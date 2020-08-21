@@ -1,0 +1,28 @@
+name: Linux
+on:
+  push:
+    branches: [avalonia]
+  pull_request:
+    branches: [avalonia]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Nuget Restore
+        run: msbuild /p:Configuration=Release -t:restore
+      - name: Build with msbuild
+        run: msbuild ClassicAssist.Avalonia /p:Configuration=Release
+      - run: |
+          find Output/net48
+        shell: bash        
+      - name: Upload Plugin Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: Linux
+          path: ./Output/net48
+      - name: Build with msbuild
+        run: msbuild ClassicAssist.Tests /p:Configuration=Release
+      - name: Tests
+        run: dotnet test ClassicAssist.Tests/bin/Release/net48/ClassicAssist.Tests.dll
