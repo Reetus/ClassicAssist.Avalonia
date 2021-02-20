@@ -5,24 +5,29 @@ on:
   pull_request:
     branches: [avalonia]
 
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+       os: [ macos-latest, ubuntu-latest, windows-latest ]
+
     steps:
-      - uses: actions/checkout@v2
-      - name: Nuget Restore
-        run: msbuild /p:Configuration=Release -t:restore
-      - name: Build with msbuild
-        run: msbuild ClassicAssist.Avalonia /p:Configuration=Release
-      - run: |
-          find Output/net48
-        shell: bash        
-      - name: Upload Plugin Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: Linux
-          path: ./Output/net48
-      - name: Build with msbuild
-        run: msbuild ClassicAssist.Tests /p:Configuration=Release
-      - name: Tests
-        run: dotnet test ClassicAssist.Tests/bin/Release/net48/ClassicAssist.Tests.dll
+    - uses: actions/checkout@v2
+        
+    - name: Setup .NET 5
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.100
+            
+    - name: Build
+      run: dotnet build -c Linux
+
+    - name: Upload Plugin Artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: ClassicAssist.Avalonia-${{ matrix.os }}
+        path: ./Output/net48
