@@ -29,9 +29,10 @@ using ClassicAssist.Misc;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UI.Views;
+using ClassicAssist.UO.Data;
+using CUO_API;
 using Newtonsoft.Json.Linq;
 using SEngine = ClassicAssist.Shared.Engine;
-using PluginHeader = ClassicAssist.Shared.Engine.PluginHeader;
 
 // ReSharper disable once CheckNamespace
 namespace Assistant

@@ -35,7 +35,6 @@ using ClassicAssist.UI.ViewModels;
 using CUO_API;
 using Newtonsoft.Json.Linq;
 using SEngine = ClassicAssist.Shared.Engine;
-using PluginHeader = ClassicAssist.Shared.Engine.PluginHeader;
 
 // ReSharper disable once CheckNamespace
 namespace Assistant
@@ -48,10 +47,8 @@ namespace Assistant
 
         public static string StartupPath { get; set; }
 
-        [UnmanagedCallersOnly]
-        public static void Install( IntPtr ptr )
+        public static void Install( PluginHeader* plugin )
         {
-            var plugin = (PluginHeader*)ptr;
             _plugin = plugin;
 
             StartupPath = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location );

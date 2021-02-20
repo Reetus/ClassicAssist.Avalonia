@@ -47,11 +47,11 @@ namespace ClassicAssist.Shared
 
         private static OnConnected _onConnected;
         private static OnDisconnected _onDisconnected;
-        private static OnPacketSendRecv_new_intptr _onReceive;
-        private static OnPacketSendRecv_new_intptr _onSend;
+        private static OnPacketSendRecv _onReceive;
+        private static OnPacketSendRecv _onSend;
         private static OnGetUOFilePath _getUOFilePath;
-        private static OnPacketSendRecv_new_intptr _sendToClient;
-        private static OnPacketSendRecv_new_intptr _sendToServer;
+        private static OnPacketSendRecv _sendToClient;
+        private static OnPacketSendRecv _sendToServer;
         private static OnGetPacketLength _getPacketLength;
         private static OnUpdatePlayerPosition _onPlayerPositionChanged;
         private static OnClientClose _onClientClosing;
@@ -151,8 +151,8 @@ namespace ClassicAssist.Shared
 
             plugin->OnConnected = Marshal.GetFunctionPointerForDelegate( _onConnected );
             plugin->OnDisconnected = Marshal.GetFunctionPointerForDelegate( _onDisconnected );
-            plugin->OnRecv_new = Marshal.GetFunctionPointerForDelegate( _onReceive );
-            plugin->OnSend_new = Marshal.GetFunctionPointerForDelegate( _onSend );
+            plugin->OnRecv = Marshal.GetFunctionPointerForDelegate( _onReceive );
+            plugin->OnSend = Marshal.GetFunctionPointerForDelegate( _onSend );
             plugin->OnPlayerPositionChanged = Marshal.GetFunctionPointerForDelegate( _onPlayerPositionChanged );
             plugin->OnClientClosing = Marshal.GetFunctionPointerForDelegate( _onClientClosing );
             plugin->OnHotkeyPressed = Marshal.GetFunctionPointerForDelegate( _onHotkeyPressed );
@@ -162,8 +162,8 @@ namespace ClassicAssist.Shared
 
             _getPacketLength = Marshal.GetDelegateForFunctionPointer<OnGetPacketLength>( plugin->GetPacketLength );
             _getUOFilePath = Marshal.GetDelegateForFunctionPointer<OnGetUOFilePath>( plugin->GetUOFilePath );
-            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new_intptr>( plugin->Recv_new );
-            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new_intptr>( plugin->Send_new );
+            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Recv );
+            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Send );
             _requestMove = Marshal.GetDelegateForFunctionPointer<RequestMove>( plugin->RequestMove );
 
             ClientPath = _getUOFilePath();
@@ -543,10 +543,7 @@ namespace ClassicAssist.Shared
 
                 (byte[] data, int dataLength) = Utility.CopyBuffer( packet, length );
 
-                IntPtr unmanagedPointer = Marshal.AllocHGlobal( dataLength );
-                Marshal.Copy( data, 0, unmanagedPointer, dataLength );
-
-                _sendToServer?.Invoke( unmanagedPointer, ref dataLength );
+                _sendToServer?.Invoke( ref data, ref dataLength );
 
                 _nextPacketSendTime = DateTime.Now + PACKET_SEND_DELAY;
             }
@@ -568,10 +565,7 @@ namespace ClassicAssist.Shared
 
                     InternalPacketReceivedEvent?.Invoke( packet, length );
 
-                    IntPtr unmanagedPointer = Marshal.AllocHGlobal( length );
-                    Marshal.Copy( packet, 0, unmanagedPointer, length );
-
-                    _sendToClient?.Invoke( unmanagedPointer, ref length );
+                    _sendToClient?.Invoke( ref packet, ref length );
 
                     _nextPacketRecvTime = DateTime.Now + PACKET_RECV_DELAY;
                 }
@@ -676,11 +670,8 @@ namespace ClassicAssist.Shared
 
         #region ClassicUO Events
 
-        private static bool OnPacketSend( IntPtr ptr, ref int length )
+        private static bool OnPacketSend( ref byte[] data, ref int length )
         {
-            byte[] data = new byte[length];
-            Marshal.Copy( ptr, data, 0, length );
-
             bool filter = false;
 
             if (CommandsManager.IsSpeechPacket( data[0] ))
