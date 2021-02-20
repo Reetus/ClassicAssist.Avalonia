@@ -33,9 +33,9 @@ namespace ClassicAssist.Data
         public static string SessionId { get; set; }
         public static Version UpdateGumpVersion { get; set; }
         public static string UserId { get; set; }
-        public static double WindowHeight { get; set; }
+        public static double WindowHeight { get; set; } = 500;
 
-        public static double WindowWidth { get; set; }
+        public static double WindowWidth { get; set; } = 625;
 
         public static event EventHandler SavedPasswordsChanged;
         public static event EventHandler OptionsLoaded;
