@@ -297,6 +297,13 @@ namespace ClassicAssist.UI.ViewModels
             {
                 Directory.CreateDirectory( modulePath );
             }
+
+            string assistantModule = Path.Combine( modulePath, "Assistant.py" );
+
+            if ( !File.Exists( assistantModule ) )
+            {
+                File.WriteAllText( assistantModule, "from ClassicAssist.Shared import Engine as _Engine\nEngine = _Engine" );
+            }
         }
 
         private Unit RemoveMacroConfirm( object obj )
