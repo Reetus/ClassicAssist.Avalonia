@@ -6,260 +6,276 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
+using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
-using ClassicAssist.Shared.UO;
 using IronPython.Hosting;
+using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 
-namespace ClassicAssist.Data.Macros
+namespace ClassicAssist.Data.Macros;
+
+public class MacroInvoker
 {
-    public class MacroInvoker
+    public delegate void dMacroException( Exception e );
+
+    public delegate void dMacroStartStop();
+
+    private static readonly ScriptEngine _engine = Python.CreateEngine();
+    private static Dictionary<string, object> _importCache;
+    private readonly MemoryStream _memoryStream = new();
+    private readonly SystemMessageTextWriter _textWriter = new();
+    private CancellationTokenSource _cancellationToken;
+    private MacroEntry _macro;
+    private ScriptScope _macroScope;
+
+    public MacroInvoker()
     {
-        public delegate void dMacroException( Exception e );
+        ScriptRuntime runtime = _engine.Runtime;
+        runtime.LoadAssembly( Assembly.GetExecutingAssembly() );
 
-        public delegate void dMacroStartStop();
-
-        private static readonly ScriptEngine _engine = Python.CreateEngine();
-        private static Dictionary<string, object> _importCache;
-        private readonly MemoryStream _memoryStream = new MemoryStream();
-        private CancellationTokenSource _cancellationToken;
-        private MacroEntry _macro;
-        private readonly SystemMessageTextWriter _textWriter = new SystemMessageTextWriter();
-
-        public MacroInvoker()
+        foreach ( string assembly in AssistantOptions.Assemblies ?? new string[0] )
         {
-            ScriptRuntime runtime = _engine.Runtime;
-            runtime.LoadAssembly( Assembly.GetExecutingAssembly() );
-
-            foreach ( string assembly in AssistantOptions.Assemblies ?? new string[0] )
+            try
             {
-                try
-                {
-                    runtime.LoadAssembly( Assembly.LoadFile( assembly ) );
-                }
-                catch ( Exception )
-                {
-                    // ignored
-                }
+                runtime.LoadAssembly( Assembly.LoadFile( assembly ) );
             }
-
-            if ( _importCache == null )
+            catch ( Exception )
             {
-                _importCache = InitializeImports( _engine );
+                // ignored
             }
-
-            _engine.Runtime.IO.SetOutput( _memoryStream, _textWriter );
-            _engine.Runtime.IO.SetErrorOutput( _memoryStream, _textWriter );
-
-            string modulePath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Modules" );
-            ICollection<string> searchPaths = _engine.GetSearchPaths();
-
-            if ( searchPaths.Contains( modulePath ) )
-            {
-                return;
-            }
-
-            searchPaths.Add( modulePath );
-            _engine.SetSearchPaths( searchPaths );
         }
 
-        public Exception Exception { get; set; }
-        public bool IsFaulted { get; set; }
-
-        public bool IsRunning => Thread?.IsAlive ?? false;
-
-        public Stopwatch StopWatch { get; set; } = new Stopwatch();
-
-        public Thread Thread { get; set; }
-
-        public event dMacroStartStop StartedEvent;
-        public event dMacroStartStop StoppedEvent;
-        public event dMacroException ExceptionEvent;
-
-        private static string GetScriptingImports()
+        if ( _importCache == null )
         {
-            string prepend = Assembly.GetExecutingAssembly().GetTypes()
-                .Where( t =>
-                    t.Namespace != null && t.IsPublic && t.IsClass && t.Namespace.EndsWith( "Macros.Commands" ) )
-                .Aggregate( string.Empty, ( current, t ) => current + $"from {t.FullName} import * \n" );
-
-            foreach ( string assemblyName in AssistantOptions.Assemblies ?? new string[0] )
-            {
-                try
-                {
-                    Assembly assembly = Assembly.LoadFile( assemblyName );
-
-                    prepend += assembly.GetTypes()
-                        .Where( t =>
-                            t.Namespace != null && t.IsPublic && t.IsClass &&
-                            t.Namespace.EndsWith( "Macros.Commands" ) ).Aggregate( string.Empty,
-                            ( current, t ) => current + $"from {t.FullName} import * \n" );
-                }
-                catch ( Exception )
-                {
-                    // ignored
-                }
-            }
-
-            return prepend;
+            _importCache = InitializeImports( _engine );
         }
 
-        public static Dictionary<string, object> InitializeImports( ScriptEngine engine )
+        _engine.Runtime.IO.SetOutput( _memoryStream, _textWriter );
+        _engine.Runtime.IO.SetErrorOutput( _memoryStream, _textWriter );
+
+        string modulePath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Modules" );
+        ICollection<string> searchPaths = _engine.GetSearchPaths();
+
+        if ( searchPaths.Contains( modulePath ) )
         {
-            Dictionary<string, object> dictionary = new Dictionary<string, object>();
-
-            ScriptSource importSource =
-                engine.CreateScriptSourceFromString( GetScriptingImports(), SourceCodeKind.Statements );
-
-            CompiledCode importCompiled = importSource.Compile();
-            ScriptScope importScope = engine.CreateScope( dictionary );
-            importCompiled.Execute( importScope );
-
-            return dictionary;
+            return;
         }
 
-        public void Execute( MacroEntry macro )
+        searchPaths.Add( modulePath );
+        _engine.SetSearchPaths( searchPaths );
+    }
+
+    public Exception Exception { get; set; }
+    public bool IsFaulted { get; set; }
+
+    public bool IsRunning => Thread?.IsAlive ?? false;
+
+    public Stopwatch StopWatch { get; set; } = new();
+
+    public Thread Thread { get; set; }
+
+    public event dMacroStartStop StartedEvent;
+    public event dMacroStartStop StoppedEvent;
+    public event dMacroException ExceptionEvent;
+
+    private static string GetScriptingImports()
+    {
+        string prepend = Assembly.GetExecutingAssembly().GetTypes()
+            .Where( t => t.Namespace != null && t.IsPublic && t.IsClass && t.Namespace.EndsWith( "Macros.Commands" ) )
+            .Aggregate( string.Empty, ( current, t ) => current + $"from {t.FullName} import * \n" );
+
+        foreach ( string assemblyName in AssistantOptions.Assemblies ?? new string[0] )
         {
-            _macro = macro;
-
-            if ( Thread != null && Thread.IsAlive )
+            try
             {
-                Stop();
+                Assembly assembly = Assembly.LoadFile( assemblyName );
+
+                prepend += assembly.GetTypes()
+                    .Where( t =>
+                        t.Namespace != null && t.IsPublic && t.IsClass && t.Namespace.EndsWith( "Macros.Commands" ) )
+                    .Aggregate( string.Empty, ( current, t ) => current + $"from {t.FullName} import * \n" );
+                
+                prepend += "from System import Array\n";
+                prepend += "import sys";
             }
-
-            MainCommands.SetQuietMode( Options.CurrentOptions.DefaultMacroQuietMode );
-
-            _cancellationToken = new CancellationTokenSource();
-
-            if ( _importCache == null )
+            catch ( Exception )
             {
-                _importCache = InitializeImports( _engine );
+                // ignored
             }
+        }
 
-            ScriptSource source = _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
+        return prepend;
+    }
 
-            Dictionary<string, object> importCache = new Dictionary<string, object>( _importCache );
+    public static Dictionary<string, object> InitializeImports( ScriptEngine engine )
+    {
+        Dictionary<string, object> dictionary = new();
 
-            IsFaulted = false;
+        ScriptSource importSource =
+            engine.CreateScriptSourceFromString( GetScriptingImports(), SourceCodeKind.Statements );
 
-            Thread = new Thread( () =>
+        CompiledCode importCompiled = importSource.Compile();
+        ScriptScope importScope = engine.CreateScope( dictionary );
+        importCompiled.Execute( importScope );
+
+        return dictionary;
+    }
+
+    public void Execute( MacroEntry macro )
+    {
+        _macro = macro;
+
+        if ( Thread != null && Thread.IsAlive )
+        {
+            Stop();
+        }
+
+        MainCommands.SetQuietMode( Options.CurrentOptions.DefaultMacroQuietMode );
+
+        _cancellationToken = new CancellationTokenSource();
+
+        if ( _importCache == null )
+        {
+            _importCache = InitializeImports( _engine );
+        }
+
+        ScriptSource source = _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
+
+        Dictionary<string, object> importCache = new(_importCache);
+
+        IsFaulted = false;
+
+        Thread = new Thread( () =>
+        {
+            Thread = Thread.CurrentThread;
+
+            try
             {
-                Thread = Thread.CurrentThread;
+                StartedEvent?.Invoke();
 
-                try
+                AliasCommands.SetDefaultAliases();
+
+                _macroScope = _engine.CreateScope( importCache );
+                _engine.SetTrace( OnTrace );
+
+                StopWatch.Reset();
+                StopWatch.Start();
+
+                do
                 {
-                    StartedEvent?.Invoke();
+                    _cancellationToken.Token.ThrowIfCancellationRequested();
 
-                    AliasCommands.SetDefaultAliases();
+                    source.Execute( _macroScope );
 
-                    ScriptScope macroScope = _engine.CreateScope( importCache );
+                    StopWatch.Stop();
 
-                    StopWatch.Reset();
-                    StopWatch.Start();
+                    bool willLoop = _macro.Loop && !IsFaulted && !_cancellationToken.IsCancellationRequested;
 
-                    do
+                    if ( !willLoop )
                     {
-                        _cancellationToken.Token.ThrowIfCancellationRequested();
-
-                        source.Execute( macroScope );
-
-                        StopWatch.Stop();
-
-                        bool willLoop = _macro.Loop && !IsFaulted && !_cancellationToken.IsCancellationRequested;
-
-                        if ( !willLoop )
-                        {
-                            break;
-                        }
-
-                        if ( Options.CurrentOptions.Debug )
-                        {
-                            Shared.UO.Commands.SystemMessage( string.Format( Strings.Loop_time___0_, StopWatch.Elapsed ) );
-                        }
-
-                        int diff = 50 - (int) StopWatch.ElapsedMilliseconds;
-
-                        if ( diff > 0 )
-                        {
-                            Thread.Sleep( diff );
-                        }
+                        break;
                     }
-                    while ( _macro.Loop && !IsFaulted );
-                }
-                catch ( TaskCanceledException )
-                {
-                    IsFaulted = true;
-                }
-                catch ( ThreadInterruptedException )
-                {
-                    IsFaulted = true;
-                }
-                catch ( ThreadAbortException )
-                {
-                    IsFaulted = true;
-                }
-                catch ( Exception e )
-                {
-                    IsFaulted = true;
-                    Exception = e;
 
-                    ExceptionEvent?.Invoke( e );
-                }
-                finally
-                {
-                    StoppedEvent?.Invoke();
-                    MacroManager.GetInstance().OnMacroStopped();
-                }
-            } ) { IsBackground = true };
+                    if ( Options.CurrentOptions.Debug )
+                    {
+                        Shared.UO.Commands.SystemMessage( string.Format( Strings.Loop_time___0_, StopWatch.Elapsed ) );
+                    }
 
-            try
-            {
-                Thread.Start();
-                MacroManager.GetInstance().OnMacroStarted();
+                    int diff = 50 - (int)StopWatch.ElapsedMilliseconds;
+
+                    if ( diff > 0 )
+                    {
+                        Thread.Sleep( diff );
+                    }
+                }
+                while ( _macro.Loop && !IsFaulted );
             }
-            catch ( ThreadStateException )
+            catch ( TaskCanceledException )
             {
-                // TODO 
+                IsFaulted = true;
             }
-            catch ( ThreadStartException )
+            catch ( SystemExitException )
             {
-                // TODO 
+                IsFaulted = true;
             }
-        }
-
-        public void Stop()
-        {
-            _cancellationToken?.Cancel();
-
-            if ( Thread == null || !Thread.IsAlive )
+            catch ( ThreadInterruptedException )
             {
-                return;
+                IsFaulted = true;
             }
-
-            try
+            catch ( ThreadAbortException )
             {
-                StopWatch.Stop();
+                IsFaulted = true;
+            }
+            catch ( Exception e )
+            {
+                IsFaulted = true;
+                Exception = e;
 
-                int diff = 50 - (int) StopWatch.ElapsedMilliseconds;
-
-                if ( diff > 0 )
-                {
-                    Thread.Sleep( diff );
-                }
-
-                Thread?.Abort();
-                Thread?.Join( 100 );
-
-                MacroManager.GetInstance().Replay = false;
+                ExceptionEvent?.Invoke( e );
+            }
+            finally
+            {
+                StoppedEvent?.Invoke();
                 MacroManager.GetInstance().OnMacroStopped();
             }
-            catch ( ThreadStateException e )
+        } ) { IsBackground = true };
+
+        try
+        {
+            Thread.Start();
+            MacroManager.GetInstance().OnMacroStarted();
+        }
+        catch ( ThreadStateException )
+        {
+            // TODO 
+        }
+        catch ( ThreadStartException )
+        {
+            // TODO 
+        }
+    }
+
+    private TracebackDelegate OnTrace( TraceBackFrame frame, string result, object payload )
+    {
+        if ( !_cancellationToken.IsCancellationRequested )
+        {
+            return OnTrace;
+        }
+
+        _macroScope.Engine.Execute( "sys.exit()", _macroScope );
+        return null;
+    }
+    public void Stop()
+    {
+        _cancellationToken?.Cancel();
+
+        if ( Thread == null || !Thread.IsAlive )
+        {
+            return;
+        }
+
+        try
+        {
+            StopWatch.Stop();
+
+            int diff = 50 - (int)StopWatch.ElapsedMilliseconds;
+
+            if ( diff > 0 )
             {
-                Shared.UO.Commands.SystemMessage( string.Format( Strings.Macro_error___0_, e.Message ) );
+                Thread.Sleep( diff );
             }
+
+            Thread?.Interrupt();
+            Thread?.Join( 100 );
+
+            MacroManager.GetInstance().Replay = false;
+            MacroManager.GetInstance().OnMacroStopped();
+        }
+        catch ( ThreadStateException e )
+        {
+            Shared.UO.Commands.SystemMessage( string.Format( Strings.Macro_error___0_, e.Message ) );
         }
     }
 }

@@ -16,7 +16,7 @@ namespace ClassicAssist.Data.Hotkeys
 {
     public class KeyState
     {
-        [DllImport("SDL2.dll", EntryPoint = "SDL_GetKeyboardState", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("libSDL2-2.0.so.0", EntryPoint = "SDL_GetKeyboardState", CallingConvention = CallingConvention.Cdecl)]
         private static unsafe extern byte* GetKeyboardState(out int numKeys);
 
         public static unsafe bool GetKeyState(SDL_Scancode scanCode)

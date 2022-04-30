@@ -1,68 +1,69 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net48;netcoreapp3.1</TargetFrameworks>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PlatformTarget>x64</PlatformTarget>
-    <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
-    <OutputPath>..\Output\</OutputPath>
-    <Configurations>Debug;Release;Linux</Configurations>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)'=='netcoreapp3.1'">
-  </PropertyGroup>
-  <Choose>
-    <When Condition="'$(Configuration)'=='Linux'">
-      <ItemGroup>
-        <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.6.1.6" />        
-      </ItemGroup>
-    </When>
-  </Choose>
-  <ItemGroup>
-    <Folder Include="Models\" />
-    <AvaloniaResource Include="Assets\**" />
-    <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Desktop" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Skia" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Xaml.Interactions" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="0.10.0-preview1" />
-    <PackageReference Include="System.Resources.Extensions" Version="4.7.1" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.7.1.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="AvaloniaEdit">
-      <HintPath>AvaloniaEdit.dll</HintPath>
-    </Reference>
-    <Reference Include="cuoapi">
-      <HintPath>..\ClassicAssist.Shared\cuoapi.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup>
-    <Compile Update="Views\AboutControl.axaml.cs">
-      <DependentUpon>AboutControl.axaml</DependentUpon>
-    </Compile>
-    <Compile Update="Views\GeneralControl.axaml.cs">
-      <DependentUpon>GeneralControl.axaml</DependentUpon>
-    </Compile>
-  </ItemGroup>
-  <PropertyGroup>
-    <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
-    <Version>0.3.$(BuildDate).0</Version>
-  </PropertyGroup>
-  <ItemGroup>
-    <NativeLibs Include="$(NuGetPackageRoot)avalonia.native\0.10.0-preview1\runtimes\osx\native\libAvaloniaNative.dylib;$(NuGetPackageRoot)skiasharp\1.68.2.1\runtimes\osx\native\libSkiaSharp.dylib;$(NuGetPackageRoot)\harfbuzzsharp\2.6.1.6\runtimes\osx\native\libHarfBuzzSharp.dylib" />
-  </ItemGroup>
-  <Target Name="CopyNativeLibs" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(TargetFramework)'=='net48' and '$(Configuration)'=='Linux'">
-    <Message Text="Copying native libraries to $(OutDir)" Importance="Normal" />
-    <Copy SourceFiles="@(NativeLibs)" DestinationFolder="$(OutDir)" />
-  </Target>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFrameworks>net60</TargetFrameworks>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PlatformTarget>x64</PlatformTarget>
+        <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+        <OutputPath>..\Output\</OutputPath>
+        <Configurations>Debug;Release;Linux</Configurations>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(TargetFramework)'=='netcoreapp3.1'">
+    </PropertyGroup>
+    <Choose>
+        <When Condition="'$(Configuration)'=='Linux'">
+            <ItemGroup>
+                <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.6.1.6"/>
+            </ItemGroup>
+        </When>
+    </Choose>
+    <ItemGroup>
+        <Folder Include="Models\"/>
+        <AvaloniaResource Include="Assets\**"/>
+        <AvaloniaResource Include="Controls\GroupBox.Theme.xaml"/>
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.Desktop" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.Skia" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.Xaml.Interactions" Version="0.10.0-preview1"/>
+        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="0.10.0-preview1"/>
+        <PackageReference Include="DNNE" Version="1.0.30"/>
+        <PackageReference Include="System.Resources.Extensions" Version="4.7.1"/>
+        <PackageReference Include="System.Collections.Immutable" Version="1.7.1.0"/>
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Reference Include="AvaloniaEdit">
+            <HintPath>AvaloniaEdit.dll</HintPath>
+        </Reference>
+        <Reference Include="cuoapi">
+            <HintPath>..\ClassicAssist.Shared\cuoapi.dll</HintPath>
+        </Reference>
+    </ItemGroup>
+    <ItemGroup>
+        <Compile Update="Views\AboutControl.axaml.cs">
+            <DependentUpon>AboutControl.axaml</DependentUpon>
+        </Compile>
+        <Compile Update="Views\GeneralControl.axaml.cs">
+            <DependentUpon>GeneralControl.axaml</DependentUpon>
+        </Compile>
+    </ItemGroup>
+    <PropertyGroup>
+        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
+        <Version>0.3.$(BuildDate).0</Version>
+    </PropertyGroup>
+    <ItemGroup>
+        <NativeLibs Include="$(NuGetPackageRoot)avalonia.native\0.10.0-preview1\runtimes\osx\native\libAvaloniaNative.dylib;$(NuGetPackageRoot)skiasharp\1.68.2.1\runtimes\osx\native\libSkiaSharp.dylib;$(NuGetPackageRoot)\harfbuzzsharp\2.6.1.6\runtimes\osx\native\libHarfBuzzSharp.dylib"/>
+    </ItemGroup>
+    <Target Name="CopyNativeLibs" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(TargetFramework)'=='net48' and '$(Configuration)'=='Linux'">
+        <Message Text="Copying native libraries to $(OutDir)" Importance="Normal"/>
+        <Copy SourceFiles="@(NativeLibs)" DestinationFolder="$(OutDir)"/>
+    </Target>
 </Project>
