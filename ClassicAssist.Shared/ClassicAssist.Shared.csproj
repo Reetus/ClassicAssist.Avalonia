@@ -19,22 +19,22 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <None Remove="Data\Bodies.json"/>
-        <None Remove="Data\BuffIcons.json"/>
-        <None Remove="Data\Properties.json"/>
-        <None Remove="Data\Regions.json"/>
-        <None Remove="Data\Spells.json"/>
-        <None Remove="Data\Weapons.json"/>
-        <None Remove="Resources\Colours.xaml"/>
-        <None Remove="Resources\DarkTheme.xaml"/>
-        <None Remove="Resources\dialog-error.png"/>
-        <None Remove="Resources\dialog-info.png"/>
-        <None Remove="Resources\dialog-warn.png"/>
-        <None Remove="Resources\Icons.xaml"/>
-        <None Remove="Resources\LeftRightIconToggleButton.xaml"/>
-        <None Remove="Resources\ResourceDictionary.xaml"/>
-        <None Remove="zlib32.dll"/>
-        <None Remove="zlib64.dll"/>
+        <None Remove="Data\Bodies.json" />
+        <None Remove="Data\BuffIcons.json" />
+        <None Remove="Data\Properties.json" />
+        <None Remove="Data\Regions.json" />
+        <None Remove="Data\Spells.json" />
+        <None Remove="Data\Weapons.json" />
+        <None Remove="Resources\Colours.xaml" />
+        <None Remove="Resources\DarkTheme.xaml" />
+        <None Remove="Resources\dialog-error.png" />
+        <None Remove="Resources\dialog-info.png" />
+        <None Remove="Resources\dialog-warn.png" />
+        <None Remove="Resources\Icons.xaml" />
+        <None Remove="Resources\LeftRightIconToggleButton.xaml" />
+        <None Remove="Resources\ResourceDictionary.xaml" />
+        <None Remove="zlib32.dll" />
+        <None Remove="zlib64.dll" />
     </ItemGroup>
 
     <ItemGroup>
@@ -65,27 +65,27 @@
     </ItemGroup>
 
     <ItemGroup>
-        <EmbeddedResource Include="Resources\arrow_down.png"/>
-        <EmbeddedResource Include="Resources\arrow_up.png"/>
-        <EmbeddedResource Include="Resources\dialog-error.png"/>
-        <EmbeddedResource Include="Resources\dialog-info.png"/>
-        <EmbeddedResource Include="Resources\dialog-warn.png"/>
-        <EmbeddedResource Include="Resources\green-circle.png"/>
-        <EmbeddedResource Include="Resources\kiss.wav"/>
-        <EmbeddedResource Include="Resources\lock.png"/>
-        <EmbeddedResource Include="Resources\python.png"/>
-        <EmbeddedResource Include="Resources\red-circle.png"/>
+        <EmbeddedResource Include="Resources\arrow_down.png" />
+        <EmbeddedResource Include="Resources\arrow_up.png" />
+        <EmbeddedResource Include="Resources\dialog-error.png" />
+        <EmbeddedResource Include="Resources\dialog-info.png" />
+        <EmbeddedResource Include="Resources\dialog-warn.png" />
+        <EmbeddedResource Include="Resources\green-circle.png" />
+        <EmbeddedResource Include="Resources\kiss.wav" />
+        <EmbeddedResource Include="Resources\lock.png" />
+        <EmbeddedResource Include="Resources\python.png" />
+        <EmbeddedResource Include="Resources\red-circle.png" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="IronPython" Version="2.7.12"/>
-        <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.1"/>
-        <PackageReference Include="Octokit" Version="0.51.0"/>
-        <PackageReference Include="OptimizedPriorityQueue" Version="5.1.0"/>
-        <PackageReference Include="reactiveui" Version="18.0.10"/>
-        <PackageReference Include="Sentry" Version="3.16.0"/>
-        <PackageReference Include="System.Drawing.Common" Version="6.0.0"/>
+        <PackageReference Include="IronPython" Version="2.7.12" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+        <PackageReference Include="Octokit" Version="0.51.0" />
+        <PackageReference Include="OptimizedPriorityQueue" Version="5.1.0" />
+        <PackageReference Include="reactiveui" Version="18.4.1" />
+        <PackageReference Include="Sentry" Version="3.25.0" />
+        <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -164,7 +164,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Folder Include="Properties\"/>
+        <Folder Include="Properties\" />
     </ItemGroup>
 
     <PropertyGroup>

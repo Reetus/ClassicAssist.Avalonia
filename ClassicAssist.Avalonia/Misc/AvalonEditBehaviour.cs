@@ -32,8 +32,8 @@ namespace ClassicAssist.Avalonia.Misc
     public class AvalonEditBehaviour : Behavior<TextEditor>
     {
         public static readonly DirectProperty<AvalonEditBehaviour, string> TextProperty =
-            AvaloniaProperty.RegisterDirect<AvalonEditBehaviour, string>( nameof( Text ), o => o.Text,
-                ( o, v ) => { o.Text = v; }, defaultBindingMode: BindingMode.TwoWay );
+            AvaloniaProperty.RegisterDirect<AvalonEditBehaviour, string>(nameof(Text), o => o.Text,
+                (o, v) => { o.Text = v; }, defaultBindingMode: BindingMode.TwoWay);
 
         private string _text;
 
@@ -42,14 +42,14 @@ namespace ClassicAssist.Avalonia.Misc
             get => _text;
             set
             {
-                SetAndRaise( TextProperty, ref _text, value );
-                SetText( value );
+                SetAndRaise(TextProperty, ref _text, value);
+                SetText(value);
             }
         }
 
-        private void SetText( string value )
+        private void SetText(string value)
         {
-            if ( AssociatedObject != null )
+            if (AssociatedObject != null)
             {
                 AssociatedObject.Document.Text = value ?? string.Empty;
             }
@@ -59,7 +59,7 @@ namespace ClassicAssist.Avalonia.Misc
         {
             base.OnAttached();
 
-            if ( AssociatedObject != null )
+            if (AssociatedObject != null)
             {
                 AssociatedObject.TextChanged += AssociatedObjectOnTextChanged;
                 AssociatedObject.LostFocus += AssociatedObjectOnLostFocus;
@@ -70,26 +70,26 @@ namespace ClassicAssist.Avalonia.Misc
         {
             base.OnDetaching();
 
-            if ( AssociatedObject != null )
+            if (AssociatedObject != null)
             {
                 AssociatedObject.TextChanged -= AssociatedObjectOnTextChanged;
                 AssociatedObject.LostFocus -= AssociatedObjectOnLostFocus;
             }
         }
 
-        private void AssociatedObjectOnTextChanged( object sender, EventArgs eventArgs )
+        private void AssociatedObjectOnTextChanged(object sender, EventArgs eventArgs)
         {
-            if ( !( sender is TextEditor textEditor ) )
+            if (!(sender is TextEditor textEditor))
             {
                 return;
             }
 
-            if ( textEditor.Document == null )
+            if (textEditor.Document == null)
             {
                 return;
             }
 
-            if ( Text == null || Text.Equals( textEditor.Document.Text ) )
+            if (Text == null || Text.Equals(textEditor.Document.Text))
             {
                 return;
             }
@@ -99,14 +99,14 @@ namespace ClassicAssist.Avalonia.Misc
             textEditor.CaretOffset = carot;
         }
 
-        private void AssociatedObjectOnLostFocus( object sender, RoutedEventArgs routedEventArgs )
+        private void AssociatedObjectOnLostFocus(object sender, RoutedEventArgs routedEventArgs)
         {
-            if ( !( sender is TextEditor textEditor ) )
+            if (!(sender is TextEditor textEditor))
             {
                 return;
             }
 
-            if ( textEditor.Document != null )
+            if (textEditor.Document != null)
             {
                 Text = textEditor.Document.Text;
             }

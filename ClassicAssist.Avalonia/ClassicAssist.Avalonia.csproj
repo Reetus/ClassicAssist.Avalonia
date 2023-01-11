@@ -15,29 +15,29 @@
     <Choose>
         <When Condition="'$(Configuration)'=='Linux'">
             <ItemGroup>
-                <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.6.1.6"/>
+	            <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.8.2.1-preview.108" />
             </ItemGroup>
         </When>
     </Choose>
     <ItemGroup>
-        <Folder Include="Models\"/>
-        <AvaloniaResource Include="Assets\**"/>
-        <AvaloniaResource Include="Controls\GroupBox.Theme.xaml"/>
+        <Folder Include="Models\" />
+        <AvaloniaResource Include="Assets\**" />
+        <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.Desktop" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.Skia" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.Xaml.Interactions" Version="0.10.0-preview1"/>
-        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="0.10.0-preview1"/>
-        <PackageReference Include="DNNE" Version="1.0.30"/>
-        <PackageReference Include="System.Resources.Extensions" Version="4.7.1"/>
-        <PackageReference Include="System.Collections.Immutable" Version="1.7.1.0"/>
+        <PackageReference Include="Avalonia" Version="0.10.18" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.18" />
+        <PackageReference Include="Avalonia.Desktop" Version="0.10.18" />
+        <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.18" />
+        <PackageReference Include="Avalonia.Skia" Version="0.10.18" />
+        <PackageReference Include="Avalonia.Xaml.Interactions" Version="0.10.18" />
+        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="0.10.18" />
+        <PackageReference Include="DNNE" Version="1.0.33" />
+        <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
+        <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />
     </ItemGroup>
     <ItemGroup>
-        <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj"/>
+        <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
         <Reference Include="AvaloniaEdit">
