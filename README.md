@@ -75,7 +75,9 @@ on Mac)
 
 ### Linux-specific
 
-TODO
+Need to symlink libdl.so to libdl.so.2
+
+![image](https://user-images.githubusercontent.com/6239195/211748863-681850a0-3275-4386-895a-46dff587556c.png)
 
 ## License
 
