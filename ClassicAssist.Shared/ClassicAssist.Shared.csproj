@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net60</TargetFramework>
+        <TargetFramework>net70</TargetFramework>
         <RootNamespace>ClassicAssist.Shared</RootNamespace>
         <UseWPF>false</UseWPF>
         <Configurations>Debug;Release;Linux</Configurations>
