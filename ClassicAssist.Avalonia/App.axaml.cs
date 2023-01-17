@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -33,9 +34,12 @@ namespace ClassicAssist.Avalonia
             //TODO
             Assistant.Engine.MainWindow = (MainWindow)desktop.MainWindow;
 
-            SEngine.Shutdown += () =>
+            SEngine.Shutdown += async () =>
             {
                 desktop.Shutdown( 0 );
+
+                await Task.Delay( 2500 );
+                
                 Environment.Exit( 0 );
             };
         }

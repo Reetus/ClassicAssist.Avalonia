@@ -20,6 +20,11 @@
   <Window.DataContext>
     <viewModels:MainWindowViewModel />
   </Window.DataContext>
+  <Window.Styles>
+    <Style Selector="TabItem">
+      <Setter Property="FontSize" Value="18"/>
+    </Style>
+  </Window.Styles>
   <Grid RowDefinitions="*">
     <TabControl Padding="10" Grid.Row="0">
       <TabItem Header="{x:Static resources:Strings.General}">
@@ -45,7 +50,7 @@
       </TabItem>
     </TabControl>
     <StackPanel Grid.Row="0" Margin="10" VerticalAlignment="Top" HorizontalAlignment="Right">
-      <Button Height="20" Width="20" Padding="3" HorizontalAlignment="Left" Command="{Binding DebugCommand}">
+      <Button Height="30" Width="30" Padding="3" HorizontalAlignment="Left" Command="{Binding DebugCommand}">
         <Image Source="{StaticResource BugIcon}"/>
       </Button>
     </StackPanel>

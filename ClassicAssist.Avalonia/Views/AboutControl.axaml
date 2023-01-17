@@ -83,7 +83,7 @@
         </DockPanel>
       </controls:GroupBox>
     </Grid>
-    <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="25" HorizontalAlignment="Center" Margin="10">
+    <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="45" HorizontalAlignment="Center" Margin="10">
       <Button Content="{x:Static resources:Strings.Project_Homepage}" Margin="0,0,10,0" Command="{Binding LaunchHomepageCommand}"/>
       <Button Content="{x:Static resources:Strings.Check_For_Updates}" IsEnabled="false"/>
     </StackPanel>

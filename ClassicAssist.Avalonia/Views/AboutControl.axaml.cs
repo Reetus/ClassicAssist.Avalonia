@@ -18,8 +18,8 @@ namespace ClassicAssist.Avalonia.Views
 
             _control = this.FindControl<TextBlock>( "CreditText" );
 
-            _control.PointerEnter += OnPointerEnter;
-            _control.PointerLeave += OnPointerLeave;
+            // _control.PointerEnter += OnPointerEnter;
+            // _control.PointerLeave += OnPointerLeave;
         }
 
         private void OnPointerLeave( object sender, PointerEventArgs e )

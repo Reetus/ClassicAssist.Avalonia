@@ -14,11 +14,16 @@
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
-    <StyleInclude Source="avares://Avalonia.Themes.Default/DefaultTheme.xaml"/>
-    <StyleInclude Source="avares://Avalonia.Themes.Default/Accents/BaseDark.xaml"/>
+    <SimpleTheme Mode="Dark"/>
     <StyleInclude Source="avares://AvaloniaEdit/AvaloniaEdit.xaml" />
-    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Default.xaml"/>
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/GroupBox.Theme.xaml"/>
+    <Style Selector="Button">
+      <Setter Property="HorizontalAlignment" Value="Stretch"/>
+      <Setter Property="HorizontalContentAlignment" Value="Center"/>
+      <Setter Property="VerticalAlignment" Value="Stretch"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
     <Style Selector="TextBlock.h1">
       <Setter Property="FontSize" Value="14"/>
       <Setter Property="FontWeight" Value="Bold"/>
