@@ -1,9 +1,11 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using ClassicAssist.Avalonia.Views;
-using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
+using SEngine = ClassicAssist.Shared.Engine;
 
 namespace ClassicAssist.Avalonia
 {
@@ -16,18 +18,26 @@ namespace ClassicAssist.Avalonia
 
         public override void OnFrameworkInitializationCompleted()
         {
-            if ( ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop )
+            if ( ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop )
             {
-                desktop.MainWindow = new MainWindow
-                {
-                    DataContext = new MainWindowViewModel(),
-                };
-
-                //TODO
-                Assistant.Engine.MainWindow = (MainWindow)desktop.MainWindow;
+                return;
             }
 
-            base.OnFrameworkInitializationCompleted();
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+                
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = new MainWindowViewModel(),
+            };
+
+            //TODO
+            Assistant.Engine.MainWindow = (MainWindow)desktop.MainWindow;
+
+            SEngine.Shutdown += () =>
+            {
+                desktop.Shutdown( 0 );
+                Environment.Exit( 0 );
+            };
         }
     }
 }

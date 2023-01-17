@@ -41,6 +41,10 @@ namespace ClassicAssist.Shared
 
         public delegate void dSendRecvPacket( byte[] data, int length );
 
+        public delegate void dShutdown();
+
+        public static event dShutdown Shutdown;
+
         public delegate void dUpdateWindowTitle();
 
         private const int MAX_DISTANCE = 32;
@@ -257,6 +261,7 @@ namespace ClassicAssist.Shared
             Options.Save( Options.CurrentOptions );
             AssistantOptions.Save();
             SentrySdk.Close();
+            Shutdown?.Invoke();
         }
 
         private static void OnPlayerPositionChanged( int x, int y, int z )
