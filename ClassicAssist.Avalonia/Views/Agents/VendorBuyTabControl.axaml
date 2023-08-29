@@ -26,7 +26,7 @@
       <CheckBox IsChecked="{Binding IncludeBackpackAmount}"
                 Content="{x:Static resources:Strings.Include_Backpack_Amount}" />
     </DockPanel>
-    <DataGrid Grid.Row="1" Items="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+    <DataGrid Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="✓">
           <DataGridTemplateColumn.CellTemplate>
@@ -49,7 +49,7 @@
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate>
                 <controls:EditTextBlock Text="{Binding Hue}" ShowIcon="True" />
-            </DataTemplate>            
+            </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
         <DataGridTemplateColumn Header="{x:Static resources:Strings.Amount}" Width="1*">

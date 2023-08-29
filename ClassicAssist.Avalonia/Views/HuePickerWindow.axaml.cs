@@ -11,7 +11,7 @@ using ReactiveUI;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class HuePickerWindow : Window, INotifyPropertyChanged
+    public partial class HuePickerWindow : Window, INotifyPropertyChanged
     {
         private ObservableCollection<HuePickerEntry> _filteredItems = new ObservableCollection<HuePickerEntry>();
         private string _filterText;
@@ -83,11 +83,6 @@ namespace ClassicAssist.Avalonia.Views
         {
             obj = value;
             OnPropertyChanged( propertyName );
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
 
         private void OK( object obj )

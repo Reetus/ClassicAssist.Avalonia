@@ -13,14 +13,14 @@
   </UserControl.DataContext>
   <UserControl.Resources>
     <misc:JoinArrayValueConverter x:Key="JoinArrayValueConverter"/>
-  </UserControl.Resources>  
+  </UserControl.Resources>
   <Grid RowDefinitions="Auto, *">
     <WrapPanel Grid.Row="0" Classes="ToolBar" Margin="0,0,0,10">
       <Button ToolTip.Tip="{x:Static resources:Strings.Target_object___}" Command="{Binding TargetCommand}">
         <Image Source="{DynamicResource CrosshairIcon}" />
       </Button>
     </WrapPanel>
-    <DataGrid Items="{Binding Items}" Grid.Row="1" IsReadOnly="True">
+    <DataGrid ItemsSource="{Binding Items}" Grid.Row="1" IsReadOnly="True">
       <DataGrid.Columns>
         <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Width="1*" Binding="{Binding Cliloc}"/>
         <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Width="3*" Binding="{Binding Text}"/>

@@ -18,7 +18,7 @@
       <TextBlock Text="{x:Static resources:Strings.Filter_}" DockPanel.Dock="Left" Margin="0,0,10,0" VerticalAlignment="Center" />
       <TextBox Text="{Binding FilterText}" />
     </DockPanel>
-    <ListBox Grid.Row="1" Items="{Binding FilteredItems}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" x:Name="listBox" SelectedItem="{Binding SelectedItem}">
+    <ListBox Grid.Row="1" ItemsSource="{Binding FilteredItems}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" x:Name="listBox" SelectedItem="{Binding SelectedItem}">
       <ListBox.ItemsPanel>
         <ItemsPanelTemplate>
           <VirtualizingStackPanel/>

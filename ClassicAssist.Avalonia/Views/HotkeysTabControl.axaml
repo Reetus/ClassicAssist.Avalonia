@@ -18,7 +18,7 @@
 	</UserControl.Resources>
 	<Grid ColumnDefinitions="*, 150">
 		<Grid Grid.Column="0" RowDefinitions="*,Auto">
-			<TreeView x:Name="TreeView" Items="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+			<TreeView x:Name="TreeView" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
 				<TreeView.ItemTemplate>
 					<TreeDataTemplate ItemsSource="{Binding Children}">
 						<StackPanel Orientation="Horizontal" Margin="0, 2, 0, 2">

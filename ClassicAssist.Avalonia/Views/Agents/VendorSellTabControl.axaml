@@ -4,14 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:agents="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Agents;assembly=ClassicAssist.Shared"
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
-             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"             
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.VendorSellTabControl">
   <UserControl.DataContext>
     <agents:VendorSellTabViewModel />
   </UserControl.DataContext>
   <Grid RowDefinitions="*, Auto">
-    <DataGrid Grid.Row="0" Items="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+    <DataGrid Grid.Row="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="✓">
           <DataGridTemplateColumn.CellTemplate>

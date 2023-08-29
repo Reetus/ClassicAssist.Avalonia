@@ -18,7 +18,7 @@
           <CheckBox Content="{x:Static resources:Strings.Stack}" IsChecked="{Binding SelectedItem.Stack}" />
         </StackPanel>
       </Grid>
-      <ListBox Items="{Binding Items}" Grid.Row="1" SelectedItem="{Binding SelectedItem}">
+      <ListBox ItemsSource="{Binding Items}" Grid.Row="1" SelectedItem="{Binding SelectedItem}">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <controls:EditTextBlock Text="{Binding Name}" ShowIcon="True"/>
@@ -36,7 +36,7 @@
       </Grid>
     </Grid>
     <Grid Grid.Column="1" Margin="0,0,0,0" RowDefinitions="*,Auto">
-      <DataGrid Items="{Binding SelectedItem.Items}" Grid.Row="0" x:Name="dataGrid" SelectedItem="{Binding SelectedOrganizerItem, Mode=TwoWay}" Padding="5">
+      <DataGrid ItemsSource="{Binding SelectedItem.Items}" Grid.Row="0" x:Name="dataGrid" SelectedItem="{Binding SelectedOrganizerItem, Mode=TwoWay}" Padding="5">
         <DataGrid.Columns>
           <DataGridTextColumn Header="{x:Static resources:Strings.Item}" Binding="{Binding Item}" Width="2*"/>
           <DataGridTextColumn Header="{x:Static resources:Strings.Graphic}" Binding="{Binding ID, StringFormat={}0x{0:x}}" Width="1*"/>
@@ -53,7 +53,7 @@
                 <controls:EditTextBlock Text="{Binding Amount}" ShowIcon="True" VerticalAlignment="Center"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
-          </DataGridTemplateColumn>          
+          </DataGridTemplateColumn>
         </DataGrid.Columns>
       </DataGrid>
       <StackPanel Orientation="Horizontal" Grid.Row="1">

@@ -7,17 +7,18 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class EditTextBlock : UserControl
+    public partial class EditTextBlock : UserControl
     {
-        public static DirectProperty<EditTextBlock, string> TextProperty =
+        public static readonly DirectProperty<EditTextBlock, string> TextProperty =
             AvaloniaProperty.RegisterDirect<EditTextBlock, string>( nameof( Text ), o => o.Text, ( o, v ) => o.Text = v,
                 defaultBindingMode: BindingMode.TwoWay );
 
-        public static StyledProperty<bool> ShowIconProperty = new StyledProperty<bool>( nameof( ShowIcon ),
-            typeof( EditTextBlock ), new StyledPropertyMetadata<bool>( true, BindingMode.TwoWay ) );
+        public static readonly StyledProperty<bool> ShowIconProperty = AvaloniaProperty.Register<EditTextBlock, bool>(
+            nameof( ShowIcon ),
+            defaultBindingMode: BindingMode.TwoWay
+        );
 
         private readonly Button _pencilButton;
-        private bool _showIcon;
 
         private string _text;
         private readonly TextBlock _textBlock;
@@ -53,8 +54,8 @@ namespace ClassicAssist.Avalonia.Controls
 
         public bool ShowIcon
         {
-            get => _showIcon;
-            set => SetAndRaise( ShowIconProperty, ref _showIcon, value );
+            get => GetValue( ShowIconProperty );
+            set => SetValue( ShowIconProperty, value );
         }
 
         public string Text
@@ -84,11 +85,6 @@ namespace ClassicAssist.Avalonia.Controls
             _pencilButton.IsVisible = ShowIcon;
             _textBox.IsVisible = false;
             _textBox.SelectionStart = _textBox.SelectionEnd = 0;
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
     }
 }

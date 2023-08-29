@@ -24,7 +24,7 @@
       <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
         <TextBlock Text="{x:Static resources:Strings.Language}" />
         <ComboBox Margin="10,0,10,0"
-						  Items="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:Language}}}"
+						  ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:Language}}}"
                           x:Name="langCombo" SelectedItem="{x:Static data:AssistantOptions.LanguageOverride}"
                           MinWidth="100">
           <i:Interaction.Behaviors>
@@ -45,7 +45,7 @@
       <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
         <TextBlock Text="{x:Static resources:Strings.Smart_last_target_}" />
         <ComboBox SelectedItem="{Binding CurrentOptions.SmartTargetOption, Mode=TwoWay}" Margin="10,0,10,0"
-                          Items="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:SmartTargetOption}}}"
+                          ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:SmartTargetOption}}}"
                           MinWidth="100" />
       </StackPanel>
       <CheckBox Content="{x:Static resources:Strings.Persist_Use_Once}"
