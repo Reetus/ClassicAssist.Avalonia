@@ -4,16 +4,11 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class AgentsTabControl : UserControl
+    public partial class AgentsTabControl : UserControl
     {
         public AgentsTabControl()
         {
             this.InitializeComponent();
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
     }
 }

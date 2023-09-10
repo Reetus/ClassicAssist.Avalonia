@@ -17,10 +17,12 @@
 
 using Avalonia.Controls.Primitives;
 using Avalonia.Styling;
+using System;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class GroupBox : HeaderedContentControl, IStyleable
+    public class GroupBox : HeaderedContentControl
     {
+        protected override Type StyleKeyOverride => typeof(GroupBox);
     }
 }

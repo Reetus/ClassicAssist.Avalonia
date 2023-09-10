@@ -34,13 +34,13 @@ namespace ClassicAssist.Avalonia
 {
     public class AvaloniaUIInvoker : IUIInvoker
     {
-        private readonly IClipboard _clipboard;
+        private readonly Lazy<IClipboard> _clipboard;
         private readonly Dispatcher _dispatcher;
 
         public AvaloniaUIInvoker( Dispatcher dispatcher )
         {
             _dispatcher = dispatcher;
-            _clipboard = AvaloniaLocator.Current.GetService<IClipboard>();
+            _clipboard = new Lazy<IClipboard>( GetClipboard );
         }
 
         public Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
@@ -78,7 +78,7 @@ namespace ClassicAssist.Avalonia
                 {
                     Console.WriteLine( e.ToString() );
                 }
-            } );
+            } ).GetTask();
         }
 
         public Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default ) where T: class
@@ -131,14 +131,18 @@ namespace ClassicAssist.Avalonia
             return window.SelectedHue;
         }
 
+        private IClipboard GetClipboard() {
+            return Engine.MainWindow.Clipboard;
+        }
+
         public void SetClipboardText( string text )
         {
-            _clipboard.SetTextAsync( text ).ConfigureAwait( false );
+            _clipboard.Value.SetTextAsync( text ).ConfigureAwait( false );
         }
 
         public string GetClipboardText()
         {
-            return _clipboard.GetTextAsync().GetAwaiter().GetResult();
+            return _clipboard.Value.GetTextAsync().GetAwaiter().GetResult();
         }
     }
 }

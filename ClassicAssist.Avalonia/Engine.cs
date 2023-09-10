@@ -80,7 +80,7 @@ namespace Assistant
                 {
                     SEngine.Dispatcher = new AvaloniaDispatcher( Dispatcher.UIThread );
                     SEngine.UIInvoker = new AvaloniaUIInvoker( Dispatcher.UIThread );
-                    AppBuilder.Configure<App>().UsePlatformDetect().LogToDebug()
+                    AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace()
                         .StartWithClassicDesktopLifetime( null );
                 } ) { IsBackground = true };
 
@@ -90,7 +90,7 @@ namespace Assistant
             {
                 // Set up the Avalonia application without starting. This
                 // initializes the Avalonia APIs.
-                AppBuilder.Configure<App>().UsePlatformDetect().LogToDebug().UseReactiveUI().SetupWithoutStarting();
+                AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace().UseReactiveUI().SetupWithoutStarting();
 
                 // Avalonia is set up, so can create dispatcher.
                 SEngine.Dispatcher = new AvaloniaDispatcher( Dispatcher.UIThread );

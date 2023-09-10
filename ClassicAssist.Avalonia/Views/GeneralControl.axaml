@@ -6,7 +6,7 @@
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"                          
+             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
              xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.GeneralControl">
@@ -15,7 +15,7 @@
   </UserControl.DataContext>
   <Grid ColumnDefinitions="200,*">
     <Grid Grid.Column="0" RowDefinitions="*,Auto">
-      <ListBox Items="{Binding Filters}" Grid.Row="0">
+      <ListBox ItemsSource="{Binding Filters}" Grid.Row="0">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <StackPanel Orientation="Horizontal">
@@ -56,7 +56,7 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Grid Grid.Column="0">
-              <ComboBox Items="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
+              <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
                 <i:Interaction.Behaviors>
                   <misc:ComboBoxBehavior CommandBinding="{Binding ChangeProfileCommand}" CommandParameter="{Binding SelectedProfile}" OnlyUserTriggered="True" />
                 </i:Interaction.Behaviors>

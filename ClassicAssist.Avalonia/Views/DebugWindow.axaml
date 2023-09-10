@@ -27,14 +27,14 @@
             <Image Source="{StaticResource RemoveIcon}" Height="16"/>
           </Button>
           <Button Command="{Binding ViewPlayerEquipmentCommand}" Margin="0,0,5,0" ToolTip.Tip="View Player Equipment">
-            <Image Source="{StaticResource PersonIcon}" Height="16"/>
+            <Image Source="{StaticResource PersonIcon}" Height="16" ToolTip.Tip="View Player Equipment!"/>
           </Button>
           <Button Command="{Binding ExportLogCommand}" CommandParameter="{Binding Items}" Margin="0,0,5,0" ToolTip.Tip="{x:Static resources:Strings.Save}">
             <Image Source="{StaticResource ExportIcon}" Height="16"/>
           </Button>
           <TextBlock Text="{x:Static resources:Strings.Enabled_Packets_}" Margin="0,0,10,0"
                      VerticalAlignment="Center" />
-          <ComboBox Items="{Binding PacketEntries}" Width="100" BorderThickness="1">
+          <ComboBox ItemsSource="{Binding PacketEntries}" Width="100" BorderThickness="1">
             <ComboBox.ItemTemplate>
               <DataTemplate>
                 <StackPanel Orientation="Horizontal">
@@ -46,7 +46,12 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
         </WrapPanel>
-        <ListBox x:Name="ListBox" Items="{Binding Items}" Grid.Row="1" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" VirtualizationMode="Simple" Margin="0,10,0,0">
+        <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="1" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" Margin="0,10,0,0">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
           <ListBox.ItemTemplate>
             <DataTemplate>
               <controls:HexDumpControl Packet="{Binding $parent.DataContext}"/>

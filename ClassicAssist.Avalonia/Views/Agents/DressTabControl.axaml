@@ -6,7 +6,7 @@
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"             
+             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.DressTabControl">
   <UserControl.DataContext>
@@ -22,7 +22,7 @@
                   IsChecked="{Binding UseUO3DPackets}" Grid.Row="1"
                   ToolTip.Tip="{x:Static resources:Strings.Requires_Server_Support}" />
       </StackPanel>
-      <ListBox Grid.Row="1" Margin="0,5" Items="{Binding Items}" SelectedItem="{Binding SelectedItem}" SelectedIndex="0">
+      <ListBox Grid.Row="1" Margin="0,5" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" SelectedIndex="0">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <controls:EditTextBlock Text="{Binding Name}" ShowIcon="True"/>
@@ -35,7 +35,7 @@
       </Grid>
     </Grid>
     <Grid Grid.Column="1" RowDefinitions="*, Auto" Margin="5,0">
-      <ListBox Grid.Row="0" Margin="0,0,0,5" Items="{Binding SelectedItem.Items}" SelectedItem="{Binding SelectedDressItem}">
+      <ListBox Grid.Row="0" Margin="0,0,0,5" ItemsSource="{Binding SelectedItem.Items}" SelectedItem="{Binding SelectedDressItem}">
         <ListBox.ContextMenu>
           <ContextMenu>
             <MenuItem Header="{x:Static resources:Strings.Toggle_Dress_Type}" Command="{Binding ChangeDressTypeCommand}" CommandParameter="{Binding SelectedDressItem}"/>

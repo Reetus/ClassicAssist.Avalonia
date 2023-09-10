@@ -7,7 +7,7 @@ using ClassicAssist.Shared;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class AboutControl : UserControl
+    public partial class AboutControl : UserControl
     {
         private readonly TextBlock _control;
         private Timer _timer;
@@ -18,8 +18,8 @@ namespace ClassicAssist.Avalonia.Views
 
             _control = this.FindControl<TextBlock>( "CreditText" );
 
-            _control.PointerEnter += OnPointerEnter;
-            _control.PointerLeave += OnPointerLeave;
+            _control.PointerEntered += OnPointerEnter;
+            _control.PointerExited += OnPointerLeave;
         }
 
         private void OnPointerLeave( object sender, PointerEventArgs e )
@@ -46,11 +46,6 @@ namespace ClassicAssist.Avalonia.Views
             };
 
             _timer.Start();
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
     }
 }

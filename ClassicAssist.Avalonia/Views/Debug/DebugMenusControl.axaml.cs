@@ -4,16 +4,11 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Debug
 {
-    public class DebugMenusControl : UserControl
+    public partial class DebugMenusControl : UserControl
     {
         public DebugMenusControl()
         {
             this.InitializeComponent();
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
     }
 }

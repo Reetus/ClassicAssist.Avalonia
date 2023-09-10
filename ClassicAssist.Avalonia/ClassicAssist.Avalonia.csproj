@@ -15,7 +15,7 @@
   <Choose>
     <When Condition="'$(Configuration)'=='Linux'">
       <ItemGroup>
-        <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.6.1.6" />        
+        <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.8.2.5" />
       </ItemGroup>
     </When>
   </Choose>
@@ -25,13 +25,15 @@
     <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Controls.DataGrid" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Desktop" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.ReactiveUI" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Skia" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Xaml.Interactions" Version="0.10.0-preview1" />
-    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="0.10.0-preview1" />
+    <PackageReference Include="Avalonia" Version="11.0.4" />
+    <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.0.1" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.4" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.4" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.4" />
+    <PackageReference Include="Avalonia.Skia" Version="11.0.4" />
+    <PackageReference Include="Avalonia.Themes.Simple" Version="11.0.4" />
+    <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.0.2" />
+    <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.0.2" />
     <PackageReference Include="System.Resources.Extensions" Version="4.7.1" />
     <PackageReference Include="System.Collections.Immutable" Version="1.7.1.0" />
   </ItemGroup>
@@ -39,9 +41,6 @@
     <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AvaloniaEdit">
-      <HintPath>AvaloniaEdit.dll</HintPath>
-    </Reference>
     <Reference Include="cuoapi">
       <HintPath>..\ClassicAssist.Shared\cuoapi.dll</HintPath>
     </Reference>
@@ -59,10 +58,10 @@
     <Version>0.3.$(BuildDate).0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <NativeLibs Include="$(NuGetPackageRoot)avalonia.native\0.10.0-preview1\runtimes\osx\native\libAvaloniaNative.dylib;$(NuGetPackageRoot)skiasharp\1.68.2.1\runtimes\osx\native\libSkiaSharp.dylib;$(NuGetPackageRoot)\harfbuzzsharp\2.6.1.6\runtimes\osx\native\libHarfBuzzSharp.dylib" />
+    <NativeLibs Include="$(NuGetPackageRoot)avalonia.native\11.0.4\runtimes\osx\native\libAvaloniaNative.dylib;$(NuGetPackageRoot)skiasharp.nativeassets.macos\2.88.3\runtimes\osx\native\libSkiaSharp.dylib;$(NuGetPackageRoot)\harfbuzzsharp.nativeassets.macos\2.8.2.5\runtimes\osx\native\libHarfBuzzSharp.dylib" />
   </ItemGroup>
   <Target Name="CopyNativeLibs" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(TargetFramework)'=='net48' and '$(Configuration)'=='Linux'">
-    <Message Text="Copying native libraries to $(OutDir)" Importance="Normal" />
+    <Message Text="Copying native libraries from $(NuGetPackageRoot) to $(OutDir)" Importance="High" />
     <Copy SourceFiles="@(NativeLibs)" DestinationFolder="$(OutDir)" />
   </Target>
 </Project>

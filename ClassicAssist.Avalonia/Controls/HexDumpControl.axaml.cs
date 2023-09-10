@@ -13,7 +13,7 @@ using ClassicAssist.UO.Network.PacketFilter;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class HexDumpControl : UserControl
+    public partial class HexDumpControl : UserControl
     {
         public static readonly DirectProperty<HexDumpControl, PacketEntry> PacketProperty =
             AvaloniaProperty.RegisterDirect<HexDumpControl, PacketEntry>( nameof( Packet ), o => o.Packet,
@@ -47,7 +47,7 @@ namespace ClassicAssist.Avalonia.Controls
 
                 prepend += " };";
 
-                IClipboard service = (IClipboard) AvaloniaLocator.Current.GetService( typeof( IClipboard ) );
+                IClipboard service = TopLevel.GetTopLevel(this).Clipboard;
 
                 service.SetTextAsync( prepend ).ConfigureAwait( false );
             };
@@ -92,11 +92,6 @@ namespace ClassicAssist.Avalonia.Controls
 
                 return "Length: " + Packet.Length;
             }
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
     }
 }

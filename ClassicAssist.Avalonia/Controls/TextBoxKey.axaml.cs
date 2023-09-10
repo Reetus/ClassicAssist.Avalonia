@@ -10,9 +10,9 @@ using CKey = ClassicAssist.Misc.Key;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class TextBoxKey : UserControl
+    public partial class TextBoxKey : UserControl
     {
-        public static DirectProperty<TextBoxKey, ShortcutKeys> ShortcutProperty =
+        public static readonly DirectProperty<TextBoxKey, ShortcutKeys> ShortcutProperty =
             AvaloniaProperty.RegisterDirect<TextBoxKey, ShortcutKeys>( nameof( Shortcut ), o => o.Shortcut,
                 ( o, v ) => o.Shortcut = v, defaultBindingMode: BindingMode.TwoWay );
 
@@ -60,11 +60,6 @@ namespace ClassicAssist.Avalonia.Controls
             }
 
             return CKey.None;
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
         }
 
         protected override void OnKeyDown( KeyEventArgs e )

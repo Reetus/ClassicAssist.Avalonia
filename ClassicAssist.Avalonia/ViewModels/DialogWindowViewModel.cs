@@ -49,7 +49,7 @@ namespace ClassicAssist.UI.ViewModels
 
         public async Task Copy()
         {
-            await AvaloniaLocator.Current.GetService<IClipboard>().SetTextAsync(_window.Text);
+            await (_window.Window as Window).Clipboard.SetTextAsync(_window.Text);
         }
     }
 }

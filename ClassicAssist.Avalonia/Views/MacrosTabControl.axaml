@@ -21,7 +21,7 @@
   </UserControl.DataContext>
   <Grid ColumnDefinitions="155,5,*">
     <Grid Grid.Column="0" RowDefinitions="*, Auto, Auto, Auto">
-      <ListBox x:Name="ListBox" Items="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+      <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="*, Auto" Background="{Binding $parent.Background}">
