@@ -7,7 +7,7 @@ using ClassicAssist.Shared;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class AboutControl : UserControl
+    public partial class AboutControl : UserControl
     {
         private readonly TextBlock _control;
         private Timer _timer;

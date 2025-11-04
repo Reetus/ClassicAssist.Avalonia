@@ -39,7 +39,7 @@ namespace ClassicAssist.Avalonia
 
         public Task InvokeAsync( Action action )
         {
-            return _dispatcher.InvokeAsync( action );
+            return _dispatcher.InvokeAsync( action ).GetTask();
         }
     }
 }

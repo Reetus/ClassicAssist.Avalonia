@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Assistant;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.UI.ViewModels;
 using SEngine = ClassicAssist.Shared.Engine;
@@ -23,6 +25,9 @@ namespace ClassicAssist.Avalonia
             {
                 return;
             }
+            
+            SEngine.Dispatcher = new AvaloniaDispatcher( Dispatcher.UIThread );
+            SEngine.UIInvoker = new AvaloniaUIInvoker( Dispatcher.UIThread );
 
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 

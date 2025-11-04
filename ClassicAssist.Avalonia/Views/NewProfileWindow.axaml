@@ -35,14 +35,14 @@
         </Style>
       </StackPanel.Styles>
       <Button Content="{x:Static resources:Strings.OK}">
-        <i:Interaction.Behaviors>
+        <Interaction.Behaviors>
           <misc:CloseOnClickBehaviour Command="{Binding OkCommand}"/>
-        </i:Interaction.Behaviors>
+        </Interaction.Behaviors>
       </Button>
       <Button Content="{x:Static resources:Strings.Cancel}">
-        <i:Interaction.Behaviors>
+        <Interaction.Behaviors>
           <misc:CloseOnClickBehaviour />
-        </i:Interaction.Behaviors>
+        </Interaction.Behaviors>
       </Button>
     </StackPanel>
   </Grid>

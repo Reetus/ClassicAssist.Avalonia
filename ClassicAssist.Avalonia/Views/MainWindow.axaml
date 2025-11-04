@@ -13,10 +13,10 @@
         Height="400" Width="625"
         x:Class="ClassicAssist.Avalonia.Views.MainWindow"
         Title="{Binding Title}" Topmost="{Binding AlwaysOnTop}">
-  <i:Interaction.Behaviors>
+  <Interaction.Behaviors>
     <misc:WindowInitializedBehaviour/>
     <misc:WindowResizeBehaviour/>
-  </i:Interaction.Behaviors>
+  </Interaction.Behaviors>
   <Window.DataContext>
     <viewModels:MainWindowViewModel />
   </Window.DataContext>

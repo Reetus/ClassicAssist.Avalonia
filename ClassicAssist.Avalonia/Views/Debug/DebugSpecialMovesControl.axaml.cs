@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Debug
 {
-    public class DebugSpecialMovesControl : UserControl
+    public partial class DebugSpecialMovesControl : UserControl
     {
         public DebugSpecialMovesControl()
         {

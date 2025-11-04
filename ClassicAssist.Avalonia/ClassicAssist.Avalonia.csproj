@@ -1,41 +1,35 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFrameworks>net70</TargetFrameworks>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PlatformTarget>x64</PlatformTarget>
         <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
         <OutputPath>..\Output\</OutputPath>
         <Configurations>Debug;Release;Linux</Configurations>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     </PropertyGroup>
     <PropertyGroup Condition="'$(TargetFramework)'=='netcoreapp3.1'">
     </PropertyGroup>
-    <Choose>
-        <When Condition="'$(Configuration)'=='Linux'">
-            <ItemGroup>
-	            <PackageReference Include="HarfBuzzSharp.NativeAssets.Linux" Version="2.8.2.1-preview.108" />
-            </ItemGroup>
-        </When>
-    </Choose>
-    <ItemGroup>
+   <ItemGroup>
         <Folder Include="Models\" />
         <AvaloniaResource Include="Assets\**" />
         <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.ReactiveUI" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Skia" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Themes.Simple" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Xaml.Interactions" Version="11.0.0-preview4" />
-        <PackageReference Include="Avalonia.Xaml.Interactivity" Version="11.0.0-preview4" />
+        <PackageReference Include="Avalonia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+        <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Themes.Simple" Version="11.3.8" />
         <PackageReference Include="DNNE" Version="1.0.33" />
         <PackageReference Include="System.Resources.Extensions" Version="7.0.0" />
         <PackageReference Include="System.Collections.Immutable" Version="7.0.0" />
+        <PackageReference Include="Xaml.Behaviors.Interactions" Version="11.3.6.6" />
+        <PackageReference Include="Xaml.Behaviors.Interactivity" Version="11.3.6.6" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
@@ -60,11 +54,4 @@
         <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
         <Version>0.3.$(BuildDate).0</Version>
     </PropertyGroup>
-    <ItemGroup>
-        <NativeLibs Include="$(NuGetPackageRoot)avalonia.native\0.10.0-preview1\runtimes\osx\native\libAvaloniaNative.dylib;$(NuGetPackageRoot)skiasharp\1.68.2.1\runtimes\osx\native\libSkiaSharp.dylib;$(NuGetPackageRoot)\harfbuzzsharp\2.6.1.6\runtimes\osx\native\libHarfBuzzSharp.dylib" />
-    </ItemGroup>
-    <Target Name="CopyNativeLibs" AfterTargets="CopyFilesToOutputDirectory" Condition="'$(TargetFramework)'=='net48' and '$(Configuration)'=='Linux'">
-        <Message Text="Copying native libraries to $(OutDir)" Importance="Normal" />
-        <Copy SourceFiles="@(NativeLibs)" DestinationFolder="$(OutDir)" />
-    </Target>
 </Project>

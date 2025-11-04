@@ -3,7 +3,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class NewProfileWindow : Window
+    public partial class NewProfileWindow : Window
     {
         public NewProfileWindow()
         {

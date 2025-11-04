@@ -10,7 +10,7 @@
     <agents:FriendsTabViewModel />
   </UserControl.DataContext>
   <Grid ColumnDefinitions="*,*" RowDefinitions="*, Auto">
-    <ListBox Grid.Row="0" Grid.Column="0" Items="{Binding Options.Friends}" SelectedItem="{Binding SelectedItem}" />
+    <ListBox Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Options.Friends}" SelectedItem="{Binding SelectedItem}" />
     <Grid Grid.Row="1" Grid.Column="0" ColumnDefinitions="*,*">
       <Button Content="{x:Static resources:Strings.Insert}" Grid.Column="0" Margin="0,5,5,5"
               Command="{Binding AddFriendCommand}" />

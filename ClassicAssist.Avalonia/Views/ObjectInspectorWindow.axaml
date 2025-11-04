@@ -12,7 +12,7 @@
   <Window.DataContext>
     <viewModels:ObjectInspectorViewModel/>
   </Window.DataContext>
-  <DataGrid Items="{Binding Items}" IsReadOnly="True" HorizontalScrollBarVisibility="Hidden" x:Name="DataGrid">
+  <DataGrid ItemsSource="{Binding Items}" IsReadOnly="True" HorizontalScrollBarVisibility="Hidden" x:Name="DataGrid">
     <DataGrid.Columns>
       <DataGridTextColumn Header="{x:Static resources:Strings.Property}" Binding="{Binding Name}" Width="2*"/>
       <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Value}" Width="3*"/>

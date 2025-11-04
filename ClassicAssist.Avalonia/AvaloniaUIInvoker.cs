@@ -40,7 +40,7 @@ namespace ClassicAssist.Avalonia
         public AvaloniaUIInvoker( Dispatcher dispatcher )
         {
             _dispatcher = dispatcher;
-            _clipboard = AvaloniaLocator.Current.GetService<IClipboard>();
+            // _clipboard = AvaloniaLocator.Current.GetService<IClipboard>();
         }
 
         public Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
@@ -78,7 +78,7 @@ namespace ClassicAssist.Avalonia
                 {
                     Console.WriteLine( e.ToString() );
                 }
-            } );
+            } ).GetTask();
         }
 
         public Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default ) where T: class

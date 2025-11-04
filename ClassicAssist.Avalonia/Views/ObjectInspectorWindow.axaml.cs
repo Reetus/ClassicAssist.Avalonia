@@ -3,7 +3,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class ObjectInspectorWindow : Window
+    public partial class ObjectInspectorWindow : Window
     {
         public ObjectInspectorWindow()
         {

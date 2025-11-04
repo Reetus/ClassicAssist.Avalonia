@@ -20,7 +20,7 @@
         <Image Source="{DynamicResource CrosshairIcon}" />
       </Button>
     </WrapPanel>
-    <DataGrid Items="{Binding Items}" Grid.Row="1" IsReadOnly="True">
+    <DataGrid ItemsSource="{Binding Items}" Grid.Row="1" IsReadOnly="True">
       <DataGrid.Columns>
         <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Width="1*" Binding="{Binding Cliloc}"/>
         <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Width="3*" Binding="{Binding Text}"/>

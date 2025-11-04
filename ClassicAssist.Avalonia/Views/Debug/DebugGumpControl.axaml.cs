@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Debug
 {
-    public class DebugGumpControl : UserControl
+    public partial class DebugGumpControl : UserControl
     {
         public DebugGumpControl()
         {

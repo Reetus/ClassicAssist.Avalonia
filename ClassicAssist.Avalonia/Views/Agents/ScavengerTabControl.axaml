@@ -26,7 +26,7 @@
       <Button Content="{x:Static resources:Strings.Clear_All}" Command="{Binding ClearAllCommand}" />
       <Button Content="{x:Static resources:Strings.Set_Container}" Command="{Binding SetContainerCommand}" />
     </StackPanel>
-    <DataGrid Grid.Column="1" Items="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+    <DataGrid Grid.Column="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="✓">
           <DataGridTemplateColumn.CellTemplate>

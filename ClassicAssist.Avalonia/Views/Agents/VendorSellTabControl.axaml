@@ -11,7 +11,7 @@
     <agents:VendorSellTabViewModel />
   </UserControl.DataContext>
   <Grid RowDefinitions="*, Auto">
-    <DataGrid Grid.Row="0" Items="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
+    <DataGrid Grid.Row="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="✓">
           <DataGridTemplateColumn.CellTemplate>

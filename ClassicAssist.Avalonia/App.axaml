@@ -14,8 +14,8 @@
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
-    <SimpleTheme Mode="Dark"/>
-    <StyleInclude Source="avares://AvaloniaEdit/AvaloniaEdit.xaml" />
+    <SimpleTheme/>
+    <StyleInclude Source="avares://AvaloniaEdit/Themes/Simple/AvaloniaEdit.xaml" />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Simple.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/GroupBox.Theme.xaml"/>
     <Style Selector="Button">

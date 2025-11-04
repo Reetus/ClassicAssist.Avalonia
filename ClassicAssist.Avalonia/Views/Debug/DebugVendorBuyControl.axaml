@@ -14,10 +14,10 @@
     <DockPanel>
         <CheckBox IsChecked="{Binding IsEnabled}" Content="{x:Static resources:Strings.Enabled}" DockPanel.Dock="Top"
                   Margin="0,0,0,10" />
-      <ListBox Items="{Binding Messages}" AutoScrollToSelectedItem="True">
-        <i:Interaction.Behaviors>
+      <ListBox ItemsSource="{Binding Messages}" AutoScrollToSelectedItem="True">
+        <Interaction.Behaviors>
           <misc:ListBoxAutoScrollBehaviour/>
-        </i:Interaction.Behaviors>
+        </Interaction.Behaviors>
       </ListBox>
     </DockPanel>  
 </UserControl>

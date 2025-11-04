@@ -10,7 +10,7 @@ using CKey = ClassicAssist.Misc.Key;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class TextBoxKey : UserControl
+    public partial class TextBoxKey : UserControl
     {
         public static DirectProperty<TextBoxKey, ShortcutKeys> ShortcutProperty =
             AvaloniaProperty.RegisterDirect<TextBoxKey, ShortcutKeys>( nameof( Shortcut ), o => o.Shortcut,

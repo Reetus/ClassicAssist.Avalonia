@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Agents
 {
-    public class OrganizerTabControl : UserControl
+    public partial class OrganizerTabControl : UserControl
     {
         public OrganizerTabControl()
         {

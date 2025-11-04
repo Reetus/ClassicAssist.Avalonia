@@ -12,7 +12,7 @@
     <agents:CountersTabViewModel/>
   </UserControl.DataContext>
   <Grid RowDefinitions="*, Auto, Auto">
-    <DataGrid Items="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" x:Name="DataGrid">
+    <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}" x:Name="DataGrid">
       <DataGrid.Styles>
         <Style Selector="controls|EditTextBlock">
           <Setter Property="VerticalAlignment" Value="Center"/>

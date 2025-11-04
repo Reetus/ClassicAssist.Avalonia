@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Agents
 {
-    public class ScavengerTabControl : UserControl
+    public partial class ScavengerTabControl : UserControl
     {
         public ScavengerTabControl()
         {

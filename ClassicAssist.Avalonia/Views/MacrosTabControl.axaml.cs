@@ -12,7 +12,7 @@ using AvaloniaEdit.Highlighting.Xshd;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class MacrosTabControl : UserControl
+    public partial class MacrosTabControl : UserControl
     {
         public MacrosTabControl()
         {
@@ -23,8 +23,7 @@ namespace ClassicAssist.Avalonia.Views
             textEditor.ShowLineNumbers = true;
             textEditor.Options.ConvertTabsToSpaces = true;
 
-            Stream stream = AvaloniaLocator.Current.GetService<IAssetLoader>()
-                .Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
+            Stream stream = AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
 
             textEditor.SyntaxHighlighting = HighlightingLoader.Load(
                 new XmlTextReader( stream ), HighlightingManager.Instance );

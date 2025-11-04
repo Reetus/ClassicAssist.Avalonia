@@ -7,14 +7,15 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Controls
 {
-    public class EditTextBlock : UserControl
+    public partial class EditTextBlock : UserControl
     {
         public static DirectProperty<EditTextBlock, string> TextProperty =
             AvaloniaProperty.RegisterDirect<EditTextBlock, string>( nameof( Text ), o => o.Text, ( o, v ) => o.Text = v,
                 defaultBindingMode: BindingMode.TwoWay );
 
-        public static StyledProperty<bool> ShowIconProperty = new StyledProperty<bool>( nameof( ShowIcon ),
-            typeof( EditTextBlock ), new StyledPropertyMetadata<bool>( true, BindingMode.TwoWay ) );
+        public static DirectProperty<EditTextBlock, bool> ShowIconProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, bool>( nameof( ShowIcon ), o => o.ShowIcon,
+                ( o, v ) => o.ShowIcon = v, defaultBindingMode: BindingMode.TwoWay );
 
         private readonly Button _pencilButton;
         private bool _showIcon;

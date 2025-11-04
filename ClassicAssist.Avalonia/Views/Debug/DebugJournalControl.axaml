@@ -18,10 +18,10 @@
                ToolTip.Tip="{x:Static resources:Strings.Clear_All}" />
       </Button>
     </WrapPanel>
-    <ListBox Items="{Binding Items}" SelectedItem="{Binding SelectedItem}">
-      <i:Interaction.Behaviors>
+    <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+      <Interaction.Behaviors>
         <misc:ListBoxAutoScrollBehaviour/>
-      </i:Interaction.Behaviors>
+      </Interaction.Behaviors>
     </ListBox>
   </DockPanel>
 </UserControl>

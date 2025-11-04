@@ -21,7 +21,7 @@
   </UserControl.DataContext>
   <Grid ColumnDefinitions="155,5,*">
     <Grid Grid.Column="0" RowDefinitions="*, Auto, Auto, Auto">
-      <ListBox x:Name="ListBox" Items="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+      <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="*, Auto" Background="{Binding $parent.Background}">
@@ -29,14 +29,14 @@
               <TextBlock x:Name="Hotkey" Text="{Binding Hotkey}" Margin="2,0,0,0"
                          Grid.Column="1" FontSize="7" Foreground="SpringGreen" TextAlignment="Right"
                          VerticalAlignment="Center" HorizontalAlignment="Right">
-                <i:Interaction.Behaviors>
-                  <ia:DataTriggerBehavior Binding="{Binding #Hotkey.Text}" ComparisonCondition="Equal" Value="None">
-                    <ia:ChangePropertyAction TargetObject="{Binding #Hotkey}" PropertyName="IsVisible" Value="False"/>
-                  </ia:DataTriggerBehavior>
-                  <ia:DataTriggerBehavior Binding="{Binding #Hotkey.Text}" ComparisonCondition="NotEqual" Value="None">
-                    <ia:ChangePropertyAction TargetObject="{Binding #Hotkey}" PropertyName="IsVisible" Value="True"/>
-                  </ia:DataTriggerBehavior>
-                </i:Interaction.Behaviors>
+                <Interaction.Behaviors>
+                  <DataTriggerBehavior Binding="{Binding #Hotkey.Text}" ComparisonCondition="Equal" Value="None">
+                    <ChangePropertyAction TargetObject="{Binding #Hotkey}" PropertyName="IsVisible" Value="False"/>
+                  </DataTriggerBehavior>
+                  <DataTriggerBehavior Binding="{Binding #Hotkey.Text}" ComparisonCondition="NotEqual" Value="None">
+                    <ChangePropertyAction TargetObject="{Binding #Hotkey}" PropertyName="IsVisible" Value="True"/>
+                  </DataTriggerBehavior>
+                </Interaction.Behaviors>
               </TextBlock>
             </Grid>
           </DataTemplate>
@@ -80,9 +80,9 @@
     <Grid Grid.Column="2" RowDefinitions="*, Auto, Auto">
       <Border BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderMidBrush}" Padding="2" Grid.Row="0">
         <AvalonEdit:TextEditor x:Name="Editor" FontFamily="avares://ClassicAssist.Avalonia/Assets/Fonts/*.ttf#Ubuntu Mono">
-          <i:Interaction.Behaviors>
+          <Interaction.Behaviors>
             <misc:AvalonEditBehaviour Text="{Binding SelectedItem.Macro}" />
-          </i:Interaction.Behaviors>
+          </Interaction.Behaviors>
         </AvalonEdit:TextEditor>
       </Border>
       <WrapPanel Grid.Row="1">

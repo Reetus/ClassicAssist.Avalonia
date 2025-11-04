@@ -34,7 +34,7 @@
           </Button>
           <TextBlock Text="{x:Static resources:Strings.Enabled_Packets_}" Margin="0,0,10,0"
                      VerticalAlignment="Center" />
-          <ComboBox Items="{Binding PacketEntries}" Width="100" BorderThickness="1">
+          <ComboBox ItemsSource="{Binding PacketEntries}" Width="100" BorderThickness="1">
             <ComboBox.ItemTemplate>
               <DataTemplate>
                 <StackPanel Orientation="Horizontal">
@@ -46,15 +46,15 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
         </WrapPanel>
-        <ListBox x:Name="ListBox" Items="{Binding Items}" Grid.Row="1" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" VirtualizationMode="Simple" Margin="0,10,0,0">
+        <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="1" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" Margin="0,10,0,0">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <controls:HexDumpControl Packet="{Binding $parent.DataContext}"/>
             </DataTemplate>
           </ListBox.ItemTemplate>
-          <i:Interaction.Behaviors>
+          <Interaction.Behaviors>
             <misc:ListBoxAutoScrollBehaviour/>
-          </i:Interaction.Behaviors>
+          </Interaction.Behaviors>
         </ListBox>
         <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10,0,0">
           <CheckBox Content="{x:Static resources:Strings.Capture_Packets}" VerticalAlignment="Center"

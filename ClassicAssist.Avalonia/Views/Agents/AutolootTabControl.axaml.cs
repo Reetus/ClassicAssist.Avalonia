@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views.Agents
 {
-    public class AutolootTabControl : UserControl
+    public partial class AutolootTabControl : UserControl
     {
         public AutolootTabControl()
         {

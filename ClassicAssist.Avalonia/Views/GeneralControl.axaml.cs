@@ -4,7 +4,7 @@ using Avalonia.Markup.Xaml;
 
 namespace ClassicAssist.Avalonia.Views
 {
-    public class GeneralControl : UserControl
+    public partial class GeneralControl : UserControl
     {
         public GeneralControl()
         {

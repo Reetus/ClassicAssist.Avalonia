@@ -10,8 +10,8 @@
     <viewModels:DebugSpecialMovesViewModel/>
   </UserControl.DataContext>
   <Grid ColumnDefinitions="Auto, *">
-    <ListBox Grid.Column="0" MinWidth="120" Margin="0,0,5,0" Items="{Binding Items}"
+    <ListBox Grid.Column="0" MinWidth="120" Margin="0,0,5,0" ItemsSource="{Binding Items}"
              SelectedItem="{Binding SelectedItem}" />
-    <ListBox Grid.Column="2" Items="{Binding Messages}" />
+    <ListBox Grid.Column="2" ItemsSource="{Binding Messages}" />
   </Grid>
 </UserControl>
