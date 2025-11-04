@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net70</TargetFramework>
+        <TargetFramework>net90</TargetFramework>
         <RootNamespace>ClassicAssist.Shared</RootNamespace>
         <UseWPF>false</UseWPF>
         <Configurations>Debug;Release;Linux</Configurations>
@@ -80,7 +80,7 @@
     <ItemGroup>
         <PackageReference Include="IronPython" Version="2.7.12" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
         <PackageReference Include="Octokit" Version="0.51.0" />
         <PackageReference Include="OptimizedPriorityQueue" Version="5.1.0" />
         <PackageReference Include="reactiveui" Version="18.4.1" />
@@ -165,6 +165,10 @@
 
     <ItemGroup>
         <Folder Include="Properties\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
     </ItemGroup>
 
     <PropertyGroup>

@@ -1,5 +1,9 @@
-﻿using Avalonia;
+﻿using System.IO.Pipes;
+using Assistant;
+using Avalonia;
 using Avalonia.ReactiveUI;
+using ClassicAssist.Plugin.Shared;
+using StreamJsonRpc;
 
 namespace ClassicAssist.Avalonia
 {
@@ -10,6 +14,27 @@ namespace ClassicAssist.Avalonia
         // yet and stuff might break.
         public static void Main( string[] args )
         {
+            // Encoding.RegisterProvider( CodePagesEncodingProvider.Instance );
+            
+            if ( args == null || args.Length == 0 )
+            {
+                return;
+            }
+
+            string pipeName = args[0];
+            
+            // NativeMethods.SetCurrentProcessExplicitAppUserModelID( pipeName );
+
+            NamedPipeClientStream clientStream = new NamedPipeClientStream( ".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous );
+            clientStream.Connect();
+
+            // Attach client RPC
+            var pluginMethods = new ClassicAssist.Shared.Engine.PluginMethods();
+            JsonRpc rpc = JsonRpc.Attach( clientStream, pluginMethods );
+            IHostMethods host = rpc.Attach<IHostMethods>();
+            
+            Shared.Engine.InstallRPC( rpc, host, pluginMethods );
+            
             BuildAvaloniaApp().StartWithClassicDesktopLifetime( args );
         }
 

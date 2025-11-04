@@ -20,6 +20,7 @@
 using ClassicAssist.Shared;
 using ClassicAssist.Misc;
 using ClassicAssist.UO.Gumps;
+using NativeMethods = ClassicAssist.Misc.NativeMethods;
 
 namespace ClassicAssist.UI.ViewModels
 {

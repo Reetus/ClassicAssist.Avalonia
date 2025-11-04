@@ -19,9 +19,11 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.ReactiveUI;
 using Avalonia.Threading;
@@ -30,10 +32,13 @@ using ClassicAssist.Avalonia.Misc;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
+using ClassicAssist.UO.Data;
 using CUO_API;
 using Newtonsoft.Json.Linq;
+using StreamJsonRpc;
 using SEngine = ClassicAssist.Shared.Engine;
 using PluginHeader = ClassicAssist.Shared.Engine.PluginHeader;
 
@@ -47,7 +52,7 @@ namespace Assistant
         public static MainWindow MainWindow { get; internal set; }
 
         public static string StartupPath { get; set; }
-
+        
         [UnmanagedCallersOnly]
         public static void Install( IntPtr ptr )
         {
@@ -111,6 +116,14 @@ namespace Assistant
 
             Options.LoadEvent += OnOptionsLoad;
             Options.SaveEvent += OnOptionsSave;
+        }
+
+        public static void Initialize()
+        {
+            Options.LoadEvent += OnOptionsLoad;
+            Options.SaveEvent += OnOptionsSave;
+            
+            SEngine.Initialize();
         }
 
         private static void OnOptionsSave( JObject obj )

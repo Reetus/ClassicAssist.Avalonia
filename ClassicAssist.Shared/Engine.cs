@@ -18,6 +18,7 @@ using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Data.Targeting;
 using ClassicAssist.Misc;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
@@ -25,6 +26,7 @@ using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using CUO_API;
 using Sentry;
+using StreamJsonRpc;
 
 [assembly: InternalsVisibleTo( "ClassicAssist.Tests" )]
 
@@ -51,11 +53,11 @@ namespace ClassicAssist.Shared
 
         private static OnConnected _onConnected;
         private static OnDisconnected _onDisconnected;
-        private static OnPacketSendRecv_new_intptr _onReceive;
-        private static OnPacketSendRecv_new_intptr _onSend;
+        private static OnPacketSendRecv _onReceive;
+        private static OnPacketSendRecv _onSend;
         private static OnGetUOFilePath _getUOFilePath;
-        private static OnPacketSendRecv_new_intptr _sendToClient;
-        private static OnPacketSendRecv_new_intptr _sendToServer;
+        private static OnPacketSendRecv _sendToClient;
+        private static OnPacketSendRecv _sendToServer;
         private static OnGetPacketLength _getPacketLength;
         private static OnUpdatePlayerPosition _onPlayerPositionChanged;
         private static OnClientClose _onClientClosing;
@@ -128,6 +130,7 @@ namespace ClassicAssist.Shared
         public static event dConnected ConnectedEvent;
         public static event dDisconnected DisconnectedEvent;
         public static event dPlayerInitialized PlayerInitializedEvent;
+        public static IHostMethods Host { get; set; }
 
         public static unsafe void Install( PluginHeader* plugin, IMessageBoxProvider provider )
         {
@@ -139,12 +142,40 @@ namespace ClassicAssist.Shared
             InitializePlugin( plugin );
         }
 
+        public static void InstallRPC( JsonRpc rpc, IHostMethods hostMethods, PluginMethods pluginMethods )
+        {
+            Host = hostMethods;
+            
+            Initialize();
+        
+            ClientPath = Host.GetClientPath().Result;
+            ClientVersion = Host.GetClientVersion().Result;
+            
+            Art.Initialize( ClientPath );
+            Hues.Initialize( ClientPath );
+            Cliloc.Initialize( ClientPath );
+            Skills.Initialize( ClientPath );
+            Speech.Initialize( ClientPath );
+            TileData.Initialize( ClientPath );
+            Statics.Initialize( ClientPath );
+            MapInfo.Initialize( ClientPath );
+            
+            InitializeExtensions();
+            
+            _getPacketLength = id => Host.GetPacketLength( id ).Result;
+            _getUOFilePath = () => Host.GetUOFilePath().Result;
+            _sendToClient = SendPacketToClientPlugin;
+            _sendToServer = SendPacketToServerPlugin;
+            _requestMove = ( dir, run ) => Host.RequestMove(dir, run).Result;
+            // _setTitle = title => Host.SetTitle(title);            
+        }
+        
         internal static unsafe void InitializePlugin( PluginHeader* plugin )
         {
             _onConnected = OnConnected;
             _onDisconnected = OnDisconnected;
-            _onReceive = OnPacketReceive;
-            _onSend = OnPacketSend;
+            // _onReceive = OnPacketReceive;
+            // _onSend = OnPacketSend;
             _onPlayerPositionChanged = OnPlayerPositionChanged;
             _onClientClosing = OnClientClosing;
             _onHotkeyPressed = OnHotkeyPressed;
@@ -166,8 +197,8 @@ namespace ClassicAssist.Shared
 
             _getPacketLength = Marshal.GetDelegateForFunctionPointer<OnGetPacketLength>( plugin->GetPacketLength );
             _getUOFilePath = Marshal.GetDelegateForFunctionPointer<OnGetUOFilePath>( plugin->GetUOFilePath );
-            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new_intptr>( plugin->Recv_new );
-            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new_intptr>( plugin->Send_new );
+            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Recv );
+            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Send );
             _requestMove = Marshal.GetDelegateForFunctionPointer<RequestMove>( plugin->RequestMove );
 
             ClientPath = _getUOFilePath();
@@ -194,7 +225,7 @@ namespace ClassicAssist.Shared
             InitializeExtensions();
         }
 
-        private static void InitializeExtensions()
+        public static void InitializeExtensions()
         {
             IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes()
                 .Where( t => typeof( IExtension ).IsAssignableFrom( t ) && t.IsClass );
@@ -213,7 +244,7 @@ namespace ClassicAssist.Shared
             }
         }
 
-        private static void OnMouse( int button, int wheel )
+        public static void OnMouse( int button, int wheel )
         {
             MouseOptions mouse = MouseOptions.None;
 
@@ -242,7 +273,7 @@ namespace ClassicAssist.Shared
             HotkeyManager.GetInstance().OnMouseAction( mouse );
         }
 
-        private static bool OnHotkeyPressed( int key, int mod, bool pressed )
+        public static bool OnHotkeyPressed( int key, int mod, bool pressed )
         {
             if ( !IsClientFocused )
             {
@@ -256,15 +287,20 @@ namespace ClassicAssist.Shared
             return !pass;
         }
 
-        private static void OnClientClosing()
+        public static void OnClientClosing()
         {
             Options.Save( Options.CurrentOptions );
             AssistantOptions.Save();
             SentrySdk.Close();
             Shutdown?.Invoke();
+            
+            if ( Host != null )
+            {
+                Environment.Exit( 0 );
+            }            
         }
 
-        private static void OnPlayerPositionChanged( int x, int y, int z )
+        public static void OnPlayerPositionChanged( int x, int y, int z )
         {
             if (Player != null)
             {
@@ -319,7 +355,7 @@ namespace ClassicAssist.Shared
             return mobile;
         }
 
-        private static void Initialize()
+        public static void Initialize()
         {
             StartupPath = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location );
 
@@ -548,10 +584,7 @@ namespace ClassicAssist.Shared
 
                 (byte[] data, int dataLength) = Utility.CopyBuffer( packet, length );
 
-                IntPtr unmanagedPointer = Marshal.AllocHGlobal( dataLength );
-                Marshal.Copy( data, 0, unmanagedPointer, dataLength );
-
-                _sendToServer?.Invoke( unmanagedPointer, ref dataLength );
+                _sendToServer?.Invoke( ref data, ref dataLength );
 
                 _nextPacketSendTime = DateTime.Now + PACKET_SEND_DELAY;
             }
@@ -573,10 +606,7 @@ namespace ClassicAssist.Shared
 
                     InternalPacketReceivedEvent?.Invoke( packet, length );
 
-                    IntPtr unmanagedPointer = Marshal.AllocHGlobal( length );
-                    Marshal.Copy( packet, 0, unmanagedPointer, length );
-
-                    _sendToClient?.Invoke( unmanagedPointer, ref length );
+                    _sendToClient?.Invoke( ref packet, ref length );
 
                     _nextPacketRecvTime = DateTime.Now + PACKET_RECV_DELAY;
                 }
@@ -681,11 +711,8 @@ namespace ClassicAssist.Shared
 
         #region ClassicUO Events
 
-        private static bool OnPacketSend( IntPtr ptr, ref int length )
+        public static bool OnPacketSend( byte[] data, int length )
         {
-            byte[] data = new byte[length];
-            Marshal.Copy( ptr, data, 0, length );
-
             bool filter = false;
 
             if (CommandsManager.IsSpeechPacket( data[0] ))
@@ -740,11 +767,8 @@ namespace ClassicAssist.Shared
 
         public static ThreadQueue<Packet> OutgoingQueue { get; set; }
 
-        private static bool OnPacketReceive( IntPtr ptr, ref int length )
+        public static bool OnPacketReceive( byte[] data, int length )
         {
-            byte[] data = new byte[length];
-            Marshal.Copy( ptr, data, 0, length );
-            
             if (_incomingPacketFilter.MatchFilterAll( data, out PacketFilterInfo[] pfis ) > 0)
             {
                 foreach (PacketFilterInfo pfi in pfis)
@@ -781,14 +805,14 @@ namespace ClassicAssist.Shared
             _sequenceList[sequence] = (int)direction;
         }
 
-        private static void OnConnected()
+        public static void OnConnected()
         {
             Connected = true;
 
             ConnectedEvent?.Invoke();
         }
 
-        private static void OnDisconnected()
+        public static void OnDisconnected()
         {
             Connected = false;
 
@@ -808,7 +832,88 @@ namespace ClassicAssist.Shared
         {
             IsClientFocused = false;
         }
+        
+        private static bool SendPacketToServerPlugin( ref byte[] data, ref int length )
+        {
+            return Host.SendPacketToServer( data, length ).Result;
+        }
+
+        private static bool SendPacketToClientPlugin( ref byte[] data, ref int length )
+        {
+            return Host.SendPacketToClient( data, length ).Result;
+        }        
+        
 
         #endregion
+        
+        public class PluginMethods : IPluginMethods
+        {
+            public void OnConnected()
+            {
+                Engine.OnConnected();
+            }
+
+            public void OnDisconnected()
+            {
+                Engine.OnDisconnected();
+            }
+
+            public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length )
+            {
+                byte[] original = new byte[length];
+                int originalLength = length;
+                Array.Copy( data, original, length );
+                
+                bool result = Engine.OnPacketReceive( data, length );
+                
+                bool modified = length != originalLength || !original.SequenceEqual( data );
+
+                return Task.FromResult( ( result, modified ? data : Array.Empty<byte>(), modified ? length : 0 ) );
+            }
+
+            public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length )
+            {
+                byte[] original = new byte[length];
+                int originalLength = length;
+                Array.Copy( data, original, length );
+
+                bool result = Engine.OnPacketSend( data, length );
+
+                bool modified = length != originalLength || !original.SequenceEqual( data );
+
+                return Task.FromResult( ( result, modified ? data : Array.Empty<byte>(), modified ? length : 0 ) );
+            }
+
+            public void OnClientClosing()
+            {
+                Engine.OnClientClosing();
+            }
+
+            public Task<bool> OnHotkeyPressed( int key, int mod, bool pressed )
+            {
+                return Task.FromResult( Engine.OnHotkeyPressed( key, mod, pressed ) );
+            }
+
+            public void OnMouse( int button, int wheel )
+            {
+                OnMouse( button, wheel );
+            }
+
+            public void OnTick()
+            {
+                // Engine.OnTick();
+            }
+
+            public void OnFocusChanged( bool focus )
+            {
+                // Engine.OnFocusChanged( focus );
+            }
+
+            public void OnPlayerPositionChanged( int x, int y, int z )
+            {
+                Engine.OnPlayerPositionChanged( x, y, z );
+            }
+        }
+
     }
 }

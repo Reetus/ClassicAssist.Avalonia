@@ -24,6 +24,7 @@ using ClassicAssist.Helpers;
 using ClassicAssist.Misc;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects.Gumps;
+using NativeMethods = ClassicAssist.Misc.NativeMethods;
 
 namespace ClassicAssist.UO.Gumps
 {
