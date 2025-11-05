@@ -38,7 +38,7 @@
       <ListBox Grid.Row="0" Margin="0,0,0,5" ItemsSource="{Binding SelectedItem.Items}" SelectedItem="{Binding SelectedDressItem}">
         <ListBox.ContextMenu>
           <ContextMenu>
-            <MenuItem Header="{x:Static resources:Strings.Toggle_Dress_Type}" Command="{Binding ChangeDressTypeCommand}" CommandParameter="{Binding SelectedDressItem}"/>
+            <MenuItem Header="{x:Static resources:Strings.Dress_Type}" Command="{Binding ChangeDressTypeCommand}" CommandParameter="{Binding SelectedDressItem}"/>
           </ContextMenu>
         </ListBox.ContextMenu>
         <ListBox.ItemTemplate>

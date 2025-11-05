@@ -37,15 +37,11 @@ namespace ClassicAssist.Avalonia
             };
 
             //TODO
-            Assistant.Engine.MainWindow = (MainWindow)desktop.MainWindow;
+            Engine.MainWindow = (MainWindow)desktop.MainWindow;
 
-            SEngine.Shutdown += async () =>
+            SEngine.Shutdown += () =>
             {
                 desktop.Shutdown( 0 );
-
-                await Task.Delay( 2500 );
-                
-                Environment.Exit( 0 );
             };
         }
     }

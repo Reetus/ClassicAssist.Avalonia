@@ -271,14 +271,13 @@ namespace ClassicAssist.UI.ViewModels
 
         internal static DateTime GetBuildDateTime( Assembly assembly )
         {
-            return default;
-            // System.Version.TryParse( FileVersionInfo.GetVersionInfo( assembly.Location ).ProductVersion,
-            //     out Version version );
-            //
-            // DateTime buildDateTime =
-            //     new DateTime( 2020, 7, 3 ).Add( new TimeSpan( TimeSpan.TicksPerDay * version.Build ) );
-            //
-            // return buildDateTime;
+            System.Version.TryParse( FileVersionInfo.GetVersionInfo( assembly.Location ).FileVersion,
+                out Version version );
+            
+            DateTime buildDateTime =
+                new DateTime( 2020, 7, 3 ).Add( new TimeSpan( TimeSpan.TicksPerDay * version.Build ) );
+            
+            return buildDateTime;
         }
     }
 }

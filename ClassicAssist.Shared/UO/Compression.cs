@@ -5,16 +5,32 @@ namespace ClassicAssist.UO
 {
     public static class Compression
     {
+#if LINUX
+        [DllImport( "libz", EntryPoint = "uncompress" )]
+#else
         [DllImport( "zlib32.dll", EntryPoint = "uncompress" )]
+#endif
         private static extern int Uncompress32( byte[] dest, ref int destLen, byte[] source, int sourceLen );
 
+#if LINUX
+        [DllImport( "libz", EntryPoint = "uncompress" )]
+#else
         [DllImport( "zlib64.dll", EntryPoint = "uncompress" )]
+#endif
         private static extern int Uncompress64( byte[] dest, ref int destLen, byte[] source, int sourceLen );
 
+#if LINUX
+        [DllImport( "libz", EntryPoint = "uncompress" )]
+#else
         [DllImport( "zlib32.dll", EntryPoint = "compress" )]
+#endif
         private static extern int Compress32( byte[] dest, ref int destLen, byte[] source, int sourceLen );
 
+#if LINUX
+        [DllImport( "libz", EntryPoint = "uncompress" )]
+#else
         [DllImport( "zlib64.dll", EntryPoint = "compress" )]
+#endif
         private static extern int Compress64( byte[] dest, ref int destLen, byte[] source, int sourceLen );
 
         public static bool Uncompress( ref byte[] destBuffer, ref int destLength, byte[] sourceBuffer, int sourceLen )

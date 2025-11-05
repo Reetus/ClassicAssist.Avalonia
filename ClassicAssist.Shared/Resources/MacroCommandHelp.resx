@@ -319,7 +319,7 @@ MoveType(0x170f, "backpack", "bank", -1, -1, 0, 50, 10)</value>
     <value>Executes the named Organizer agent.</value>
   </data>
   <data name="ORGANIZER_COMMAND_INSERTTEXT" xml:space="preserve">
-    <value>Organize("Organizer-1")</value>
+    <value>Organizer("Organizer-1")</value>
   </data>
   <data name="ORGANIZING_COMMAND_DESCRIPTION" xml:space="preserve">
     <value>Returns true if currently running an organizer agent, or false if not.</value>
@@ -1006,7 +1006,7 @@ MoveType(0x170f, "backpack", "bank", -1, -1, 0, 50, 10)</value>
     <value>SetSkill("hiding", "locked")</value>
   </data>
   <data name="SKILL_COMMAND_DESCRIPTION" xml:space="preserve">
-    <value>Returns the base value of the given skill name.</value>
+    <value>Returns the value of the given skill name.</value>
   </data>
   <data name="SKILL_COMMAND_INSERTTEXT" xml:space="preserve">
     <value>if Skill("hiding") &lt; 100:</value>
@@ -1166,22 +1166,22 @@ if FindWand("fireball", "backpack", 5):
   </data>
   <data name="FINDTYPE_COMMAND_EXAMPLE" xml:space="preserve">
     <value># Look for a food item from a list and eat 1 if found.
-if not ListExists("food"): 
- CreateList("food") 
- PushList("food", 0x9b7) #bird 
- PushList("food", 0x9d3) #ham 
- PushList("food", 0x97d) #cheese 
- PushList("food", 0x9d0) #apple 
- PushList("food", 0x9eb) #muffin 
- PushList("food", 0x97b) #fishsteak 
- PushList("food", 0x9c0) #sausage 
- PushList("food", 0x9f2) #ribs 
- PushList("food", 0x9d1) #grapes 
- PushList("food", 0x9d2) #peach 
+if not ListExists("food"):
+ CreateList("food")
+ PushList("food", 0x9b7) #bird
+ PushList("food", 0x9d3) #ham
+ PushList("food", 0x97d) #cheese
+ PushList("food", 0x9d0) #apple
+ PushList("food", 0x9eb) #muffin
+ PushList("food", 0x97b) #fishsteak
+ PushList("food", 0x9c0) #sausage
+ PushList("food", 0x9f2) #ribs
+ PushList("food", 0x9d1) #grapes
+ PushList("food", 0x9d2) #peach
 
-for i in GetList("food"): 
- if FindType(i, -1, "backpack"): 
-  UseObject("found") 
+for i in GetList("food"):
+ if FindType(i, -1, "backpack"):
+  UseObject("found")
   break</value>
   </data>
   <data name="REPLAY_COMMAND_DESCRIPTION" xml:space="preserve">
@@ -1457,6 +1457,495 @@ Pathfind(1438, 1630, 20)
 
 #Pathfind to entity
 SetEnemy(0x3c9)
-Pathfind('enemy')</value>
+Pathfind('enemy')
+
+# Cancel pathfind in progress
+Pathfind(-1)</value>
+  </data>
+  <data name="SETORGANIZERCONTAINERS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Set the source and destination for the specified Organizer name</value>
+  </data>
+  <data name="SETORGANIZERCONTAINERS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetOrganizerContainers("Organizer-1", "backpack", "bank")</value>
+  </data>
+  <data name="ACTIVEABILITY_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if either the primary or secondary ability is set</value>
+  </data>
+  <data name="ACTIVEABILITY_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if ActiveAbility():</value>
+  </data>
+  <data name="ACTIVEABILITY_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>if not ActiveAbility():
+ SetAbility("primary", "on")</value>
+  </data>
+  <data name="MESSAGEPROMPT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Displays an ingame gump prompting for a message</value>
+  </data>
+  <data name="MESSAGEPROMPT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>res, msg = MessagePrompt("Message", "Initial Text")</value>
+  </data>
+  <data name="MESSAGEPROMPT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>res, name = MessagePrompt("Enter Name?", "Whiskers")
+
+if res:
+ Rename(0xc1b, name)</value>
+  </data>
+  <data name="GETTEXT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Sends an internal prompt request and returns the text entered</value>
+  </data>
+  <data name="GETTEXT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>res, msg = GetText("Enter message...", 30000)</value>
+  </data>
+  <data name="GETTEXT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>res, name = GetText("Name?", 10000)
+
+if res:
+ Rename(0xc1b, name)</value>
+  </data>
+  <data name="DIRECTION_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns the Direction the given alias/serial is facing</value>
+  </data>
+  <data name="DIRECTION_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if Direction('enemy') == 'West':</value>
+  </data>
+  <data name="POPLIST_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Remove elements from a list, returns the number of elements removed</value>
+  </data>
+  <data name="POPLIST_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>PopList("list")</value>
+  </data>
+  <data name="POPLIST_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>CreateList("hippies")
+PushList("hippies", 1)
+PushList("hippies", 2)
+PushList("hippies", 3)
+
+PopList("hippies", "front") # Removes 1
+PopList("hippies", "back") # Removes 3
+PopList("hippies", "2") # Removes any 2's that exist in the list
+
+
+for x in GetList("hippies"):
+ print x # Never reached because list is empty
+</value>
+  </data>
+  <data name="INTERRUPTSPELL_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Attempts to interrupt spell by lifting an item briefly.</value>
+  </data>
+  <data name="INTERRUPTSPELL_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>InterruptSpell()</value>
+  </data>
+  <data name="SNAPSHOT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Take a screenshot of the window</value>
+  </data>
+  <data name="SNAPSHOT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Snapshot()</value>
+  </data>
+  <data name="SNAPSHOT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value># Just the game client area, no delay, default filename
+Snapshot()
+
+# Fullscreen snapshot, 3 second delay, default filename
+Snapshot(3000, True)
+
+# Client area snapshot, no delay, custom filename
+Snapshot(0, False, "screenshot.png")</value>
+  </data>
+  <data name="WAITFORCONTEXT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value># select by index number
+WaitForContext('self', 2, 5000)
+# select by entry name
+WaitForContext('self', "Open Item Insurance Menu", 5000)</value>
+  </data>
+  <data name="SELECTIONPROMPT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Produces an in-game gump to choose from a list of options
+
+Returns a tuple with a boolean signifying whether the OK button was pressed, and the index of the entry selected</value>
+  </data>
+  <data name="SELECTIONPROMPT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SelectionPrompt(['Option 1', 'Option 2'])</value>
+  </data>
+  <data name="SELECTIONPROMPT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>res, index = SelectionPrompt(['Sex', 'Drugs', 'Rock and Roll'])
+
+if res:
+ print 'Option {} was selected'.format(index)
+else:
+ print 'Cancel was pressed'</value>
+  </data>
+  <data name="SETVENDORBUYAUTOBUY_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Enables or disables autobuying of the specified vendor buy list name...</value>
+  </data>
+  <data name="SETVENDORBUYAUTOBUY_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetVendorBuyAutoBuy("regs", "on")</value>
+  </data>
+  <data name="SETVENDORBUYAUTOBUY_COMMAND_EXAMPLE" xml:space="preserve">
+    <value># set on
+SetVendorBuyAutoBuy("regs", "on")
+# set off
+SetVendorBuyAutoBuy("regs", "off")
+# default will toggle
+SetVendorBuyAutoBuy("regs")</value>
+  </data>
+  <data name="ISRUNNING_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if the specified macro name is currently running</value>
+  </data>
+  <data name="ISRUNNING_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if IsRunning('macro'):</value>
+  </data>
+  <data name="LOGOUT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Disconnects from the server and returns to the login screen</value>
+  </data>
+  <data name="LOGOUT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Logout()</value>
+  </data>
+  <data name="QUIT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Closes the client</value>
+  </data>
+  <data name="QUIT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Quit()</value>
+  </data>
+  <data name="PROMPTMACROALIAS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Prompt with an in-game target cursor to supply value for given alias name, alias is valid only in the current macro.</value>
+  </data>
+  <data name="PROMPTMACROALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>PromptMacroAlias("mount")</value>
+  </data>
+  <data name="DIFFHITSPERCENT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns the given mobiles different between max and currents hits as a percentage, if parameter is null, then returns the value from the player (parameter can be serial or alias).</value>
+  </data>
+  <data name="DIFFHITSPERCENT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if DiffHitsPercent("self") &gt; 30:</value>
+  </data>
+  <data name="DIFFHITSPERCENT_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>if DiffHitsPercent("self") &gt; 30: # 70% health</value>
+  </data>
+  <data name="FOLLOWING_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if currently following a target</value>
+  </data>
+  <data name="FOLLOWING_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if Following():</value>
+  </data>
+  <data name="FOLLOW_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Instructs ClassicUO to follow the specified alias/serial, supply no parameter to cancel</value>
+  </data>
+  <data name="FOLLOW_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Follow('enemy')</value>
+  </data>
+  <data name="FOLLOWING_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>if not Following():
+ Follow('enemy')</value>
+  </data>
+  <data name="FOLLOW_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>if FindObject('enemy'):
+ Follow('enemy')
+ Attack('enemy')
+else:
+ Follow() # stop following
+Pause(1000)</value>
+  </data>
+  <data name="PATHFINDING_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if ClassicUO is currently pathfinding</value>
+  </data>
+  <data name="PATHFINDING_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if Pathfinding():</value>
+  </data>
+  <data name="PATHFINDING_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>Pathfind('enemy')
+Pause(25) # there is a delay between calling Pathfind() and Pathfinding() being True
+
+while Pathfinding():
+ Pause(50)
+ 
+HeadMsg("die scum", "self")</value>
+  </data>
+  <data name="WAITFORJOURNALARRAY_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Wait up the given timeout for one of any of provided array of string to appear in journal</value>
+  </data>
+  <data name="WAITFORJOURNALARRAY_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>(idx, text) = WaitForJournal(['sex', 'drugs'], 5000)</value>
+  </data>
+  <data name="WAITFORJOURNALARRAY_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>(idx, text) = WaitForJournal(['sex', 'drugs'], 5000)
+
+if idx != None:
+ print "Found text '{}' at index {}".format(text, idx)
+else:
+ print 'None of them were found :('</value>
+  </data>
+  <data name="CLEAROBJECTQUEUE_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Clears all actions in action packet queue</value>
+  </data>
+  <data name="CLEAROBJECTQUEUE_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>ClearObjectQueue()</value>
+  </data>
+  <data name="AUTOLOOT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Causes autoloot to check a particular container, even when not enabled, and bypassing the corpse type check</value>
+  </data>
+  <data name="AUTOLOOT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Autoloot("found")</value>
+  </data>
+  <data name="DISTANCECOORDINATES_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns the distance to the given coordinates.</value>
+  </data>
+  <data name="DISTANCECOORDINATES_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Distance(1000, 1000)</value>
+  </data>
+  <data name="DISTANCECOORDINATES_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>location = (1000, 1000, 0)
+
+while Distance(location[0], location[1]) &gt; 2:
+ Pathfind(location[0], location[1], location[2])
+ Pause(1000)</value>
+  </data>
+  <data name="SKILLDELTA_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns the skill value delta since last reset</value>
+  </data>
+  <data name="SKILLDELTA_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SkillDelta('skillName')</value>
+  </data>
+  <data name="SKILLDELTA_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>if SkillDelta('Hiding') &gt; 0.5:
+    Stop()</value>
+  </data>
+  <data name="AUTOLOOTING_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if currently checking corpse / autolooting items.</value>
+  </data>
+  <data name="AUTOLOOTING_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>if Autolooting():</value>
+  </data>
+  <data name="USELASTSKILL_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Uses the last invoked skill</value>
+  </data>
+  <data name="USELASTSKILL_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>UseLastSkill()</value>
+  </data>
+  <data name="OPENECV_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Open entity collection viewer for specified container serial/alias</value>
+  </data>
+  <data name="OPENECV_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>OpenECV('backpack')</value>
+  </data>
+  <data name="PLAYCUOMACRO_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Plays the specified CUO macro name</value>
+  </data>
+  <data name="PLAYCUOMACRO_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>PlayCUOMacro('Paperdoll')</value>
+  </data>
+  <data name="SETAUTOLOGIN_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Configures autologin settings</value>
+  </data>
+  <data name="SETAUTOLOGIN_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetAutologin(False)</value>
+  </data>
+  <data name="SETSCAVENGER_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Enable/Disable/Toggle the Scavenger agent</value>
+  </data>
+  <data name="SETSCAVENGER_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetScavenger("off")</value>
+  </data>
+  <data name="WAITFORTRADEWINDOW_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Waits the specified number of milliseconds for trade window action, -1 for infinite</value>
+  </data>
+  <data name="WAITFORTRADEWINDOW_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>WaitForTradeWindow(5000)</value>
+  </data>
+  <data name="TRADEACCEPT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Accepts the current trade window</value>
+  </data>
+  <data name="TRADEACCEPT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>TradeAccept()</value>
+  </data>
+  <data name="TRADEREJECT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Rejects (unticks) the current trade window</value>
+  </data>
+  <data name="TRADEREJECT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>TradeReject()</value>
+  </data>
+  <data name="TRADECLOSE_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Closes the current trade window</value>
+  </data>
+  <data name="TRADECLOSE_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>TradeClose()</value>
+  </data>
+  <data name="FASTERCASTING_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Return faster casting value.</value>
+  </data>
+  <data name="FASTERCASTING_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>fc = FasterCasting()</value>
+  </data>
+  <data name="FASTERCASTRECOVERY_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Return faster cast recovery value.</value>
+  </data>
+  <data name="FASTERCASTRECOVERY_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>fcr = FasterCastRecovery()</value>
+  </data>
+  <data name="OPENHELPGUMP_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Opens the Help gump</value>
+  </data>
+  <data name="OPENHELPGUMP_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>OpenHelpGump()</value>
+  </data>
+  <data name="TRADECURRENCY_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Sets the gold and platinum in the trade window (for shards that support it)</value>
+  </data>
+  <data name="TRADECURRENCY_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>TradeCurrency(60000, 1)</value>
+  </data>
+  <data name="ITEMARRAYGUMP_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Displays a gump with the selected serials / aliases in a grid, similar to the UOSteam loot grid, returns array of serials selected</value>
+  </data>
+  <data name="ITEMARRAYGUMP_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>ItemArrayGump(['item'])</value>
+  </data>
+  <data name="ITEMARRAYGUMP_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>from Assistant import Engine
+
+#single select, specified items
+result = ItemArrayGump([0x462d3373, 0x462d6029])
+
+if result.Length == 0:
+ print 'Nothing was selected'
+else:
+ print 'Serial {} was selected'.format(result[0])
+
+#showing backpack items, multi select, at coords 200, 200
+items = Engine.Player.Backpack.Container.GetItems()
+results = ItemArrayGump(items, True, 200, 200)
+
+if results.Length == 0:
+ print 'Nothing was selected'
+else:
+ print '{} item(s) were selected'.format(results.Length)
+ 
+ for serial in results:
+  print 'Serial {} was selected'.format(serial)
+</value>
+  </data>
+  <data name="BRINGCLIENTWINDOWTOFRONT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Bring client window to front</value>
+  </data>
+  <data name="BRINGCLIENTWINDOWTOFRONT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>BringClientWindowToFront()</value>
+  </data>
+  <data name="PLAYMACRO_COMMAND_EXAMPLE" xml:space="preserve">
+    <value># Play another macro
+
+PlayMacro("beep")
+
+# Play another macro passing parameters to it
+
+PlayMacro("beep", 1, "moo")
+
+# In the played macro, args[0] will be 1 and args[1] will be "moo"</value>
+  </data>
+  <data name="ADDMAPMARKER_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Adds a marker on the world map</value>
+  </data>
+  <data name="REMOVEMAPMARKER_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Removes all map markers with the specified name from the world map</value>
+  </data>
+  <data name="ADDMAPMARKER_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>AddMapMarker("Treasure", 1000, 1000, 0)</value>
+  </data>
+  <data name="REMOVEMAPMARKER_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>RemoveMapMarker("Treasure")</value>
+  </data>
+  <data name="CLEARMAPMARKERS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Clears all map markers</value>
+  </data>
+  <data name="CLEARMAPMARKERS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>ClearMapMarkers()</value>
+  </data>
+  <data name="MAP_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns the current map of the Player</value>
+  </data>
+  <data name="MAP_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>Map()</value>
+  </data>
+  <data name="STOPORGANIZER_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Stops the organizer agent if currently running</value>
+  </data>
+  <data name="STOPORGANIZER_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>StopOrganizer()</value>
+  </data>
+  <data name="STOPDRESS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Stops the dress agent is it is currently running</value>
+  </data>
+  <data name="STOPDRESS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>StopDress()</value>
+  </data>
+  <data name="USETRAPPOUCH_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Uses the first item in the Trap Pouch agent list...</value>
+  </data>
+  <data name="USETRAPPOUCH_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>UseTrapPouch()</value>
+  </data>
+  <data name="CLEARTRAPPOUCH_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Clears the items in the trap pouch agent...</value>
+  </data>
+  <data name="CLEARTRAPPOUCH_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>ClearTrapPouch()</value>
+  </data>
+  <data name="SETTRAPPOUCH_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Adds the specified item to the trap pouch agent item list...</value>
+  </data>
+  <data name="SETTRAPPOUCH_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetTrapPouch("pouch")</value>
+  </data>
+  <data name="SETTRAPPOUCH_COMMAND_EXAMPLE" xml:space="preserve">
+    <value>ClearTrapPouch()
+
+if FindType(0xe79, -1, 'backpack'):
+    Cast('Magic Trap', 'found')
+    SetTrapPouch('found')</value>
+  </data>
+  <data name="GETPLAYERALIAS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Gets the value of the given alias name, for the current player.</value>
+  </data>
+  <data name="GETPLAYERALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>GetPlayerAlias("mount")</value>
+  </data>
+  <data name="PROMPTPLAYERALIAS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Prompt with an in-game target cursor to supply value for given alias name, for the current player.</value>
+  </data>
+  <data name="PROMPTPLAYERALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>PromptPlayerAlias("mount")</value>
+  </data>
+  <data name="SETPLAYERALIAS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Sets the value of the given alias name, for the current player.</value>
+  </data>
+  <data name="SETPLAYERALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetPlayerAlias("mount", 0x40000001)</value>
+  </data>
+  <data name="UNSETPLAYERALIAS_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Removes the alias name given, for the current player.</value>
+  </data>
+  <data name="UNSETPLAYERALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>UnsetPlayerAlias("mount")</value>
+  </data>
+  <data name="MOVEITEMXYZ_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Moves the specified serial/alias to the given coordinates</value>
+  </data>
+  <data name="MOVEITEMXYZ_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>MoveItemXYZ('found', 0, 0, 0)</value>
+  </data>
+  <data name="MOVETYPEXYZ_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Move the given type from the specified source container to the specified X, Y, Z, no amount specified or -1 will move the full stack.</value>
+  </data>
+  <data name="MOVETYPEXYZ_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>MoveTypeXYZ(0xf0e, "backpack", 0, 0, 0, -1)</value>
+  </data>
+  <data name="SETAUTOLOOT_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>SetAutoloot("off")</value>
+  </data>
+  <data name="SETAUTOLOOT_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Enable/Disable/Toggle the Autoloot agent</value>
+  </data>
+  <data name="SWINGSPEEDINCREASE_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Return SwingSpeed Increase value.</value>
+  </data>
+  <data name="SWINGSPEEDINCREASE_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>ssi = SwingSpeedIncrease()</value>
   </data>
 </root>

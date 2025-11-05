@@ -1,5 +1,64 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -53,595 +112,595 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Abilities" xml:space="preserve">
-    <value>Abilities</value>
+    <value>Schopnosti</value>
   </data>
   <data name="Ability already set..." xml:space="preserve">
-    <value>Ability already set...</value>
+    <value>Schopnost je již nastavena..</value>
   </data>
   <data name="Ability not set..." xml:space="preserve">
-    <value>Ability not set...</value>
+    <value>Schopnost není nastavena..</value>
   </data>
   <data name="About" xml:space="preserve">
     <value>About</value>
   </data>
   <data name="Action Delay:" xml:space="preserve">
-    <value>Action Delay:</value>
+    <value>Zpoždění akcí:</value>
   </data>
   <data name="Actions" xml:space="preserve">
-    <value>Actions</value>
+    <value>Akce</value>
   </data>
   <data name="Active Objects" xml:space="preserve">
-    <value>Active Objects</value>
+    <value>Aktivní objekty</value>
   </data>
   <data name="Add Friend" xml:space="preserve">
-    <value>Add Friend</value>
+    <value>Přidat přítele</value>
   </data>
   <data name="Address:" xml:space="preserve">
-    <value>Address:</value>
+    <value>Adresa:</value>
   </data>
   <data name="Agents" xml:space="preserve">
-    <value>Agents</value>
+    <value>Agenti</value>
   </data>
   <data name="Agility Potion" xml:space="preserve">
-    <value>Agility Potion</value>
+    <value>Lektvar obratnosti</value>
   </data>
   <data name="Aliases" xml:space="preserve">
-    <value>Aliases</value>
+    <value>Aliasy</value>
   </data>
   <data name="All skills:" xml:space="preserve">
-    <value>All skills:</value>
+    <value>Všechny dovednosti:</value>
   </data>
   <data name="Always On Top" xml:space="preserve">
-    <value>Always On Top</value>
+    <value>Vždy navrchu</value>
   </data>
   <data name="Amount" xml:space="preserve">
-    <value>Amount</value>
+    <value>Množství</value>
   </data>
   <data name="Attack Enemy" xml:space="preserve">
-    <value>Attack Enemy</value>
+    <value>Zaútočit na nepřítele</value>
   </data>
   <data name="Attack Last" xml:space="preserve">
-    <value>Attack Last</value>
+    <value>Zaútočit na posledního</value>
   </data>
   <data name="Attack request blocked..." xml:space="preserve">
-    <value>Attack request blocked...</value>
+    <value>Požadavek na útok blokován..</value>
   </data>
   <data name="Bandage Self" xml:space="preserve">
-    <value>Bandage Self</value>
+    <value>Bandážovat sebe</value>
   </data>
   <data name="Blank" xml:space="preserve">
-    <value>Blank</value>
+    <value>Prázdný</value>
   </data>
   <data name="Bola" xml:space="preserve">
     <value>Bola</value>
   </data>
   <data name="Both" xml:space="preserve">
-    <value>Both</value>
+    <value>Oboje</value>
   </data>
   <data name="Bought" xml:space="preserve">
-    <value>Bought</value>
+    <value>Koupeno</value>
   </data>
   <data name="BuffIcon" xml:space="preserve">
     <value>BuffIcon</value>
   </data>
   <data name="Buffs / Penalties" xml:space="preserve">
-    <value>Buffs / Penalties</value>
+    <value>Buffy / Debuffy</value>
   </data>
   <data name="Build Date:" xml:space="preserve">
-    <value>Build Date:</value>
+    <value>Datum buildu:</value>
   </data>
   <data name="Buy Agent: No matches found." xml:space="preserve">
-    <value>Buy Agent: No matches found.</value>
+    <value>Agent nákupu: Nenalezeny žádné shody.</value>
   </data>
   <data name="Cancel" xml:space="preserve">
-    <value>Cancel</value>
+    <value>Zrušit</value>
   </data>
   <data name="Cancel action" xml:space="preserve">
-    <value>Cancel action</value>
+    <value>Zrušit akci</value>
   </data>
   <data name="Cannot find container..." xml:space="preserve">
-    <value>Cannot find container...</value>
+    <value>Nelze najít kontejner..</value>
   </data>
   <data name="Cannot find item..." xml:space="preserve">
-    <value>Cannot find item...</value>
+    <value>Nelze najít předmět..</value>
   </data>
   <data name="Capture Packets" xml:space="preserve">
-    <value>Capture Packets</value>
+    <value>Zachytávat pakety</value>
   </data>
   <data name="Character" xml:space="preserve">
-    <value>Character</value>
+    <value>Postava</value>
   </data>
   <data name="Check For Updates" xml:space="preserve">
-    <value>Check For Updates</value>
+    <value>Zkontrolovat aktualizace</value>
   </data>
   <data name="Clear" xml:space="preserve">
-    <value>Clear</value>
+    <value>Vymazat</value>
   </data>
   <data name="Clear All" xml:space="preserve">
-    <value>Clear All</value>
+    <value>Vymazat vše</value>
   </data>
   <data name="Clear All Objects" xml:space="preserve">
-    <value>Clear All Objects</value>
+    <value>Vymazat všechny objekty</value>
   </data>
   <data name="Clear Object Queue" xml:space="preserve">
-    <value>Clear Object Queue</value>
+    <value>Vymazat frontu objektů</value>
   </data>
   <data name="Clear Target Queue" xml:space="preserve">
-    <value>Clear Target Queue</value>
+    <value>Vymazat frontu cílů</value>
   </data>
   <data name="Close" xml:space="preserve">
-    <value>Close</value>
+    <value>Zavřít</value>
   </data>
   <data name="Color" xml:space="preserve">
-    <value>Color</value>
+    <value>Barva</value>
   </data>
   <data name="Combat" xml:space="preserve">
-    <value>Combat</value>
+    <value>Boj</value>
   </data>
   <data name="Command Prefix:" xml:space="preserve">
-    <value>Command Prefix:</value>
+    <value>Prefix příkazů:</value>
   </data>
   <data name="Commands" xml:space="preserve">
-    <value>Commands</value>
+    <value>Příkazy</value>
   </data>
   <data name="Commands:" xml:space="preserve">
-    <value>Commands:</value>
+    <value>Příkazy:</value>
   </data>
   <data name="Conflagration Potion" xml:space="preserve">
-    <value>Conflagration Potion</value>
+    <value>Lektvar požáru</value>
   </data>
   <data name="Confusion Blast Potion" xml:space="preserve">
-    <value>Confusion Blast Potion</value>
+    <value>Lektvar zmatku</value>
   </data>
   <data name="Connected:" xml:space="preserve">
-    <value>Connected:</value>
+    <value>Připojeno:</value>
   </data>
   <data name="Consume" xml:space="preserve">
-    <value>Consume</value>
+    <value>Spotřebovat</value>
   </data>
   <data name="Copy" xml:space="preserve">
-    <value>Copy</value>
+    <value>Kopírovat</value>
   </data>
   <data name="Copy All" xml:space="preserve">
-    <value>Copy All</value>
+    <value>Kopírovat vše</value>
   </data>
   <data name="Count" xml:space="preserve">
-    <value>Count</value>
+    <value>Počet</value>
   </data>
   <data name="Counter &quot;{0}&quot; amount is now {1}..." xml:space="preserve">
-    <value>Counter "{0}" amount is now {1}...</value>
+    <value>Počítadlo "{0}" má nyní hodnotu {1}..</value>
   </data>
   <data name="Counters" xml:space="preserve">
-    <value>Counters</value>
+    <value>Počítadla</value>
   </data>
   <data name="Cure Potion" xml:space="preserve">
-    <value>Cure Potion</value>
+    <value>Léčivý lektvar</value>
   </data>
   <data name="Current Ability Cleared" xml:space="preserve">
-    <value>Current Ability Cleared</value>
+    <value>Aktuální schopnost smazána</value>
   </data>
   <data name="Current Location:" xml:space="preserve">
-    <value>Current Location:</value>
+    <value>Současná pozice:</value>
   </data>
   <data name="Do not auto interupt" xml:space="preserve">
-    <value>Do not auto interupt</value>
+    <value>Nepřerušovat</value>
   </data>
   <data name="Dress" xml:space="preserve">
-    <value>Dress</value>
+    <value>Obléct</value>
   </data>
   <data name="Duplicate" xml:space="preserve">
-    <value>Duplicate</value>
+    <value>Duplikovat</value>
   </data>
   <data name="Enabled" xml:space="preserve">
-    <value>Enabled</value>
+    <value>Povoleno</value>
   </data>
   <data name="Enchanted Apple" xml:space="preserve">
-    <value>Enchanted Apple</value>
+    <value>Kouzelné jablko</value>
   </data>
   <data name="Enemy" xml:space="preserve">
-    <value>Enemy</value>
+    <value>Nepřítel</value>
   </data>
   <data name="Entity" xml:space="preserve">
-    <value>Entity</value>
+    <value>Entita</value>
   </data>
   <data name="Entity Collection Viewer" xml:space="preserve">
-    <value>Entity Collection Viewer</value>
+    <value>Průzkumník entit</value>
   </data>
   <data name="Entity not found..." xml:space="preserve">
-    <value>Entity not found...</value>
+    <value>Entita nenalezena..</value>
   </data>
   <data name="Entity Viewer" xml:space="preserve">
-    <value>Entity Viewer</value>
+    <value>Průzkumník entity</value>
   </data>
   <data name="Equip Last Weapon (Quick Weapon Switch)" xml:space="preserve">
-    <value>Equip Last Weapon (Quick Weapon Switch) *</value>
+    <value>Obléct poslední zbraň (Quick Weapon Switch) *</value>
   </data>
   <data name="Error" xml:space="preserve">
-    <value>Error</value>
+    <value>Chyba</value>
   </data>
   <data name="Error: Cannot find player backpack" xml:space="preserve">
-    <value>Error: Cannot find player backpack</value>
+    <value>Chyba: Nelze najít hráčův batoh</value>
   </data>
   <data name="Error: Cannot find type" xml:space="preserve">
-    <value>Error: Cannot find type</value>
+    <value>Chyba: Nelze najít typ</value>
   </data>
   <data name="Error: No Player" xml:space="preserve">
-    <value>Error: No Player</value>
+    <value>Chyba: Není hráč</value>
   </data>
   <data name="Execute" xml:space="preserve">
-    <value>Execute</value>
+    <value>Provést</value>
   </data>
   <data name="Explosion Potion" xml:space="preserve">
-    <value>Explosion Potion</value>
+    <value>Lektvar výbuchu</value>
   </data>
   <data name="Filters" xml:space="preserve">
-    <value>Filters</value>
+    <value>Filtr</value>
   </data>
   <data name="Force Walk Off" xml:space="preserve">
-    <value>Force Walk Off</value>
+    <value>Vynucená chůze vypnuta</value>
   </data>
   <data name="Force Walk On" xml:space="preserve">
-    <value>Force Walk On</value>
+    <value>Vynucená chůze zapnuta</value>
   </data>
   <data name="Friend" xml:space="preserve">
-    <value>Friend</value>
+    <value>Přítel</value>
   </data>
   <data name="Friends" xml:space="preserve">
-    <value>Friends</value>
+    <value>Přátelé</value>
   </data>
   <data name="Fruit Bowl" xml:space="preserve">
-    <value>Fruit Bowl</value>
+    <value>Ovocná mísa</value>
   </data>
   <data name="General" xml:space="preserve">
-    <value>General</value>
+    <value>Obecné</value>
   </data>
   <data name="Get Closest Gray" xml:space="preserve">
-    <value>Get Closest Gray</value>
+    <value>Nejbližší šedivý</value>
   </data>
   <data name="Get Next Gray" xml:space="preserve">
-    <value>Get Next Gray</value>
+    <value>Následující šedivý</value>
   </data>
   <data name="Get Next Innocent" xml:space="preserve">
-    <value>Get Next Innocent</value>
+    <value>Následující nevinný</value>
   </data>
   <data name="Get Next Murderer" xml:space="preserve">
-    <value>Get Next Murderer</value>
+    <value>Následující vrah</value>
   </data>
   <data name="Get Next Unfriendly" xml:space="preserve">
-    <value>Get Next Unfriendly</value>
+    <value>Následující nepřátelský</value>
   </data>
   <data name="Grapes of Wrath" xml:space="preserve">
-    <value>Grapes of Wrath</value>
+    <value>Hrozny hněvu</value>
   </data>
   <data name="Graphic" xml:space="preserve">
-    <value>Graphic</value>
+    <value>Grafika</value>
   </data>
   <data name="Grid Container Viewer" xml:space="preserve">
-    <value>Grid Container Viewer</value>
+    <value>Tabulkový pohled kontejneru</value>
   </data>
   <data name="Gumps" xml:space="preserve">
-    <value>Gumps</value>
+    <value>Gumpy</value>
   </data>
   <data name="Heal Potion" xml:space="preserve">
-    <value>Heal Potion</value>
+    <value>Léčivý lektvar</value>
   </data>
   <data name="Hotkeys" xml:space="preserve">
-    <value>Hotkeys</value>
+    <value>Klávesové zkratky</value>
   </data>
   <data name="Hotkeys disabled..." xml:space="preserve">
-    <value>Hotkeys disabled...</value>
+    <value>Klávesové zkratky vypnuty..</value>
   </data>
   <data name="Hotkeys enabled..." xml:space="preserve">
-    <value>Hotkeys enabled...</value>
+    <value>Klávesové zkratky zapnuty..</value>
   </data>
   <data name="Ignore ping packets" xml:space="preserve">
-    <value>Ignore ping packets</value>
+    <value>Ignorovat ping pakety</value>
   </data>
   <data name="Import" xml:space="preserve">
-    <value>Import</value>
+    <value>Importovat</value>
   </data>
   <data name="Include Backpack Amount" xml:space="preserve">
-    <value>Include Backpack Amount</value>
+    <value>Zahrnout počty batohu</value>
   </data>
   <data name="Include party members" xml:space="preserve">
-    <value>Include party members</value>
+    <value>Zahrnout členy družiny</value>
   </data>
   <data name="Include Purchased Amount" xml:space="preserve">
-    <value>Include Purchased Amount</value>
+    <value>Zahrnout zakoupené počty</value>
   </data>
   <data name="Insert" xml:space="preserve">
-    <value>Insert</value>
+    <value>Vložit</value>
   </data>
   <data name="Interrupt Spell" xml:space="preserve">
-    <value>Interrupt Spell</value>
+    <value>Přerušit kouzlo</value>
   </data>
   <data name="Invalid container..." xml:space="preserve">
-    <value>Invalid container...</value>
+    <value>Nevalidní kontejner..</value>
   </data>
   <data name="Invalid counter agent name..." xml:space="preserve">
-    <value>Invalid counter agent name...</value>
+    <value>Nevalidní název počítadla..</value>
   </data>
   <data name="Invalid destination container..." xml:space="preserve">
-    <value>Invalid destination container...</value>
+    <value>Nevalidní cílový kontejner..</value>
   </data>
   <data name="Invalid gump..." xml:space="preserve">
-    <value>Invalid gump...</value>
+    <value>Nevalidní gump..</value>
   </data>
   <data name="Invalid layer value..." xml:space="preserve">
-    <value>Invalid layer value...</value>
+    <value>Nevalidní hodnota vrstvy..</value>
   </data>
   <data name="Invalid mount..." xml:space="preserve">
-    <value>Invalid mount...</value>
+    <value>Nevalidní jezdítko..</value>
   </data>
   <data name="Invalid or unknown object id" xml:space="preserve">
-    <value>Invalid or unknown object id</value>
+    <value>Nevalidní nebo neznámé ID objektu</value>
   </data>
   <data name="Invalid skill name &quot;{0}&quot;" xml:space="preserve">
-    <value>Invalid skill name "{0}"</value>
+    <value>Nevalidní dovednost jménem "{0}"</value>
   </data>
   <data name="Invalid source container..." xml:space="preserve">
-    <value>Invalid source container...</value>
+    <value>Nevalidní zdrojový kontejner..</value>
   </data>
   <data name="Invisibility Potion" xml:space="preserve">
-    <value>Invisibility Potion</value>
+    <value>Lektvar neviditelnosti</value>
   </data>
   <data name="Item" xml:space="preserve">
-    <value>Item</value>
+    <value>Předmět</value>
   </data>
   <data name="Item properties null or not loaded..." xml:space="preserve">
-    <value>Item properties null or not loaded...</value>
+    <value>Vlastnosti předmětu jsou prázdné nebo nejsou načtené..</value>
   </data>
   <data name="items" xml:space="preserve">
-    <value>items</value>
+    <value>předměty</value>
   </data>
   <data name="Items:" xml:space="preserve">
-    <value>Items:</value>
+    <value>Předměty:</value>
   </data>
   <data name="Journal" xml:space="preserve">
-    <value>Journal</value>
+    <value>Deník</value>
   </data>
   <data name="Last Target" xml:space="preserve">
-    <value>Last Target</value>
+    <value>Poslední cíl</value>
   </data>
   <data name="Last Target:" xml:space="preserve">
-    <value>Last Target:</value>
+    <value>Poslední cíl:</value>
   </data>
   <data name="Latency:" xml:space="preserve">
-    <value>Latency:</value>
+    <value>Latence:</value>
   </data>
   <data name="Light" xml:space="preserve">
-    <value>Light</value>
+    <value>Světlo</value>
   </data>
   <data name="Light Level" xml:space="preserve">
-    <value>Light Level</value>
+    <value>Úroveň světla</value>
   </data>
   <data name="Limit Mouse Wheel Retrigger" xml:space="preserve">
-    <value>Limit Mouse Wheel Retrigger</value>
+    <value>Limit kolečka myši pro znovuspuštění</value>
   </data>
   <data name="Line Number" xml:space="preserve">
-    <value>Line Number</value>
+    <value>Číslo řádku</value>
   </data>
   <data name="Lists" xml:space="preserve">
-    <value>Lists</value>
+    <value>Seznamy</value>
   </data>
   <data name="Location:" xml:space="preserve">
-    <value>Location:</value>
+    <value>Pozice:</value>
   </data>
   <data name="Loop" xml:space="preserve">
-    <value>Loop</value>
+    <value>Cyklit</value>
   </data>
   <data name="Loop time: {0}" xml:space="preserve">
-    <value>Loop time: {0}</value>
+    <value>Čas cyklu: {0}</value>
   </data>
   <data name="Macro error: {0}" xml:space="preserve">
-    <value>Macro error: {0}</value>
+    <value>Chyba makra: {0}</value>
   </data>
   <data name="Macros" xml:space="preserve">
-    <value>Macros</value>
+    <value>Makra</value>
   </data>
   <data name="Made_For_Malo" xml:space="preserve">
-    <value>"Made For Malo"</value>
+    <value>"Vyrobeno pro Malo"</value>
   </data>
   <data name="Magical" xml:space="preserve">
-    <value>Magical</value>
+    <value>Magický</value>
   </data>
   <data name="Main" xml:space="preserve">
-    <value>Main</value>
+    <value>Hlavní</value>
   </data>
   <data name="Map:" xml:space="preserve">
-    <value>Map:</value>
+    <value>Mapa:</value>
   </data>
   <data name="Max Price" xml:space="preserve">
-    <value>Max Price</value>
+    <value>Maximální cena</value>
   </data>
   <data name="Messages" xml:space="preserve">
-    <value>Messages</value>
+    <value>Zprávy</value>
   </data>
   <data name="Min Price" xml:space="preserve">
-    <value>Min Price</value>
+    <value>Minimální cena</value>
   </data>
   <data name="Misc" xml:space="preserve">
-    <value>Misc</value>
+    <value>Různé</value>
   </data>
   <data name="Mobile" xml:space="preserve">
-    <value>Mobile</value>
+    <value>Postava</value>
   </data>
   <data name="Mobile not found..." xml:space="preserve">
-    <value>Mobile not found...</value>
+    <value>Postava nenalezena..</value>
   </data>
   <data name="Mobiles:" xml:space="preserve">
-    <value>Mobiles:</value>
+    <value>Postavy:</value>
   </data>
   <data name="Move conflicting items" xml:space="preserve">
-    <value>Move conflicting items</value>
+    <value>Posunout rozporné předměty</value>
   </data>
   <data name="Move to backpack" xml:space="preserve">
-    <value>Move to backpack</value>
+    <value>Přesunout do batohu</value>
   </data>
   <data name="Move to container" xml:space="preserve">
-    <value>Move to container</value>
+    <value>Přesunout do kontejneru</value>
   </data>
   <data name="Movement" xml:space="preserve">
-    <value>Movement</value>
+    <value>Pohyb</value>
   </data>
   <data name="Name" xml:space="preserve">
-    <value>Name</value>
+    <value>Jméno</value>
   </data>
   <data name="Name:" xml:space="preserve">
-    <value>Name:</value>
+    <value>Jméno:</value>
   </data>
   <data name="New" xml:space="preserve">
-    <value>New</value>
+    <value>Nový</value>
   </data>
   <data name="New Item" xml:space="preserve">
-    <value>New Item</value>
+    <value>Nový předmět</value>
   </data>
   <data name="New Profile" xml:space="preserve">
-    <value>New Profile</value>
+    <value>Nový profil</value>
   </data>
   <data name="New version available:" xml:space="preserve">
-    <value>New version available:</value>
+    <value>Dostupná nová verze:</value>
   </data>
   <data name="None" xml:space="preserve">
-    <value>None</value>
+    <value>Žádný</value>
   </data>
   <data name="Object &quot;{0}&quot; updated..." xml:space="preserve">
-    <value>Object "{0}" updated...</value>
+    <value>Objekt "{0}" aktualizovaný..</value>
   </data>
   <data name="Object Inspector" xml:space="preserve">
-    <value>Object Inspector</value>
+    <value>Inspektor objektů</value>
   </data>
   <data name="Objects" xml:space="preserve">
-    <value>Objects</value>
+    <value>Objekty</value>
   </data>
   <data name="OK" xml:space="preserve">
     <value>OK</value>
   </data>
   <data name="Options" xml:space="preserve">
-    <value>Options</value>
+    <value>Nastavení</value>
   </data>
   <data name="Orange Petal" xml:space="preserve">
-    <value>Orange Petal</value>
+    <value>Oranžový okvětní lístek</value>
   </data>
   <data name="Organizer" xml:space="preserve">
-    <value>Organizer</value>
+    <value>Organizér</value>
   </data>
   <data name="Organizer &quot;{0}&quot; not found..." xml:space="preserve">
-    <value>Organizer "{0}" not found...</value>
+    <value>Organizér "{0}" nenalezen..</value>
   </data>
   <data name="Organizer containers set..." xml:space="preserve">
-    <value>Organizer containers set...</value>
+    <value>Kontejner organizéru nastaven..</value>
   </data>
   <data name="Organizer {0} finished..." xml:space="preserve">
-    <value>Organizer "{0}" finished...</value>
+    <value>Organizér "{0}" skončil..</value>
   </data>
   <data name="Organizer {0} running..." xml:space="preserve">
-    <value>Organizer "{0}" running...</value>
+    <value>Organizér "{0}" běží..</value>
   </data>
   <data name="Pass to UO" xml:space="preserve">
-    <value>Pass to UO</value>
+    <value>Poslat do UO</value>
   </data>
   <data name="Persist Use Once" xml:space="preserve">
-    <value>Persist Use Once</value>
+    <value>Trvalé použití jednou</value>
   </data>
   <data name="Play" xml:space="preserve">
-    <value>Play</value>
+    <value>Přehrát</value>
   </data>
   <data name="Player" xml:space="preserve">
-    <value>Player</value>
+    <value>Hráč</value>
   </data>
   <data name="Port:" xml:space="preserve">
     <value>Port:</value>
   </data>
   <data name="Prevent attacking friends in war mode" xml:space="preserve">
-    <value>Prevent attacking friends in war mode</value>
+    <value>Zabránit útoku na přátele v módu boje</value>
   </data>
   <data name="Prevent targeting friends with Harmful spells" xml:space="preserve">
-    <value>Prevent targeting friends with Harmful spells</value>
+    <value>Zabránit seslání zbraňujících kouzel na přátele</value>
   </data>
   <data name="Product:" xml:space="preserve">
-    <value>Product:</value>
+    <value>Produkt:</value>
   </data>
   <data name="ProductName" xml:space="preserve">
     <value>ClassicAssist</value>
   </data>
   <data name="Profile name contains illegal characters." xml:space="preserve">
-    <value>Profile name contains illegal characters.</value>
+    <value>Název profilu obsahuje nevalidní znaky.</value>
   </data>
   <data name="Profiles" xml:space="preserve">
-    <value>Profiles</value>
+    <value>Profily</value>
   </data>
   <data name="Properties" xml:space="preserve">
-    <value>Properties</value>
+    <value>Vlastnosti</value>
   </data>
   <data name="Property" xml:space="preserve">
-    <value>Property</value>
+    <value>Vlastnost</value>
   </data>
   <data name="Public Properties" xml:space="preserve">
-    <value>Public Properties</value>
+    <value>Veřejné vlastnosti</value>
   </data>
   <data name="Queue Last Target / Target Self" xml:space="preserve">
-    <value>Queue Last Target / Target Self</value>
+    <value>Dávat Last Target / Target Self do fronty</value>
   </data>
   <data name="Range check last target" xml:space="preserve">
-    <value>Range check last target</value>
+    <value>Kontrolovat dosah na Last Target</value>
   </data>
   <data name="Ready..." xml:space="preserve">
-    <value>Ready...</value>
+    <value>Připraven..</value>
   </data>
   <data name="Record" xml:space="preserve">
-    <value>Record</value>
+    <value>Nahrát</value>
   </data>
   <data name="Recount" xml:space="preserve">
-    <value>Recount</value>
+    <value>Přepočítat</value>
   </data>
   <data name="Refresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>Obnovit</value>
   </data>
   <data name="Refresh Potion" xml:space="preserve">
-    <value>Refresh Potion</value>
+    <value>Osvěžující lektvar</value>
   </data>
   <data name="Regeneration" xml:space="preserve">
-    <value>Regeneration</value>
+    <value>Regenerace</value>
   </data>
   <data name="Remove" xml:space="preserve">
-    <value>Remove</value>
+    <value>Odebrat</value>
   </data>
   <data name="Remove Friend" xml:space="preserve">
-    <value>Remove Friend</value>
+    <value>Odebrat přítele</value>
   </data>
   <data name="Reset +/-" xml:space="preserve">
-    <value>Reset +/-</value>
+    <value>Resetovat +/-</value>
   </data>
   <data name="Resistances" xml:space="preserve">
-    <value>Resistances</value>
+    <value>Odolnosti</value>
   </data>
   <data name="Resync" xml:space="preserve">
-    <value>Resync</value>
+    <value>Resynchronizovat</value>
   </data>
   <data name="Save" xml:space="preserve">
-    <value>Save</value>
+    <value>Uložit</value>
   </data>
   <data name="Seasons" xml:space="preserve">
-    <value>Seasons</value>
+    <value>Roční období</value>
   </data>
   <data name="Select destination container..." xml:space="preserve">
-    <value>Select destination container...</value>
+    <value>Vybrat cílový kontejner..</value>
   </data>
   <data name="Select source container..." xml:space="preserve">
-    <value>Select source container...</value>
+    <value>Vybrat zdrojový kontejner..</value>
   </data>
   <data name="Select undress container..." xml:space="preserve">
-    <value>Select undress container...</value>
+    <value>Vyber kontejner pro svléknutí..</value>
   </data>
   <data name="Serial" xml:space="preserve">
-    <value>Serial</value>
+    <value>Serial (sériové číslo)</value>
   </data>
   <data name="Serial:" xml:space="preserve">
     <value>Serial:</value>
@@ -650,376 +709,376 @@
     <value>Server</value>
   </data>
   <data name="Set" xml:space="preserve">
-    <value>Set</value>
+    <value>Nastavit</value>
   </data>
   <data name="Set Containers" xml:space="preserve">
-    <value>Set Containers</value>
+    <value>Nastavit kontejnery</value>
   </data>
   <data name="Set Down" xml:space="preserve">
-    <value>Set Down</value>
+    <value>Nastavit dolů</value>
   </data>
   <data name="Set Enemy" xml:space="preserve">
-    <value>Set Enemy</value>
+    <value>Nastavit nepřítele</value>
   </data>
   <data name="Set Friend" xml:space="preserve">
-    <value>Set Friend</value>
+    <value>Nastavi přítele</value>
   </data>
   <data name="Set Last Target" xml:space="preserve">
-    <value>Set Last Target</value>
+    <value>Nastavit Last Target</value>
   </data>
   <data name="Set Locked" xml:space="preserve">
-    <value>Set Locked</value>
+    <value>Nastavit zámek</value>
   </data>
   <data name="Set Primary Ability" xml:space="preserve">
-    <value>Set Primary Ability</value>
+    <value>Nastavit primární abilitu</value>
   </data>
   <data name="Set Secondary Ability" xml:space="preserve">
-    <value>Set Secondary Ability</value>
+    <value>Nastavit sekundární abilitu</value>
   </data>
   <data name="Set Undress Container" xml:space="preserve">
-    <value>Set Undress Container</value>
+    <value>Nastavit kontejner pro svléknutí</value>
   </data>
   <data name="Set Up" xml:space="preserve">
-    <value>Set Up</value>
+    <value>Nastavit nahoru</value>
   </data>
   <data name="Setting ability &quot;{0}&quot;..." xml:space="preserve">
-    <value>Setting ability "{0}"...</value>
+    <value>Nastavuji abilitu "{0}"</value>
   </data>
   <data name="Show World Items" xml:space="preserve">
-    <value>Show World Items</value>
+    <value>Zobrazit předměty světa</value>
   </data>
   <data name="Skills" xml:space="preserve">
-    <value>Skills</value>
+    <value>Dovednosti</value>
   </data>
   <data name="Smart last target:" xml:space="preserve">
-    <value>Smart last target:</value>
+    <value>Chytrý Last Target:</value>
   </data>
   <data name="Smoke Bomb" xml:space="preserve">
-    <value>Smoke Bomb</value>
+    <value>Dýmovnice</value>
   </data>
   <data name="Software" xml:space="preserve">
-    <value>Software</value>
+    <value>Aplikace</value>
   </data>
   <data name="Spells" xml:space="preserve">
-    <value>Spells</value>
+    <value>Kouzla</value>
   </data>
   <data name="Stack" xml:space="preserve">
-    <value>Stack</value>
+    <value>Hromada</value>
   </data>
   <data name="Stats" xml:space="preserve">
-    <value>Stats</value>
+    <value>Statistiky</value>
   </data>
   <data name="Status:" xml:space="preserve">
-    <value>Status:</value>
+    <value>Stav:</value>
   </data>
   <data name="Stop" xml:space="preserve">
-    <value>Stop</value>
+    <value>Zastavit</value>
   </data>
   <data name="Stop Current Macro" xml:space="preserve">
-    <value>Stop Current Macro</value>
+    <value>Zastavit současné makro</value>
   </data>
   <data name="Strength Potion" xml:space="preserve">
-    <value>Strength Potion</value>
+    <value>Lektvar síly</value>
   </data>
   <data name="Target" xml:space="preserve">
-    <value>Target</value>
+    <value>Cíl</value>
   </data>
   <data name="Target blocked... try again..." xml:space="preserve">
-    <value>Target blocked... try again...</value>
+    <value>Cíl blokován.. zkus to znovu..</value>
   </data>
   <data name="Target clothing item..." xml:space="preserve">
-    <value>Target clothing item...</value>
+    <value>Vyber předmět k obléknutí..</value>
   </data>
   <data name="Target container..." xml:space="preserve">
-    <value>Target container...</value>
+    <value>Vyber kontejner..</value>
   </data>
   <data name="Target Enemy" xml:space="preserve">
-    <value>Target Enemy</value>
+    <value>Vyber nepřítele</value>
   </data>
   <data name="Target Friend" xml:space="preserve">
-    <value>Target Friend</value>
+    <value>Vyber přítele</value>
   </data>
   <data name="Target friend to remove..." xml:space="preserve">
-    <value>Target friend to remove...</value>
+    <value>Vyber přítele k odebrání..</value>
   </data>
   <data name="Target Last" xml:space="preserve">
-    <value>Target Last</value>
+    <value>Vybrat poslední cíl</value>
   </data>
   <data name="Target new friend..." xml:space="preserve">
-    <value>Target new friend...</value>
+    <value>Vybrat nového přítele..</value>
   </data>
   <data name="Target new item..." xml:space="preserve">
-    <value>Target new item...</value>
+    <value>Vybrat nový předmět..</value>
   </data>
   <data name="Target new mount..." xml:space="preserve">
-    <value>Target new mount...</value>
+    <value>Vybrat nové jezdítko..</value>
   </data>
   <data name="Target object..." xml:space="preserve">
-    <value>Target object...</value>
+    <value>Vybrat objekt..</value>
   </data>
   <data name="Target out of range, try again..." xml:space="preserve">
-    <value>Target out of range, try again...</value>
+    <value>Cíl je mimo dosah, zkus to znovu..</value>
   </data>
   <data name="Target queue cleared..." xml:space="preserve">
-    <value>Target queue cleared...</value>
+    <value>Fronta cílů vymazána..</value>
   </data>
   <data name="Target Queued" xml:space="preserve">
-    <value>Target Queued</value>
+    <value>Cíl přidán do fronty</value>
   </data>
   <data name="Target Self" xml:space="preserve">
-    <value>Target Self</value>
+    <value>Vybrat sebe</value>
   </data>
   <data name="Target timeout..." xml:space="preserve">
-    <value>Target timeout...</value>
+    <value>Čas pro zacílení vypršel..</value>
   </data>
   <data name="Targeting" xml:space="preserve">
-    <value>Targeting</value>
+    <value>Zaměřuji</value>
   </data>
   <data name="The item needs to be equipped..." xml:space="preserve">
-    <value>The item needs to be equipped...</value>
+    <value>Předmět musí být oblečený..</value>
   </data>
   <data name="Timeout..." xml:space="preserve">
-    <value>Timeout...</value>
+    <value>Časový limit..</value>
   </data>
   <data name="Timers" xml:space="preserve">
-    <value>Timers</value>
+    <value>Časovače</value>
   </data>
   <data name="Toggle Force Walk" xml:space="preserve">
-    <value>Toggle Force Walk</value>
+    <value>Přepnout nucenou chůzi</value>
   </data>
   <data name="Toggle hotkeys" xml:space="preserve">
-    <value>Toggle hotkeys</value>
+    <value>Přepnout klávesové zkratky</value>
   </data>
   <data name="Toggle item properties" xml:space="preserve">
-    <value>Toggle item properties</value>
+    <value>Přepnout vlastnosti předmětu</value>
   </data>
   <data name="Toggle Primary Ability" xml:space="preserve">
-    <value>Toggle Primary Ability</value>
+    <value>Přepnout primární abilitu</value>
   </data>
   <data name="Toggle Secondary Ability" xml:space="preserve">
-    <value>Toggle Secondary Ability</value>
+    <value>Přepnout sekundární abilitu</value>
   </data>
   <data name="Topmost" xml:space="preserve">
-    <value>Topmost</value>
+    <value>Vždy navrchu</value>
   </data>
   <data name="Trinsic Rose Petal" xml:space="preserve">
-    <value>Trinsic Rose Petal</value>
+    <value>Trinsic okvětní lístek růže</value>
   </data>
   <data name="Undress" xml:space="preserve">
-    <value>Undress</value>
+    <value>Svléknout</value>
   </data>
   <data name="Undress All" xml:space="preserve">
-    <value>Undress All</value>
+    <value>Svléknout vše</value>
   </data>
   <data name="Unknown alias &quot;{0}&quot;." xml:space="preserve">
-    <value>Unknown alias "{0}".</value>
+    <value>Neznámý alias "{0}".</value>
   </data>
   <data name="Unknown buff name..." xml:space="preserve">
-    <value>Unknown buff name...</value>
+    <value>Neznámý název buffu..</value>
   </data>
   <data name="Unknown dress agent &quot;{0}&quot;." xml:space="preserve">
-    <value>Unknown dress agent "{0}".</value>
+    <value>Neznámý agent oblékání "{0}"</value>
   </data>
   <data name="Unknown macro..." xml:space="preserve">
-    <value>Unknown macro...</value>
+    <value>Neznámé makro..</value>
   </data>
   <data name="Unknown spell..." xml:space="preserve">
-    <value>Unknown spell...</value>
+    <value>Neznámé kouzlo..</value>
   </data>
   <data name="Unknown timer..." xml:space="preserve">
-    <value>Unknown timer...</value>
+    <value>Neznámý časovač..</value>
   </data>
   <data name="Unset Primary Ability" xml:space="preserve">
-    <value>Unset Primary Ability</value>
+    <value>Zrušit primární abilitu</value>
   </data>
   <data name="Unset Secondary Ability" xml:space="preserve">
-    <value>Unset Secondary Ability</value>
+    <value>Zrušit sekundární abilitu</value>
   </data>
   <data name="UO_LOCALE" xml:space="preserve">
     <value>ENU</value>
   </data>
   <data name="Use death screen whilst hidden" xml:space="preserve">
-    <value>Use death screen whilst hidden (Chuckles Mode)</value>
+    <value>Použití obrazovky smrti, když je skrytá (režim smíchu)</value>
   </data>
   <data name="Use experimental fizzle detection" xml:space="preserve">
-    <value>Use experimental fizzle detection</value>
+    <value>Použít experimentální detekci fizzu</value>
   </data>
   <data name="Use item" xml:space="preserve">
-    <value>Use item</value>
+    <value>Použít předmět</value>
   </data>
   <data name="Use Last Object" xml:space="preserve">
-    <value>Use Last Object</value>
+    <value>Použít Last Object</value>
   </data>
   <data name="Use Left Hand" xml:space="preserve">
-    <value>Use Left Hand</value>
+    <value>Použít levou ruku</value>
   </data>
   <data name="Use object queue" xml:space="preserve">
-    <value>Use object queue</value>
+    <value>Použít frontu objektů</value>
   </data>
   <data name="Use Right Hand" xml:space="preserve">
-    <value>Use Right Hand</value>
+    <value>Použít pravou ruku</value>
   </data>
   <data name="Use skill" xml:space="preserve">
-    <value>Use skill</value>
+    <value>Použít dovednost</value>
   </data>
   <data name="UseOnce cleared..." xml:space="preserve">
-    <value>UseOnce cleared...</value>
+    <value>UseOnce vyčištěna..</value>
   </data>
   <data name="UseOnce: Cannot find type..." xml:space="preserve">
-    <value>UseOnce: Cannot find type...</value>
+    <value>UseOnce: Nelze najít typ..</value>
   </data>
   <data name="Value" xml:space="preserve">
-    <value>Value</value>
+    <value>Hodnota</value>
   </data>
   <data name="Vendor Buy" xml:space="preserve">
-    <value>Vendor Buy</value>
+    <value>Koupit u obchodníka</value>
   </data>
   <data name="Vendor Sell" xml:space="preserve">
-    <value>Vendor Sell</value>
+    <value>Prodat u obchodníka</value>
   </data>
   <data name="Version:" xml:space="preserve">
-    <value>Version:</value>
+    <value>Verze:</value>
   </data>
   <data name="Warn when counter amount below:" xml:space="preserve">
-    <value>Warn when counter amount below:</value>
+    <value>Varovat když počítadlo klesne pod hodnotu:</value>
   </data>
   <data name="Weather" xml:space="preserve">
-    <value>Weather</value>
+    <value>Počasí</value>
   </data>
   <data name="World_Status" xml:space="preserve">
-    <value>World Status</value>
+    <value>Stav světa</value>
   </data>
   <data name="{0} items, {1} selected, {2} total amount" xml:space="preserve">
-    <value>{0} items, {1} selected, {2} total amount</value>
+    <value>{0} předmětů, {1} vybraných, {2} celkem</value>
   </data>
   <data name="Language" xml:space="preserve">
-    <value>Language</value>
+    <value>Jazyk</value>
   </data>
   <data name="Restart game for changes to take effect..." xml:space="preserve">
-    <value>Restart game for changes to take effect...</value>
+    <value>Restartuj hru aby změny nabyly účinnosti..</value>
   </data>
   <data name="Complete" xml:space="preserve">
-    <value>Complete</value>
+    <value>Dokončit</value>
   </data>
   <data name="Auto accept party invites" xml:space="preserve">
-    <value>Auto accept party invites</value>
+    <value>Automaticky přijímat pozvánky do družiny</value>
   </data>
   <data name="Auto accept only from friends" xml:space="preserve">
-    <value>Auto accept only from friends</value>
+    <value>Automaticky přijímat pozvánky pouze od přátel</value>
   </data>
   <data name="WarMode On" xml:space="preserve">
-    <value>WarMode On</value>
+    <value>Bojový stav zapnut</value>
   </data>
   <data name="WarMode Off" xml:space="preserve">
-    <value>WarMode Off</value>
+    <value>Bojový stav vypnut</value>
   </data>
   <data name="WarMode Toggle" xml:space="preserve">
-    <value>WarMode Toggle</value>
+    <value>Přepnout bojový stav</value>
   </data>
   <data name="Set Container" xml:space="preserve">
-    <value>Set Container</value>
+    <value>Nastavit kontejner</value>
   </data>
   <data name="Scavenger" xml:space="preserve">
-    <value>Scavenger</value>
+    <value>Mrchožrout</value>
   </data>
   <data name="Prevent targeting innocents in guardzone" xml:space="preserve">
-    <value>Prevent targeting innocents in guardzone</value>
+    <value>Zabránit cílení nevinných ve strážené zóně</value>
   </data>
   <data name="Prevent attacking innocents in guardzone" xml:space="preserve">
-    <value>Prevent attacking innocents in guardzone</value>
+    <value>Zabránit útočení na nevinné ve strážené zóně</value>
   </data>
   <data name="Applies to hotkeys / macros only." xml:space="preserve">
-    <value>Applies to hotkeys / macros only.</value>
+    <value>Platí pouze pro zkratky / makra.</value>
   </data>
   <data name="Hue Picker" xml:space="preserve">
-    <value>Hue Picker</value>
+    <value>Výběr barvy</value>
   </data>
   <data name="Disable inside guardzone" xml:space="preserve">
-    <value>Disable inside guardzone</value>
+    <value>Deaktivovat ve strážené zóně</value>
   </data>
   <data name="Autoloot" xml:space="preserve">
     <value>Autoloot</value>
   </data>
   <data name="Autoloot matching items" xml:space="preserve">
-    <value>Autoloot matching items</value>
+    <value>Autoloot stejných předmětů</value>
   </data>
   <data name="Rehue matching items" xml:space="preserve">
-    <value>Rehue matching items</value>
+    <value>Přebarvit stejné předměty</value>
   </data>
   <data name="Operator" xml:space="preserve">
-    <value>Operator</value>
+    <value>Operátor</value>
   </data>
   <data name="Cannot find sound file..." xml:space="preserve">
-    <value>Cannot find sound file...</value>
+    <value>Nelze najít zvukový soubor..</value>
   </data>
   <data name="Autolooting '{0}'" xml:space="preserve">
     <value>Autolooting '{0}'</value>
   </data>
   <data name="Apply" xml:space="preserve">
-    <value>Apply</value>
+    <value>Použít</value>
   </data>
   <data name="Reset" xml:space="preserve">
-    <value>Reset</value>
+    <value>Resetovat</value>
   </data>
   <data name="Load" xml:space="preserve">
-    <value>Load</value>
+    <value>Načíst</value>
   </data>
   <data name="Project Homepage" xml:space="preserve">
-    <value>Project Homepage</value>
+    <value>Stránka projektu</value>
   </data>
   <data name="Last target message:" xml:space="preserve">
-    <value>Last target message:</value>
+    <value>Last Target zpráva:</value>
   </data>
   <data name="Friend target message:" xml:space="preserve">
-    <value>Friend target message:</value>
+    <value>Zpráva přátelského cíle:</value>
   </data>
   <data name="Enemy target message:" xml:space="preserve">
-    <value>Enemy target message:</value>
+    <value>Zpráva nepřátelského cíle:</value>
   </data>
   <data name="Macro name must be unique." xml:space="preserve">
-    <value>Macro name must be unique.</value>
+    <value>Název makra musí být unikátní.</value>
   </data>
   <data name="Profile saved..." xml:space="preserve">
-    <value>Profile saved...</value>
+    <value>Profil uložen..</value>
   </data>
   <data name="Repeated Messages" xml:space="preserve">
-    <value>Repeated Messages</value>
+    <value>Opakované zprávy</value>
   </data>
   <data name="Cliloc Filter" xml:space="preserve">
-    <value>Cliloc Filter</value>
+    <value>Filtr clilocu</value>
   </data>
   <data name="ID" xml:space="preserve">
     <value>ID</value>
   </data>
   <data name="Filter:" xml:space="preserve">
-    <value>Filter:</value>
+    <value>Filtr:</value>
   </data>
   <data name="Original" xml:space="preserve">
-    <value>Original</value>
+    <value>Originál</value>
   </data>
   <data name="Replacement" xml:space="preserve">
-    <value>Replacement</value>
+    <value>Náhrada</value>
   </data>
   <data name="Add" xml:space="preserve">
-    <value>Add</value>
+    <value>Přidat</value>
   </data>
   <data name="Macros default to quiet mode" xml:space="preserve">
-    <value>Macros default to quiet mode</value>
+    <value>Makra jsou implicitně ztlumená</value>
   </data>
   <data name="GetFriend/GetEnemy uses ignore list" xml:space="preserve">
-    <value>GetFriend/GetEnemy uses ignore list</value>
+    <value>GetFriend/GetEnemy používá seznam ignorovaných</value>
   </data>
   <data name="Ignore List" xml:space="preserve">
-    <value>Ignore List</value>
+    <value>Seznam ignorovaných</value>
   </data>
   <data name="Warning" xml:space="preserve">
-    <value>Warning</value>
+    <value>Varování</value>
   </data>
   <data name="Overwrite existing hotkey '{0}' ?" xml:space="preserve">
-    <value>Overwrite existing hotkey '{0}' ?</value>
+    <value>Přepsat existující klávesovou zkratku '{0}' ?</value>
   </data>
   <data name="Abilities Gump" xml:space="preserve">
-    <value>Abilities Gump</value>
+    <value>Gump schopností</value>
   </data>
   <data name="X:" xml:space="preserve">
     <value>X:</value>
@@ -1028,49 +1087,49 @@
     <value>Y:</value>
   </data>
   <data name="Saved Passwords:" xml:space="preserve">
-    <value>Saved Passwords:</value>
+    <value>Uložená hesla:</value>
   </data>
   <data name="Only overwrite blank password" xml:space="preserve">
-    <value>Only overwrite blank password</value>
+    <value>Přepsat pouze prázdné heslo</value>
   </data>
   <data name="Show GIF Capture" xml:space="preserve">
-    <value>Show GIF Capture</value>
+    <value>Zobrazit zachycení GIF</value>
   </data>
   <data name="Requires Server Support" xml:space="preserve">
-    <value>Requires Server Support</value>
+    <value>Vyžaduje podporu serveru</value>
   </data>
   <data name="Run in background" xml:space="preserve">
-    <value>Run in background</value>
+    <value>Spustit na pozadí</value>
   </data>
   <data name="Background macro '{0}' started..." xml:space="preserve">
-    <value>Background macro '{0}' started...</value>
+    <value>Makro na pozadí '{0}' spuštěno..</value>
   </data>
   <data name="Background macro '{0}' stopped..." xml:space="preserve">
-    <value>Background macro '{0}' stopped...</value>
+    <value>Makro na pozadí '{0}' zastaveno..</value>
   </data>
   <data name="Cannot PlayMacro from background macro..." xml:space="preserve">
-    <value>Cannot PlayMacro from background macro...</value>
+    <value>Nelze přehrát makro, které je určené na pozadí..</value>
   </data>
   <data name="Autostart" xml:space="preserve">
     <value>Autostart</value>
   </data>
   <data name="When checked macro will execute automatically after login." xml:space="preserve">
-    <value>When checked macro will execute automatically after login.</value>
+    <value>Je-li zaškrtnuto, makro se spustí automaticky po přihlášení do hry.</value>
   </data>
   <data name="Stop All Macros" xml:space="preserve">
-    <value>Stop All Macros</value>
+    <value>Zastavit všechna makra</value>
   </data>
   <data name="Stops all running macros including background and autostart macros." xml:space="preserve">
-    <value>Stops all running macros including background and autostart macros.</value>
+    <value>Zastavit všechna běžící makra, včetně těch na pozadí a automaticky spuštěných.</value>
   </data>
   <data name="Global" xml:space="preserve">
-    <value>Global</value>
+    <value>Globální</value>
   </data>
   <data name="Instance" xml:space="preserve">
     <value>Instance</value>
   </data>
   <data name="Waiting for ClassicAssist to initialize..." xml:space="preserve">
-    <value>Waiting for ClassicAssist to initialize...</value>
+    <value>Čekání na inicializaci ClassicAssist..</value>
   </data>
   <data name="Masteries" xml:space="preserve">
     <value>Masteries</value>
@@ -1079,1011 +1138,858 @@
     <value>Stun</value>
   </data>
   <data name="Disarm" xml:space="preserve">
-    <value>Disarm</value>
+    <value>Odzbrojení</value>
   </data>
   <data name="Clear Weapon Ability" xml:space="preserve">
-    <value>Clear Weapon Ability</value>
+    <value>Vymazat schopnost zbraně</value>
   </data>
   <data name="Type" xml:space="preserve">
-    <value>Type</value>
+    <value>Typ</value>
   </data>
   <data name="Dress Type" xml:space="preserve">
-    <value>Dress Type</value>
+    <value>Typ úboru</value>
   </data>
   <data name="Invalid type..." xml:space="preserve">
-    <value>Invalid type...</value>
+    <value>Nevalidní typ..</value>
   </data>
   <data name="No temporary dress layout configured..." xml:space="preserve">
-    <value>No temporary dress layout configured...</value>
+    <value>Není nastaveno žádné dočasné rozložení oblečení..</value>
   </data>
   <data name="See More" xml:space="preserve">
-    <value>See More</value>
+    <value>Zobrazit více</value>
   </data>
   <data name="Reset Container" xml:space="preserve">
-    <value>Reset Container</value>
+    <value>Resetovat kontejner</value>
   </data>
   <data name="Context menu request" xml:space="preserve">
-    <value>Context menu request</value>
+    <value>Požadavek na kontextové menu</value>
   </data>
   <data name="Show Profile Name In Title" xml:space="preserve">
-    <value>Show Profile Name In Title</value>
+    <value>Zobrazit název profilu záhlaví</value>
   </data>
   <data name="Use UO3D Packets" xml:space="preserve">
-    <value>Use UO3D Packets</value>
+    <value>Použít UO3D pakety</value>
   </data>
   <data name="Define Custom Properties" xml:space="preserve">
-    <value>Define Custom Properties</value>
+    <value>Definovat vlastní vlastnosti</value>
   </data>
   <data name="Cliloc" xml:space="preserve">
     <value>Cliloc</value>
   </data>
   <data name="Arguments" xml:space="preserve">
-    <value>Arguments</value>
+    <value>Argumenty</value>
   </data>
   <data name="Choose by Cliloc" xml:space="preserve">
-    <value>Choose by Cliloc</value>
+    <value>Vybrat podle clilocu</value>
   </data>
   <data name="Choose from Item" xml:space="preserve">
-    <value>Choose from Item</value>
+    <value>Vybrat z předmětu</value>
   </data>
   <data name="Toggle mounted" xml:space="preserve">
-    <value>Toggle mounted</value>
+    <value>Přepnout osedlání</value>
   </data>
   <data name="Target Acquisition - Enemy" xml:space="preserve">
-    <value>Target Acquisition - Enemy</value>
+    <value>Zaměření cíle - Nepřítel</value>
   </data>
   <data name="Target Acquisition - Friend" xml:space="preserve">
-    <value>Target Acquisition - Friend</value>
+    <value>Akvizice cíle - Přítel</value>
   </data>
   <data name="Get Next Friend" xml:space="preserve">
-    <value>Get Next Friend</value>
+    <value>Vyber dalšího přítele</value>
   </data>
   <data name="Get Next Any" xml:space="preserve">
-    <value>Get Next Any</value>
+    <value>Vyber dalšího kohokoli</value>
   </data>
   <data name="Get Next Criminal" xml:space="preserve">
-    <value>Get Next Criminal</value>
+    <value>Vyber dalšího kriminálníka</value>
   </data>
   <data name="Get Next Enemy" xml:space="preserve">
-    <value>Get Next Enemy</value>
+    <value>Vyber dalšího nepřítele</value>
   </data>
   <data name="Get Next Gray / Criminal" xml:space="preserve">
-    <value>Get Next Gray / Criminal</value>
+    <value>Vyber dalšího šedého / nepřítele</value>
   </data>
   <data name="Match Any ID" xml:space="preserve">
-    <value>Match Any ID</value>
+    <value>Odpovídá libovolnému ID</value>
   </data>
   <data name="Any" xml:space="preserve">
-    <value>Any</value>
+    <value>Libovolné</value>
   </data>
   <data name="Macro Commands Wiki (Launches in Browser)" xml:space="preserve">
-    <value>Macro Commands Wiki (Launches in Browser)</value>
+    <value>Wiki příkazů maker (Otevře v prohlížeči)</value>
   </data>
   <data name="MACRO_WIKI_URL" xml:space="preserve">
     <value>https://github.com/Reetus/ClassicAssist/wiki/Macro-Commands</value>
   </data>
   <data name="Really remove macro &quot;{0}&quot;?" xml:space="preserve">
-    <value>Really remove macro "{0}"?</value>
+    <value>Opravdu smazat makro "{0}"?</value>
   </data>
   <data name="Donating helps support continued development, your support is appreciated." xml:space="preserve">
-    <value>Donating helps support continued development, your support is appreciated.</value>
+    <value>Dary pomáhají udržet vývoj v průběhu, vaše podpora se cení.</value>
   </data>
   <data name="Max Target Queue Length:" xml:space="preserve">
-    <value>Max Target Queue Length:</value>
+    <value>Maximální délka fronty cílů:</value>
   </data>
   <data name="Target queue is not enabled..." xml:space="preserve">
-    <value>Target queue is not enabled...</value>
+    <value>Fronta cílů není povolena..</value>
   </data>
   <data name="Next Target: {0}" xml:space="preserve">
-    <value>Next Target: {0}</value>
+    <value>Další cíl: {0}</value>
   </data>
   <data name="No Target" xml:space="preserve">
-    <value>No Target</value>
+    <value>Žádný cíl</value>
   </data>
   <data name="Show Next Target In Queue" xml:space="preserve">
-    <value>Show Next Target In Queue</value>
+    <value>Zobrazit další cíl ve frontě</value>
   </data>
   <data name="Shard:" xml:space="preserve">
-    <value>Shard:</value>
+    <value>Střep:</value>
   </data>
   <data name="Sort Macros Alphabetical" xml:space="preserve">
-    <value>Sort Macros Alphabetical</value>
+    <value>Seřadit makra podle abecedy</value>
   </data>
   <data name="Equip Item" xml:space="preserve">
-    <value>Equip Item</value>
+    <value>Nasadit předmět</value>
   </data>
   <data name="Show Chat Window" xml:space="preserve">
-    <value>Show Chat Window</value>
+    <value>Zavřít okno chatu</value>
   </data>
   <data name="Chat" xml:space="preserve">
     <value>Chat</value>
   </data>
   <data name="Target object '{0}'..." xml:space="preserve">
-    <value>Target object '{0}'...</value>
+    <value>Vybrat objekt "{0}"..</value>
   </data>
   <data name="Miscellaneous" xml:space="preserve">
-    <value>Miscellaneous</value>
+    <value>Různé</value>
   </data>
   <data name="Base" xml:space="preserve">
-    <value>Base</value>
+    <value>Základ</value>
   </data>
   <data name="Cap" xml:space="preserve">
-    <value>Cap</value>
+    <value>Limit</value>
   </data>
   <data name="Status" xml:space="preserve">
-    <value>Status</value>
+    <value>Stav</value>
   </data>
   <data name="Total base:" xml:space="preserve">
-    <value>Total base:</value>
+    <value>Součet základu:</value>
   </data>
   <data name="Drop Holding Object" xml:space="preserve">
-    <value>Drop Holding Object</value>
+    <value>Upustit držený předmět</value>
   </data>
   <data name="Journal receives filtered messages" xml:space="preserve">
-    <value>Journal receives filtered messages</value>
+    <value>Deník dostává filtrované zprávy</value>
   </data>
   <data name="Enabled Packets" xml:space="preserve">
-    <value>Enabled Packets</value>
+    <value>Povolit pakety</value>
   </data>
   <data name="All Enabled" xml:space="preserve">
-    <value>All Enabled</value>
+    <value>Všechny povoleny</value>
   </data>
   <data name="All Packets" xml:space="preserve">
-    <value>All Packets</value>
+    <value>Všechny pakety</value>
   </data>
   <data name="Last Object" xml:space="preserve">
     <value>Last Object</value>
   </data>
   <data name="Features:" xml:space="preserve">
-    <value>Features:</value>
+    <value>Funkce:</value>
   </data>
   <data name="Undisableable" xml:space="preserve">
-    <value>Undisableable</value>
+    <value>Nedeaktivovatelné</value>
   </data>
   <data name="Hotkey will still trigger with hotkeys disabled" xml:space="preserve">
-    <value>Hotkey will still trigger with hotkeys disabled</value>
+    <value>Klávesová zkratka spustí i když jsou ostatní vypnuté</value>
   </data>
   <data name="Menu" xml:space="preserve">
     <value>Menu</value>
   </data>
   <data name="Menus" xml:space="preserve">
-    <value>Menus</value>
+    <value>Menu</value>
   </data>
   <data name="Message Limit:" xml:space="preserve">
-    <value>Message Limit:</value>
+    <value>Limit zpráv:</value>
   </data>
   <data name="Time Limit:" xml:space="preserve">
-    <value>Time Limit:</value>
+    <value>Časový limit:</value>
   </data>
   <data name="Filtered Time:" xml:space="preserve">
-    <value>Filtered Time:</value>
+    <value>Čas filtrování:</value>
   </data>
   <data name="seconds" xml:space="preserve">
-    <value>seconds</value>
+    <value>sekund</value>
   </data>
   <data name="Resurrection Point: {0} - Direction: {1} - Distance: {2}" xml:space="preserve">
-    <value>Resurrection Point: {0} - Direction: {1} - Distance: {2}</value>
+    <value>Bod oživení: {0} - Směr: {1} - Vzdálenost: {2}</value>
   </data>
   <data name="Show resurrection waypoints" xml:space="preserve">
-    <value>Show resurrection waypoints</value>
+    <value>Ukázat body oživení</value>
   </data>
   <data name="Show" xml:space="preserve">
-    <value>Show</value>
+    <value>Ukázat</value>
   </data>
   <data name="Hide" xml:space="preserve">
-    <value>Hide</value>
+    <value>Skrýt</value>
   </data>
   <data name="Author" xml:space="preserve">
-    <value>Author</value>
+    <value>Autor</value>
   </data>
   <data name="Category" xml:space="preserve">
-    <value>Category</value>
+    <value>Kategorie</value>
   </data>
   <data name="Copy to clipboard" xml:space="preserve">
-    <value>Copy to clipboard</value>
+    <value>Zkopírovat do schránky</value>
   </data>
   <data name="Create Macro" xml:space="preserve">
-    <value>Create Macro</value>
+    <value>Vytvořit makro</value>
   </data>
   <data name="Era" xml:space="preserve">
-    <value>Era</value>
+    <value>Éra</value>
   </data>
   <data name="Open in Github" xml:space="preserve">
-    <value>Open in Github</value>
+    <value>Otevřít v GitHubu</value>
   </data>
   <data name="Shard" xml:space="preserve">
     <value>Shard</value>
   </data>
   <data name="Macro Warning" xml:space="preserve">
-    <value>Running malicious macros could compromise your account or computer!
+    <value>Spouštění škodlivých maker může vystavit účet nebo počítač nebezpečí!
 
-You should understand what the macro is doing before running.
+Měl bys znát, co makro dělá, před tím, než ho spustíš.
 
-Whist all care has been taken to ensure macros are not malicious, no responsibility will be taken.
+Ikdyž pečlivě kontrolujeme zda makra nejsou škodlivá, neneseme žádnou odpovědnost.
 
-Are you sure you wish to continue?</value>
+Určitě chceš pokračovat?</value>
   </data>
   <data name="Public Macros" xml:space="preserve">
-    <value>Public Macros</value>
+    <value>Veřejná makra</value>
   </data>
   <data name="Learn how to contribute your own macros..." xml:space="preserve">
-    <value>Learn how to contribute your own macros...</value>
+    <value>Nauč se sdílet vlastní makra..</value>
   </data>
   <data name="Failed to download manifest..." xml:space="preserve">
-    <value>Failed to download manifest...</value>
+    <value>Stažení manifestu selhalo..</value>
   </data>
   <data name="Failed to download macro..." xml:space="preserve">
-    <value>Failed to download macro...</value>
+    <value>Stažení makra selhalo..</value>
   </data>
   <data name="Additional Assemblies" xml:space="preserve">
-    <value>Additional Assemblies</value>
+    <value>Dodatečné sestavy</value>
   </data>
   <data name="Additional assemblies to load:" xml:space="preserve">
-    <value>Additional assemblies to load:</value>
+    <value>Dodatečné sestavy k načtení:</value>
   </data>
   <data name="Error loading assembly: {0}" xml:space="preserve">
-    <value>Error loading assembly: {0}</value>
+    <value>Chyba načítání sestavy: {0}</value>
   </data>
   <data name="Special Moves" xml:space="preserve">
-    <value>Special Moves</value>
+    <value>Speciální pohyby</value>
   </data>
   <data name="Loaded to all profiles" xml:space="preserve">
-    <value>Loaded to all profiles</value>
+    <value>Načtené pro všechny profily</value>
   </data>
   <data name="Bards Music" xml:space="preserve">
-    <value>Bards Music</value>
+    <value>Bardova hudba</value>
   </data>
   <data name="Check hands before potions" xml:space="preserve">
-    <value>Check hands before potions</value>
+    <value>Zkontroluj ruce před pitím lektvaru</value>
   </data>
   <data name="Scavenging '{0}'" xml:space="preserve">
-    <value>Scavenging '{0}'...</value>
+    <value>Úklid "{0}"...</value>
   </data>
   <data name="Rehue friends" xml:space="preserve">
-    <value>Rehue friends</value>
+    <value>Přebarvit přátele</value>
   </data>
   <data name="Show running macros gump" xml:space="preserve">
-    <value>Show running macros gump</value>
+    <value>Zobrazit gump s běžícími makry</value>
   </data>
   <data name="Item out of range..." xml:space="preserve">
-    <value>Item out of range...</value>
+    <value>Předmět je mimo dosah..</value>
   </data>
   <data name="Cast Last Spell" xml:space="preserve">
-    <value>Cast Last Spell</value>
+    <value>Zakouzlit poslední kouzlo</value>
   </data>
   <data name="Arm / Disarm already in progress..." xml:space="preserve">
-    <value>Arm / Disarm already in progress...</value>
+    <value>Zbrojení již probíhá..</value>
   </data>
   <data name="Dress already in progress..." xml:space="preserve">
-    <value>Dress already in progress...</value>
+    <value>Oblékání již probíhá..</value>
   </data>
   <data name="Maximum distance exceeded." xml:space="preserve">
-    <value>Maximum distance exceeded.</value>
+    <value>Maximální vzdálenost překročena.</value>
   </data>
   <data name="Show Child Items" xml:space="preserve">
-    <value>Show Child Items</value>
+    <value>Zobrazit dceřinné předměty</value>
   </data>
   <data name="Open All Containers" xml:space="preserve">
-    <value>Open All Containers</value>
+    <value>Otevřít všechny kontejnery</value>
   </data>
   <data name="Requeue failed items" xml:space="preserve">
-    <value>Requeue failed items</value>
+    <value>Nepovedené znovu zařadit do fronty</value>
   </data>
   <data name="Invalid organizer agent name..." xml:space="preserve">
-    <value>Invalid organizer agent name...</value>
+    <value>Nevalidní název organizéru..</value>
   </data>
   <data name="Loot humanoids" xml:space="preserve">
-    <value>Loot humanoids</value>
+    <value>Lootit humanoidy</value>
   </data>
   <data name="Reset import cache" xml:space="preserve">
-    <value>Reset import cache</value>
+    <value>Resetovat paměť importů</value>
   </data>
   <data name="Macro not found..." xml:space="preserve">
-    <value>Macro not found...</value>
+    <value>Makro nenalezeno..</value>
   </data>
   <data name="Module" xml:space="preserve">
-    <value>Module</value>
+    <value>Modul</value>
   </data>
   <data name="Snapshot Saved: {0}" xml:space="preserve">
-    <value>Snapshot Saved: {0}</value>
+    <value>Snímek uložen: {0}</value>
   </data>
   <data name="Take Snapshot" xml:space="preserve">
-    <value>Take Snapshot</value>
+    <value>Zachytit snímek</value>
   </data>
   <data name="Priority:" xml:space="preserve">
-    <value>Priority:</value>
+    <value>Priorita:</value>
   </data>
   <data name="Priority" xml:space="preserve">
-    <value>Priority</value>
+    <value>Priorita</value>
   </data>
   <data name="Object queue full" xml:space="preserve">
-    <value>Object queue full</value>
+    <value>Fronta objektů je plná</value>
   </data>
   <data name="Use Cliloc language from ClassicUO settings" xml:space="preserve">
-    <value>Use Cliloc language from ClassicUO settings</value>
+    <value>Použít jazyk clilocu z nastavení ClassicUO</value>
   </data>
   <data name="Keyboard" xml:space="preserve">
-    <value>Keyboard</value>
+    <value>Klávesnice</value>
   </data>
   <data name="Share Macro" xml:space="preserve">
-    <value>Share Macro</value>
+    <value>Sdílet makro</value>
   </data>
   <data name="Check Weight" xml:space="preserve">
-    <value>Check Weight</value>
+    <value>Zkontrolovat váhu</value>
   </data>
   <data name="Minimum Weight Available:" xml:space="preserve">
-    <value>Minimum Weight Available:</value>
+    <value>Minimální dostupná váha:</value>
   </data>
   <data name="Context menu entry not found..." xml:space="preserve">
-    <value>Context menu entry not found...</value>
+    <value>Řádek v kontextovém menu nenalezen..</value>
   </data>
   <data name="Atleast one option must be provided..." xml:space="preserve">
-    <value>Atleast one option must be provided...</value>
+    <value>Alespoň jedna možnost musí být vybraná..</value>
   </data>
   <data name="Invalid VendorBuy list name..." xml:space="preserve">
-    <value>Invalid VendorBuy list name...</value>
+    <value>Nevalidní název VendorBuy seznamu..</value>
   </data>
   <data name="Invalid state name: &quot;on&quot;, &quot;off&quot;, or &quot;toggle&quot;..." xml:space="preserve">
-    <value>Invalid state name: "on", "off", or "toggle"...</value>
+    <value>Nevalidní název stavu: "on", "off", nebo "toggle"..</value>
   </data>
   <data name="Replay" xml:space="preserve">
-    <value>Replay</value>
+    <value>Přehrát</value>
   </data>
   <data name="Ignore packet type" xml:space="preserve">
-    <value>Ignore packet type</value>
+    <value>Ignorovat typ paketu</value>
   </data>
   <data name="Copy packet declaration" xml:space="preserve">
-    <value>Copy packet declaration</value>
+    <value>Kopírovat deklaraci paketu</value>
   </data>
   <data name="Configure Sound Filters" xml:space="preserve">
-    <value>Configure Sound Filters</value>
+    <value>Nastavit filtr zvuků</value>
   </data>
   <data name="Sound Filter" xml:space="preserve">
-    <value>Sound Filter</value>
+    <value>Filtr zvuků</value>
   </data>
   <data name="Sound Type" xml:space="preserve">
-    <value>Sound Type</value>
+    <value>Filtr typů</value>
   </data>
   <data name="Animals" xml:space="preserve">
-    <value>Animals</value>
+    <value>Zvířata</value>
   </data>
   <data name="Environment" xml:space="preserve">
-    <value>Environment</value>
+    <value>Prostředí</value>
   </data>
   <data name="Bear Sounds" xml:space="preserve">
-    <value>Bear Sounds</value>
+    <value>Zvuky medvědů</value>
   </data>
   <data name="Bird Sounds" xml:space="preserve">
-    <value>Bird Sounds</value>
+    <value>Zvuky ptáků</value>
   </data>
   <data name="Bull Sounds" xml:space="preserve">
-    <value>Bull Sounds</value>
+    <value>Zvuky krav</value>
   </data>
   <data name="Cat Sounds" xml:space="preserve">
-    <value>Cat Sounds</value>
+    <value>Zvuky koček</value>
   </data>
   <data name="Chicken Sounds" xml:space="preserve">
-    <value>Chicken Sounds</value>
+    <value>Zvuky kuřat</value>
   </data>
   <data name="Cougar Sounds" xml:space="preserve">
-    <value>Cougar Sounds</value>
+    <value>Zvuky šelem</value>
   </data>
   <data name="Deer Sounds" xml:space="preserve">
-    <value>Deer Sounds</value>
+    <value>Zvuky vysoké</value>
   </data>
   <data name="Dog Sounds" xml:space="preserve">
-    <value>Dog Sounds</value>
+    <value>Zvuky psů</value>
   </data>
   <data name="Dragon Sounds" xml:space="preserve">
-    <value>Dragon Sounds</value>
+    <value>Zvuky draků</value>
   </data>
   <data name="Eagle Sounds" xml:space="preserve">
-    <value>Eagle Sounds</value>
+    <value>Zvuky orlů</value>
   </data>
   <data name="Goat Sounds" xml:space="preserve">
-    <value>Goat Sounds</value>
+    <value>Zvuky koz</value>
   </data>
   <data name="Horse Sounds" xml:space="preserve">
-    <value>Horse Sounds</value>
+    <value>Zvuky koní</value>
   </data>
   <data name="Pig Sounds" xml:space="preserve">
-    <value>Pig Sounds</value>
+    <value>Zvuky prasat</value>
   </data>
   <data name="Rat Sounds" xml:space="preserve">
-    <value>Rat Sounds</value>
+    <value>Zvuky krys</value>
   </data>
   <data name="Sheep Sounds" xml:space="preserve">
-    <value>Sheep Sounds</value>
+    <value>Zvuky ovcí</value>
   </data>
   <data name="Titan / Cyclops Sounds" xml:space="preserve">
-    <value>Titan / Cyclops Sounds</value>
+    <value>Zvuky titánů / kyklopů</value>
   </data>
   <data name="Wolf Sounds" xml:space="preserve">
-    <value>Wolf Sounds</value>
+    <value>Zvuky vlků</value>
   </data>
   <data name="Door Sounds" xml:space="preserve">
-    <value>Door Sounds</value>
+    <value>Zvuky dveří</value>
   </data>
   <data name="Emote Sounds" xml:space="preserve">
-    <value>Emote Sounds</value>
+    <value>Zvuky emotů</value>
   </data>
   <data name="Weapon Sounds" xml:space="preserve">
-    <value>Weapon Sounds</value>
+    <value>Zvuky zbraní</value>
   </data>
   <data name="Wrestling Sounds" xml:space="preserve">
-    <value>Wrestling Sounds</value>
+    <value>Zvuky boxu</value>
   </data>
   <data name="Spell Fizzle Sounds" xml:space="preserve">
-    <value>Spell Fizzle Sounds</value>
+    <value>Zvuky fizzu kouzel</value>
   </data>
   <data name="Alchemy Sounds" xml:space="preserve">
-    <value>Alchemy Sounds</value>
+    <value>Zvuky alchymie</value>
   </data>
   <data name="Inscribing Sounds" xml:space="preserve">
-    <value>Inscribing Sounds</value>
+    <value>Zvuky opisování</value>
   </data>
   <data name="Spirit Speak Sounds" xml:space="preserve">
-    <value>Spirit Speak Sounds</value>
+    <value>Zvuky řeči mrtvých</value>
   </data>
   <data name="Expire Targets:" xml:space="preserve">
-    <value>Expire Targets:</value>
+    <value>Vypršení cílů:</value>
   </data>
   <data name="Time in milliseconds (-1 to not expire)" xml:space="preserve">
-    <value>Time in milliseconds (-1 to not expire)</value>
+    <value>Čas v milisekundách (-1 pro vypnutí)</value>
   </data>
   <data name="New Group" xml:space="preserve">
-    <value>New Group</value>
+    <value>Nová skupina</value>
   </data>
   <data name="Remove Group" xml:space="preserve">
-    <value>Remove Group</value>
+    <value>Přejmenovat skupinu</value>
   </data>
   <data name="Auto disable when loading" xml:space="preserve">
-    <value>Auto disable when loading</value>
+    <value>Automaticky deaktivovat během načítání</value>
   </data>
   <data name="Disable all vendor buy entries on loading profile" xml:space="preserve">
-    <value>Disable all vendor buy entries on loading profile</value>
+    <value>Vypnout všechny nákupy u obchodníků při načtení profilu</value>
   </data>
   <data name="Open Modules Folder" xml:space="preserve">
-    <value>Open Modules Folder</value>
+    <value>Otevřít složku s moduly</value>
   </data>
   <data name="Backup Days" xml:space="preserve">
-    <value>Backup Days</value>
+    <value>Dny záloh</value>
   </data>
   <data name="Backup Settings" xml:space="preserve">
-    <value>Backup Settings</value>
+    <value>Nastavení záloh</value>
   </data>
   <data name="Choose backup folder" xml:space="preserve">
-    <value>Choose backup folder</value>
+    <value>Vybrat složku pro zálohy</value>
   </data>
   <data name="Path" xml:space="preserve">
-    <value>Path</value>
+    <value>Cesta</value>
   </data>
   <data name="Setting to zero will cause it to backup on every client close" xml:space="preserve">
-    <value>Setting to zero will cause it to backup on every client close</value>
+    <value>Nastavení na 0 způsobí zálohování při každém vypnutí klienta</value>
   </data>
   <data name="Login" xml:space="preserve">
-    <value>Login</value>
+    <value>Přihlásit</value>
   </data>
   <data name="Login With Windows" xml:space="preserve">
-    <value>Login With Windows</value>
+    <value>Přihlásit s Windows</value>
   </data>
   <data name="Logout" xml:space="preserve">
-    <value>Logout</value>
+    <value>Odhlásit</value>
   </data>
   <data name="Username" xml:space="preserve">
-    <value>Username</value>
+    <value>Přihlašovací jméno</value>
   </data>
   <data name="Loading..." xml:space="preserve">
-    <value>Loading...</value>
+    <value>Načítání..</value>
   </data>
   <data name="No items..." xml:space="preserve">
-    <value>No items...</value>
+    <value>Žádné předměty..</value>
   </data>
   <data name="Backing up {0}..." xml:space="preserve">
-    <value>Backing up {0}...</value>
+    <value>Zálohuji {0}..</value>
   </data>
   <data name="Done..." xml:space="preserve">
-    <value>Done...</value>
+    <value>Hotovo..</value>
   </data>
   <data name="Failed to backup file: {0}" xml:space="preserve">
-    <value>Failed to backup file: {0}</value>
+    <value>Uložení zálohy selhalo: {0}</value>
   </data>
   <data name="No backup type or path set..." xml:space="preserve">
-    <value>No backup type or path set...</value>
+    <value>Není nastavený typ nebo cesta záloh..</value>
   </data>
   <data name="Profile Backup" xml:space="preserve">
-    <value>Profile Backup</value>
+    <value>Zálohovat profil</value>
   </data>
   <data name="Profile backup in progress..." xml:space="preserve">
-    <value>Profile backup in progress...</value>
+    <value>Probíhá záloha profilu..</value>
   </data>
   <data name="Folder Browser" xml:space="preserve">
-    <value>Folder Browser</value>
+    <value>Průzkumník souborů</value>
   </data>
   <data name="New Folder" xml:space="preserve">
-    <value>New Folder</value>
+    <value>Nová složka</value>
   </data>
   <data name="Incremental" xml:space="preserve">
-    <value>Incremental</value>
+    <value>Inkrementální</value>
   </data>
   <data name="Only write files that have been modified" xml:space="preserve">
-    <value>Only write files that have been modified</value>
+    <value>Zapisovat pouze soubory které byly upraveny</value>
   </data>
   <data name="Backup path not set" xml:space="preserve">
-    <value>Backup path not set</value>
+    <value>Cesta k zálohám nenastavena</value>
   </data>
   <data name="Cannot locate backup folder" xml:space="preserve">
-    <value>Cannot locate backup folder</value>
+    <value>Nelze najít složku pro zálohy</value>
   </data>
   <data name="Overwrite Existing" xml:space="preserve">
-    <value>Overwrite Existing</value>
+    <value>Přepsat existující</value>
   </data>
   <data name="Overwrite existing files instead of creating new files with the same name" xml:space="preserve">
-    <value>Overwrite existing files instead of creating new files with the same name</value>
+    <value>Přepsat existující soubory místo vytváření nových se stejným jménem</value>
   </data>
   <data name="Password" xml:space="preserve">
-    <value>Password</value>
+    <value>Heslo</value>
   </data>
   <data name="Minimize to system tray" xml:space="preserve">
-    <value>Minimize to system tray</value>
+    <value>Minimalizovat do oznamovací oblasti</value>
   </data>
   <data name="Unknown" xml:space="preserve">
-    <value>Unknown</value>
+    <value>Neznámé</value>
   </data>
   <data name="All Names" xml:space="preserve">
-    <value>All Names</value>
+    <value>Všechna jména</value>
   </data>
   <data name="Create Macro Button" xml:space="preserve">
-    <value>Create Macro Button</value>
+    <value>Vytvořit tlačítko makra</value>
   </data>
   <data name="Reflection Error: {0}" xml:space="preserve">
-    <value>Reflection Error: {0}</value>
+    <value>Chyba odrazu: {0}</value>
   </data>
   <data name="Show player / shard name in CUO title" xml:space="preserve">
-    <value>Show player / shard name in CUO title</value>
+    <value>Zobrazit jméno hráče / shardu v titulku CUO</value>
   </data>
   <data name="ID from target" xml:space="preserve">
-    <value>ID from target</value>
+    <value>ID od hráče</value>
   </data>
   <data name="Layer" xml:space="preserve">
-    <value>Layer</value>
+    <value>Vrstva</value>
   </data>
   <data name="Activated following" xml:space="preserve">
-    <value>Activated following</value>
+    <value>Aktivováno sledování</value>
   </data>
   <data name="Deactivated following" xml:space="preserve">
-    <value>Deactivated following</value>
+    <value>Deaktivováno sledování</value>
   </data>
   <data name="Event" xml:space="preserve">
-    <value>Event</value>
+    <value>Událost</value>
   </data>
   <data name="Caller" xml:space="preserve">
-    <value>Caller</value>
+    <value>Volající</value>
   </data>
   <data name="Elapsed" xml:space="preserve">
-    <value>Elapsed</value>
+    <value>Uplynulý</value>
   </data>
   <data name="Format Code" xml:space="preserve">
-    <value>Format Code</value>
+    <value>Formátovací kód</value>
   </data>
   <data name="Current month donations" xml:space="preserve">
-    <value>Current donations for {0}: ${1}</value>
+    <value>Aktuální dary pro {0}: ${1}</value>
   </data>
   <data name="Donate Now" xml:space="preserve">
-    <value>Donate Now</value>
+    <value>Přispějte nyní</value>
   </data>
   <data name="Context menu entry disabled" xml:space="preserve">
-    <value>Context menu entry disabled</value>
+    <value>Položka kontextové nabídky zakázána</value>
   </data>
   <data name="Use Last Skill" xml:space="preserve">
-    <value>Use Last Skill</value>
+    <value>Použít poslední dovednost</value>
   </data>
   <data name="Login With Google" xml:space="preserve">
-    <value>Login With Google</value>
+    <value>Přihlásit se přes Google</value>
   </data>
   <data name="Authentication error or timeout" xml:space="preserve">
-    <value>Authentication error or timeout</value>
+    <value>Chyba ověřování nebo vypršení časového limitu</value>
   </data>
   <data name="Name Overrides" xml:space="preserve">
-    <value>Name Overrides</value>
+    <value>Přepsání názvů</value>
   </data>
   <data name="Insert Empty Entry" xml:space="preserve">
-    <value>Insert Empty Entry</value>
+    <value>Vložit prázdnou položku</value>
   </data>
   <data name="Notes" xml:space="preserve">
-    <value>Notes</value>
+    <value>Poznámky</value>
   </data>
   <data name="Autologin" xml:space="preserve">
-    <value>Autologin</value>
+    <value>Automatické přihlašování</value>
   </data>
   <data name="Account" xml:space="preserve">
-    <value>Account</value>
+    <value>Účet</value>
   </data>
   <data name="Server Index" xml:space="preserve">
-    <value>Server Index</value>
+    <value>Index serveru</value>
   </data>
   <data name="Character Index" xml:space="preserve">
-    <value>Character Index</value>
+    <value>Rejstřík znaků</value>
   </data>
   <data name="Connect Delay" xml:space="preserve">
-    <value>Connect Delay</value>
+    <value>Zpoždění připojení</value>
   </data>
   <data name="Reconnect Delay" xml:space="preserve">
-    <value>Reconnect Delay</value>
+    <value>Zpoždění opětovného připojení</value>
   </data>
   <data name="Unknown account..." xml:space="preserve">
-    <value>Unknown account...</value>
+    <value>Neznámý účet...</value>
   </data>
   <data name="Autologin in {0} seconds..." xml:space="preserve">
-    <value>Autologin in {0} seconds...</value>
+    <value>Automatické přihlášení za {0} sekund...</value>
   </data>
   <data name="Connecting..." xml:space="preserve">
-    <value>Connecting...</value>
+    <value>Připojování...</value>
   </data>
   <data name="Timeout waiting for shard selection screen" xml:space="preserve">
-    <value>Timeout waiting for shard selection screen</value>
+    <value>Časový limit čekání na obrazovku pro výběr horizontálních oddílů</value>
   </data>
   <data name="Failed to get server list" xml:space="preserve">
-    <value>Failed to get server list</value>
+    <value>Nepodařilo se získat seznam serverů</value>
   </data>
   <data name="Failed to get selected server index" xml:space="preserve">
-    <value>Failed to get selected server index</value>
+    <value>Nepodařilo se získat vybraný index serveru</value>
   </data>
   <data name="Servers:" xml:space="preserve">
-    <value>Servers:</value>
+    <value>Servery:</value>
   </data>
   <data name="Selecting server {0}..." xml:space="preserve">
-    <value>Selecting server {0}...</value>
+    <value>Výběr serveru {0}...</value>
   </data>
   <data name="Timeout waiting for character selection screen" xml:space="preserve">
-    <value>Timeout waiting for character selection screen</value>
+    <value>Obrazovka Timeout čekání na výběr znaku</value>
   </data>
   <data name="Failed to get character list" xml:space="preserve">
-    <value>Failed to get character list</value>
+    <value>Nepodařilo se získat seznam znaků</value>
   </data>
   <data name="Character index not found" xml:space="preserve">
-    <value>Character index not found</value>
+    <value>Index znaků nenalezen</value>
   </data>
   <data name="Characters:" xml:space="preserve">
-    <value>Characters:</value>
+    <value>Znaky:</value>
   </data>
   <data name="Selecting character {0}..." xml:space="preserve">
-    <value>Selecting character {0}...</value>
+    <value>Výběr znaku {0}...</value>
   </data>
   <data name="{0} agent is now {1}" xml:space="preserve">
-    <value>{0} agent is now {1}</value>
+    <value>{0} agent je nyní {1}</value>
   </data>
   <data name="Disabled" xml:space="preserve">
-    <value>Disabled</value>
+    <value>Invalidní</value>
   </data>
   <data name="Trade" xml:space="preserve">
-    <value>Trade</value>
+    <value>Obchod</value>
   </data>
   <data name="Match text value of property (UOAlive)" xml:space="preserve">
-    <value>Match text value of property (UOAlive)</value>
+    <value>Shoda textové hodnoty vlastnosti (UOAlive)</value>
   </data>
   <data name="Mini Heal / Cure Self" xml:space="preserve">
-    <value>Mini Heal / Cure Self</value>
+    <value>Mini Léčit / Vyléčit sám sebe</value>
   </data>
   <data name="Greater Heal / Cure Self" xml:space="preserve">
-    <value>Greater Heal / Cure Self</value>
+    <value>Větší léčení / vyléčení sebe sama</value>
   </data>
   <data name="Cure" xml:space="preserve">
-    <value>Cure</value>
+    <value>Lék</value>
   </data>
   <data name="Arch Cure" xml:space="preserve">
-    <value>Arch Cure</value>
+    <value>Oblouk Cure</value>
   </data>
   <data name="Healing" xml:space="preserve">
-    <value>Healing</value>
+    <value>Léčení</value>
   </data>
   <data name="No items to display..." xml:space="preserve">
-    <value>No items to display...</value>
+    <value>Žádné položky k zobrazení...</value>
   </data>
   <data name="Backup Now" xml:space="preserve">
-    <value>Backup Now</value>
+    <value>Zálohovat nyní</value>
   </data>
   <data name="Linked" xml:space="preserve">
-    <value>Linked</value>
+    <value>Spojen</value>
   </data>
   <data name="Unlinked" xml:space="preserve">
-    <value>Unlinked</value>
+    <value>Nepropojené</value>
   </data>
   <data name="Logout on disconnected prompt" xml:space="preserve">
-    <value>Logout on disconnected prompt</value>
+    <value>Výzva k odhlášení při odpojení</value>
   </data>
   <data name="Combine stacks" xml:space="preserve">
-    <value>Combine stacks</value>
+    <value>Kombinování balíčků</value>
   </data>
   <data name="Replace name with single click label" xml:space="preserve">
-    <value>Replace name with single click label</value>
+    <value>Nahraďte název štítkem na jedno kliknutí</value>
   </data>
   <data name="Moving item {0} / {1}" xml:space="preserve">
-    <value>Moving item {0} / {1}</value>
+    <value>Přesouvání položky {0} / {1}</value>
   </data>
   <data name="Text Color" xml:space="preserve">
-    <value>Text Color</value>
+    <value>Barva textu</value>
   </data>
   <data name="Width" xml:space="preserve">
-    <value>Width</value>
+    <value>Šířka</value>
   </data>
   <data name="Height" xml:space="preserve">
-    <value>Height</value>
+    <value>Výška</value>
   </data>
   <data name="Transparent background" xml:space="preserve">
-    <value>Transparent background</value>
+    <value>Průhledné pozadí</value>
   </data>
   <data name="ItemID Filter" xml:space="preserve">
-    <value>ItemID Filter</value>
+    <value>Filtr ItemID</value>
   </data>
   <data name="Source ID" xml:space="preserve">
-    <value>Source ID</value>
+    <value>ID zdroje</value>
   </data>
   <data name="Destination ID" xml:space="preserve">
-    <value>Destination ID</value>
+    <value>ID cíle</value>
   </data>
   <data name="World Map" xml:space="preserve">
-    <value>World Map</value>
+    <value>Mapa světa</value>
   </data>
   <data name="Skill Bonus" xml:space="preserve">
-    <value>Skill Bonus</value>
+    <value>Bonus k dovednostem</value>
   </data>
   <data name="Stop Organizer" xml:space="preserve">
-    <value>Stop Organizer</value>
+    <value>Zastavit organizátor</value>
   </data>
   <data name="Stop Dress" xml:space="preserve">
-    <value>Stop Dress</value>
+    <value>Zastavit šaty</value>
   </data>
   <data name="Screenshot" xml:space="preserve">
-    <value>Screenshot</value>
+    <value>Snímek obrazovky</value>
   </data>
   <data name="Open Folder" xml:space="preserve">
-    <value>Open Folder</value>
+    <value>Otevřít složku</value>
   </data>
   <data name="Include Player Name" xml:space="preserve">
-    <value>Include Player Name</value>
+    <value>Zahrnout jméno hráče</value>
   </data>
   <data name="Include Shard Name" xml:space="preserve">
-    <value>Include Shard Name</value>
+    <value>Zahrnout název horizontálního oddílu</value>
   </data>
   <data name="Include Timestamp" xml:space="preserve">
-    <value>Include Timestamp</value>
+    <value>Zahrnout časové razítko</value>
   </data>
   <data name="Information Bar" xml:space="preserve">
-    <value>Information Bar</value>
+    <value>Informační lišta</value>
   </data>
   <data name="Format:" xml:space="preserve">
-    <value>Format:</value>
+    <value>Formát:</value>
   </data>
   <data name="Font Color:" xml:space="preserve">
-    <value>Font Color:</value>
+    <value>Barva písma:</value>
   </data>
   <data name="Background Color:" xml:space="preserve">
-    <value>Background Color:</value>
+    <value>Barva pozadí:</value>
   </data>
   <data name="Font Size:" xml:space="preserve">
-    <value>Font Size:</value>
+    <value>Velikost písma:</value>
   </data>
   <data name="Auto Screenshot" xml:space="preserve">
-    <value>Auto Screenshot</value>
+    <value>Automatický snímek obrazovky</value>
   </data>
   <data name="Player Death" xml:space="preserve">
-    <value>Player Death</value>
+    <value>Smrt hráče</value>
   </data>
   <data name="Filename Format:" xml:space="preserve">
-    <value>Filename Format:</value>
+    <value>Formát názvu souboru:</value>
   </data>
   <data name="Mobile Death" xml:space="preserve">
-    <value>Mobile Death</value>
+    <value>Mobilní smrt</value>
   </data>
   <data name="Player Death Delay:" xml:space="preserve">
-    <value>Player Death Delay:</value>
+    <value>Prodleva smrti hráče:</value>
   </data>
   <data name="Mobile Death Delay:" xml:space="preserve">
-    <value>Mobile Death Delay:</value>
+    <value>Zpoždění mobilní smrti:</value>
   </data>
   <data name="(milliseconds)" xml:space="preserve">
-    <value>(milliseconds)</value>
+    <value>(milisekundy)</value>
   </data>
   <data name="UO Only" xml:space="preserve">
-    <value>UO Only</value>
+    <value>Pouze UO</value>
   </data>
   <data name="Fullscreen" xml:space="preserve">
-    <value>Fullscreen</value>
+    <value>Celá obrazovka</value>
   </data>
   <data name="Max Distance:" xml:space="preserve">
-    <value>Max Distance:</value>
+    <value>Maximální vzdálenost:</value>
   </data>
   <data name="Only if enemy" xml:space="preserve">
-    <value>Only if enemy</value>
+    <value>Pouze v případě, že nepřítel</value>
   </data>
   <data name="Disable hotkeys on profile load" xml:space="preserve">
-    <value>Disable hotkeys on profile load</value>
+    <value>Zakázat klávesové zkratky při načítání profilu</value>
   </data>
   <data name="Limit Hotkey Retrigger" xml:space="preserve">
-    <value>Limit Hotkey Retrigger</value>
+    <value>Omezte opětovné spuštění klávesové zkratky</value>
   </data>
   <data name="Other" xml:space="preserve">
     <value>Other</value>
   </data>
   <data name="Packets" xml:space="preserve">
-    <value>Packets</value>
+    <value>Pakety</value>
   </data>
   <data name="Hue Override" xml:space="preserve">
-    <value>Hue Override</value>
+    <value>Přepsání odstínu</value>
   </data>
   <data name="Hotkeys Status Gump" xml:space="preserve">
-    <value>Hotkeys Status Gump</value>
+    <value>Stavové klávesové zkratky Gump</value>
   </data>
   <data name="A profile already exists by this name, choose a new name..." xml:space="preserve">
-    <value>A profile already exists by this name, choose a new name...</value>
+    <value>Profil pod tímto názvem již existuje, zvolte nový název...</value>
   </data>
   <data name="Targeting item {0} / {1}" xml:space="preserve">
-    <value>Targeting item {0} / {1}</value>
+    <value>Cílení na položku {0} / {1}</value>
   </data>
   <data name="Move to bank" xml:space="preserve">
-    <value>Move to bank</value>
+    <value>Přesun do banky</value>
   </data>
   <data name="Direction" xml:space="preserve">
-    <value>Direction</value>
+    <value>Směr</value>
   </data>
   <data name="Include Internal" xml:space="preserve">
     <value>Include Internal</value>
   </data>
-  <data name="Show Overhead" xml:space="preserve">
-    <value>Show Overhead</value>
-  </data>
-  <data name="Display system message as overhead message" xml:space="preserve">
-    <value>Display system message as overhead message</value>
-  </data>
-  <data name="Trap Pouches" xml:space="preserve">
-    <value>Trap Pouches</value>
-  </data>
-  <data name="Auto-add targeted pouches" xml:space="preserve">
-    <value>Auto-add targeted pouches</value>
-  </data>
-  <data name="Remove item on use object request" xml:space="preserve">
-    <value>Remove item on use object request</value>
-  </data>
-  <data name="Only if last spell is Magic Trap" xml:space="preserve">
-    <value>Only if last spell is Magic Trap</value>
-  </data>
-  <data name="Warn when item count below:" xml:space="preserve">
-    <value>Warn when item count below:</value>
-  </data>
-  <data name="Trap pouch count below {0}..." xml:space="preserve">
-    <value>Trap pouch count below {0}...</value>
-  </data>
-  <data name="Overhead Message" xml:space="preserve">
-    <value>Overhead Message</value>
-  </data>
-  <data name="Use Trap Pouch" xml:space="preserve">
-    <value>Use Trap Pouch</value>
-  </data>
-  <data name="Clear Trap Pouches" xml:space="preserve">
-    <value>Clear Trap Pouches</value>
-  </data>
-  <data name="Item already in list..." xml:space="preserve">
-    <value>Item already in list...</value>
-  </data>
-  <data name="Open container" xml:space="preserve">
-    <value>Open container</value>
-  </data>
-  <data name="Opening container {0} / {1}..." xml:space="preserve">
-    <value>Opening container {0} / {1}...</value>
-  </data>
-  <data name="Only known containers" xml:space="preserve">
-    <value>Only known containers</value>
-  </data>
-  <data name="Target location..." xml:space="preserve">
-    <value>Target location...</value>
-  </data>
-  <data name="Move to ground" xml:space="preserve">
-    <value>Move to ground</value>
-  </data>
-  <data name="CSV Import" xml:space="preserve">
-    <value>CSV Import</value>
-  </data>
-  <data name="Select File" xml:space="preserve">
-    <value>Select File</value>
-  </data>
-  <data name="Error loading file, ensure it isn't currently in use" xml:space="preserve">
-    <value>Error loading file, ensure it isn't currently in use</value>
-  </data>
-  <data name="Click here to learn how to use CSV Import." xml:space="preserve">
-    <value>Click here to learn how to use CSV Import.</value>
-  </data>
-  <data name="Ignore duplicate entries" xml:space="preserve">
-    <value>Ignore duplicate entries</value>
-  </data>
-  <data name="Argument Index" xml:space="preserve">
-    <value>Argument Index</value>
-  </data>
-  <data name="Return Excess" xml:space="preserve">
-    <value>Return Excess</value>
-  </data>
-  <data name="Source" xml:space="preserve">
-    <value>Source</value>
-  </data>
-  <data name="Destination" xml:space="preserve">
-    <value>Destination</value>
-  </data>
-  <data name="Default" xml:space="preserve">
-    <value>Default</value>
-  </data>
-  <data name="Toggle Scavenger" xml:space="preserve">
-    <value>Toggle Scavenger</value>
-  </data>
-  <data name="Backpack Graphic" xml:space="preserve">
-    <value>Backpack Graphic</value>
-  </data>
-  <data name="Item Weight" xml:space="preserve">
-    <value>Item Weight</value>
-  </data>
-  <data name="Buy Agent: Not enough weight available..." xml:space="preserve">
-    <value>Buy Agent: Not enough weight available...</value>
-  </data>
   <data name="Enabled Packets:" xml:space="preserve">
-    <value>Enabled Packets:</value>
-  </data>
-  <data name="Custom Actions" xml:space="preserve">
-    <value>Custom Actions</value>
-  </data>
-  <data name="Show remaining trap pouches on use" xml:space="preserve">
-    <value>Show remaining trap pouches on use</value>
-  </data>
-  <data name="Trap pouches remaining: {0}" xml:space="preserve">
-    <value>Trap pouches remaining: {0}</value>
-  </data>
-  <data name="Toggle Autoloot" xml:space="preserve">
-    <value>Toggle Autoloot</value>
-  </data>
-  <data name="Selected Season:" xml:space="preserve">
-    <value>Selected Season:</value>
-  </data>
-  <data name="Check Backpack Item Count" xml:space="preserve">
-    <value>Check Backpack Item Count</value>
-  </data>
-  <data name="Minimum Items Available:" xml:space="preserve">
-    <value>Minimum Items Available:</value>
-  </data>
-  <data name="Buy Agent: Not enough backpack space available..." xml:space="preserve">
-    <value>Buy Agent: Not enough backpack space available...</value>
-  </data>
-  <data name="Stackable" xml:space="preserve">
-    <value>Stackable</value>
-  </data>
-  <data name="Container Sets" xml:space="preserve">
-    <value>Container Sets</value>
-  </data>
-  <data name="Move to set" xml:space="preserve">
-    <value>Move to set</value>
-  </data>
-  <data name="ID (Multiple)" xml:space="preserve">
-    <value>ID (Multiple)</value>
-  </data>
-  <data name="Autoloot Match" xml:space="preserve">
-    <value>Autoloot Match</value>
-  </data>
-  <data name="Talisman Skill Bonus" xml:space="preserve">
-    <value>Talisman Skill Bonus</value>
-  </data>
-  <data name="Talisman Exceptional Skill Bonus" xml:space="preserve">
-    <value>Talisman Exceptional Skill Bonus</value>
-  </data>
-  <data name="Cliloc (Multiple)" xml:space="preserve">
-    <value>Cliloc (Multiple)</value>
-  </data>
-  <data name="Move to group" xml:space="preserve">
-    <value>Move to group</value>
-  </data>
-  <data name="Framework:" xml:space="preserve">
-    <value>Framework:</value>
-  </data>
-  <data name="Action Delay Dragging (Sphere-X):" xml:space="preserve">
-    <value>Action Delay Dragging (Sphere-X):</value>
-  </data>
-  <data name="Avalonia port assistance provided by Kevin_" xml:space="preserve">
-    <value>Avalonia port assistance provided by Kevin_</value>
+    <value>Povolit pakety:</value>
   </data>
 </root>

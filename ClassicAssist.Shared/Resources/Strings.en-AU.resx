@@ -1,64 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
-  <!-- 
-    Microsoft ResX Schema 
-    
-    Version 2.0
-    
-    The primary goals of this format is to allow a simple XML format 
-    that is mostly human readable. The generation and parsing of the 
-    various data types are done through the TypeConverter classes 
-    associated with the data types.
-    
-    Example:
-    
-    ... ado.net/XML headers & schema ...
-    <resheader name="resmimetype">text/microsoft-resx</resheader>
-    <resheader name="version">2.0</resheader>
-    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
-    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
-    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
-    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
-    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
-        <value>[base64 mime encoded serialized .NET Framework object]</value>
-    </data>
-    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
-        <comment>This is a comment</comment>
-    </data>
-                
-    There are any number of "resheader" rows that contain simple 
-    name/value pairs.
-    
-    Each data row contains a name, and value. The row also contains a 
-    type or mimetype. Type corresponds to a .NET class that support 
-    text/value conversion through the TypeConverter architecture. 
-    Classes that don't support this are serialized and stored with the 
-    mimetype set.
-    
-    The mimetype is used for serialized objects, and tells the 
-    ResXResourceReader how to depersist the object. This is currently not 
-    extensible. For a given mimetype the value must be set accordingly:
-    
-    Note - application/x-microsoft.net.object.binary.base64 is the format 
-    that the ResXResourceWriter will generate, however the reader can 
-    read any of the formats listed below.
-    
-    mimetype: application/x-microsoft.net.object.binary.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
-            : and then encoded with base64 encoding.
-    
-    mimetype: application/x-microsoft.net.object.soap.base64
-    value   : The object must be serialized with 
-            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
-            : and then encoded with base64 encoding.
-
-    mimetype: application/x-microsoft.net.object.bytearray.base64
-    value   : The object must be serialized into a byte array 
-            : using a System.ComponentModel.TypeConverter
-            : and then encoded with base64 encoding.
-    -->
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
     <xsd:element name="root" msdata:IsDataSet="true">
@@ -112,10 +53,10 @@
     <value>2.0</value>
   </resheader>
   <resheader name="reader">
-    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <resheader name="writer">
-    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=9.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="Organizer" xml:space="preserve">
     <value>Organiser</value>
@@ -1281,8 +1222,8 @@
   <data name="Journal receives filtered messages" xml:space="preserve">
     <value>Journal receives filtered messages</value>
   </data>
-  <data name="Enabled Packets:" xml:space="preserve">
-    <value>Enabled Packets:</value>
+  <data name="Enabled Packets" xml:space="preserve">
+    <value>Enabled Packets</value>
   </data>
   <data name="All Enabled" xml:space="preserve">
     <value>All Enabled</value>
@@ -1410,22 +1351,736 @@ Are you sure you wish to continue?</value>
   <data name="Cast Last Spell" xml:space="preserve">
     <value>Cast Last Spell</value>
   </data>
-  <data name="Up" xml:space="preserve">
-    <value>Up</value>
+  <data name="Maximum distance exceeded." xml:space="preserve">
+    <value>Maximum distance exceeded.</value>
   </data>
-  <data name="Down" xml:space="preserve">
-    <value>Down</value>
+  <data name="Show Child Items" xml:space="preserve">
+    <value>Show Child Items</value>
   </data>
-  <data name="Locked" xml:space="preserve">
-    <value>Locked</value>
+  <data name="Open All Containers" xml:space="preserve">
+    <value>Open All Containers</value>
+  </data>
+  <data name="Requeue failed items" xml:space="preserve">
+    <value>Requeue failed items</value>
+  </data>
+  <data name="Invalid organizer agent name..." xml:space="preserve">
+    <value>Invalid organizer agent name...</value>
+  </data>
+  <data name="Loot humanoids" xml:space="preserve">
+    <value>Loot humanoids</value>
+  </data>
+  <data name="Reset import cache" xml:space="preserve">
+    <value>Reset import cache</value>
+  </data>
+  <data name="Macro not found..." xml:space="preserve">
+    <value>Macro not found...</value>
+  </data>
+  <data name="Take Snapshot" xml:space="preserve">
+    <value>Take Snapshot</value>
+  </data>
+  <data name="Snapshot Saved: {0}" xml:space="preserve">
+    <value>Snapshot Saved: {0}</value>
+  </data>
+  <data name="Priority:" xml:space="preserve">
+    <value>Priority:</value>
+  </data>
+  <data name="Priority" xml:space="preserve">
+    <value>Priority</value>
+  </data>
+  <data name="Object queue full" xml:space="preserve">
+    <value>Object queue full</value>
+  </data>
+  <data name="Use Cliloc language from ClassicUO settings" xml:space="preserve">
+    <value>Use Cliloc language from ClassicUO settings</value>
+  </data>
+  <data name="Keyboard" xml:space="preserve">
+    <value>Keyboard</value>
+  </data>
+  <data name="Share Macro" xml:space="preserve">
+    <value>Share Macro</value>
+  </data>
+  <data name="Check Weight" xml:space="preserve">
+    <value>Check Weight</value>
+  </data>
+  <data name="Minimum Weight Available:" xml:space="preserve">
+    <value>Minimum Weight Available:</value>
+  </data>
+  <data name="Context menu entry not found..." xml:space="preserve">
+    <value>Context menu entry not found...</value>
+  </data>
+  <data name="Atleast one option must be provided..." xml:space="preserve">
+    <value>Atleast one option must be provided...</value>
+  </data>
+  <data name="Invalid state name: &quot;on&quot;, &quot;off&quot;, or &quot;toggle&quot;..." xml:space="preserve">
+    <value>Invalid state name: "on", "off", or "toggle"...</value>
+  </data>
+  <data name="Replay" xml:space="preserve">
+    <value>Replay</value>
+  </data>
+  <data name="Ignore packet type" xml:space="preserve">
+    <value>Ignore packet type</value>
+  </data>
+  <data name="Copy packet declaration" xml:space="preserve">
+    <value>Copy packet declaration</value>
+  </data>
+  <data name="Configure Sound Filters" xml:space="preserve">
+    <value>Configure Sound Filters</value>
+  </data>
+  <data name="Sound Filter" xml:space="preserve">
+    <value>Sound Filter</value>
+  </data>
+  <data name="Sound Type" xml:space="preserve">
+    <value>Sound Type</value>
+  </data>
+  <data name="Animals" xml:space="preserve">
+    <value>Animals</value>
+  </data>
+  <data name="Environment" xml:space="preserve">
+    <value>Environment</value>
+  </data>
+  <data name="Bear Sounds" xml:space="preserve">
+    <value>Bear Sounds</value>
+  </data>
+  <data name="Bird Sounds" xml:space="preserve">
+    <value>Bird Sounds</value>
+  </data>
+  <data name="Bull Sounds" xml:space="preserve">
+    <value>Bull Sounds</value>
+  </data>
+  <data name="Cat Sounds" xml:space="preserve">
+    <value>Cat Sounds</value>
+  </data>
+  <data name="Chicken Sounds" xml:space="preserve">
+    <value>Chicken Sounds</value>
+  </data>
+  <data name="Cougar Sounds" xml:space="preserve">
+    <value>Cougar Sounds</value>
+  </data>
+  <data name="Deer Sounds" xml:space="preserve">
+    <value>Deer Sounds</value>
+  </data>
+  <data name="Dog Sounds" xml:space="preserve">
+    <value>Dog Sounds</value>
+  </data>
+  <data name="Dragon Sounds" xml:space="preserve">
+    <value>Dragon Sounds</value>
+  </data>
+  <data name="Eagle Sounds" xml:space="preserve">
+    <value>Eagle Sounds</value>
+  </data>
+  <data name="Goat Sounds" xml:space="preserve">
+    <value>Goat Sounds</value>
+  </data>
+  <data name="Horse Sounds" xml:space="preserve">
+    <value>Horse Sounds</value>
+  </data>
+  <data name="Pig Sounds" xml:space="preserve">
+    <value>Pig Sounds</value>
+  </data>
+  <data name="Rat Sounds" xml:space="preserve">
+    <value>Rat Sounds</value>
+  </data>
+  <data name="Sheep Sounds" xml:space="preserve">
+    <value>Sheep Sounds</value>
+  </data>
+  <data name="Titan / Cyclops Sounds" xml:space="preserve">
+    <value>Titan / Cyclops Sounds</value>
+  </data>
+  <data name="Wolf Sounds" xml:space="preserve">
+    <value>Wolf Sounds</value>
+  </data>
+  <data name="Door Sounds" xml:space="preserve">
+    <value>Door Sounds</value>
+  </data>
+  <data name="Emote Sounds" xml:space="preserve">
+    <value>Emote Sounds</value>
+  </data>
+  <data name="Weapon Sounds" xml:space="preserve">
+    <value>Weapon Sounds</value>
+  </data>
+  <data name="Wrestling Sounds" xml:space="preserve">
+    <value>Wrestling Sounds</value>
+  </data>
+  <data name="Spell Fizzle Sounds" xml:space="preserve">
+    <value>Spell Fizzle Sounds</value>
+  </data>
+  <data name="Alchemy Sounds" xml:space="preserve">
+    <value>Alchemy Sounds</value>
+  </data>
+  <data name="Inscribing Sounds" xml:space="preserve">
+    <value>Inscribing Sounds</value>
+  </data>
+  <data name="Spirit Speak Sounds" xml:space="preserve">
+    <value>Spirit Speak Sounds</value>
+  </data>
+  <data name="Expire Targets:" xml:space="preserve">
+    <value>Expire Targets:</value>
+  </data>
+  <data name="Time in milliseconds (-1 to not expire)" xml:space="preserve">
+    <value>Time in milliseconds (-1 to not expire)</value>
+  </data>
+  <data name="ID from target" xml:space="preserve">
+    <value>ID from target</value>
+  </data>
+  <data name="Layer" xml:space="preserve">
+    <value>Layer</value>
+  </data>
+  <data name="Activated following" xml:space="preserve">
+    <value>Activated following</value>
+  </data>
+  <data name="Deactivated following" xml:space="preserve">
+    <value>Deactivated following</value>
+  </data>
+  <data name="Event" xml:space="preserve">
+    <value>Event</value>
+  </data>
+  <data name="Caller" xml:space="preserve">
+    <value>Caller</value>
+  </data>
+  <data name="Elapsed" xml:space="preserve">
+    <value>Elapsed</value>
+  </data>
+  <data name="Format Code" xml:space="preserve">
+    <value>Format Code</value>
+  </data>
+  <data name="Current month donations" xml:space="preserve">
+    <value>Current donations for {0}: ${1}</value>
+  </data>
+  <data name="Donate Now" xml:space="preserve">
+    <value>Donate Now</value>
+  </data>
+  <data name="Context menu entry disabled" xml:space="preserve">
+    <value>Context menu entry disabled</value>
+  </data>
+  <data name="Use Last Skill" xml:space="preserve">
+    <value>Use Last Skill</value>
+  </data>
+  <data name="Login With Google" xml:space="preserve">
+    <value>Login With Google</value>
+  </data>
+  <data name="Authentication error or timeout" xml:space="preserve">
+    <value>Authentication error or timeout</value>
+  </data>
+  <data name="Name Overrides" xml:space="preserve">
+    <value>Name Overrides</value>
+  </data>
+  <data name="Insert Empty Entry" xml:space="preserve">
+    <value>Insert Empty Entry</value>
+  </data>
+  <data name="Notes" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="Autologin" xml:space="preserve">
+    <value>Autologin</value>
+  </data>
+  <data name="Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Server Index" xml:space="preserve">
+    <value>Server Index</value>
+  </data>
+  <data name="Character Index" xml:space="preserve">
+    <value>Character Index</value>
+  </data>
+  <data name="Connect Delay" xml:space="preserve">
+    <value>Connect Delay</value>
+  </data>
+  <data name="Reconnect Delay" xml:space="preserve">
+    <value>Reconnect Delay</value>
+  </data>
+  <data name="Unknown account..." xml:space="preserve">
+    <value>Unknown account...</value>
+  </data>
+  <data name="Autologin in {0} seconds..." xml:space="preserve">
+    <value>Autologin in {0} seconds...</value>
+  </data>
+  <data name="Connecting..." xml:space="preserve">
+    <value>Connecting...</value>
+  </data>
+  <data name="Timeout waiting for shard selection screen" xml:space="preserve">
+    <value>Timeout waiting for shard selection screen</value>
+  </data>
+  <data name="Failed to get server list" xml:space="preserve">
+    <value>Failed to get server list</value>
+  </data>
+  <data name="Failed to get selected server index" xml:space="preserve">
+    <value>Failed to get selected server index</value>
+  </data>
+  <data name="Servers:" xml:space="preserve">
+    <value>Servers:</value>
+  </data>
+  <data name="Selecting server {0}..." xml:space="preserve">
+    <value>Selecting server {0}...</value>
+  </data>
+  <data name="Timeout waiting for character selection screen" xml:space="preserve">
+    <value>Timeout waiting for character selection screen</value>
+  </data>
+  <data name="Failed to get character list" xml:space="preserve">
+    <value>Failed to get character list</value>
+  </data>
+  <data name="Character index not found" xml:space="preserve">
+    <value>Character index not found</value>
+  </data>
+  <data name="Characters:" xml:space="preserve">
+    <value>Characters:</value>
+  </data>
+  <data name="Selecting character {0}..." xml:space="preserve">
+    <value>Selecting character {0}...</value>
+  </data>
+  <data name="{0} agent is now {1}" xml:space="preserve">
+    <value>{0} agent is now {1}</value>
+  </data>
+  <data name="Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Trade" xml:space="preserve">
+    <value>Trade</value>
+  </data>
+  <data name="Match text value of property (UOAlive)" xml:space="preserve">
+    <value>Match text value of property (UOAlive)</value>
+  </data>
+  <data name="Mini Heal / Cure Self" xml:space="preserve">
+    <value>Mini Heal / Cure Self</value>
+  </data>
+  <data name="Greater Heal / Cure Self" xml:space="preserve">
+    <value>Greater Heal / Cure Self</value>
+  </data>
+  <data name="Cure" xml:space="preserve">
+    <value>Cure</value>
+  </data>
+  <data name="Arch Cure" xml:space="preserve">
+    <value>Arch Cure</value>
+  </data>
+  <data name="Healing" xml:space="preserve">
+    <value>Healing</value>
+  </data>
+  <data name="No items to display..." xml:space="preserve">
+    <value>No items to display...</value>
+  </data>
+  <data name="Backup Now" xml:space="preserve">
+    <value>Backup Now</value>
+  </data>
+  <data name="Linked" xml:space="preserve">
+    <value>Linked</value>
+  </data>
+  <data name="Unlinked" xml:space="preserve">
+    <value>Unlinked</value>
+  </data>
+  <data name="Logout on disconnected prompt" xml:space="preserve">
+    <value>Logout on disconnected prompt</value>
+  </data>
+  <data name="Combine stacks" xml:space="preserve">
+    <value>Combine stacks</value>
+  </data>
+  <data name="Replace name with single click label" xml:space="preserve">
+    <value>Replace name with single click label</value>
+  </data>
+  <data name="Text Color" xml:space="preserve">
+    <value>Text Color</value>
+  </data>
+  <data name="Width" xml:space="preserve">
+    <value>Width</value>
+  </data>
+  <data name="Height" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="Transparent background" xml:space="preserve">
+    <value>Transparent background</value>
+  </data>
+  <data name="ItemID Filter" xml:space="preserve">
+    <value>ItemID Filter</value>
+  </data>
+  <data name="Source ID" xml:space="preserve">
+    <value>Source ID</value>
+  </data>
+  <data name="Destination ID" xml:space="preserve">
+    <value>Destination ID</value>
+  </data>
+  <data name="World Map" xml:space="preserve">
+    <value>World Map</value>
+  </data>
+  <data name="Skill Bonus" xml:space="preserve">
+    <value>Skill Bonus</value>
+  </data>
+  <data name="Stop Organizer" xml:space="preserve">
+    <value>Stop Organizer</value>
+  </data>
+  <data name="Stop Dress" xml:space="preserve">
+    <value>Stop Dress</value>
+  </data>
+  <data name="Screenshot" xml:space="preserve">
+    <value>Screenshot</value>
+  </data>
+  <data name="Open Folder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="Include Player Name" xml:space="preserve">
+    <value>Include Player Name</value>
+  </data>
+  <data name="Include Shard Name" xml:space="preserve">
+    <value>Include Shard Name</value>
+  </data>
+  <data name="Include Timestamp" xml:space="preserve">
+    <value>Include Timestamp</value>
+  </data>
+  <data name="Information Bar" xml:space="preserve">
+    <value>Information Bar</value>
+  </data>
+  <data name="Format:" xml:space="preserve">
+    <value>Format:</value>
+  </data>
+  <data name="Font Color:" xml:space="preserve">
+    <value>Font Colour:</value>
+  </data>
+  <data name="Background Color:" xml:space="preserve">
+    <value>Background Colour:</value>
+  </data>
+  <data name="Font Size:" xml:space="preserve">
+    <value>Font Size:</value>
+  </data>
+  <data name="Auto Screenshot" xml:space="preserve">
+    <value>Auto Screenshot</value>
+  </data>
+  <data name="Player Death" xml:space="preserve">
+    <value>Player Death</value>
+  </data>
+  <data name="Filename Format:" xml:space="preserve">
+    <value>Filename Format:</value>
+  </data>
+  <data name="Mobile Death" xml:space="preserve">
+    <value>Mobile Death</value>
+  </data>
+  <data name="Player Death Delay:" xml:space="preserve">
+    <value>Player Death Delay:</value>
+  </data>
+  <data name="Mobile Death Delay:" xml:space="preserve">
+    <value>Mobile Death Delay:</value>
+  </data>
+  <data name="(milliseconds)" xml:space="preserve">
+    <value>(milliseconds)</value>
+  </data>
+  <data name="UO Only" xml:space="preserve">
+    <value>UO Only</value>
+  </data>
+  <data name="Fullscreen" xml:space="preserve">
+    <value>Fullscreen</value>
+  </data>
+  <data name="Max Distance:" xml:space="preserve">
+    <value>Max Distance:</value>
+  </data>
+  <data name="Only if enemy" xml:space="preserve">
+    <value>Only if enemy</value>
+  </data>
+  <data name="Disable hotkeys on profile load" xml:space="preserve">
+    <value>Disable hotkeys on profile load</value>
+  </data>
+  <data name="Limit Hotkey Retrigger" xml:space="preserve">
+    <value>Limit Hotkey Retrigger</value>
+  </data>
+  <data name="Other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Packets" xml:space="preserve">
+    <value>Packets</value>
+  </data>
+  <data name="Hue Override" xml:space="preserve">
+    <value>Hue Override</value>
+  </data>
+  <data name="Hotkeys Status Gump" xml:space="preserve">
+    <value>Hotkeys Status Gump</value>
+  </data>
+  <data name="A profile already exists by this name, choose a new name..." xml:space="preserve">
+    <value>A profile already exists by this name, choose a new name...</value>
+  </data>
+  <data name="Targeting item {0} / {1}" xml:space="preserve">
+    <value>Targeting item {0} / {1}</value>
+  </data>
+  <data name="Move to bank" xml:space="preserve">
+    <value>Move to bank</value>
+  </data>
+  <data name="Direction" xml:space="preserve">
+    <value>Direction</value>
+  </data>
+  <data name="Include Internal" xml:space="preserve">
+    <value>Include Internal</value>
+  </data>
+  <data name="Arm / Disarm already in progress..." xml:space="preserve">
+    <value>Arm / Disarm already in progress...</value>
+  </data>
+  <data name="Dress already in progress..." xml:space="preserve">
+    <value>Dress already in progress...</value>
+  </data>
+  <data name="Module" xml:space="preserve">
+    <value>Module</value>
+  </data>
+  <data name="Invalid VendorBuy list name..." xml:space="preserve">
+    <value>Invalid VendorBuy list name...</value>
+  </data>
+  <data name="New Group" xml:space="preserve">
+    <value>New Group</value>
+  </data>
+  <data name="Remove Group" xml:space="preserve">
+    <value>Remove Group</value>
+  </data>
+  <data name="Auto disable when loading" xml:space="preserve">
+    <value>Auto disable when loading</value>
+  </data>
+  <data name="Disable all vendor buy entries on loading profile" xml:space="preserve">
+    <value>Disable all vendor buy entries on loading profile</value>
+  </data>
+  <data name="Open Modules Folder" xml:space="preserve">
+    <value>Open Modules Folder</value>
+  </data>
+  <data name="Backup Days" xml:space="preserve">
+    <value>Backup Days</value>
+  </data>
+  <data name="Backup Settings" xml:space="preserve">
+    <value>Backup Settings</value>
+  </data>
+  <data name="Choose backup folder" xml:space="preserve">
+    <value>Choose backup folder</value>
+  </data>
+  <data name="Path" xml:space="preserve">
+    <value>Path</value>
+  </data>
+  <data name="Setting to zero will cause it to backup on every client close" xml:space="preserve">
+    <value>Setting to zero will cause it to backup on every client close</value>
+  </data>
+  <data name="Login" xml:space="preserve">
+    <value>Login</value>
+  </data>
+  <data name="Login With Windows" xml:space="preserve">
+    <value>Login With Windows</value>
+  </data>
+  <data name="Logout" xml:space="preserve">
+    <value>Logout</value>
+  </data>
+  <data name="Username" xml:space="preserve">
+    <value>Username</value>
+  </data>
+  <data name="Loading..." xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="No items..." xml:space="preserve">
+    <value>No items...</value>
+  </data>
+  <data name="Backing up {0}..." xml:space="preserve">
+    <value>Backing up {0}...</value>
+  </data>
+  <data name="Done..." xml:space="preserve">
+    <value>Done...</value>
+  </data>
+  <data name="Failed to backup file: {0}" xml:space="preserve">
+    <value>Failed to backup file: {0}</value>
+  </data>
+  <data name="No backup type or path set..." xml:space="preserve">
+    <value>No backup type or path set...</value>
+  </data>
+  <data name="Profile Backup" xml:space="preserve">
+    <value>Profile Backup</value>
+  </data>
+  <data name="Profile backup in progress..." xml:space="preserve">
+    <value>Profile backup in progress...</value>
+  </data>
+  <data name="Folder Browser" xml:space="preserve">
+    <value>Folder Browser</value>
+  </data>
+  <data name="New Folder" xml:space="preserve">
+    <value>New Folder</value>
+  </data>
+  <data name="Incremental" xml:space="preserve">
+    <value>Incremental</value>
+  </data>
+  <data name="Only write files that have been modified" xml:space="preserve">
+    <value>Only write files that have been modified</value>
+  </data>
+  <data name="Backup path not set" xml:space="preserve">
+    <value>Backup path not set</value>
+  </data>
+  <data name="Cannot locate backup folder" xml:space="preserve">
+    <value>Cannot locate backup folder</value>
+  </data>
+  <data name="Overwrite Existing" xml:space="preserve">
+    <value>Overwrite Existing</value>
+  </data>
+  <data name="Overwrite existing files instead of creating new files with the same name" xml:space="preserve">
+    <value>Overwrite existing files instead of creating new files with the same name</value>
+  </data>
+  <data name="Password" xml:space="preserve">
+    <value>Password</value>
+  </data>
+  <data name="Minimize to system tray" xml:space="preserve">
+    <value>Minimize to system tray</value>
+  </data>
+  <data name="Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="All Names" xml:space="preserve">
+    <value>All Names</value>
+  </data>
+  <data name="Create Macro Button" xml:space="preserve">
+    <value>Create Macro Button</value>
+  </data>
+  <data name="Reflection Error: {0}" xml:space="preserve">
+    <value>Reflection Error: {0}</value>
+  </data>
+  <data name="Show player / shard name in CUO title" xml:space="preserve">
+    <value>Show player / shard name in CUO title</value>
+  </data>
+  <data name="Moving item {0} / {1}" xml:space="preserve">
+    <value>Moving item {0} / {1}</value>
+  </data>
+  <data name="Show Overhead" xml:space="preserve">
+    <value>Show Overhead</value>
+  </data>
+  <data name="Display system message as overhead message" xml:space="preserve">
+    <value>Display system message as overhead message</value>
+  </data>
+  <data name="Trap Pouches" xml:space="preserve">
+    <value>Trap Pouches</value>
+  </data>
+  <data name="Auto-add targeted pouches" xml:space="preserve">
+    <value>Auto-add targeted pouches</value>
+  </data>
+  <data name="Remove item on use object request" xml:space="preserve">
+    <value>Remove item on use object request</value>
+  </data>
+  <data name="Only if last spell is Magic Trap" xml:space="preserve">
+    <value>Only if last spell is Magic Trap</value>
+  </data>
+  <data name="Warn when item count below:" xml:space="preserve">
+    <value>Warn when item count below:</value>
+  </data>
+  <data name="Trap pouch count below {0}..." xml:space="preserve">
+    <value>Trap pouch count below {0}...</value>
+  </data>
+  <data name="Overhead Message" xml:space="preserve">
+    <value>Overhead Message</value>
+  </data>
+  <data name="Use Trap Pouch" xml:space="preserve">
+    <value>Use Trap Pouch</value>
+  </data>
+  <data name="Clear Trap Pouches" xml:space="preserve">
+    <value>Clear Trap Pouches</value>
+  </data>
+  <data name="Item already in list..." xml:space="preserve">
+    <value>Item already in list...</value>
+  </data>
+  <data name="Open container" xml:space="preserve">
+    <value>Open container</value>
+  </data>
+  <data name="Opening container {0} / {1}..." xml:space="preserve">
+    <value>Opening container {0} / {1}...</value>
+  </data>
+  <data name="Only known containers" xml:space="preserve">
+    <value>Only known containers</value>
+  </data>
+  <data name="Target location..." xml:space="preserve">
+    <value>Target location...</value>
+  </data>
+  <data name="Move to ground" xml:space="preserve">
+    <value>Move to ground</value>
+  </data>
+  <data name="CSV Import" xml:space="preserve">
+    <value>CSV Import</value>
+  </data>
+  <data name="Select File" xml:space="preserve">
+    <value>Select File</value>
+  </data>
+  <data name="Error loading file, ensure it isn't currently in use" xml:space="preserve">
+    <value>Error loading file, ensure it isn't currently in use</value>
+  </data>
+  <data name="Click here to learn how to use CSV Import." xml:space="preserve">
+    <value>Click here to learn how to use CSV Import.</value>
+  </data>
+  <data name="Ignore duplicate entries" xml:space="preserve">
+    <value>Ignore duplicate entries</value>
+  </data>
+  <data name="Argument Index" xml:space="preserve">
+    <value>Argument Index</value>
+  </data>
+  <data name="Return Excess" xml:space="preserve">
+    <value>Return Excess</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="Destination" xml:space="preserve">
+    <value>Destination</value>
+  </data>
+  <data name="Default" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Toggle Scavenger" xml:space="preserve">
+    <value>Toggle Scavenger</value>
+  </data>
+  <data name="Backpack Graphic" xml:space="preserve">
+    <value>Backpack Graphic</value>
+  </data>
+  <data name="Item Weight" xml:space="preserve">
+    <value>Item Weight</value>
+  </data>
+  <data name="Buy Agent: Not enough weight available..." xml:space="preserve">
+    <value>Buy Agent: Not enough weight available...</value>
+  </data>
+  <data name="Enabled Packets:" xml:space="preserve">
+    <value>Enabled Packets:</value>
+  </data>
+  <data name="Custom Actions" xml:space="preserve">
+    <value>Custom Actions</value>
+  </data>
+  <data name="Show remaining trap pouches on use" xml:space="preserve">
+    <value>Show remaining trap pouches on use</value>
+  </data>
+  <data name="Trap pouches remaining: {0}" xml:space="preserve">
+    <value>Trap pouches remaining: {0}</value>
+  </data>
+  <data name="Toggle Autoloot" xml:space="preserve">
+    <value>Toggle Autoloot</value>
+  </data>
+  <data name="Selected Season:" xml:space="preserve">
+    <value>Selected Season:</value>
+  </data>
+  <data name="Check Backpack Item Count" xml:space="preserve">
+    <value>Check Backpack Item Count</value>
+  </data>
+  <data name="Minimum Items Available:" xml:space="preserve">
+    <value>Minimum Items Available:</value>
+  </data>
+  <data name="Buy Agent: Not enough backpack space available..." xml:space="preserve">
+    <value>Buy Agent: Not enough backpack space available...</value>
+  </data>
+  <data name="Stackable" xml:space="preserve">
+    <value>Stackable</value>
+  </data>
+  <data name="Container Sets" xml:space="preserve">
+    <value>Container Sets</value>
+  </data>
+  <data name="Move to set" xml:space="preserve">
+    <value>Move to set</value>
+  </data>
+  <data name="ID (Multiple)" xml:space="preserve">
+    <value>ID (Multiple)</value>
+  </data>
+  <data name="Autoloot Match" xml:space="preserve">
+    <value>Autoloot Match</value>
+  </data>
+  <data name="Talisman Skill Bonus" xml:space="preserve">
+    <value>Talisman Skill Bonus</value>
+  </data>
+  <data name="Talisman Exceptional Skill Bonus" xml:space="preserve">
+    <value>Talisman Exceptional Skill Bonus</value>
+  </data>
+  <data name="Cliloc (Multiple)" xml:space="preserve">
+    <value>Cliloc (Multiple)</value>
+  </data>
+  <data name="Move to group" xml:space="preserve">
+    <value>Move to group</value>
+  </data>
+  <data name="Framework:" xml:space="preserve">
+    <value>Framework:</value>
   </data>
   <data name="Avalonia port assistance provided by Kevin_" xml:space="preserve">
     <value>Avalonia port assistance provided by Kevin_</value>
-  </data>
-  <data name="Toggle Dress Type" xml:space="preserve">
-    <value>Toggle Dress Type</value>
-  </data>
-  <data name="Maximum distance exceeded." xml:space="preserve">
-    <value>Maximum distance exceeded.</value>
   </data>
 </root>

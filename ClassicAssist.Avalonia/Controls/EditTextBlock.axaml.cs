@@ -9,11 +9,11 @@ namespace ClassicAssist.Avalonia.Controls
 {
     public partial class EditTextBlock : UserControl
     {
-        public static DirectProperty<EditTextBlock, string> TextProperty =
+        public static readonly DirectProperty<EditTextBlock, string> TextProperty =
             AvaloniaProperty.RegisterDirect<EditTextBlock, string>( nameof( Text ), o => o.Text, ( o, v ) => o.Text = v,
                 defaultBindingMode: BindingMode.TwoWay );
 
-        public static DirectProperty<EditTextBlock, bool> ShowIconProperty =
+        public static readonly DirectProperty<EditTextBlock, bool> ShowIconProperty =
             AvaloniaProperty.RegisterDirect<EditTextBlock, bool>( nameof( ShowIcon ), o => o.ShowIcon,
                 ( o, v ) => o.ShowIcon = v, defaultBindingMode: BindingMode.TwoWay );
 

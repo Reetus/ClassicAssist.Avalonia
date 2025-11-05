@@ -12,7 +12,7 @@ namespace ClassicAssist.Avalonia.Controls
 {
     public partial class TextBoxKey : UserControl
     {
-        public static DirectProperty<TextBoxKey, ShortcutKeys> ShortcutProperty =
+        public static readonly DirectProperty<TextBoxKey, ShortcutKeys> ShortcutProperty =
             AvaloniaProperty.RegisterDirect<TextBoxKey, ShortcutKeys>( nameof( Shortcut ), o => o.Shortcut,
                 ( o, v ) => o.Shortcut = v, defaultBindingMode: BindingMode.TwoWay );
 

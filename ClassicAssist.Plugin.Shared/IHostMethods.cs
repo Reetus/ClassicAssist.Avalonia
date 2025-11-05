@@ -43,5 +43,6 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> Follow( int serial );
         void PlayCUOMacro( string name );
         Task<bool> HasDisconnectedGump();
+        void OnShutdown();
     }
 }

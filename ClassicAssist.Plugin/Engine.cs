@@ -21,6 +21,7 @@ using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Plugin.Shared.Reflection;
@@ -55,6 +56,8 @@ namespace Assistant
         private static OnMouse _onMouse;
         private static OnFocusGained _onFocusGained;
         private static OnFocusLost _onFocusLost;
+
+        public static AutoResetEvent ShutdownResetEvent { get; } = new AutoResetEvent( false );
 
         public static Assembly ClassicAssembly { get; set; }
 
@@ -254,6 +257,8 @@ namespace Assistant
         private static void OnClientClosing()
         {
             _plugin?.OnClientClosing();
+
+            ShutdownResetEvent.WaitOne( 60000 );
         }
 
         private static void OnPlayerPositionChanged( int x, int y, int z )
@@ -437,6 +442,11 @@ namespace Assistant
             public Task<bool> HasDisconnectedGump()
             {
                 return Task.FromResult( ReflectionImpl.HasDisconnectedGump() );
+            }
+
+            public void OnShutdown()
+            {
+                ShutdownResetEvent.Set();
             }
         }
 

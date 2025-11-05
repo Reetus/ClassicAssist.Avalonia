@@ -34,13 +34,11 @@ namespace ClassicAssist.Avalonia
 {
     public class AvaloniaUIInvoker : IUIInvoker
     {
-        private readonly IClipboard _clipboard;
         private readonly Dispatcher _dispatcher;
 
         public AvaloniaUIInvoker( Dispatcher dispatcher )
         {
             _dispatcher = dispatcher;
-            // _clipboard = AvaloniaLocator.Current.GetService<IClipboard>();
         }
 
         public Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
@@ -133,12 +131,12 @@ namespace ClassicAssist.Avalonia
 
         public void SetClipboardText( string text )
         {
-            _clipboard.SetTextAsync( text ).ConfigureAwait( false );
+            Engine.MainWindow.Clipboard.SetTextAsync( text ).ConfigureAwait( false );
         }
 
         public string GetClipboardText()
         {
-            return _clipboard.GetTextAsync().GetAwaiter().GetResult();
+            return Engine.MainWindow.Clipboard.TryGetTextAsync().Result;
         }
     }
 }

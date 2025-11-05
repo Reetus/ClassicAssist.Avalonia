@@ -122,8 +122,6 @@ namespace Assistant
         {
             Options.LoadEvent += OnOptionsLoad;
             Options.SaveEvent += OnOptionsSave;
-            
-            SEngine.Initialize();
         }
 
         private static void OnOptionsSave( JObject obj )

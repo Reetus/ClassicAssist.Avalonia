@@ -29,11 +29,12 @@ namespace ClassicAssist.Avalonia
             clientStream.Connect();
 
             // Attach client RPC
-            var pluginMethods = new ClassicAssist.Shared.Engine.PluginMethods();
+            Shared.Engine.PluginMethods pluginMethods = new Shared.Engine.PluginMethods();
             JsonRpc rpc = JsonRpc.Attach( clientStream, pluginMethods );
             IHostMethods host = rpc.Attach<IHostMethods>();
             
             Shared.Engine.InstallRPC( rpc, host, pluginMethods );
+            Engine.Initialize();
             
             BuildAvaloniaApp().StartWithClassicDesktopLifetime( args );
         }

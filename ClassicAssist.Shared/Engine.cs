@@ -292,12 +292,8 @@ namespace ClassicAssist.Shared
             Options.Save( Options.CurrentOptions );
             AssistantOptions.Save();
             SentrySdk.Close();
+            Host?.OnShutdown();
             Shutdown?.Invoke();
-            
-            if ( Host != null )
-            {
-                Environment.Exit( 0 );
-            }            
         }
 
         public static void OnPlayerPositionChanged( int x, int y, int z )
@@ -896,17 +892,24 @@ namespace ClassicAssist.Shared
 
             public void OnMouse( int button, int wheel )
             {
-                OnMouse( button, wheel );
+                Engine.OnMouse( button, wheel );
             }
 
             public void OnTick()
             {
-                // Engine.OnTick();
+                Engine.OnTick();
             }
 
             public void OnFocusChanged( bool focus )
             {
-                // Engine.OnFocusChanged( focus );
+                if ( focus )
+                {
+                    OnFocusGained();
+                }
+                else
+                {
+                    OnFocusLost();
+                }
             }
 
             public void OnPlayerPositionChanged( int x, int y, int z )
@@ -915,5 +918,8 @@ namespace ClassicAssist.Shared
             }
         }
 
+        private static void OnTick()
+        {
+        }
     }
 }
