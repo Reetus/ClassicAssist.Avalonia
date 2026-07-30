@@ -1,7 +1,6 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using ClassicAssist.Annotations;
 using ClassicAssist.UI.Misc;
 using Newtonsoft.Json;
 
@@ -116,7 +115,6 @@ namespace ClassicAssist.Data.Hotkeys
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

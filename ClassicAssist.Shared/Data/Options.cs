@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using ClassicAssist.Annotations;
 using ClassicAssist.Data.Friends;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Macros;
@@ -423,7 +422,6 @@ namespace ClassicAssist.Data
             LoadEvent?.Invoke( json, options );
         }
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

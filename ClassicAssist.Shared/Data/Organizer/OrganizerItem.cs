@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using ClassicAssist.Annotations;
 
 namespace ClassicAssist.Data.Organizer
 {
@@ -44,7 +43,6 @@ namespace ClassicAssist.Data.Organizer
             OnPropertyChanged( propertyName );
         }
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

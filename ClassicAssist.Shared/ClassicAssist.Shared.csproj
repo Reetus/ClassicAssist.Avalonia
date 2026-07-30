@@ -3,8 +3,7 @@
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
         <RootNamespace>ClassicAssist.Shared</RootNamespace>
-        <Configurations>Debug;Release;Linux</Configurations>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+            <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -17,8 +16,6 @@
         <None Remove="Resources\dialog-error.png" />
         <None Remove="Resources\dialog-info.png" />
         <None Remove="Resources\dialog-warn.png" />
-        <None Remove="zlib32.dll" />
-        <None Remove="zlib64.dll" />
     </ItemGroup>
 
     <ItemGroup>
@@ -40,12 +37,6 @@
         <Content Include="Data\Weapons.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
-        <Content Include="zlib32.dll">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-        <Content Include="zlib64.dll">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
     </ItemGroup>
 
     <ItemGroup>
@@ -64,6 +55,8 @@
     <ItemGroup>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="IronPython" Version="2.7.12" />
+        <PackageReference Include="LibDeflate.NET" Version="1.19.0" />
+        <PackageReference Include="LibDeflate.Native" Version="1.19.0" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
         <PackageReference Include="Octokit" Version="0.51.0" />

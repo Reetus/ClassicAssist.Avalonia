@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using ClassicAssist.Annotations;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 
@@ -76,7 +75,6 @@ namespace ClassicAssist.Avalonia.Views
 
         public new event PropertyChangedEventHandler PropertyChanged;
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

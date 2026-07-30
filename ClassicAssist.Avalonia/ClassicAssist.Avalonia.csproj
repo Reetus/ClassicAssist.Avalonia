@@ -6,8 +6,7 @@
         <!-- Deployed as a subfolder of the plugin; the plugin launches this apphost as a child process. -->
         <OutputPath>..\Output\ClassicAssist\ui\</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-        <Configurations>Debug;Release;Linux</Configurations>
-        <TargetFramework>net9.0</TargetFramework>
+            <TargetFramework>net9.0</TargetFramework>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <!-- Target net9.0 but run on whatever newer runtime the user has (TazUO itself ships net10). -->
     <RollForward>LatestMajor</RollForward>

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using ClassicAssist.Annotations;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.Misc;
@@ -87,7 +86,6 @@ namespace ClassicAssist.Data.Dress
             OnPropertyChanged( propertyName );
         }
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

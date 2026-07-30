@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
-using ClassicAssist.Annotations;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
@@ -298,7 +297,6 @@ namespace ClassicAssist.Shared.UI.ViewModels
 
             public event PropertyChangedEventHandler PropertyChanged;
 
-            [NotifyPropertyChangedInvocator]
             protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
             {
                 PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

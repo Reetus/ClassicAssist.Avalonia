@@ -1,80 +1,37 @@
 using System;
-using System.Reflection;
-using System.Runtime.InteropServices;
+using System.Buffers;
+using LibDeflate;
 
 namespace ClassicAssist.UO
 {
     public static class Compression
     {
-        /// <summary>
-        ///     Logical name resolved to a real zlib by <see cref="Resolve" />. The platform is decided at run
-        ///     time rather than by a build configuration, because the previous <c>#if LINUX</c> approach only
-        ///     worked in the "Linux" configuration and left Debug builds P/Invoking zlib64.dll on Linux.
-        /// </summary>
-        private const string ZLIB = "zlib";
+        private static readonly Compressor _compressor = new ZlibCompressor( 1 );
+        private static readonly Decompressor _decompressor = new ZlibDecompressor();
 
-        static Compression()
+        // libdeflate's compressor and decompressor objects each own scratch state and must not be used
+        // concurrently. Packet callbacks arrive on thread pool threads from the plugin, so send and
+        // receive really can overlap here.
+        private static readonly object _compressLock = new object();
+        private static readonly object _decompressLock = new object();
+
+        public static int Compress( byte[] sourceBuffer, ref byte[] destBuffer )
         {
-            NativeLibrary.SetDllImportResolver( typeof( Compression ).Assembly, Resolve );
-        }
-
-        [DllImport( ZLIB, EntryPoint = "uncompress" )]
-        private static extern int UncompressNative( byte[] dest, ref int destLen, byte[] source, int sourceLen );
-
-        [DllImport( ZLIB, EntryPoint = "compress" )]
-        private static extern int CompressNative( byte[] dest, ref int destLen, byte[] source, int sourceLen );
-
-        private static IntPtr Resolve( string libraryName, Assembly assembly, DllImportSearchPath? searchPath )
-        {
-            if ( libraryName != ZLIB )
+            lock ( _compressLock )
             {
-                return IntPtr.Zero;
+                return _compressor.Compress( sourceBuffer, destBuffer );
             }
-
-            string[] candidates;
-
-            if ( RuntimeInformation.IsOSPlatform( OSPlatform.Windows ) )
-            {
-                candidates = Environment.Is64BitProcess
-                    ? new[] { "zlib64.dll", "zlib1.dll" }
-                    : new[] { "zlib32.dll", "zlib1.dll" };
-            }
-            else if ( RuntimeInformation.IsOSPlatform( OSPlatform.OSX ) )
-            {
-                candidates = new[] { "libz.dylib", "libz.1.dylib" };
-            }
-            else
-            {
-                candidates = new[] { "libz.so.1", "libz.so" };
-            }
-
-            foreach ( string candidate in candidates )
-            {
-                if ( NativeLibrary.TryLoad( candidate, assembly, searchPath, out IntPtr handle ) )
-                {
-                    return handle;
-                }
-            }
-
-            return IntPtr.Zero;
         }
 
         public static bool Uncompress( ref byte[] destBuffer, ref int destLength, byte[] sourceBuffer, int sourceLen )
         {
-            return UncompressNative( destBuffer, ref destLength, sourceBuffer, sourceLen ) == 0;
-        }
+            lock ( _decompressLock )
+            {
+                OperationStatus status = _decompressor.Decompress( sourceBuffer.AsSpan( 0, sourceLen ),
+                    destBuffer.AsSpan(), out destLength );
 
-        public static byte[] Compress( byte[] bytes )
-        {
-            byte[] compressBytes = new byte[(int) ( bytes.Length * 1.001 ) + 12];
-
-            int length = compressBytes.Length;
-
-            CompressNative( compressBytes, ref length, bytes, bytes.Length );
-
-            Array.Resize( ref compressBytes, length );
-
-            return compressBytes;
+                return status == OperationStatus.Done;
+            }
         }
     }
 }

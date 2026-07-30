@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Runtime.CompilerServices;
 using ClassicAssist.Shared;
-using ClassicAssist.Annotations;
 using ClassicAssist.UO.Objects;
 
 namespace ClassicAssist.Data.Counters
@@ -53,7 +52,6 @@ namespace ClassicAssist.Data.Counters
             Count = matches?.Sum( i => i.Count ) ?? 0;
         }
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

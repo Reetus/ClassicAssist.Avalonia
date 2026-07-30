@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using ClassicAssist.Annotations;
 using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.Data.Skills
@@ -76,7 +75,6 @@ namespace ClassicAssist.Data.Skills
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        [NotifyPropertyChangedInvocator]
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
         {
             PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );

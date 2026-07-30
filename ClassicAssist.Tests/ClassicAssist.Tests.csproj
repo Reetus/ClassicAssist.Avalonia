@@ -2,7 +2,6 @@
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Configurations>Debug;Release;Linux</Configurations>
     <IsPackable>false</IsPackable>
     <!-- Target net9.0 but run on whatever newer runtime the user has (TazUO itself ships net10). -->
     <RollForward>LatestMajor</RollForward>
