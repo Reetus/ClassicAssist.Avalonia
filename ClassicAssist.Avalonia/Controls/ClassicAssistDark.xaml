@@ -97,10 +97,16 @@
   </Style>
 
   <!--
-    Selection belongs to the row, not the cell. Avalonia's DataGrid marks the clicked cell :current
-    and draws a currency box plus a focus rectangle around it, which reads as a second, competing
-    selection. Blanking the cell's own chrome in every state leaves the row highlight as the only
-    selection the user sees.
+    Selection belongs to the row, not the cell. Avalonia's DataGrid marks the clicked cell :current and
+    reveals two overlays inside it - Rectangle#CurrencyVisual and Grid#FocusVisual - which read as a
+    second selection competing with the row highlight. Hiding them again leaves the row as the only
+    thing that looks selected.
+
+    The pseudo-classes on these selectors are load-bearing, not decoration. The DataGrid theme turns
+    the overlays on from `^:current` / `^:focus` styles, and Avalonia applies a style with a
+    pseudo-class at StyleTrigger priority, which outranks the plain Style priority an unconditional
+    selector would get. Matching the state is what lets these win; without it the setters are simply
+    outranked and nothing changes on screen.
   -->
   <Style Selector="DataGridCell">
     <Setter Property="FontSize" Value="12"/>
@@ -108,14 +114,28 @@
     <Setter Property="BorderBrush" Value="Transparent"/>
   </Style>
 
+  <Style Selector="DataGridCell:current /template/ Rectangle#CurrencyVisual">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+
+  <Style Selector="DataGridCell:focus /template/ Grid#FocusVisual">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+
+  <Style Selector="DataGridCell:focus-visible /template/ Grid#FocusVisual">
+    <Setter Property="IsVisible" Value="False"/>
+  </Style>
+
   <Style Selector="DataGridCell:current, DataGridCell:focus, DataGridCell:selected">
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="BorderBrush" Value="Transparent"/>
   </Style>
 
-  <Style Selector="DataGridRow:selected">
-    <Setter Property="Background" Value="{DynamicResource DataGridRowSelectedBackgroundBrush}"/>
-    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  <!-- Same priority rule: the row's own highlight is driven from a :selected style. -->
+  <Style Selector="DataGridRow:selected /template/ Rectangle#BackgroundRectangle">
+    <Setter Property="Fill" Value="{DynamicResource DataGridRowSelectedBackgroundBrush}"/>
+    <Setter Property="IsVisible" Value="True"/>
+    <Setter Property="Opacity" Value="1"/>
   </Style>
 
   <!--

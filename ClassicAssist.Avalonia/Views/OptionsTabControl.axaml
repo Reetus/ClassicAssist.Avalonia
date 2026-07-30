@@ -15,7 +15,9 @@
   <UserControl.Resources>
     <!--<misc:StaticStringResourceConverter x:Key="StaticStringResourceConverter" />-->
   </UserControl.Resources>
-  <Grid Margin="10">
+  <!-- No margin of its own: the TabControl already pads its content by 10, and every other tab
+       relies on just that. This one was doubling up to 20. -->
+  <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="*" />
       <ColumnDefinition Width="*" />
