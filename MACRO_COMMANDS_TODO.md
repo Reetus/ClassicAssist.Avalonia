@@ -8,7 +8,7 @@ of it for macro commands (nothing in `tazuo-net9` is absent from `develop`). It 
 commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled` and
 `DropItemToGround` - and changes how speech hue is resolved.
 
-- **58 commands missing entirely**
+- **52 commands missing entirely**
 - **22 commands whose signature changed** (5 of them behavioural rather than additive)
 
 ## Before porting anything
@@ -19,9 +19,10 @@ commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled
       single group of missing commands. `IHostMethods` is already **identical** between the two
       repos (this repo only adds `OnShutdown`), so the RPC methods these commands need already
       exist and work - nothing new has to be plumbed.
-- [ ] **Sync `Resources/MacroCommandHelp.resx`.** None of the missing commands have help entries
-      here, so ported commands show blank help in the UI until the strings come across too.
-      `Strings.resx` may also need new category entries.
+- [x] ~~**Sync `Resources/MacroCommandHelp.resx`.**~~ Done - taken wholesale from `develop`, so help
+      text for every command below is already present. That also fixed the designer pointing at the
+      wrong resource name, which had been making *all* macro help throw
+      `MissingManifestResourceException`. `Strings.resx` may still need new category entries.
 - [ ] Decide on the `object` vs `int` list change below before porting list-related commands.
 
 ## Breaking signature changes
@@ -60,7 +61,7 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 - [ ] `bool ActiveAbility()`
 
-### Agent (15)
+### Agent (11)
 
 - [ ] `void Autoloot( object obj )`
 - [ ] `bool Autolooting()`
@@ -71,10 +72,6 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 - [ ] `void SetTrapPouch( object obj )`
 - [ ] `void SetVendorBuyAutoBuy( string listName, string onOff = "toggle" )`
 - [ ] `void StopDress()`
-- [ ] `void TradeAccept()`
-- [ ] `void TradeClose()`
-- [ ] `void TradeCurrency( int gold, int platinum = 0 )`
-- [ ] `void TradeReject()`
 - [ ] `void UseTrapPouch()`
 - [ ] `bool WaitForTradeWindow( int timeout = -1 )`
 
@@ -86,12 +83,10 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 - [ ] `void SetPlayerAlias( string aliasName, object obj )`
 - [ ] `void UnsetPlayerAlias( string aliasName )`
 
-### Entity (4)
+### Entity (2)
 
 - [ ] `string Direction( object obj = null )`
 - [ ] `int Map()`
-- [ ] `bool WaitForBuffDisabled( string name, int timeout = 5000 )`
-- [ ] `bool WaitForBuffEnabled( string name, int timeout = 5000 )`
 
 ### Gump (3)
 
