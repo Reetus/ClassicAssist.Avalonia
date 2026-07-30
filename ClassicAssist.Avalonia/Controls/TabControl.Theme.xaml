@@ -1,0 +1,129 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    FluentTheme styles TabItem as a "pivot" header: 24pt type, 48px tall, no tab body. That reads as
+    a page title rather than a tab, which is why the stock Fluent TabControl looks so unlike the WPF
+    build. This replaces it with classic tabs - a strip of small buttoned headers sitting on top of a
+    bordered content panel, the selected one merging into the panel below it.
+
+    Both templates are written out in full rather than tweaking Fluent's resource keys, because those
+    keys are internal to the theme and change between versions; a DynamicResource that stops
+    resolving degrades silently rather than failing the build.
+  -->
+
+  <Style Selector="TabControl">
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                Background="{TemplateBinding Background}"
+                CornerRadius="{TemplateBinding CornerRadius}">
+          <DockPanel>
+            <ItemsPresenter Name="PART_ItemsPresenter"
+                            DockPanel.Dock="Top"
+                            ItemsPanel="{TemplateBinding ItemsPanel}"/>
+            <!--
+              Negative top margin pulls the panel up under the tab strip so the selected tab, which
+              paints the same background and leaves its own bottom edge open, joins onto it.
+            -->
+            <Border Name="PART_ContentPanel"
+                    Margin="0,-1,0,0"
+                    Background="{DynamicResource TabPanelBackground}"
+                    BorderBrush="{DynamicResource TabStripBorderBrush}"
+                    BorderThickness="1">
+              <ContentPresenter Name="PART_SelectedContentHost"
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding SelectedContent}"
+                                ContentTemplate="{TemplateBinding SelectedContentTemplate}"/>
+            </Border>
+          </DockPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <!-- The strip itself: tabs run left to right and never stretch to fill the width. -->
+  <Style Selector="TabControl > ItemsPresenter#PART_ItemsPresenter > WrapPanel">
+    <Setter Property="Orientation" Value="Horizontal"/>
+  </Style>
+
+  <Style Selector="TabItem">
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="Padding" Value="12,5"/>
+    <Setter Property="Margin" Value="0,0,2,0"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Foreground" Value="{DynamicResource TabItemForeground}"/>
+    <Setter Property="Background" Value="{DynamicResource TabItemBackground}"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{DynamicResource TabStripBorderBrush}"
+                BorderThickness="1,1,1,1"
+                CornerRadius="3,3,0,0">
+          <ContentPresenter Name="PART_ContentPresenter"
+                            Margin="{TemplateBinding Padding}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Content="{TemplateBinding Header}"
+                            ContentTemplate="{TemplateBinding HeaderTemplate}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="TabItem:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TabItemBackgroundPointerOver}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundSelected}"/>
+  </Style>
+
+  <!--
+    Selected tabs paint the content panel's background and drop their bottom border, so the tab and
+    the panel below read as one surface.
+  -->
+  <Style Selector="TabItem:selected">
+    <Setter Property="Background" Value="{DynamicResource TabPanelBackground}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundSelected}"/>
+  </Style>
+
+  <Style Selector="TabItem:selected /template/ Border#PART_Border">
+    <Setter Property="BorderThickness" Value="1,1,1,0"/>
+    <Setter Property="Margin" Value="0,0,0,-1"/>
+  </Style>
+
+  <Style Selector="TabItem:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource TabItemForegroundDisabled}"/>
+  </Style>
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="TabPanelBackground" Color="#FF2B2B2B"/>
+          <SolidColorBrush x:Key="TabStripBorderBrush" Color="#FF3F3F46"/>
+          <SolidColorBrush x:Key="TabItemBackground" Color="#FF232323"/>
+          <SolidColorBrush x:Key="TabItemBackgroundPointerOver" Color="#FF3A3A3D"/>
+          <SolidColorBrush x:Key="TabItemForeground" Color="#FFBFBFBF"/>
+          <SolidColorBrush x:Key="TabItemForegroundSelected" Color="#FFFFFFFF"/>
+          <SolidColorBrush x:Key="TabItemForegroundDisabled" Color="#FF6D6D6D"/>
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="TabPanelBackground" Color="#FFFFFFFF"/>
+          <SolidColorBrush x:Key="TabStripBorderBrush" Color="#FFACACAC"/>
+          <SolidColorBrush x:Key="TabItemBackground" Color="#FFEFEFEF"/>
+          <SolidColorBrush x:Key="TabItemBackgroundPointerOver" Color="#FFDCDCDC"/>
+          <SolidColorBrush x:Key="TabItemForeground" Color="#FF303030"/>
+          <SolidColorBrush x:Key="TabItemForegroundSelected" Color="#FF000000"/>
+          <SolidColorBrush x:Key="TabItemForegroundDisabled" Color="#FF9D9D9D"/>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+</Styles>
