@@ -20,6 +20,7 @@ using System.IO;
 using System.IO.Pipes;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,23 +44,15 @@ namespace ClassicAssist.Plugin
         
         private static IPluginMethods _plugin;
         private static HostMethods _hostMethods;
-        private static OnConnected _onConnected;
-        private static OnDisconnected _onDisconnected;
-        private static OnPacketSendRecv _onReceive;
-        private static OnPacketSendRecv _onSend;
-        private static OnTick _onTick;
-        private static OnGetUOFilePath _getUOFilePath;
-        private static OnPacketSendRecv _sendToClient;
-        private static OnPacketSendRecv _sendToServer;
-        private static OnGetPacketLength _getPacketLength;
-        private static OnUpdatePlayerPosition _onPlayerPositionChanged;
-        private static OnSetTitle _setTitle;
-        private static OnClientClose _onClientClosing;
-        private static OnHotkey _onHotkeyPressed;
-        private static RequestMove _requestMove;
-        private static OnMouse _onMouse;
-        private static OnFocusGained _onFocusGained;
-        private static OnFocusLost _onFocusLost;
+
+        // Addresses out of the client's PluginHeader, invoked through calli. See InitializePlugin for
+        // why these aren't delegates.
+        private static IntPtr _sendToClientNewPtr;
+        private static IntPtr _sendToServerNewPtr;
+        private static IntPtr _getPacketLengthPtr;
+        private static IntPtr _getUOFilePathPtr;
+        private static IntPtr _setTitlePtr;
+        private static IntPtr _requestMovePtr;
 
         public static AutoResetEvent ShutdownResetEvent { get; } = new AutoResetEvent( false );
 
@@ -93,39 +86,36 @@ namespace ClassicAssist.Plugin
 
         private static unsafe void InitializePlugin( PluginHeader* plugin )
         {
-            _onConnected = OnConnected;
-            _onDisconnected = OnDisconnected;
-            _onReceive = OnPacketReceive;
-            _onSend = OnPacketSend;
-            _onPlayerPositionChanged = OnPlayerPositionChanged;
-            _onClientClosing = OnClientClosing;
-            _onHotkeyPressed = OnHotkeyPressed;
-            _onMouse = OnMouse;
-            _onTick = OnTick;
-            _onFocusGained = () => OnFocusChanged( true );
-            _onFocusLost = () => OnFocusChanged( false );
             WindowHandle = plugin->HWND;
 
-            plugin->OnConnected = Marshal.GetFunctionPointerForDelegate( _onConnected );
-            plugin->OnDisconnected = Marshal.GetFunctionPointerForDelegate( _onDisconnected );
-            plugin->OnRecv = Marshal.GetFunctionPointerForDelegate( _onReceive );
-            plugin->OnSend = Marshal.GetFunctionPointerForDelegate( _onSend );
-            plugin->OnPlayerPositionChanged = Marshal.GetFunctionPointerForDelegate( _onPlayerPositionChanged );
-            plugin->OnClientClosing = Marshal.GetFunctionPointerForDelegate( _onClientClosing );
-            plugin->OnHotkeyPressed = Marshal.GetFunctionPointerForDelegate( _onHotkeyPressed );
-            plugin->OnMouse = Marshal.GetFunctionPointerForDelegate( _onMouse );
-            plugin->Tick = Marshal.GetFunctionPointerForDelegate( _onTick );
-            plugin->OnFocusGained = Marshal.GetFunctionPointerForDelegate( _onFocusGained );
-            plugin->OnFocusLost = Marshal.GetFunctionPointerForDelegate( _onFocusLost );
+            // Everything below deliberately avoids Marshal.GetFunctionPointerForDelegate and
+            // Marshal.GetDelegateForFunctionPointer, in both directions. Those two only interoperate
+            // when the host and the plugin agree on the *identity* of the CUO_API delegate types, and
+            // that assumption does not hold on every load path:
+            //
+            //   managed load (TazUO, ClassicUO.Bootstrap)  cuoapi resolves to the host's copy, so the
+            //                                              pointer is a managed thunk the runtime
+            //                                              unwraps straight back to the original
+            //                                              delegate. Nothing is marshalled.
+            //   DNNE native load (modern ClassicUO)        DNNE calls hostfxr's
+            //                                              load_assembly_and_get_function_pointer,
+            //                                              which always uses an
+            //                                              IsolatedComponentLoadContext. We get our
+            //                                              own cuoapi, so identity differs even though
+            //                                              it is the same file and version.
+            //
+            // In that second case GetDelegateForFunctionPointer throws InvalidCastException outright,
+            // and any delegate we hand back makes the host throw the same way when it reads the
+            // header. Where it does not throw it silently makes things worse: the runtime falls back
+            // to building a real marshalling stub, and `ref byte[]` carries no element count across
+            // one, so packet buffers arrive with a length unrelated to the count beside them.
+            //
+            // Raw function pointers have none of that coupling - a calli is just an address and a
+            // signature - so the same registration is correct on every host and every load path.
+            RegisterCallbacks( plugin );
+            BindHostCallbacks( plugin );
 
-            _getPacketLength = Marshal.GetDelegateForFunctionPointer<OnGetPacketLength>( plugin->GetPacketLength );
-            _getUOFilePath = Marshal.GetDelegateForFunctionPointer<OnGetUOFilePath>( plugin->GetUOFilePath );
-            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Recv );
-            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Send );
-            _requestMove = Marshal.GetDelegateForFunctionPointer<RequestMove>( plugin->RequestMove );
-            _setTitle = Marshal.GetDelegateForFunctionPointer<OnSetTitle>( plugin->SetTitle );
-
-            ClientPath = _getUOFilePath();
+            ClientPath = GetUOFilePath();
             ClientVersion = new Version( (byte) ( plugin->ClientVersion >> 24 ), (byte) ( plugin->ClientVersion >> 16 ), (byte) ( plugin->ClientVersion >> 8 ),
                 (byte) plugin->ClientVersion );
 
@@ -139,6 +129,164 @@ namespace ClassicAssist.Plugin
             if ( StartupPath == null )
             {
                 throw new InvalidOperationException();
+            }
+        }
+
+        /// <summary>
+        ///     Publishes our callbacks into the header as raw <see cref="UnmanagedCallersOnlyAttribute" />
+        ///     pointers.
+        ///     <para>
+        ///         <c>OnRecv</c> / <c>OnSend</c> are deliberately left null. They take <c>ref byte[]</c>,
+        ///         which is not blittable and so cannot be exposed this way at all, and a marshalled delegate
+        ///         in those slots is exactly what breaks the DNNE path. Every host this plugin supports -
+        ///         modern ClassicUO, ClassicUO.Bootstrap and TazUO - checks <c>OnRecv_new</c> /
+        ///         <c>OnSend_new</c> first and only falls back to the old pair when they are null, so leaving
+        ///         them empty costs nothing. A client predating the <c>_new</c> slots would get no packet
+        ///         filtering, but such a client also has no room in its header for them (see below).
+        ///     </para>
+        /// </summary>
+        private static unsafe void RegisterCallbacks( PluginHeader* plugin )
+        {
+            plugin->OnConnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnConnected;
+            plugin->OnDisconnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnDisconnected;
+            plugin->OnClientClosing = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnClientClosing;
+            plugin->Tick = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnTick;
+            plugin->OnFocusGained = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnFocusGained;
+            plugin->OnFocusLost = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnFocusLost;
+            plugin->OnMouse = (IntPtr) (delegate* unmanaged[Cdecl]<int, int, void>) &NativeOnMouse;
+            plugin->OnPlayerPositionChanged =
+                (IntPtr) (delegate* unmanaged[Cdecl]<int, int, int, void>) &NativeOnPlayerPositionChanged;
+
+            // bool is 4-byte BOOL by default in interop, and the host declares these without any
+            // MarshalAs, so int is what actually crosses.
+            plugin->OnHotkeyPressed = (IntPtr) (delegate* unmanaged[Cdecl]<int, int, int, int>) &NativeOnHotkeyPressed;
+
+            // The cuoapi PluginHeader stops at SetTitle, but every current client appends four more
+            // slots. They are fixed-offset in a sequential struct of pointers, so reach them by hand:
+            //
+            //   184  OnRecv_new    192  OnSend_new    200  Recv_new    208  Send_new
+            //
+            // This assumes the header the client passed is the long form. That is true of modern
+            // ClassicUO, ClassicUO.Bootstrap and TazUO; against a client old enough to pass the short
+            // 184-byte header these writes would land on its stack.
+            byte* raw = (byte*) plugin;
+
+            *(IntPtr*) ( raw + 184 ) = (IntPtr) (delegate* unmanaged[Cdecl]<IntPtr, int*, byte>) &OnPacketReceiveNative;
+            *(IntPtr*) ( raw + 192 ) = (IntPtr) (delegate* unmanaged[Cdecl]<IntPtr, int*, byte>) &OnPacketSendNative;
+        }
+
+        /// <summary>
+        ///     Caches the host's side of the header. Stored as raw addresses and invoked through calli, for
+        ///     the reasons in <see cref="InitializePlugin" />.
+        /// </summary>
+        private static unsafe void BindHostCallbacks( PluginHeader* plugin )
+        {
+            byte* raw = (byte*) plugin;
+
+            _getPacketLengthPtr = plugin->GetPacketLength;
+            _getUOFilePathPtr = plugin->GetUOFilePath;
+            _requestMovePtr = plugin->RequestMove;
+            _setTitlePtr = plugin->SetTitle;
+            _sendToClientNewPtr = *(IntPtr*) ( raw + 200 );
+            _sendToServerNewPtr = *(IntPtr*) ( raw + 208 );
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnConnected()
+        {
+            OnConnected();
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnDisconnected()
+        {
+            OnDisconnected();
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnClientClosing()
+        {
+            OnClientClosing();
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnTick()
+        {
+            OnTick();
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnFocusGained()
+        {
+            OnFocusChanged( true );
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnFocusLost()
+        {
+            OnFocusChanged( false );
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnMouse( int button, int wheel )
+        {
+            OnMouse( button, wheel );
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static void NativeOnPlayerPositionChanged( int x, int y, int z )
+        {
+            OnPlayerPositionChanged( x, y, z );
+        }
+
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static int NativeOnHotkeyPressed( int key, int mod, int pressed )
+        {
+            return OnHotkeyPressed( key, mod, pressed != 0 ) ? 1 : 0;
+        }
+
+        private static unsafe short GetPacketLength( int id )
+        {
+            return _getPacketLengthPtr == IntPtr.Zero
+                ? (short) -1
+                : ( (delegate* unmanaged[Cdecl]<int, short>) _getPacketLengthPtr )( id );
+        }
+
+        private static unsafe string GetUOFilePath()
+        {
+            if ( _getUOFilePathPtr == IntPtr.Zero )
+            {
+                return null;
+            }
+
+            // Ansi, because the host declares the delegate without a CharSet. The buffer is allocated
+            // by the host's return-value marshaller and is ours to free, but this runs once at startup
+            // and guessing the wrong allocator would corrupt its heap, so leave it.
+            return Marshal.PtrToStringAnsi( ( (delegate* unmanaged[Cdecl]<IntPtr>) _getUOFilePathPtr )() );
+        }
+
+        private static unsafe bool RequestMove( int dir, bool run )
+        {
+            return _requestMovePtr != IntPtr.Zero &&
+                   ( (delegate* unmanaged[Cdecl]<int, int, int>) _requestMovePtr )( dir, run ? 1 : 0 ) != 0;
+        }
+
+        private static unsafe void SetTitle( string title )
+        {
+            if ( _setTitlePtr == IntPtr.Zero )
+            {
+                return;
+            }
+
+            IntPtr ptr = Marshal.StringToHGlobalAnsi( title );
+
+            try
+            {
+                ( (delegate* unmanaged[Cdecl]<IntPtr, void>) _setTitlePtr )( ptr );
+            }
+            finally
+            {
+                Marshal.FreeHGlobal( ptr );
             }
         }
 
@@ -297,6 +445,24 @@ namespace ClassicAssist.Plugin
             }
         }
 
+        private static readonly HashSet<string> _warned = new HashSet<string>();
+
+        /// <summary>
+        ///     Logs a given message once. These fire from the packet path, which runs for every packet.
+        /// </summary>
+        private static void WarnOnce( string message )
+        {
+            lock ( _warned )
+            {
+                if ( !_warned.Add( message ) )
+                {
+                    return;
+                }
+            }
+
+            Console.WriteLine( $"ClassicAssist: {message}" );
+        }
+
         /// <summary>
         ///     Decides whether a failed RPC call means the UI is gone or merely that a handler threw.
         ///     Detaching on the latter would silently disable the assistant for the rest of the session after
@@ -346,33 +512,86 @@ namespace ClassicAssist.Plugin
             _plugin?.OnPlayerPositionChanged( x, y, z );
         }
 
-        private static bool OnPacketSend( ref byte[] data, ref int length )
+        /// <summary>
+        ///     Outgoing half of the OnSend_new / OnRecv_new pair. See <see cref="FilterPacketNative" /> for why
+        ///     these exist at all.
+        /// </summary>
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static unsafe byte OnPacketSendNative( IntPtr data, int* length )
         {
-            return FilterPacket( ref data, ref length, ( plugin, buffer ) => plugin.OnPacketSend( buffer, buffer.Length ) );
+            return FilterPacketNative( data, length,
+                ( plugin, buffer ) => plugin.OnPacketSend( buffer, buffer.Length ) );
         }
 
-        private static bool OnPacketReceive( ref byte[] data, ref int length )
+        [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+        private static unsafe byte OnPacketReceiveNative( IntPtr data, int* length )
         {
-            return FilterPacket( ref data, ref length, ( plugin, buffer ) => plugin.OnPacketReceive( buffer, buffer.Length ) );
+            return FilterPacketNative( data, length,
+                ( plugin, buffer ) => plugin.OnPacketReceive( buffer, buffer.Length ) );
         }
 
         /// <summary>
-        ///     Round-trips a packet through the UI process and applies any rewrite it asks for. Returning true
-        ///     lets the packet through unchanged, which is what we want whenever the UI can't answer.
+        ///     The packet callbacks the host actually prefers. The host declares them as
+        ///     <c>bool(byte[] data, ref int length)</c>, but we register them as raw
+        ///     <see cref="UnmanagedCallersOnlyAttribute" /> pointers rather than as marshalled delegates, and
+        ///     that difference is the whole point.
+        ///     <para>
+        ///         The old <c>OnRecv</c> / <c>OnSend</c> pair takes <c>ref byte[]</c>. That only ever worked
+        ///         because the host and the plugin shared one CUO_API identity, so
+        ///         <c>Marshal.GetDelegateForFunctionPointer</c> handed the original delegate straight back and
+        ///         no marshalling happened. Under DNNE the plugin lives in an IsolatedComponentLoadContext with
+        ///         its own copy of cuoapi, identity differs, and the runtime builds a real marshalling stub -
+        ///         at which point <c>ref byte[]</c> arrives carrying no element count and the array bears no
+        ///         relation to <c>length</c>.
+        ///     </para>
+        ///     <para>
+        ///         Taking the buffer as a pointer plus an explicit count sidesteps that entirely: nothing about
+        ///         the signature depends on shared type identity, so the same registration is correct on both
+        ///         load paths. The host pins its array for the duration of the call, so writing through
+        ///         <paramref name="data" /> updates the caller's buffer in place - but only up to the length it
+        ///         handed us, since that is all it allocated.
+        ///     </para>
         /// </summary>
-        private static bool FilterPacket( ref byte[] data, ref int length,
+        private static unsafe byte FilterPacketNative( IntPtr data, int* length,
             Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
         {
             IPluginMethods plugin = _plugin;
 
-            if ( plugin == null )
+            if ( plugin == null || data == IntPtr.Zero || length == null || *length <= 0 )
             {
-                return true;
+                return 1;
             }
 
-            byte[] buffer = new byte[length];
-            Buffer.BlockCopy( data, 0, buffer, 0, length );
+            int capacity = *length;
+            byte[] buffer = new byte[capacity];
 
+            Marshal.Copy( data, buffer, 0, capacity );
+
+            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, call );
+
+            if ( newPacket == null || newLength <= 0 || newLength > capacity )
+            {
+                return result ? (byte) 1 : (byte) 0;
+            }
+
+            Marshal.Copy( newPacket, 0, data, newLength );
+            *length = newLength;
+
+            return result ? (byte) 1 : (byte) 0;
+        }
+
+        /// <summary>
+        ///     Asks the UI process what to do with a packet. Never throws: any failure means the UI can't
+        ///     answer, and the packet should go through untouched rather than take the client down with it.
+        /// </summary>
+        /// <returns>
+        ///     Whether to let the packet through, plus the rewritten packet, if any. A null or empty rewrite
+        ///     means leave the buffer alone. The rewrite is not length-checked here - each caller knows how
+        ///     much room its own buffer has.
+        /// </returns>
+        private static (bool, byte[], int) Filter( IPluginMethods plugin, byte[] buffer,
+            Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
+        {
             bool result;
             byte[] newPacket;
             int newLength;
@@ -385,25 +604,22 @@ namespace ClassicAssist.Plugin
             {
                 OnRpcException( e, $"packet filter (0x{buffer[0]:X2})" );
 
-                return true;
+                return ( true, null, 0 );
             }
 
-            if ( newLength == 0 || !result )
+            if ( !result )
             {
-                return result;
+                return ( false, null, 0 );
             }
 
-            // ClassicUO copies our buffer back into a fixed-size array of its own, so a packet that grew
-            // past the original allocation can't be handed back.
-            if ( newLength > data.Length )
+            // The UI process may return a buffer whose length doesn't match newLength (JSON-RPC
+            // serialisation quirk). Clamp to what it actually sent.
+            if ( newPacket != null && newLength > newPacket.Length )
             {
-                return result;
+                newLength = newPacket.Length;
             }
 
-            length = newLength;
-            Buffer.BlockCopy( newPacket, 0, data, 0, length );
-
-            return result;
+            return ( true, newPacket, newLength );
         }
 
         private static void OnDisconnected()
@@ -418,14 +634,46 @@ namespace ClassicAssist.Plugin
 
         public class HostMethods : IHostMethods
         {
-            public Task<bool> SendPacketToServer( byte[] packet, int length )
+            public unsafe Task<bool> SendPacketToServer( byte[] packet, int length )
             {
-                return Task.FromResult( _sendToServer( ref packet, ref length ) );
+                int len = length;
+
+                if ( _sendToServerNewPtr != IntPtr.Zero )
+                {
+                    fixed ( byte* ptr = packet )
+                    {
+                        // byte, not bool: the host declares these [return: MarshalAs(UnmanagedType.I1)].
+                        ( (delegate* unmanaged[Cdecl]<IntPtr, ref int, byte>)_sendToServerNewPtr )(
+                            (IntPtr) ptr, ref len );
+                    }
+                }
+                else
+                {
+                    WarnOnce( "client did not provide Send_new; outgoing packets cannot be injected." );
+                }
+
+                return Task.FromResult( true );
             }
 
-            public Task<bool> SendPacketToClient( byte[] packet, int length )
+            public unsafe Task<bool> SendPacketToClient( byte[] packet, int length )
             {
-                return Task.FromResult( _sendToClient( ref packet, ref length ) );
+                int len = length;
+
+                if ( _sendToClientNewPtr != IntPtr.Zero )
+                {
+                    fixed ( byte* ptr = packet )
+                    {
+                        // byte, not bool: the host declares these [return: MarshalAs(UnmanagedType.I1)].
+                        ( (delegate* unmanaged[Cdecl]<IntPtr, ref int, byte>)_sendToClientNewPtr )(
+                            (IntPtr) ptr, ref len );
+                    }
+                }
+                else
+                {
+                    WarnOnce( "client did not provide Recv_new; incoming packets cannot be injected." );
+                }
+
+                return Task.FromResult( true );
             }
 
             public Task<string> GetClientPath()
@@ -440,22 +688,22 @@ namespace ClassicAssist.Plugin
 
             public Task<short> GetPacketLength( int id )
             {
-                return Task.FromResult( _getPacketLength( id ) );
+                return Task.FromResult( PluginEngine.GetPacketLength( id ) );
             }
 
             public Task<string> GetUOFilePath()
             {
-                return Task.FromResult( _getUOFilePath() );
+                return Task.FromResult( PluginEngine.GetUOFilePath() );
             }
 
             public Task<bool> RequestMove( int dir, bool run )
             {
-                return Task.FromResult( _requestMove( dir, run ) );
+                return Task.FromResult( PluginEngine.RequestMove( dir, run ) );
             }
 
             public void SetTitle( string title )
             {
-                _setTitle( title );
+                PluginEngine.SetTitle( title );
             }
 
             public Task<(int x, int y)> GetGumpPosition( uint id )
@@ -546,7 +794,7 @@ namespace ClassicAssist.Plugin
 
         public static void Move( int subCode, bool b )
         {
-            _requestMove(subCode, b );
+            RequestMove( subCode, b );
         }
     }
 }

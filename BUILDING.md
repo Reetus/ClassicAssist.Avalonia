@@ -56,8 +56,36 @@ This produces `ClassicAssistNE.so` (`.dll` on Windows) next to the managed `Clas
 is worth keeping, because on Windows a native binary named `ClassicAssist.dll` would collide with the
 managed assembly of the same name. Override with `DnneNativeBinaryName` if you really need to.
 
-Two things the shim needs that are easy to miss, both handled by the `EnableDnne` property group in
-`ClassicAssist.Plugin.csproj`:
+### Why the plugin never uses `Marshal.GetDelegateForFunctionPointer`
+
+DNNE activates the plugin through hostfxr's `load_assembly_and_get_function_pointer`, which **always**
+uses an `IsolatedComponentLoadContext`. There is no opt-out. So under DNNE the plugin loads its own
+`cuoapi`, and its `CUO_API` delegate types are a different identity from the client's even though the
+file and version are identical.
+
+That breaks the obvious way of exchanging the `PluginHeader`:
+
+- `Marshal.GetDelegateForFunctionPointer<T>` on a host pointer throws `InvalidCastException`, because
+  the pointer is a managed thunk it tries to unwrap back into a delegate type we don't share.
+- A delegate *we* publish makes the client throw the same way when it reads the header back.
+- Where it doesn't throw it silently corrupts: the runtime falls back to a real marshalling stub, and
+  `ref byte[]` carries no element count across one, so packet buffers arrive with a length unrelated
+  to the count beside them. That was the `ArgumentException` out of `FilterPacket`.
+
+So `PluginEngine` exchanges the header **entirely through raw function pointers** — everything we
+publish is `[UnmanagedCallersOnly]`, everything we consume is invoked through a
+`delegate* unmanaged[Cdecl]`. A calli is just an address and a signature, so the same registration is
+correct on every host and every load path.
+
+One consequence: `OnRecv` / `OnSend` are left null. They take `ref byte[]`, which is not blittable and
+so cannot be exposed as a native pointer at all. Modern ClassicUO, ClassicUO.Bootstrap and TazUO all
+prefer `OnRecv_new` / `OnSend_new` and only fall back to the old pair when those are null, so nothing
+is lost. `cuoapi`'s `PluginHeader` stops at `SetTitle`, so those four slots are reached by hand at
+offsets 184 / 192 / 200 / 208 — which assumes the client passes the long header. Every current client
+does.
+
+Two more things the shim needs that are easy to miss, both handled by the `EnableDnne` property group
+in `ClassicAssist.Plugin.csproj`:
 
 - **`Assistant.Engine.NativeInstall`** carries `[UnmanagedCallersOnly(EntryPoint = "Install")]`; DNNE
   only exports methods with that attribute. It is a *separate* method from `Install` on purpose —
@@ -77,6 +105,7 @@ nm -D --defined-only ClassicAssistNE.so | grep ' T Install'
 
 - The plugin targets `net9.0`; TazUO ships a self-contained `net10.0` runtime and rolls forward
   automatically. The UI sets `RollForward=LatestMajor` so it runs on whatever runtime is installed.
-- `cuoapi.dll` is referenced with `<Private>false</Private>` — compile-time only. It must not be
-  copied to the output; the client's own copy is what binds at run time. See the comment in
-  `ClassicAssist.Plugin.csproj` before changing this.
+- `cuoapi.dll` is referenced with `<Private>false</Private>` for the managed build — compile-time
+  only, since the client's own copy is what binds at run time. The DNNE build sets `Private=true`,
+  because the isolated load context has to resolve it from the plugin folder. Either way the plugin
+  no longer depends on the two sides agreeing on delegate identity; see above.

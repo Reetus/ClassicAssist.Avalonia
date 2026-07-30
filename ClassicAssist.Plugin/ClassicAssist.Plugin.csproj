@@ -29,10 +29,28 @@
       would then fail to activate the runtime. RollForward lets it run on a newer shared runtime
       than the net9.0 it targets.
     -->
-    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <RollForward>LatestMajor</RollForward>
     <DnneGenRollForward>LatestMajor</DnneGenRollForward>
   </PropertyGroup>
+
+  <!--
+    GenerateRuntimeConfigurationFiles only emits runtimeconfig.json for OutputType=Exe.
+    DNNE needs it next to the managed assembly to activate the runtime, so write it manually.
+  -->
+  <Target Name="GenerateRuntimeConfig" AfterTargets="Build" Condition="'$(EnableDnne)' == 'true'">
+    <WriteLinesToFile
+      File="$(OutputPath)\ClassicAssist.runtimeconfig.json"
+      Lines="{
+  &quot;runtimeOptions&quot;: {
+    &quot;tfm&quot;: &quot;net9.0&quot;,
+    &quot;framework&quot;: {
+      &quot;name&quot;: &quot;Microsoft.NETCore.App&quot;,
+      &quot;version&quot;: &quot;9.0.0&quot;
+    },
+    &quot;rollForward&quot;: &quot;LatestMajor&quot;
+  }
+}"
+      Overwrite="true" />
+  </Target>
 
   <ItemGroup Condition="'$(EnableDnne)' == 'true'">
     <PackageReference Include="DNNE" Version="1.0.33" />
@@ -47,13 +65,18 @@
     redeclared locally. The client hands us its own delegates as function pointers, and
     Marshal.GetDelegateForFunctionPointer refuses to return a delegate as a same-named type from a
     different assembly - redeclaring compiles fine but throws InvalidCastException inside Install.
-    Private=false because the client has already loaded its own copy; shipping ours would be ignored at
-    best and bind to the wrong instance at worst.
+    Private=false for managed loads: the host runtime (ClassicUO/bootstrap) already has cuoapi loaded;
+    shipping our copy would cause type-identity mismatches.
+    Private=true for DNNE: the plugin gets its own .NET runtime via hostfxr so cuoapi must be deployed.
   -->
   <ItemGroup>
-    <Reference Include="cuoapi">
+    <Reference Include="cuoapi" Condition="'$(EnableDnne)' != 'true'">
       <HintPath>.\cuoapi.dll</HintPath>
       <Private>false</Private>
+    </Reference>
+    <Reference Include="cuoapi" Condition="'$(EnableDnne)' == 'true'">
+      <HintPath>.\cuoapi.dll</HintPath>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
 
