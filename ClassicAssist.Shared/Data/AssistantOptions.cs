@@ -278,6 +278,10 @@ namespace ClassicAssist.Data
                 case Language.Polish:
                     locale = new CultureInfo( "pl-PL" );
                     break;
+                case Language.Czech:
+                    // Strings.cs.resx is culture-neutral Czech; cs-CZ falls back to it.
+                    locale = new CultureInfo( "cs-CZ" );
+                    break;
                 case Language.Default:
                     break;
                 default:

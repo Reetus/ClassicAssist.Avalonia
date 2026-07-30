@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
     <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
@@ -2077,8 +2077,20 @@ Are you sure you wish to continue?</value>
   <data name="Move to group" xml:space="preserve">
     <value>Move to group</value>
   </data>
+  <data name="Debugger paused on line {0}" xml:space="preserve">
+    <value>Debugger paused on line {0}</value>
+  </data>
+  <data name="Open in external editor" xml:space="preserve">
+    <value>Open in external editor</value>
+  </data>
   <data name="Framework:" xml:space="preserve">
     <value>Framework:</value>
+  </data>
+  <data name="Organizer Match" xml:space="preserve">
+    <value>Organizer Match</value>
+  </data>
+  <data name="Target Owner" xml:space="preserve">
+    <value>Target Owner</value>
   </data>
   <data name="Avalonia port assistance provided by Kevin_" xml:space="preserve">
     <value>Avalonia port assistance provided by Kevin_</value>

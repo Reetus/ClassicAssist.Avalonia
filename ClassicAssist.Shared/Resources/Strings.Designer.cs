@@ -4088,5 +4088,29 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Avalonia port assistance provided by Kevin_", resourceCulture);
             }
         }
+        
+        public static string Debugger_paused_on_line__0_ {
+            get {
+                return ResourceManager.GetString("Debugger paused on line {0}", resourceCulture);
+            }
+        }
+        
+        public static string Open_in_external_editor {
+            get {
+                return ResourceManager.GetString("Open in external editor", resourceCulture);
+            }
+        }
+        
+        public static string Organizer_Match {
+            get {
+                return ResourceManager.GetString("Organizer Match", resourceCulture);
+            }
+        }
+        
+        public static string Target_Owner {
+            get {
+                return ResourceManager.GetString("Target Owner", resourceCulture);
+            }
+        }
     }
 }
