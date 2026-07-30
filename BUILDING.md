@@ -51,6 +51,28 @@ sudo apt install clang
 dotnet build ClassicAssist.Plugin/ClassicAssist.Plugin.csproj -p:EnableDnne=true
 ```
 
+This produces `ClassicAssistNE.so` (`.dll` on Windows) next to the managed `ClassicAssist.dll`.
+**Point the client at that file, not at `ClassicAssist.dll`** — the "NE" suffix is DNNE's default and
+is worth keeping, because on Windows a native binary named `ClassicAssist.dll` would collide with the
+managed assembly of the same name. Override with `DnneNativeBinaryName` if you really need to.
+
+Two things the shim needs that are easy to miss, both handled by the `EnableDnne` property group in
+`ClassicAssist.Plugin.csproj`:
+
+- **`Assistant.Engine.NativeInstall`** carries `[UnmanagedCallersOnly(EntryPoint = "Install")]`; DNNE
+  only exports methods with that attribute. It is a *separate* method from `Install` on purpose —
+  `UnmanagedCallersOnly` forbids managed callers, and `MethodInfo.Invoke` on such a method throws,
+  which would break the reflection path every client on Linux depends on.
+- **A `runtimeconfig.json`** beside the managed assembly, since the shim starts the runtime through
+  hostfxr. Class libraries do not emit one by default, so without it `dlsym` finds `Install` and the
+  call then fails to activate the runtime.
+
+To check the export after building:
+
+```bash
+nm -D --defined-only ClassicAssistNE.so | grep ' T Install'
+```
+
 ## Notes
 
 - The plugin targets `net9.0`; TazUO ships a self-contained `net10.0` runtime and rolls forward

@@ -16,6 +16,7 @@ using System;
 using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 
 // ReSharper disable once CheckNamespace
@@ -39,6 +40,10 @@ namespace Assistant
         private static readonly string _pluginDirectory =
             Path.GetDirectoryName( typeof( Engine ).Assembly.Location ) ?? AppContext.BaseDirectory;
 
+        /// <summary>
+        ///     Managed entry point, found by name through reflection. This is the path TazUO takes, and the
+        ///     only one that works on Linux.
+        /// </summary>
         /// <param name="header">Pointer to the client's PluginHeader.</param>
         public static void Install( IntPtr header )
         {
@@ -46,6 +51,22 @@ namespace Assistant
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
             Start( header );
+        }
+
+        /// <summary>
+        ///     Native entry point, exported as <c>Install</c> by DNNE for clients that only dlopen the
+        ///     plugin and look up the symbol - modern ClassicUO does not fall back to a managed load.
+        ///     <para>
+        ///         This has to be a second method rather than an attribute on <see cref="Install" />:
+        ///         <see cref="UnmanagedCallersOnlyAttribute" /> forbids managed callers, and
+        ///         <c>MethodInfo.Invoke</c> on such a method throws <see cref="NotSupportedException" />,
+        ///         which would break the reflection path every client on Linux relies on.
+        ///     </para>
+        /// </summary>
+        [UnmanagedCallersOnly( EntryPoint = "Install" )]
+        public static void NativeInstall( IntPtr header )
+        {
+            Install( header );
         }
 
         [MethodImpl( MethodImplOptions.NoInlining )]

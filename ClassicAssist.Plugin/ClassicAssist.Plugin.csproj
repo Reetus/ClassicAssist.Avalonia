@@ -22,6 +22,18 @@
     <EnableDnne Condition="'$(EnableDnne)' == ''">false</EnableDnne>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(EnableDnne)' == 'true'">
+    <!--
+      The shim starts the runtime through hostfxr, which needs a runtimeconfig.json beside the
+      managed assembly. Class libraries do not emit one, so dlsym would find `Install` and the call
+      would then fail to activate the runtime. RollForward lets it run on a newer shared runtime
+      than the net9.0 it targets.
+    -->
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <RollForward>LatestMajor</RollForward>
+    <DnneGenRollForward>LatestMajor</DnneGenRollForward>
+  </PropertyGroup>
+
   <ItemGroup Condition="'$(EnableDnne)' == 'true'">
     <PackageReference Include="DNNE" Version="1.0.33" />
   </ItemGroup>
