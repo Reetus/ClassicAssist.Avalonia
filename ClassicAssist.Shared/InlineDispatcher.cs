@@ -35,5 +35,10 @@ namespace ClassicAssist.Shared
 
             return Task.CompletedTask;
         }
+
+        public bool CheckAccess()
+        {
+            return true;
+        }
     }
 }

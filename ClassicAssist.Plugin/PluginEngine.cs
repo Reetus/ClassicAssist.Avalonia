@@ -289,12 +289,35 @@ namespace ClassicAssist.Plugin
             {
                 return plugin.OnHotkeyPressed( key, mod, pressed ).Result;
             }
-            catch ( Exception )
+            catch ( Exception e )
             {
-                Detach();
+                OnRpcException( e, nameof( OnHotkeyPressed ) );
 
                 return false;
             }
+        }
+
+        /// <summary>
+        ///     Decides whether a failed RPC call means the UI is gone or merely that a handler threw.
+        ///     Detaching on the latter would silently disable the assistant for the rest of the session after
+        ///     a single bad packet, with the UI still on screen looking healthy.
+        /// </summary>
+        private static void OnRpcException( Exception e, string call )
+        {
+            Exception inner = e is AggregateException aggregate ? aggregate.GetBaseException() : e;
+
+            // The UI handler threw. Its problem, not the connection's - stay attached.
+            if ( inner is RemoteInvocationException || inner is RemoteMethodNotFoundException ||
+                 inner is RemoteRpcException && !( inner is ConnectionLostException ) )
+            {
+                Console.WriteLine( $"ClassicAssist: {call} failed in the UI: {inner.Message}" );
+
+                return;
+            }
+
+            Console.WriteLine( $"ClassicAssist: lost the UI connection during {call}: {inner.Message}" );
+
+            Detach();
         }
 
         private static void OnClientClosing()
@@ -358,9 +381,9 @@ namespace ClassicAssist.Plugin
             {
                 ( result, newPacket, newLength ) = call( plugin, buffer ).Result;
             }
-            catch ( Exception )
+            catch ( Exception e )
             {
-                Detach();
+                OnRpcException( e, $"packet filter (0x{buffer[0]:X2})" );
 
                 return true;
             }

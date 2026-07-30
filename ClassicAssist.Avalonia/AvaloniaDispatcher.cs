@@ -41,5 +41,10 @@ namespace ClassicAssist.Avalonia
         {
             return _dispatcher.InvokeAsync( action ).GetTask();
         }
+
+        public bool CheckAccess()
+        {
+            return _dispatcher.CheckAccess();
+        }
     }
 }

@@ -24,5 +24,10 @@ namespace ClassicAssist
     {
         void Invoke( Action action );
         Task InvokeAsync( Action action );
+
+        /// <summary>
+        ///     True when the caller is already on the UI thread and can touch bound state directly.
+        /// </summary>
+        bool CheckAccess();
     }
 }

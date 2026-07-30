@@ -67,6 +67,31 @@ namespace ClassicAssist.UI.ViewModels
         }
 
         /// <summary>
+        ///     Raises change notifications on the UI thread.
+        ///     <para>
+        ///         These view models were written against WPF, which quietly marshals a property change
+        ///         raised on a background thread over to the dispatcher. Avalonia does not - it throws
+        ///         "Call from invalid thread". That matters because nearly everything here is driven by
+        ///         inbound RPC from the plugin, which StreamJsonRpc dispatches on thread pool threads, so
+        ///         without this every packet and connection notification dies in a swallowed exception.
+        ///     </para>
+        /// </summary>
+        protected override void OnPropertyChanged( PropertyChangedEventArgs e )
+        {
+            IDispatcher dispatcher = _dispatcher ?? Engine.Dispatcher;
+
+            if ( dispatcher != null && !dispatcher.CheckAccess() )
+            {
+                // Post rather than block: the caller may be a packet handler the game thread is waiting on.
+                dispatcher.Invoke( () => base.OnPropertyChanged( e ) );
+
+                return;
+            }
+
+            base.OnPropertyChanged( e );
+        }
+
+        /// <summary>
         ///     WPF re-queried CanExecute automatically via CommandManager.RequerySuggested; Avalonia has no
         ///     equivalent, so commands are invalidated here whenever the view model changes.
         /// </summary>
