@@ -1,8 +1,11 @@
 ﻿using System.Linq;
+using ClassicAssist.Shared;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Data.Counters;
 using ClassicAssist.Data.Dress;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.UO.Data;
+using ClassicAssist.UO.Network;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Data.Macros.Commands
@@ -99,6 +102,53 @@ namespace ClassicAssist.Data.Macros.Commands
             int serial = AliasCommands.ResolveSerial( obj );
 
             AutolootHelpers.SetAutolootContainer?.Invoke( serial );
+        }
+        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+        public static void TradeAccept()
+        {
+            PacketWriter writer = new PacketWriter( 12 );
+            writer.Write( (byte) 0x6F );
+            writer.Write( (short) 12 );
+            writer.Write( (byte) TradeAction.Update );
+            writer.Write( Engine.Trade.Serial );
+            writer.Write( 1 );
+            Engine.SendPacketToServer( writer );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+        public static void TradeReject()
+        {
+            PacketWriter writer = new PacketWriter( 12 );
+            writer.Write( (byte) 0x6F );
+            writer.Write( (short) 12 );
+            writer.Write( (byte) TradeAction.Update );
+            writer.Write( Engine.Trade.Serial );
+            writer.Write( 0 );
+            Engine.SendPacketToServer( writer );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+        public static void TradeClose()
+        {
+            PacketWriter writer = new PacketWriter( 12 );
+            writer.Write( (byte) 0x6F );
+            writer.Write( (short) 8 );
+            writer.Write( (byte) TradeAction.Cancel );
+            writer.Write( Engine.Trade.Serial );
+            Engine.SendPacketToServer( writer );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+        public static void TradeCurrency( int gold, int platinum = 0 )
+        {
+            PacketWriter writer = new PacketWriter( 12 );
+            writer.Write( (byte) 0x6F );
+            writer.Write( (short) 16 );
+            writer.Write( (byte) TradeAction.Gold );
+            writer.Write( Engine.Trade.ContainerLocal );
+            writer.Write( gold );
+            writer.Write( platinum );
+            Engine.SendPacketToServer( writer );
         }
     }
 }

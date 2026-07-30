@@ -44,9 +44,26 @@ namespace ClassicAssist.UO.Network
             Register( 0xB1, 0, OnGumpButtonPressed );
             Register( 0xBD, 0, OnClientVersion );
             Register( 0xBF, 0, OnExtendedCommand );
+            Register( 0x6F, 0, OnSecureTrade );
             Register( 0xD7, 0, OnEncodedCommand );
             Register( 0xEF, 31, OnNewClientVersion );
             RegisterExtended( 0x1C, 0, OnSpellCast );
+        }
+
+        private static void OnSecureTrade( PacketReader reader )
+        {
+            byte action = reader.ReadByte();
+            reader.ReadInt32();
+            int value1 = reader.ReadInt32();
+            int value2 = reader.ReadInt32();
+
+            if ( (TradeAction) action != TradeAction.Gold )
+            {
+                return;
+            }
+
+            Engine.Trade.GoldLocal = value1;
+            Engine.Trade.PlatinumLocal = value2;
         }
 
         private static void OnSpellCast( PacketReader reader )

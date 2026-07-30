@@ -1,0 +1,14 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      NETSDK1206: LibDeflate.Native ships its macOS binary under the version-specific RID
+      "osx.11.0", which the portable RID graph never matches from osx-arm64 or osx-x64. The file is
+      still copied to the output, and ClassicAssist.Shared/UO/Compression.cs resolves it from there
+      via a DllImportResolver, so this is handled rather than ignored. The warning surfaces in every
+      project that transitively references the package, hence suppressing it here.
+    -->
+    <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+  </PropertyGroup>
+
+</Project>

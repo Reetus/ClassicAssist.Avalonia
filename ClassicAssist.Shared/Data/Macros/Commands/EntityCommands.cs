@@ -6,6 +6,7 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
+using ClassicAssist.UO.Network.PacketFilter;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Data.Macros.Commands
@@ -201,6 +202,46 @@ namespace ClassicAssist.Data.Macros.Commands
         public static bool BuffExists( string name )
         {
             return BuffIconManager.GetInstance().BuffExists( name );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Entity ),
+            Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
+        public static bool WaitForBuffEnabled( string name, int timeout = 5000 )
+        {
+            return WaitForBuffState( name, true, timeout );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Entity ),
+            Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
+        public static bool WaitForBuffDisabled( string name, int timeout = 5000 )
+        {
+            return WaitForBuffState( name, false, timeout );
+        }
+
+        /// <summary>
+        ///     Waits on a 0xDF buff packet naming <paramref name="name" /> whose enable/disable byte matches.
+        /// </summary>
+        private static bool WaitForBuffState( string name, bool enabled, int timeout )
+        {
+            BuffIconData data = BuffIconManager.GetInstance().GetDataByName( name );
+
+            if ( data == null )
+            {
+                UOC.SystemMessage( Strings.Invalid_type___ );
+
+                return false;
+            }
+
+            PacketFilterInfo pfi = new PacketFilterInfo( 0xDF,
+                new[]
+                {
+                    PacketFilterConditions.ShortAtPositionCondition( data.ID, 7 ),
+                    PacketFilterConditions.ByteAtPositionCondition( enabled ? 1 : 0, 10 )
+                } );
+
+            PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+
+            return pwe.Lock.WaitOne( timeout );
         }
 
         [CommandsDisplay( Category = nameof( Strings.Entity ),

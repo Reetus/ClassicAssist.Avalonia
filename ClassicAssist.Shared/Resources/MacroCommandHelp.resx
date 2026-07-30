@@ -1924,6 +1924,12 @@ if FindType(0xe79, -1, 'backpack'):
   <data name="UNSETPLAYERALIAS_COMMAND_INSERTTEXT" xml:space="preserve">
     <value>UnsetPlayerAlias("mount")</value>
   </data>
+  <data name="DROPITEMTOGROUND_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Drops the specified serial/alias onto the first of the 8 tiles adjacent to the player where it will fit, no amount specified or -1 will drop the full stack. Returns true if the item was dropped.</value>
+  </data>
+  <data name="DROPITEMTOGROUND_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>DropItemToGround('found', -1)</value>
+  </data>
   <data name="MOVEITEMXYZ_COMMAND_DESCRIPTION" xml:space="preserve">
     <value>Moves the specified serial/alias to the given coordinates</value>
   </data>
@@ -1947,5 +1953,17 @@ if FindType(0xe79, -1, 'backpack'):
   </data>
   <data name="SWINGSPEEDINCREASE_COMMAND_INSERTTEXT" xml:space="preserve">
     <value>ssi = SwingSpeedIncrease()</value>
+  </data>
+  <data name="WAITFORBUFFENABLED_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if Buff Icon is Enabled before the timeout, else False</value>
+  </data>
+  <data name="WAITFORBUFFENABLED_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>WaitForBuffEnabled('Active Meditation', 5000)</value>
+  </data>
+  <data name="WAITFORBUFFDISABLED_COMMAND_DESCRIPTION" xml:space="preserve">
+    <value>Returns True if Buff Icon is Disabled before the timeout, else False</value>
+  </data>
+  <data name="WAITFORBUFFDISABLED_COMMAND_INSERTTEXT" xml:space="preserve">
+    <value>WaitForBuffDisabled('Active Meditation', 5000)</value>
   </data>
 </root>

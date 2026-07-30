@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "ExportCommands": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Users\\johns\\source\\repos\\ClassicAssist\\Output\\net48\\ClassicAssist.dll"
-    }
-  }
-}

@@ -123,6 +123,14 @@ namespace ClassicAssist.UO.Data
         Unknown
     }
 
+    public enum TradeAction
+    {
+        Start,
+        Cancel,
+        Update,
+        Gold
+    }
+
     [Flags]
     public enum MobileStatus : byte
     {

@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Abilities;
+using ClassicAssist.Data.Misc;
 using ClassicAssist.Data.Commands;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Macros;
@@ -90,6 +91,11 @@ namespace ClassicAssist.Shared
         public static int LastPromptSerial { get; set; }
         public static TargetQueue<object> LastTargetQueue { get; set; } = new TargetQueue<object>();
         public static MenuCollection Menus { get; set; } = new MenuCollection();
+
+        /// <summary>
+        ///     State of the current secure trade window, tracked from the 0x6F packet in both directions.
+        /// </summary>
+        public static Trade Trade { get; set; } = new Trade();
         public static MobileCollection Mobiles { get; set; } = new MobileCollection( Items );
         public static PacketWaitEntries PacketWaitEntries { get; set; }
         public static PlayerMobile Player { get; set; }

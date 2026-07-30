@@ -103,6 +103,7 @@ namespace ClassicAssist.UO.Network
             Register( 0x3A, 0, OnSkillsList );
             Register( 0x3C, 0, OnContainerContents );
             Register( 0x6C, 19, OnTarget );
+            Register( 0x6F, 0, OnSecureTrade );
             Register( 0x74, 0, OnShopList );
             Register( 0x77, 17, OnMobileMoving );
             Register( 0x7C, 0, OnDisplayItemListMenu );
@@ -134,6 +135,33 @@ namespace ClassicAssist.UO.Network
             RegisterExtended( 0x10, 0, OnDisplayEquipmentInfo );
             RegisterExtended( 0x21, 0, OnClearWeaponAbility );
             RegisterExtended( 0x25, 0, OnToggleSpecialMoves );
+        }
+
+        private static void OnSecureTrade( PacketReader reader )
+        {
+            byte action = reader.ReadByte();
+            int serial = reader.ReadInt32();
+            int value1 = reader.ReadInt32();
+            int value2 = reader.ReadInt32();
+
+            Engine.Trade.Action = (TradeAction) action;
+            Engine.Trade.Serial = serial;
+
+            if ( Engine.Trade.Action == TradeAction.Start )
+            {
+                Engine.Trade.ContainerLocal = value1;
+                Engine.Trade.ContainerRemote = value2;
+            }
+            else if ( Engine.Trade.Action == TradeAction.Update )
+            {
+                Engine.Trade.AcceptLocal = value1;
+                Engine.Trade.AcceptRemote = value2;
+            }
+            else if ( Engine.Trade.Action == TradeAction.Gold )
+            {
+                Engine.Trade.GoldRemote = value1;
+                Engine.Trade.PlatinumRemote = value2;
+            }
         }
 
         private static void OnUO3DPetWindow( PacketReader reader )
