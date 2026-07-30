@@ -17,6 +17,7 @@
         <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
         <AvaloniaResource Include="Controls\TabControl.Theme.xaml" />
         <AvaloniaResource Include="Controls\Compact.Theme.xaml" />
+        <AvaloniaResource Include="Controls\ClassicAssistDark.xaml" />
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.8" />

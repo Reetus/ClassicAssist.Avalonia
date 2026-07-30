@@ -39,6 +39,10 @@
     <Setter Property="MinHeight" Value="0"/>
   </Style>
 
+  <Style Selector="NumericUpDown /template/ ButtonSpinner">
+    <Setter Property="MinHeight" Value="0"/>
+  </Style>
+
   <!--
     Several views size buttons from equal-width grid columns inside a 200px panel, which leaves about
     68px per button - just enough for "Remove" at 13px with 6px of side padding, and not enough with
@@ -53,13 +57,13 @@
     General/Options are a checkbox plus a label, so that alone was setting the row height.
   -->
   <Style Selector="CheckBox">
-    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="MinHeight" Value="20"/>
     <Setter Property="Padding" Value="8,0,0,0"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>
 
   <Style Selector="RadioButton">
-    <Setter Property="MinHeight" Value="0"/>
+    <Setter Property="MinHeight" Value="20"/>
     <Setter Property="Padding" Value="8,0,0,0"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
   </Style>

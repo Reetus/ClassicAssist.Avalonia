@@ -21,7 +21,7 @@
     <viewModels:MainWindowViewModel />
   </Window.DataContext>
   <Grid RowDefinitions="*">
-    <TabControl Padding="10" Grid.Row="0">
+    <TabControl Padding="10" Margin="5" Grid.Row="0">
       <TabItem Header="{x:Static resources:Strings.General}">
         <views:GeneralControl/>
       </TabItem>
@@ -45,7 +45,7 @@
       </TabItem>
     </TabControl>
     <!-- Floats over the tab strip, so it is sized to sit inside that row rather than overlap it. -->
-    <StackPanel Grid.Row="0" Margin="0,1,3,0" VerticalAlignment="Top" HorizontalAlignment="Right">
+    <StackPanel Grid.Row="0" Margin="0,6,8,0" VerticalAlignment="Top" HorizontalAlignment="Right">
       <Button Height="26" Width="26" Padding="3" HorizontalAlignment="Left" Command="{Binding DebugCommand}">
         <Image Source="{StaticResource BugIcon}"/>
       </Button>

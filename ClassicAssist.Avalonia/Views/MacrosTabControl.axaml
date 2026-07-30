@@ -44,8 +44,10 @@
       </ListBox>
       <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Margin="0,5,0,0">
         <Grid.Styles>
+          <!-- Three buttons across a 155px panel; matches the WPF build's local style for this row. -->
           <Style Selector="Button">
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Padding" Value="4" />
           </Style>
         </Grid.Styles>
         <Button Content="{x:Static resources:Strings.Remove}" Grid.Column="0" Margin="0,0,2.5,0"

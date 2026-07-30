@@ -53,7 +53,7 @@
       <Button Content="{x:Static resources:Strings.Reset____}"
               Command="{Binding ResetDeltasCommand, Mode=OneWay}" />
       <TextBlock Text="{x:Static resources:Strings.All_skills_}" Margin="0,20,0,0" />
-      <ComboBox x:Name="comboBox" SelectedIndex="0">
+      <ComboBox x:Name="comboBox" SelectedIndex="0" HorizontalAlignment="Stretch">
         <ComboBoxItem Content="{x:Static resources:Strings.Set_Up}" />
         <ComboBoxItem Content="{x:Static resources:Strings.Set_Down}" />
         <ComboBoxItem Content="{x:Static resources:Strings.Set_Locked}" />

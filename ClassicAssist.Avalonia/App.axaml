@@ -9,35 +9,13 @@
       <ResourceDictionary.MergedDictionaries>
         <ResourceInclude Source="/Assets/Icons.xaml"/>
       </ResourceDictionary.MergedDictionaries>
-      <!--
-        Compatibility shims for the SimpleTheme keys the views still reference. FluentTheme defines
-        none of them, and an unresolved DynamicResource fails silently rather than at build time, so
-        they are declared explicitly here instead of being left to chance.
-      -->
-      <ResourceDictionary.ThemeDictionaries>
-        <ResourceDictionary x:Key="Dark">
-          <Color x:Key="ThemeForegroundColor">#FFFFFFFF</Color>
-          <Color x:Key="ThemeBackgroundColor">#FF1F1F1F</Color>
-          <SolidColorBrush x:Key="ThemeForegroundBrush" Color="#FFFFFFFF"/>
-          <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="#FF1F1F1F"/>
-          <SolidColorBrush x:Key="ThemeBorderMidBrush" Color="#FF505050"/>
-          <SolidColorBrush x:Key="ThemeControlMidBrush" Color="#FF333333"/>
-        </ResourceDictionary>
-        <ResourceDictionary x:Key="Light">
-          <Color x:Key="ThemeForegroundColor">#FF000000</Color>
-          <Color x:Key="ThemeBackgroundColor">#FFFFFFFF</Color>
-          <SolidColorBrush x:Key="ThemeForegroundBrush" Color="#FF000000"/>
-          <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="#FFFFFFFF"/>
-          <SolidColorBrush x:Key="ThemeBorderMidBrush" Color="#FFB0B0B0"/>
-          <SolidColorBrush x:Key="ThemeControlMidBrush" Color="#FFE0E0E0"/>
-        </ResourceDictionary>
-      </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>
   </Application.Resources>
   <Application.Styles>
     <FluentTheme/>
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+    <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/ClassicAssistDark.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/Compact.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/GroupBox.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/TabControl.Theme.xaml"/>
@@ -63,12 +41,6 @@
     <Style Selector="DataGrid">
       <Setter Property="IsReadOnly" Value="True"/>
       <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}"/>
-    </Style>
-    <!-- Fluent leaves list surfaces flat; the views rely on them reading as sunken panels. -->
-    <Style Selector="ListBox, TreeView">
-      <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}"/>
-      <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}"/>
-      <Setter Property="BorderThickness" Value="1"/>
     </Style>
   </Application.Styles>
 </Application>

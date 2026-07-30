@@ -12,7 +12,9 @@
   -->
 
   <Style Selector="TabControl">
-    <Setter Property="Padding" Value="0"/>
+    <!-- Default gap between the content panel border and whatever the tab hosts. MainWindow and
+         DebugWindow set their own; this is what the nested Agents strip picks up. -->
+    <Setter Property="Padding" Value="5"/>
     <Setter Property="Background" Value="Transparent"/>
     <Setter Property="Template">
       <ControlTemplate>
@@ -52,10 +54,11 @@
   </Style>
 
   <Style Selector="TabItem">
-    <Setter Property="FontSize" Value="13"/>
+    <!-- Explicit: without it Fluent's ControlTheme reasserts its 24px pivot size. -->
+    <Setter Property="FontSize" Value="12"/>
     <Setter Property="FontWeight" Value="Normal"/>
     <Setter Property="MinHeight" Value="0"/>
-    <Setter Property="Padding" Value="12,5"/>
+    <Setter Property="Padding" Value="12,4"/>
     <Setter Property="Margin" Value="0,0,2,0"/>
     <Setter Property="VerticalContentAlignment" Value="Center"/>
     <Setter Property="Foreground" Value="{DynamicResource TabItemForeground}"/>
@@ -66,7 +69,7 @@
                 Background="{TemplateBinding Background}"
                 BorderBrush="{DynamicResource TabStripBorderBrush}"
                 BorderThickness="1,1,1,1"
-                CornerRadius="3,3,0,0">
+                CornerRadius="2,12,0,0">
           <ContentPresenter Name="PART_ContentPresenter"
                             Margin="{TemplateBinding Padding}"
                             HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -106,13 +109,14 @@
     <ResourceDictionary>
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="TabPanelBackground" Color="#FF2B2B2B"/>
-          <SolidColorBrush x:Key="TabStripBorderBrush" Color="#FF3F3F46"/>
-          <SolidColorBrush x:Key="TabItemBackground" Color="#FF232323"/>
-          <SolidColorBrush x:Key="TabItemBackgroundPointerOver" Color="#FF3A3A3D"/>
-          <SolidColorBrush x:Key="TabItemForeground" Color="#FFBFBFBF"/>
-          <SolidColorBrush x:Key="TabItemForegroundSelected" Color="#FFFFFFFF"/>
-          <SolidColorBrush x:Key="TabItemForegroundDisabled" Color="#FF6D6D6D"/>
+          <!-- ClassicAssist tabs: panel and tabs share ThemeBackgroundBrush, ThemeBorderBrush edges. -->
+          <SolidColorBrush x:Key="TabPanelBackground" Color="#FF272727"/>
+          <SolidColorBrush x:Key="TabStripBorderBrush" Color="#FF474747"/>
+          <SolidColorBrush x:Key="TabItemBackground" Color="#FF1E1E1E"/>
+          <SolidColorBrush x:Key="TabItemBackgroundPointerOver" Color="#FF333333"/>
+          <SolidColorBrush x:Key="TabItemForeground" Color="#FFC4C4C4"/>
+          <SolidColorBrush x:Key="TabItemForegroundSelected" Color="#FFCCCCCC"/>
+          <SolidColorBrush x:Key="TabItemForegroundDisabled" Color="#FF8A8A8A"/>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="TabPanelBackground" Color="#FFFFFFFF"/>

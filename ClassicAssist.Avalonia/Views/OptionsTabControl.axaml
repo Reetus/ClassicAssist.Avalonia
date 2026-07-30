@@ -132,8 +132,15 @@
                       IsChecked="{Binding CurrentOptions.QueueLastTarget}" />
       <DockPanel IsEnabled="{Binding CurrentOptions.QueueLastTarget}">
         <TextBlock Text="{x:Static resources:Strings.Max_Target_Queue_Length_}" DockPanel.Dock="Left" />
+        <!--
+          Spinner off: Fluent sizes its two spin buttons from local values in the template, which no
+          style can override, and at any sensible width for this row they squeezed the number out
+          entirely. The other numeric options on this panel are plain boxes anyway, and NumericUpDown
+          still takes typed input and Up/Down keys without them.
+        -->
         <NumericUpDown Minimum="1" Maximum="100" Value="{Binding CurrentOptions.MaxTargetQueueLength}" VerticalAlignment="Center"
-                                    Width="50" DockPanel.Dock="Right" Margin="10,0,0,0" />
+                                    ShowButtonSpinner="False" FormatString="0"
+                                    Width="50" HorizontalAlignment="Left" DockPanel.Dock="Right" Margin="10,0,0,0" />
       </DockPanel>
       <CheckBox Content="{x:Static resources:Strings.Sort_Macros_Alphabetical}"
                       IsChecked="{Binding CurrentOptions.SortMacrosAlphabetical}" />

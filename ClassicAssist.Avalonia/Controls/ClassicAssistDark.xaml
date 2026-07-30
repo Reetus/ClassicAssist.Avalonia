@@ -1,0 +1,341 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!--
+    The ClassicAssist palette and the control colours that go with it, ported from the WPF build's
+    Resources/Colours.xaml and Resources/DarkTheme.xaml.
+
+    Two things this is mainly here to undo. FluentTheme paints body text pure white (#FFFFFF) where
+    ClassicAssist uses a softer #CCCCCC, and it fills checked CheckBoxes with the accent colour,
+    where ClassicAssist draws an unfilled square with a white cross. Overriding SystemAccentColor
+    handles the second one everywhere it shows up - checkbox fills, sliders, focus rings, selection -
+    rather than only on the controls that happened to get noticed.
+  -->
+
+  <!--
+    WPF renders these views at the 12px system default; Fluent's is 14px. That 2px is why buttons in
+    fixed-width grid columns clip ("Remove" -> "Remov") and why the panels no longer fit their
+    windows. Set on the window so it inherits everywhere rather than being repeated per control.
+  -->
+  <Style Selector="Window">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="Label">
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+
+  <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonHoverBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonHoverBorderBrush}"/>
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="Button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonPressBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonPressBorderBrush}"/>
+  </Style>
+
+  <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource ButtonDisabledBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ButtonDisabledBorderBrush}"/>
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource ButtonDisabledForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="TextBox">
+    <Setter Property="Background" Value="{DynamicResource TextBoxBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBoxForegroundBrush}"/>
+    <Setter Property="CaretBrush" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="Background" Value="{DynamicResource ComboBoxNonEditableBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxNonEditableBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <Style Selector="ListBox, TreeView">
+    <Setter Property="Background" Value="{DynamicResource ThemeInnerControlBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+
+  <Style Selector="DataGrid">
+    <Setter Property="Background" Value="{DynamicResource DataGridBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource DataGridBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource DataGridLinesBrush}"/>
+    <Setter Property="VerticalGridLinesBrush" Value="{DynamicResource DataGridLinesBrush}"/>
+  </Style>
+
+  <!--
+    DataGrid builds its headers, rows and cells from its own theme, which carries a FontSize, so they
+    do not pick up the window's 12px the way everything else does - they have to be set here.
+  -->
+  <Style Selector="DataGridColumnHeader">
+    <Setter Property="Background" Value="{DynamicResource DataGridHeaderBackgroundBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+
+  <Style Selector="DataGridRow">
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+
+  <!--
+    Selection belongs to the row, not the cell. Avalonia's DataGrid marks the clicked cell :current
+    and draws a currency box plus a focus rectangle around it, which reads as a second, competing
+    selection. Blanking the cell's own chrome in every state leaves the row highlight as the only
+    selection the user sees.
+  -->
+  <Style Selector="DataGridCell">
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="DataGridCell:current, DataGridCell:focus, DataGridCell:selected">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderBrush" Value="Transparent"/>
+  </Style>
+
+  <Style Selector="DataGridRow:selected">
+    <Setter Property="Background" Value="{DynamicResource DataGridRowSelectedBackgroundBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+  </Style>
+
+  <!--
+    ClassicAssist's CheckBox: a 13px unfilled square with a 1px #CCCCCC border and a cross - not
+    Fluent's accent-filled rounded box with a tick. Templated in full because the mark is a different
+    glyph, so recolouring Fluent's would not get there.
+  -->
+  <Style Selector="CheckBox">
+    <Setter Property="Background" Value="{DynamicResource CheckBoxBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid ColumnDefinitions="Auto,*" Background="Transparent">
+          <Border Name="CheckBorder" Grid.Column="0"
+                  Width="13" Height="13" CornerRadius="0"
+                  VerticalAlignment="Center"
+                  Background="{TemplateBinding Background}"
+                  BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}">
+            <Panel>
+              <Path Name="CheckMark" IsVisible="False"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Stroke="{DynamicResource CheckBoxMarkBrush}" StrokeThickness="2"
+                    Data="M 0 0 L 7 7 M 0 7 L 7 0"/>
+              <Path Name="IndeterminateMark" IsVisible="False"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    Fill="{DynamicResource CheckBoxMarkBrush}"
+                    Data="M 0 0 L 7 0 L 7 7 L 0 7 Z"/>
+            </Panel>
+          </Border>
+          <ContentPresenter Name="PART_ContentPresenter" Grid.Column="1"
+                            Margin="4,0,0,0" VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"/>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="CheckBox:checked /template/ Path#CheckMark">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+
+  <!--
+    Set on the template part, not through TemplateBinding: Fluent's own CheckBox ControlTheme zeroes
+    the control's BorderThickness in the checked state (it fills the box with the accent colour
+    instead), which left the checked boxes as a bare cross with no square around it.
+  -->
+  <Style Selector="CheckBox:checked /template/ Border#CheckBorder, CheckBox:indeterminate /template/ Border#CheckBorder">
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+
+  <Style Selector="CheckBox:indeterminate /template/ Path#IndeterminateMark">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+
+  <Style Selector="CheckBox:pointerover /template/ Border#CheckBorder">
+    <Setter Property="Background" Value="{DynamicResource ThemeTabBackgroundBrush}"/>
+  </Style>
+
+  <Style Selector="CheckBox:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource CheckBoxDisabledForegroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CheckBoxDisabledBorderBrush}"/>
+  </Style>
+
+  <Style Selector="CheckBox:disabled /template/ Path#CheckMark">
+    <Setter Property="Stroke" Value="{DynamicResource CheckBoxDisabledMarkBrush}"/>
+  </Style>
+
+  <!-- Same treatment for RadioButton, round instead of square. -->
+  <Style Selector="RadioButton">
+    <Setter Property="Background" Value="{DynamicResource RadioButtonBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid ColumnDefinitions="Auto,*" Background="Transparent">
+          <Ellipse Name="RadioBorder" Grid.Column="0"
+                   Width="13" Height="13" VerticalAlignment="Center"
+                   Fill="{TemplateBinding Background}"
+                   Stroke="{TemplateBinding BorderBrush}"
+                   StrokeThickness="1"/>
+          <Ellipse Name="RadioMark" Grid.Column="0" IsVisible="False"
+                   Width="7" Height="7" VerticalAlignment="Center"
+                   HorizontalAlignment="Center"
+                   Fill="{DynamicResource RadioButtonMarkBrush}"/>
+          <ContentPresenter Name="PART_ContentPresenter" Grid.Column="1"
+                            Margin="4,0,0,0" VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            TextElement.Foreground="{TemplateBinding Foreground}"/>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton:checked /template/ Ellipse#RadioMark">
+    <Setter Property="IsVisible" Value="True"/>
+  </Style>
+
+  <Style Selector="RadioButton:disabled">
+    <Setter Property="Foreground" Value="{DynamicResource RadioButtonDisabledForegroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource RadioButtonDisabledBorderBrush}"/>
+  </Style>
+
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <!--
+            Straight from Colours.xaml. Kept as the same names so the two builds can be diffed.
+          -->
+          <Color x:Key="BackgroundColor1">#FF151515</Color>
+          <Color x:Key="BackgroundColor2">#FF1A1A1A</Color>
+          <Color x:Key="BackgroundColor3">#FF1E1E1E</Color>
+          <Color x:Key="BackgroundColor4">#FF292929</Color>
+          <Color x:Key="BackgroundColor5">#FF333333</Color>
+          <Color x:Key="BackgroundColor6">#FF4B4B4B</Color>
+          <Color x:Key="ForegroundColor5">#FF151515</Color>
+          <Color x:Key="ForegroundColor4">#FF626262</Color>
+          <Color x:Key="ForegroundColor3">#FF8A8A8A</Color>
+          <Color x:Key="ForegroundColor2">#FFC4C4C4</Color>
+          <Color x:Key="ForegroundColor1">#FFF0F0F0</Color>
+          <Color x:Key="SelectionColor1">#FF17252D</Color>
+          <Color x:Key="SelectionColor1Emphasized">#FF193644</Color>
+          <Color x:Key="SelectionColor2">#FF207097</Color>
+          <Color x:Key="SelectionColor2Emphasized">#FF26A0DA</Color>
+          <Color x:Key="RedColor">#FFE31212</Color>
+
+          <!--
+            Fluent derives a lot from SystemAccentColor - the CheckBox fill, Slider track and thumb,
+            focus rings, ListBox and DataGrid selection. Pointing it at ClassicAssist's selection blue
+            is what removes the bright Fluent blue from all of them at once.
+          -->
+          <Color x:Key="SystemAccentColor">#FF207097</Color>
+          <Color x:Key="SystemAccentColorLight1">#FF26A0DA</Color>
+          <Color x:Key="SystemAccentColorLight2">#FF3FB0E0</Color>
+          <Color x:Key="SystemAccentColorLight3">#FF6AC4E8</Color>
+          <Color x:Key="SystemAccentColorDark1">#FF193644</Color>
+          <Color x:Key="SystemAccentColorDark2">#FF17252D</Color>
+          <Color x:Key="SystemAccentColorDark3">#FF121C22</Color>
+
+          <!-- The "Custom" block at the end of Colours.xaml; these are what most styles bind to. -->
+          <SolidColorBrush x:Key="ThemeBackgroundBrush" Color="#FF272727"/>
+          <SolidColorBrush x:Key="ThemeForegroundBrush" Color="#FFCCCCCC"/>
+          <SolidColorBrush x:Key="ThemeDisabledForegroundBrush" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="ThemeWindowBackgroundBrush" Color="#FF000000"/>
+          <SolidColorBrush x:Key="ThemeBorderBrush" Color="#FF474747"/>
+          <SolidColorBrush x:Key="ThemeInnerControlBackgroundBrush" Color="#FF151515"/>
+          <SolidColorBrush x:Key="ThemeTabBackgroundBrush" Color="#FF121212"/>
+          <SolidColorBrush x:Key="IconForegroundBrush" Color="#FFCCCCCC"/>
+
+          <!-- Kept for the views that still name them; ThemeBorderMidBrush maps onto ThemeBorderBrush. -->
+          <Color x:Key="ThemeForegroundColor">#FFCCCCCC</Color>
+          <Color x:Key="ThemeBackgroundColor">#FF272727</Color>
+          <SolidColorBrush x:Key="ThemeBorderMidBrush" Color="#FF474747"/>
+          <SolidColorBrush x:Key="ThemeControlMidBrush" Color="#FF333333"/>
+
+          <SolidColorBrush x:Key="ButtonBackgroundBrush" Color="#FF333333"/>
+          <SolidColorBrush x:Key="ButtonBorderBrush" Color="#FF333333"/>
+          <SolidColorBrush x:Key="ButtonForegroundBrush" Color="#FFC4C4C4"/>
+          <SolidColorBrush x:Key="ButtonHoverBackgroundBrush" Color="#FF333333"/>
+          <SolidColorBrush x:Key="ButtonHoverBorderBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ButtonPressBackgroundBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ButtonPressBorderBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ButtonDisabledBackgroundBrush" Color="#FF292929"/>
+          <SolidColorBrush x:Key="ButtonDisabledBorderBrush" Color="#FF292929"/>
+          <SolidColorBrush x:Key="ButtonDisabledForegroundBrush" Color="#FF8A8A8A"/>
+
+          <SolidColorBrush x:Key="TextBoxBackgroundBrush" Color="#FF333333"/>
+          <SolidColorBrush x:Key="TextBoxBorderBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="TextBoxForegroundBrush" Color="#FFC4C4C4"/>
+
+          <SolidColorBrush x:Key="ComboBoxNonEditableBackgroundBrush" Color="#FF333333"/>
+          <SolidColorBrush x:Key="ComboBoxNonEditableBorderBrush" Color="#FF4B4B4B"/>
+
+          <SolidColorBrush x:Key="CheckBoxBackgroundBrush" Color="#FF151515"/>
+          <SolidColorBrush x:Key="CheckBoxMarkBrush" Color="#FFCCCCCC"/>
+          <SolidColorBrush x:Key="CheckBoxDisabledForegroundBrush" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="CheckBoxDisabledBorderBrush" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="CheckBoxDisabledMarkBrush" Color="#FF8A8A8A"/>
+
+          <SolidColorBrush x:Key="RadioButtonBackgroundBrush" Color="#FF151515"/>
+          <SolidColorBrush x:Key="RadioButtonMarkBrush" Color="#FFCCCCCC"/>
+          <SolidColorBrush x:Key="RadioButtonDisabledForegroundBrush" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="RadioButtonDisabledBorderBrush" Color="#FF8A8A8A"/>
+
+          <SolidColorBrush x:Key="DataGridBackgroundBrush" Color="#FF151515"/>
+          <SolidColorBrush x:Key="DataGridBorderBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="DataGridLinesBrush" Color="#FF1E1E1E"/>
+          <SolidColorBrush x:Key="DataGridHeaderBackgroundBrush" Color="#FF292929"/>
+          <SolidColorBrush x:Key="DataGridRowSelectedBackgroundBrush" Color="#FF17252D"/>
+
+          <!--
+            The WPF slider is grey throughout - a #474747 track with a #474747 rectangular thumb.
+            Fluent's is accent-coloured, and SystemAccentColor alone does not cover it because the
+            slider has its own keys. The thumb is a step lighter than the track here so it stays
+            findable now that it is a circle rather than WPF's 11x18 block.
+          -->
+          <SolidColorBrush x:Key="SliderTrackFill" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackFillPressed" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackFillDisabled" Color="#FF292929"/>
+          <SolidColorBrush x:Key="SliderTrackValueFill" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#FF474747"/>
+          <SolidColorBrush x:Key="SliderTrackValueFillDisabled" Color="#FF292929"/>
+          <SolidColorBrush x:Key="SliderThumbBackground" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FFC4C4C4"/>
+          <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FFC4C4C4"/>
+          <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="#FF626262"/>
+          <SolidColorBrush x:Key="SliderInnerThumbBackground" Color="#FF8A8A8A"/>
+          <SolidColorBrush x:Key="SliderOuterThumbBackground" Color="#FF8A8A8A"/>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+</Styles>
