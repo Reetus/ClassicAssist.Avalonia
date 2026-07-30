@@ -18,12 +18,11 @@
 #endregion
 
 using System;
-using System.Reactive;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Reactive;
 using Avalonia.Xaml.Interactivity;
 using ClassicAssist.Data;
-using ReactiveUI;
 
 namespace ClassicAssist.Avalonia.Misc
 {
@@ -43,18 +42,18 @@ namespace ClassicAssist.Avalonia.Misc
             }
 #endif
 
-            _subscription = AssociatedObject.WhenAnyValue( e => e.ClientSize, e => SetSize( e ) ).Subscribe();
+            _subscription = AssociatedObject.GetObservable( TopLevel.ClientSizeProperty )
+                .Subscribe( new AnonymousObserver<Size>( SetSize ) );
 
             AssistantOptions.OptionsLoaded += OnOptionsLoaded;
         }
 
-        private static Unit SetSize( in Size size )
+        private static void SetSize( Size size )
         {
 #if !DEVELOP
             AssistantOptions.WindowHeight = size.Height;
             AssistantOptions.WindowWidth = size.Width;
 #endif
-            return Unit.Default;
         }
 
         private void OnOptionsLoaded( object sender, EventArgs e )
@@ -74,7 +73,8 @@ namespace ClassicAssist.Avalonia.Misc
         {
             base.OnDetaching();
 
-            _subscription.Dispose();
+            _subscription?.Dispose();
+            AssistantOptions.OptionsLoaded -= OnOptionsLoaded;
         }
     }
 }

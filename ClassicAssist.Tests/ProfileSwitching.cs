@@ -19,10 +19,7 @@
 //        [TestMethod]
 //        public void WontDuplicateSkillsCategory()
 //        {
-//            AppDomain appDomain = AppDomain.CreateDomain( "WontThrowExceptionOnDeserializeNullConfig",
-//                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-//            appDomain.DoCallBack( () =>
+////            appDomain.DoCallBack( () =>
 //            {
 //                const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
 

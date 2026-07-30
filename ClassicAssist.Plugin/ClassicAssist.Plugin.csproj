@@ -1,17 +1,48 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-      <OutputPath>..\Output\</OutputPath>
-      <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- ClassicUO/TazUO look for the type Assistant.Engine inside a file named ClassicAssist.dll -->
+    <AssemblyName>ClassicAssist</AssemblyName>
+    <RootNamespace>ClassicAssist.Plugin</RootNamespace>
+    <OutputPath>..\Output\ClassicAssist\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <!--
+    DNNE emits a native shim exporting `Install`, which modern ClassicUO needs because it only
+    dlopen()s the plugin and never falls back to a managed load. TazUO does fall back, and on Linux
+    it always takes that path (there is no standalone libdl.so on modern distros, so its dlopen
+    throws immediately), so the managed Assistant.Engine.Install entry point is sufficient there.
+    Building the shim requires clang, so it is opt-in: dotnet build -p:EnableDnne=true
+  -->
+  <PropertyGroup>
+    <EnableDnne Condition="'$(EnableDnne)' == ''">false</EnableDnne>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(EnableDnne)' == 'true'">
+    <PackageReference Include="DNNE" Version="1.0.33" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
+  </ItemGroup>
+
+  <!--
+    The CUO_API contract must come from this exact assembly identity (cuoapi, 1.3.0.0) rather than being
+    redeclared locally. The client hands us its own delegates as function pointers, and
+    Marshal.GetDelegateForFunctionPointer refuses to return a delegate as a same-named type from a
+    different assembly - redeclaring compiles fine but throws InvalidCastException inside Install.
+    Private=false because the client has already loaded its own copy; shipping ours would be ignored at
+    best and bind to the wrong instance at worst.
+  -->
   <ItemGroup>
     <Reference Include="cuoapi">
       <HintPath>.\cuoapi.dll</HintPath>
+      <Private>false</Private>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <ItemGroup>

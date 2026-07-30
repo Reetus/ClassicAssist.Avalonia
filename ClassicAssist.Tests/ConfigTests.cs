@@ -20,19 +20,13 @@ namespace ClassicAssist.Tests
         [TestMethod]
         public void WontThrowExceptionOnDeserializeNullConfig()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WontThrowExceptionOnDeserializeNullConfig",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () => TestConfig( null ) );
+            TestConfig( null );
         }
 
         [TestMethod]
         public void WontThrowExceptionOnDeserializeEmptyConfig()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WontThrowExceptionOnDeserializeEmptyConfig",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () => TestConfig( new JObject() ) );
+            TestConfig( new JObject() );
         }
 
         public void TestConfig( JObject json )

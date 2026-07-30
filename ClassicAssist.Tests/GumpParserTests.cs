@@ -162,9 +162,9 @@ namespace ClassicAssist.Tests
             {
                 handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
             }
-            catch ( Exception )
+            catch ( Exception e )
             {
-                Assert.Fail();
+                Assert.Fail( e.ToString() );
             }
         }
 

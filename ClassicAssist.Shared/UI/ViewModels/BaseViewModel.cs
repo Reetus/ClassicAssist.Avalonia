@@ -18,6 +18,7 @@
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Reflection;
@@ -27,13 +28,21 @@ using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.Misc;
-using ReactiveUI;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace ClassicAssist.UI.ViewModels
 {
-    public class BaseViewModel : ReactiveObject
+    public class BaseViewModel : ObservableObject
     {
         private static readonly List<BaseViewModel> _viewModels = new List<BaseViewModel>();
+
+        /// <summary>
+        ///     Command-typed properties per view model type, cached so that the CanExecute sweep on every
+        ///     property change doesn't re-reflect.
+        /// </summary>
+        private static readonly ConcurrentDictionary<Type, PropertyInfo[]> _commandProperties =
+            new ConcurrentDictionary<Type, PropertyInfo[]>();
+
         protected IDispatcher _dispatcher;
 
         public BaseViewModel()
@@ -42,18 +51,45 @@ namespace ClassicAssist.UI.ViewModels
             _dispatcher = Engine.Dispatcher;
 
             Options.CurrentOptions.PropertyChanged += OnOptionChanged;
+            PropertyChanged += OnPropertyChangedRefreshCommands;
         }
 
         public static BaseViewModel[] Instances => _viewModels.ToArray();
 
         public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
         {
-            this.RaiseAndSetIfChanged( ref obj, value, propertyName );
+            base.SetProperty( ref obj, value, propertyName );
         }
 
         protected void NotifyPropertyChanged( [CallerMemberName] string propertyName = "" )
         {
-            this.RaisePropertyChanged( propertyName );
+            OnPropertyChanged( propertyName );
+        }
+
+        /// <summary>
+        ///     WPF re-queried CanExecute automatically via CommandManager.RequerySuggested; Avalonia has no
+        ///     equivalent, so commands are invalidated here whenever the view model changes.
+        /// </summary>
+        private void OnPropertyChangedRefreshCommands( object sender, PropertyChangedEventArgs e )
+        {
+            PropertyInfo[] properties = _commandProperties.GetOrAdd( GetType(),
+                type => Array.FindAll( type.GetProperties( BindingFlags.Public | BindingFlags.Instance ),
+                    p => typeof( ICommand ).IsAssignableFrom( p.PropertyType ) && p.GetIndexParameters().Length == 0 ) );
+
+            foreach ( PropertyInfo property in properties )
+            {
+                switch ( property.GetValue( this ) )
+                {
+                    case RelayCommand command:
+                        command.RaiseCanExecuteChanged();
+
+                        break;
+                    case RelayCommandAsync command:
+                        command.RaiseCanExecuteChanged();
+
+                        break;
+                }
+            }
         }
 
         protected void OnOptionChanged( object sender, PropertyChangedEventArgs e )

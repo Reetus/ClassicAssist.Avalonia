@@ -22,7 +22,6 @@ using ClassicAssist.UO.Objects;
 using Microsoft.Scripting.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
@@ -31,8 +30,6 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
     {
         private const int LOOT_TIMEOUT = 5000;
         private readonly object _autolootLock = new object();
-        private readonly IObservable<bool> _entrySelected;
-        private readonly IObservable<bool> _itemSelected;
 
         private readonly string _propertiesFile = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory,
             "Data", "Properties.json" );
@@ -84,8 +81,6 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             IncomingPacketHandlers.CorpseContainerDisplayEvent += OnCorpseEvent;
             AutolootManager.GetInstance().GetEntries = () => _items.ToList();
 
-            _entrySelected = this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null );
-            _itemSelected = this.WhenAnyValue( e => e.SelectedProperty, selector: e => e != null );
         }
 
         public ICommand ClipboardCopyCommand =>
@@ -123,11 +118,11 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand InsertCommand =>
-            _insertCommand ?? ( _insertCommand = ReactiveCommand.CreateFromTask( Insert ) );
+            _insertCommand ?? ( _insertCommand = new RelayCommandAsync( Insert, o => true ) );
 
         public ICommand InsertConstraintCommand =>
             _insertConstraintCommand ?? ( _insertConstraintCommand =
-                ReactiveCommand.Create<PropertyEntry>( InsertConstraint, _entrySelected ) );
+                new RelayCommand( InsertConstraint, o => SelectedItem != null ) );
 
         public ICommand InsertMatchAnyCommand =>
             _insertMatchAnyCommand ?? ( _insertMatchAnyCommand = new RelayCommand( InsertMatchAny, o => true ) );
@@ -140,15 +135,16 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public ICommand RemoveCommand =>
             _removeCommand ??
-            ( _removeCommand = ReactiveCommand.CreateFromTask<AutolootEntry>( Remove, _entrySelected ) );
+            ( _removeCommand = new RelayCommandAsync( Remove, o => SelectedItem != null ) );
 
         public ICommand RemoveConstraintCommand =>
             _removeConstraintCommand ?? ( _removeConstraintCommand =
-                ReactiveCommand.Create<IEnumerable<AutolootConstraintEntry>>( RemoveConstraint, _itemSelected ) );
+                new RelayCommand( RemoveConstraint, o => SelectedProperty != null ) );
 
         public ICommand RemoveSingleConstraintCommand =>
             _removeSingleConstraintCommand ?? ( _removeSingleConstraintCommand =
-                ReactiveCommand.Create<AutolootConstraintEntry>( RemoveSingleConstraint, _itemSelected ) );
+                new RelayCommand( o => RemoveSingleConstraint( (AutolootConstraintEntry) o ),
+                    o => SelectedProperty != null ) );
 
         public ICommand ResetContainerCommand => _resetContainerCommand = new RelayCommand( ResetContainer, o => true );
 
@@ -172,7 +168,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public ICommand SelectHueCommand =>
             _selectHueCommand ?? ( _selectHueCommand =
-                ReactiveCommand.CreateFromTask<AutolootEntry>( SelectHue, _entrySelected ) );
+                new RelayCommandAsync( SelectHue, o => SelectedItem != null ) );
 
         public ICommand SetContainerCommand =>
             _setContainerCommand ?? ( _setContainerCommand = new RelayCommandAsync( SetContainer, o => true ) );
@@ -542,7 +538,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             Items.Add( entry );
         }
 
-        private async Task Insert( CancellationToken cancellationToken )
+        private async Task Insert( object obj )
         {
             int serial = await UOC.GetTargeSerialAsync( Strings.Target_object___ );
 

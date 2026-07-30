@@ -28,7 +28,7 @@ using Avalonia.Threading;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data;
 using ClassicAssist.Shared;
-using Engine = Assistant.Engine;
+using Engine = ClassicAssist.Avalonia.UiHost;
 
 namespace ClassicAssist.Avalonia
 {

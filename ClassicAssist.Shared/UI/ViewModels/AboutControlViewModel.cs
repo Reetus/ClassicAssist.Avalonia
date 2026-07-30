@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reactive.Linq;
 using System.Reflection;
 using System.Timers;
 using System.Windows.Input;
@@ -12,7 +11,6 @@ using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using ReactiveUI;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -133,8 +131,7 @@ namespace ClassicAssist.UI.ViewModels
         }
 
         public ICommand ShowItemsCommand =>
-            _showItemsCommand ?? ( _showItemsCommand = ReactiveCommand.Create( ShowItems,
-                this.WhenAnyValue( e => e.Connected ).ObserveOn( RxApp.MainThreadScheduler ) ) );
+            _showItemsCommand ?? ( _showItemsCommand = new RelayCommand( o => ShowItems(), o => Connected ) );
 
         public string Version { get; set; }
 

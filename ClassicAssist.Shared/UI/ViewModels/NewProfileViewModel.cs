@@ -3,7 +3,6 @@ using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
-using ReactiveUI;
 
 namespace ClassicAssist.Shared.UI.ViewModels
 {
@@ -22,7 +21,8 @@ namespace ClassicAssist.Shared.UI.ViewModels
 
         // Avalonia only
         public ICommand ChangeOptionCommand =>
-            _changeOptionCommand ?? ( _changeOptionCommand = ReactiveCommand.Create<NewProfileOption>( ChangeOption ) );
+            _changeOptionCommand ?? ( _changeOptionCommand =
+                new RelayCommand( o => ChangeOption( (NewProfileOption) o ), o => true ) );
 
         public string FileName { get; set; }
 

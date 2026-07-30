@@ -24,9 +24,8 @@ using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using CUO_API;
+
 using Sentry;
-using StreamJsonRpc;
 
 [assembly: InternalsVisibleTo( "ClassicAssist.Tests" )]
 
@@ -51,26 +50,16 @@ namespace ClassicAssist.Shared
 
         private const int MAX_DISTANCE = 32;
 
-        private static OnConnected _onConnected;
-        private static OnDisconnected _onDisconnected;
-        private static OnPacketSendRecv _onReceive;
-        private static OnPacketSendRecv _onSend;
-        private static OnGetUOFilePath _getUOFilePath;
-        private static OnPacketSendRecv _sendToClient;
-        private static OnPacketSendRecv _sendToServer;
-        private static OnGetPacketLength _getPacketLength;
-        private static OnUpdatePlayerPosition _onPlayerPositionChanged;
-        private static OnClientClose _onClientClosing;
-        private static OnFocusGained _onFocusGained;
-        private static OnFocusLost _onFocusLost;
+        private static GetUOFilePath _getUOFilePath;
+        private static SendRecvPacket _sendToClient;
+        private static SendRecvPacket _sendToServer;
+        private static GetPacketLength _getPacketLength;
         private static readonly PacketFilter _incomingPacketFilter = new PacketFilter();
         private static readonly PacketFilter _outgoingPacketPreFilter = new PacketFilter();
         private static readonly PacketFilter _outgoingPacketPostFilter = new PacketFilter();
-        private static OnHotkey _onHotkeyPressed;
-        private static RequestMove _requestMove;
+        private static Move _requestMove;
 
         private static readonly int[] _sequenceList = new int[256];
-        private static OnMouse _onMouse;
 
         private static readonly DateTime[] _lastMouseAction = new DateTime[(int)MouseOptions.None];
         private static readonly object _clientSendLock = new object();
@@ -81,7 +70,6 @@ namespace ClassicAssist.Shared
 
         private static readonly TimeSpan PACKET_SEND_DELAY = TimeSpan.FromMilliseconds( 5 );
         private static DateTime _nextPacketSendTime;
-        private static unsafe PluginHeader* _plugin;
         public static int LastSpellID;
 
         public static Assembly ClassicAssembly { get; set; }
@@ -90,7 +78,7 @@ namespace ClassicAssist.Shared
         public static Version ClientVersion { get; set; }
         public static bool Connected { get; set; }
         public static ShardEntry CurrentShard { get; set; }
-        public static IDispatcher Dispatcher { get; set; }
+        public static IDispatcher Dispatcher { get; set; } = new InlineDispatcher();
         public static FeatureFlags Features { get; set; }
         public static GumpCollection Gumps { get; set; } = new GumpCollection();
         public static bool IsClientFocused { get; set; }
@@ -132,80 +120,30 @@ namespace ClassicAssist.Shared
         public static event dPlayerInitialized PlayerInitializedEvent;
         public static IHostMethods Host { get; set; }
 
-        public static unsafe void Install( PluginHeader* plugin, IMessageBoxProvider provider )
+        /// <summary>
+        ///     The plugin starts pushing callbacks the moment the pipe is attached, which is before
+        ///     <see cref="InstallRPC" /> has finished loading the UO files and building the managers.
+        ///     Callbacks arriving before that are dropped rather than crashing on half-built state.
+        /// </summary>
+        public static bool Installed { get; private set; }
+
+        /// <summary>
+        ///     Sole entry point for the UI process. The plugin half lives in the game process and is reached
+        ///     only through <paramref name="hostMethods" />; there is deliberately no in-process variant,
+        ///     because Avalonia on Linux requires the UI to own the process main thread.
+        /// </summary>
+        public static void InstallRPC( IHostMethods hostMethods, IMessageBoxProvider provider )
         {
-            _plugin = plugin;
+            Host = hostMethods;
             MessageBoxProvider = provider;
 
             Initialize();
 
-            InitializePlugin( plugin );
-        }
-
-        public static void InstallRPC( JsonRpc rpc, IHostMethods hostMethods, PluginMethods pluginMethods )
-        {
-            Host = hostMethods;
-            
-            Initialize();
-        
             ClientPath = Host.GetClientPath().Result;
             ClientVersion = Host.GetClientVersion().Result;
-            
-            Art.Initialize( ClientPath );
-            Hues.Initialize( ClientPath );
-            Cliloc.Initialize( ClientPath );
-            Skills.Initialize( ClientPath );
-            Speech.Initialize( ClientPath );
-            TileData.Initialize( ClientPath );
-            Statics.Initialize( ClientPath );
-            MapInfo.Initialize( ClientPath );
-            
-            InitializeExtensions();
-            
-            _getPacketLength = id => Host.GetPacketLength( id ).Result;
-            _getUOFilePath = () => Host.GetUOFilePath().Result;
-            _sendToClient = SendPacketToClientPlugin;
-            _sendToServer = SendPacketToServerPlugin;
-            _requestMove = ( dir, run ) => Host.RequestMove(dir, run).Result;
-            // _setTitle = title => Host.SetTitle(title);            
-        }
-        
-        internal static unsafe void InitializePlugin( PluginHeader* plugin )
-        {
-            _onConnected = OnConnected;
-            _onDisconnected = OnDisconnected;
-            // _onReceive = OnPacketReceive;
-            // _onSend = OnPacketSend;
-            _onPlayerPositionChanged = OnPlayerPositionChanged;
-            _onClientClosing = OnClientClosing;
-            _onHotkeyPressed = OnHotkeyPressed;
-            _onMouse = OnMouse;
-            _onFocusGained = OnFocusGained;
-            _onFocusLost = OnFocusLost;
-            WindowHandle = plugin->HWND;
+            WindowHandle = Host.GetWindowHandle().Result;
 
-            plugin->OnConnected = Marshal.GetFunctionPointerForDelegate( _onConnected );
-            plugin->OnDisconnected = Marshal.GetFunctionPointerForDelegate( _onDisconnected );
-            plugin->OnRecv_new = Marshal.GetFunctionPointerForDelegate( _onReceive );
-            plugin->OnSend_new = Marshal.GetFunctionPointerForDelegate( _onSend );
-            plugin->OnPlayerPositionChanged = Marshal.GetFunctionPointerForDelegate( _onPlayerPositionChanged );
-            plugin->OnClientClosing = Marshal.GetFunctionPointerForDelegate( _onClientClosing );
-            plugin->OnHotkeyPressed = Marshal.GetFunctionPointerForDelegate( _onHotkeyPressed );
-            plugin->OnMouse = Marshal.GetFunctionPointerForDelegate( _onMouse );
-            plugin->OnFocusGained = Marshal.GetFunctionPointerForDelegate( _onFocusGained );
-            plugin->OnFocusLost = Marshal.GetFunctionPointerForDelegate( _onFocusLost );
-
-            _getPacketLength = Marshal.GetDelegateForFunctionPointer<OnGetPacketLength>( plugin->GetPacketLength );
-            _getUOFilePath = Marshal.GetDelegateForFunctionPointer<OnGetUOFilePath>( plugin->GetUOFilePath );
-            _sendToClient = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Recv );
-            _sendToServer = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( plugin->Send );
-            _requestMove = Marshal.GetDelegateForFunctionPointer<RequestMove>( plugin->RequestMove );
-
-            ClientPath = _getUOFilePath();
-            ClientVersion = new Version( (byte)(plugin->ClientVersion >> 24), (byte)(plugin->ClientVersion >> 16),
-                (byte)(plugin->ClientVersion >> 8), (byte)plugin->ClientVersion );
-
-            if (!Path.IsPathRooted( ClientPath ))
+            if ( !Path.IsPathRooted( ClientPath ) )
             {
                 ClientPath = Path.GetFullPath( ClientPath );
             }
@@ -219,10 +157,15 @@ namespace ClassicAssist.Shared
             Statics.Initialize( ClientPath );
             MapInfo.Initialize( ClientPath );
 
-            ClassicAssembly = AppDomain.CurrentDomain.GetAssemblies()
-                .FirstOrDefault( a => a.FullName.StartsWith( "ClassicUO," ) );
-
             InitializeExtensions();
+
+            _getPacketLength = id => Host.GetPacketLength( id ).Result;
+            _getUOFilePath = () => Host.GetUOFilePath().Result;
+            _sendToClient = SendPacketToClientPlugin;
+            _sendToServer = SendPacketToServerPlugin;
+            _requestMove = ( dir, run ) => Host.RequestMove( dir, run ).Result;
+
+            Installed = true;
         }
 
         public static void InitializeExtensions()
@@ -846,16 +789,31 @@ namespace ClassicAssist.Shared
         {
             public void OnConnected()
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnConnected();
             }
 
             public void OnDisconnected()
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnDisconnected();
             }
 
             public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length )
             {
+                if ( !Installed )
+                {
+                    return Task.FromResult( ( true, Array.Empty<byte>(), 0 ) );
+                }
+
                 byte[] original = new byte[length];
                 int originalLength = length;
                 Array.Copy( data, original, length );
@@ -869,6 +827,11 @@ namespace ClassicAssist.Shared
 
             public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length )
             {
+                if ( !Installed )
+                {
+                    return Task.FromResult( ( true, Array.Empty<byte>(), 0 ) );
+                }
+
                 byte[] original = new byte[length];
                 int originalLength = length;
                 Array.Copy( data, original, length );
@@ -882,26 +845,46 @@ namespace ClassicAssist.Shared
 
             public void OnClientClosing()
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnClientClosing();
             }
 
             public Task<bool> OnHotkeyPressed( int key, int mod, bool pressed )
             {
-                return Task.FromResult( Engine.OnHotkeyPressed( key, mod, pressed ) );
+                return Task.FromResult( Installed && Engine.OnHotkeyPressed( key, mod, pressed ) );
             }
 
             public void OnMouse( int button, int wheel )
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnMouse( button, wheel );
             }
 
             public void OnTick()
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnTick();
             }
 
             public void OnFocusChanged( bool focus )
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 if ( focus )
                 {
                     OnFocusGained();
@@ -914,6 +897,11 @@ namespace ClassicAssist.Shared
 
             public void OnPlayerPositionChanged( int x, int y, int z )
             {
+                if ( !Installed )
+                {
+                    return;
+                }
+
                 Engine.OnPlayerPositionChanged( x, y, z );
             }
         }

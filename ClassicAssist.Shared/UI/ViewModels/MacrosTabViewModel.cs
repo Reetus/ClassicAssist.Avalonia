@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reactive;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
@@ -16,7 +15,6 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -25,23 +23,23 @@ namespace ClassicAssist.UI.ViewModels
         private readonly MacroManager _manager;
         private int _caretPosition;
 
-        private ReactiveCommand<MacroEntry, Unit> _clearHotkeyCommand;
+        private ICommand _clearHotkeyCommand;
 
         //TODO
         //private TextDocument _document;
-        private ReactiveCommand<MacroEntry, Unit> _executeCommand;
+        private ICommand _executeCommand;
         private ICommand _inspectObjectCommand;
         private bool _isRecording;
         private RelayCommand _newMacroCommand;
         private ICommand _recordCommand;
         private RelayCommand _removeMacroCommand;
-        private ReactiveCommand<MacroEntry, Unit> _removeMacroConfirmCommand;
+        private ICommand _removeMacroConfirmCommand;
         private ICommand _saveMacroCommand;
         private MacroEntry _selectedItem;
         private ICommand _showActiveObjectsWindowCommand;
         private ICommand _showCommandsCommand;
         private ICommand _showMacrosWikiCommand;
-        private ReactiveCommand<MacroEntry, Unit> _stopCommand;
+        private ICommand _stopCommand;
 
         public MacrosTabViewModel() : base( Strings.Macros )
         {
@@ -61,9 +59,8 @@ namespace ClassicAssist.UI.ViewModels
             set => SetProperty( ref _caretPosition, value );
         }
 
-        public ReactiveCommand<MacroEntry, Unit> ClearHotkeyCommand =>
-            _clearHotkeyCommand ?? ( _clearHotkeyCommand = ReactiveCommand.Create<MacroEntry>( ClearHotkey,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+        public ICommand ClearHotkeyCommand =>
+            _clearHotkeyCommand ?? ( _clearHotkeyCommand = new RelayCommand( ClearHotkey, o => SelectedItem != null ) );
 
         //TODO
         //public TextDocument Document
@@ -72,10 +69,9 @@ namespace ClassicAssist.UI.ViewModels
         //    set => SetProperty( ref _document, value );
         //}
 
-        public ReactiveCommand<MacroEntry, Unit> ExecuteCommand =>
-            _executeCommand ?? ( _executeCommand = ReactiveCommand.CreateFromTask<MacroEntry>( Execute,
-                this.WhenAnyValue( x => x.IsRecording, x => x.SelectedItem, x => x.SelectedItem.IsRunning,
-                    ( b, entry, running ) => !b && entry != null && !running ) ) );
+        public ICommand ExecuteCommand =>
+            _executeCommand ?? ( _executeCommand = new RelayCommandAsync( Execute,
+                o => !IsRecording && SelectedItem != null && !SelectedItem.IsRunning ) );
 
         public ShortcutKeys Hotkey
         {
@@ -106,10 +102,9 @@ namespace ClassicAssist.UI.ViewModels
             _removeMacroCommand ?? ( _removeMacroCommand =
                 new RelayCommand( RemoveMacro, o => !SelectedItem?.IsRunning ?? SelectedItem != null ) );
 
-        public ReactiveCommand<MacroEntry, Unit> RemoveMacroConfirmCommand =>
+        public ICommand RemoveMacroConfirmCommand =>
             _removeMacroConfirmCommand ?? ( _removeMacroConfirmCommand =
-                ReactiveCommand.Create<MacroEntry, Unit>( RemoveMacroConfirm,
-                    this.WhenAnyValue( o => o.SelectedItem, selector: o => o != null ) ) );
+                new RelayCommand( RemoveMacroConfirm, o => SelectedItem != null ) );
 
         public ICommand SaveMacroCommand =>
             _saveMacroCommand ?? ( _saveMacroCommand = new RelayCommand( SaveMacro, o => true ) );
@@ -137,9 +132,9 @@ namespace ClassicAssist.UI.ViewModels
         //public ICommand StopCommand =>
         //    _stopCommand ?? ( _stopCommand = new RelayCommandAsync( Stop, o => SelectedItem?.IsRunning ?? false ) );
 
-        public ReactiveCommand<MacroEntry, Unit> StopCommand =>
-            _stopCommand ?? ( _stopCommand = ReactiveCommand.CreateFromTask<MacroEntry>( Stop,
-                this.WhenAnyValue( e => e.SelectedItem.IsRunning ) ) );
+        public ICommand StopCommand =>
+            _stopCommand ?? ( _stopCommand =
+                new RelayCommandAsync( Stop, o => SelectedItem != null && SelectedItem.IsRunning ) );
 
         public void Serialize( JObject json )
         {
@@ -306,11 +301,11 @@ namespace ClassicAssist.UI.ViewModels
             }
         }
 
-        private Unit RemoveMacroConfirm( object obj )
+        private void RemoveMacroConfirm( object obj )
         {
             if ( !( obj is MacroEntry entry ) )
             {
-                return Unit.Default;
+                return;
             }
 
             //TODO
@@ -323,8 +318,6 @@ namespace ClassicAssist.UI.ViewModels
             //}
 
             RemoveMacro( entry );
-
-            return Unit.Default;
         }
 
         private static void ShowMacrosWiki( object obj )
@@ -419,7 +412,7 @@ namespace ClassicAssist.UI.ViewModels
 
             entry.Hotkey = ShortcutKeys.Default;
 
-            this.RaisePropertyChanged( nameof( Hotkey ) );
+            NotifyPropertyChanged( nameof( Hotkey ) );
         }
 
         private static async Task InspectObject( object arg )

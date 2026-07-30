@@ -1,5 +1,5 @@
 ﻿using System.Threading.Tasks;
-using Assistant;
+using Engine = ClassicAssist.Avalonia.UiHost;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;

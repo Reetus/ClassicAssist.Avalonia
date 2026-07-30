@@ -38,10 +38,7 @@
 //        [TestMethod]
 //        public void CheckPoisonStatus()
 //        {
-//            AppDomain appDomain = AppDomain.CreateDomain( "CheckPoisonStatus", AppDomain.CurrentDomain.Evidence,
-//                AppDomain.CurrentDomain.SetupInformation );
-
-//            appDomain.DoCallBack( () =>
+////            appDomain.DoCallBack( () =>
 //            {
 //                Engine.ClientVersion = new Version( 5, 0, 9, 1 );
 

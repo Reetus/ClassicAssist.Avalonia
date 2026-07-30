@@ -1,5 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Reactive;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
@@ -11,7 +10,6 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
 {
@@ -42,11 +40,10 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             set => SetProperty( ref _items, value );
         }
 
-        public ICommand RecountCommand => _recountCommand ?? ( _recountCommand = ReactiveCommand.Create( Recount ) );
+        public ICommand RecountCommand => _recountCommand ?? ( _recountCommand = new RelayCommand( o => Recount(), o => true ) );
 
         public ICommand RemoveEntryCommand =>
-            _removeEntryCommand ?? ( _removeEntryCommand = ReactiveCommand.Create<CountersAgentEntry>( RemoveEntry,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+            _removeEntryCommand ?? ( _removeEntryCommand = new RelayCommand( RemoveEntry, o => SelectedItem != null ) );
 
         public CountersAgentEntry SelectedItem
         {

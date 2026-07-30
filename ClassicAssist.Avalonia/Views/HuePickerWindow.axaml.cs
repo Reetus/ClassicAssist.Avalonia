@@ -6,8 +6,8 @@ using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using ClassicAssist.Annotations;
+using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
-using ReactiveUI;
 
 namespace ClassicAssist.Avalonia.Views
 {
@@ -16,7 +16,7 @@ namespace ClassicAssist.Avalonia.Views
         private ObservableCollection<HuePickerEntry> _filteredItems = new ObservableCollection<HuePickerEntry>();
         private string _filterText;
         private ObservableCollection<HuePickerEntry> _items = new ObservableCollection<HuePickerEntry>();
-        private ICommand _okCommand;
+        private RelayCommand _okCommand;
         private int _selectedHue;
         private HuePickerEntry _selectedItem;
 
@@ -54,9 +54,7 @@ namespace ClassicAssist.Avalonia.Views
             set => SetProperty( ref _items, value );
         }
 
-        public ICommand OKCommand =>
-            _okCommand ?? ( _okCommand = ReactiveCommand.Create<HuePickerEntry>( OK,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+        public ICommand OKCommand => _okCommand ?? ( _okCommand = new RelayCommand( OK, o => SelectedItem != null ) );
 
         public int SelectedHue
         {
@@ -67,7 +65,13 @@ namespace ClassicAssist.Avalonia.Views
         public HuePickerEntry SelectedItem
         {
             get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
+            set
+            {
+                SetProperty( ref _selectedItem, value );
+
+                // No CommandManager.RequerySuggested in Avalonia, so OK has to be invalidated by hand.
+                _okCommand?.RaiseCanExecuteChanged();
+            }
         }
 
         public new event PropertyChangedEventHandler PropertyChanged;

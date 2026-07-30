@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -15,13 +14,11 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
 {
     public class DressTabViewModel : HotkeyEntryViewModel<DressAgentEntry>, ISettingProvider
     {
-        private readonly IObservable<bool> _entrySelected;
         private readonly DressManager _manager;
 
         private readonly Layer[] _validLayers =
@@ -37,7 +34,6 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         private ICommand _dressAllItemsCommand;
         private ICommand _importItemsCommand;
         private bool _isDressingOrUndressing;
-        private readonly IObservable<bool> _itemSelected;
         private bool _moveConflictingItems;
         private ICommand _newDressEntryCommand;
         private ICommand _removeDressEntryCommand;
@@ -55,8 +51,6 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
             _manager.Items = Items;
 
-            _entrySelected = this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null );
-            _itemSelected = this.WhenAnyValue( e => e.SelectedDressItem, selector: e => e != null );
         }
 
         public ICommand AddDressItemCommand =>
@@ -69,16 +63,15 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public ICommand ClearDressItemsCommand =>
             _clearDressItemsCommand ?? ( _clearDressItemsCommand =
-                ReactiveCommand.Create<DressAgentEntry>( ClearDressItems, _entrySelected ) );
+                new RelayCommand( ClearDressItems, o => SelectedItem != null ) );
 
         public ICommand DressAllItemsCommand =>
             _dressAllItemsCommand ?? ( _dressAllItemsCommand =
-                ReactiveCommand.CreateFromTask<DressAgentEntry>( DressAllItems,
-                    _entrySelected.Merge( this.WhenAnyValue( e => e.IsDressingOrUndressing, e => !e ) ) ) );
+                new RelayCommandAsync( DressAllItems, o => SelectedItem != null && !IsDressingOrUndressing ) );
 
         public ICommand ImportItemsCommand =>
             _importItemsCommand ?? ( _importItemsCommand =
-                ReactiveCommand.Create<DressAgentEntry>( ImportItems, _entrySelected ) );
+                new RelayCommand( ImportItems, o => SelectedItem != null ) );
 
         public bool IsDressingOrUndressing
         {
@@ -97,11 +90,11 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public ICommand RemoveDressEntryCommand =>
             _removeDressEntryCommand ?? ( _removeDressEntryCommand =
-                ReactiveCommand.Create<DressAgentEntry>( RemoveDressEntry, _entrySelected ) );
+                new RelayCommand( RemoveDressEntry, o => SelectedItem != null ) );
 
         public ICommand RemoveDressItemCommand =>
             _removeDressItemCommand ?? ( _removeDressItemCommand =
-                ReactiveCommand.Create<DressAgentItem>( RemoveDressItem, _itemSelected ) );
+                new RelayCommand( RemoveDressItem, o => SelectedDressItem != null ) );
 
         public DressAgentItem SelectedDressItem
         {
@@ -117,16 +110,15 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public ICommand SetUndressContainerCommand =>
             _setUndressContainerCommand ?? ( _setUndressContainerCommand =
-                ReactiveCommand.CreateFromTask<DressAgentEntry>( SetUndressContainer, _entrySelected ) );
+                new RelayCommandAsync( SetUndressContainer, o => SelectedItem != null ) );
 
         public ICommand UndressAllItemsCommand =>
-            _undressAllItemsCommand ?? ( _undressAllItemsCommand = ReactiveCommand.CreateFromTask( UndressAllItems,
-                this.WhenAnyValue( e => e.IsDressingOrUndressing, e => !e ) ) );
+            _undressAllItemsCommand ?? ( _undressAllItemsCommand =
+                new RelayCommandAsync( UndressAllItems, o => !IsDressingOrUndressing ) );
 
         public ICommand UndressItemsCommand =>
             _undressItemsCommand ?? ( _undressItemsCommand =
-                ReactiveCommand.CreateFromTask<DressAgentEntry>( UndressItems,
-                    this.WhenAnyValue( e => e.IsDressingOrUndressing, e => !e ) ) );
+                new RelayCommandAsync( UndressItems, o => !IsDressingOrUndressing ) );
 
         public bool UseUO3DPackets
         {
@@ -324,10 +316,10 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             dae.AddOrReplaceDressItem( item );
         }
 
-        private async Task UndressAllItems( CancellationToken cancellationToken )
+        private async Task UndressAllItems( object obj )
         {
             IsDressingOrUndressing = true;
-            await _manager.UndressAll( cancellationToken );
+            await _manager.UndressAll( CancellationToken.None );
             IsDressingOrUndressing = false;
         }
 

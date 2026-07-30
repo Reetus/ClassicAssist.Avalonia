@@ -47,11 +47,6 @@ namespace ClassicAssist.Tests.MacroCommands
         [TestMethod]
         public void WillOrganizeLimitAmount()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillOrganizeLimitAmount", AppDomain.CurrentDomain.Evidence,
-                AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
                 void OnInternalPacketSentEvent( byte[] data, int length )
@@ -119,17 +114,11 @@ namespace ClassicAssist.Tests.MacroCommands
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
                 Engine.Items.Clear();
                 Engine.PacketWaitEntries = null;
-            } );
         }
 
         [TestMethod]
         public void WillOrganizeNoLimit()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillOrganizeNoLimit", AppDomain.CurrentDomain.Evidence,
-                AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
                 void OnInternalPacketSentEvent( byte[] data, int length )
@@ -196,17 +185,11 @@ namespace ClassicAssist.Tests.MacroCommands
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
                 Engine.Items.Clear();
                 Engine.PacketWaitEntries = null;
-            } );
         }
 
         [TestMethod]
         public void WillOrganizeNoLimitMultiple()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillOrganizeNoLimitMultiple",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
                 void OnInternalPacketSentEvent( byte[] data, int length )
@@ -277,7 +260,6 @@ namespace ClassicAssist.Tests.MacroCommands
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
                 Engine.Items.Clear();
                 Engine.PacketWaitEntries = null;
-            } );
         }
     }
 }

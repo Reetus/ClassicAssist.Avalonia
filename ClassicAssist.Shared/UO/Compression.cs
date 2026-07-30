@@ -1,45 +1,67 @@
-﻿using System;
+using System;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace ClassicAssist.UO
 {
     public static class Compression
     {
-#if LINUX
-        [DllImport( "libz", EntryPoint = "uncompress" )]
-#else
-        [DllImport( "zlib32.dll", EntryPoint = "uncompress" )]
-#endif
-        private static extern int Uncompress32( byte[] dest, ref int destLen, byte[] source, int sourceLen );
+        /// <summary>
+        ///     Logical name resolved to a real zlib by <see cref="Resolve" />. The platform is decided at run
+        ///     time rather than by a build configuration, because the previous <c>#if LINUX</c> approach only
+        ///     worked in the "Linux" configuration and left Debug builds P/Invoking zlib64.dll on Linux.
+        /// </summary>
+        private const string ZLIB = "zlib";
 
-#if LINUX
-        [DllImport( "libz", EntryPoint = "uncompress" )]
-#else
-        [DllImport( "zlib64.dll", EntryPoint = "uncompress" )]
-#endif
-        private static extern int Uncompress64( byte[] dest, ref int destLen, byte[] source, int sourceLen );
+        static Compression()
+        {
+            NativeLibrary.SetDllImportResolver( typeof( Compression ).Assembly, Resolve );
+        }
 
-#if LINUX
-        [DllImport( "libz", EntryPoint = "uncompress" )]
-#else
-        [DllImport( "zlib32.dll", EntryPoint = "compress" )]
-#endif
-        private static extern int Compress32( byte[] dest, ref int destLen, byte[] source, int sourceLen );
+        [DllImport( ZLIB, EntryPoint = "uncompress" )]
+        private static extern int UncompressNative( byte[] dest, ref int destLen, byte[] source, int sourceLen );
 
-#if LINUX
-        [DllImport( "libz", EntryPoint = "uncompress" )]
-#else
-        [DllImport( "zlib64.dll", EntryPoint = "compress" )]
-#endif
-        private static extern int Compress64( byte[] dest, ref int destLen, byte[] source, int sourceLen );
+        [DllImport( ZLIB, EntryPoint = "compress" )]
+        private static extern int CompressNative( byte[] dest, ref int destLen, byte[] source, int sourceLen );
+
+        private static IntPtr Resolve( string libraryName, Assembly assembly, DllImportSearchPath? searchPath )
+        {
+            if ( libraryName != ZLIB )
+            {
+                return IntPtr.Zero;
+            }
+
+            string[] candidates;
+
+            if ( RuntimeInformation.IsOSPlatform( OSPlatform.Windows ) )
+            {
+                candidates = Environment.Is64BitProcess
+                    ? new[] { "zlib64.dll", "zlib1.dll" }
+                    : new[] { "zlib32.dll", "zlib1.dll" };
+            }
+            else if ( RuntimeInformation.IsOSPlatform( OSPlatform.OSX ) )
+            {
+                candidates = new[] { "libz.dylib", "libz.1.dylib" };
+            }
+            else
+            {
+                candidates = new[] { "libz.so.1", "libz.so" };
+            }
+
+            foreach ( string candidate in candidates )
+            {
+                if ( NativeLibrary.TryLoad( candidate, assembly, searchPath, out IntPtr handle ) )
+                {
+                    return handle;
+                }
+            }
+
+            return IntPtr.Zero;
+        }
 
         public static bool Uncompress( ref byte[] destBuffer, ref int destLength, byte[] sourceBuffer, int sourceLen )
         {
-            int success = Environment.Is64BitProcess
-                ? Uncompress64( destBuffer, ref destLength, sourceBuffer, sourceLen )
-                : Uncompress32( destBuffer, ref destLength, sourceBuffer, sourceLen );
-
-            return success == 0;
+            return UncompressNative( destBuffer, ref destLength, sourceBuffer, sourceLen ) == 0;
         }
 
         public static byte[] Compress( byte[] bytes )
@@ -48,14 +70,7 @@ namespace ClassicAssist.UO
 
             int length = compressBytes.Length;
 
-            if ( Environment.Is64BitProcess )
-            {
-                Compress64( compressBytes, ref length, bytes, bytes.Length );
-            }
-            else
-            {
-                Compress32( compressBytes, ref length, bytes, bytes.Length );
-            }
+            CompressNative( compressBytes, ref length, bytes, bytes.Length );
 
             Array.Resize( ref compressBytes, length );
 

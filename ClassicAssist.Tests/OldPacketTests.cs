@@ -35,11 +35,6 @@ namespace ClassicAssist.Tests
         [TestMethod]
         public void WillSendProperDropRequest()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillSendProperDropRequest", AppDomain.CurrentDomain.Evidence,
-                AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
                 AutoResetEvent are = new AutoResetEvent( false );
 
@@ -67,20 +62,24 @@ namespace ClassicAssist.Tests
 
                 Engine.InternalPacketSentEvent += OnInternalPacketSentEvent;
 
-                Engine.SendPacketToServer( new DropItem( 0x11223344, 0x55667788, 1, 2, 3 ) );
-                are.WaitOne( 5000 );
+                try
+                {
+                    Engine.SendPacketToServer( new DropItem( 0x11223344, 0x55667788, 1, 2, 3 ) );
+                    are.WaitOne( 5000 );
+                }
+                finally
+                {
+                    // Engine is a process-wide singleton, so a handler left attached here fires against
+                    // packets sent by every later test and asserts on them.
+                    Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
+                }
+
                 Engine.ClientVersion = new Version( 7, 0, 45, 1 );
-            } );
         }
 
         [TestMethod]
         public void WillParseOldContainerContents()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillParseOldContainerContents",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
                 byte[] packet =
                 {
@@ -102,17 +101,11 @@ namespace ClassicAssist.Tests
                 Assert.AreEqual( 2, container.Container.GetItemCount() );
                 Engine.Items = null;
                 Engine.ClientVersion = new Version( 7, 0, 45, 1 );
-            } );
         }
 
         [TestMethod]
         public void WillParseOldHealthbarColour()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillParseOldHealthbarColour",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
 
                 byte[] packet =
@@ -130,17 +123,11 @@ namespace ClassicAssist.Tests
                 handler?.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
                 Assert.IsTrue( mobile.IsPoisoned );
-            } );
         }
 
         [TestMethod]
         public void WillSetPoisonedFromOldMoving()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillSetPoisonedFromOldMoving",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
 
                 byte[] packet =
@@ -171,16 +158,12 @@ namespace ClassicAssist.Tests
 
                 Assert.IsNotNull( mobile );
                 Assert.IsTrue( mobile.IsPoisoned );
-            } );
         }
 
         //[TestMethod]
         //public void WillSetPoisonedFromOldIncoming()
         //{
-        //    AppDomain appDomain = AppDomain.CreateDomain( "WillSetPoisonedFromOldIncoming",
-        //        AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-        //    appDomain.DoCallBack( () =>
+        //        //    appDomain.DoCallBack( () =>
         //    {
         //        Engine.ClientVersion = new Version( 5, 0, 9, 1 );
 

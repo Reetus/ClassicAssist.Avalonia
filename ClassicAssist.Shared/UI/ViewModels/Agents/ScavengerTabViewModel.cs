@@ -13,7 +13,6 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
@@ -41,7 +40,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand ClearAllCommand =>
-            _clearAllCommand ?? ( _clearAllCommand = ReactiveCommand.CreateFromTask( ClearAll ) );
+            _clearAllCommand ?? ( _clearAllCommand = new RelayCommandAsync( ClearAll, o => true ) );
 
         public int ContainerSerial
         {
@@ -65,8 +64,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand RemoveCommand =>
-            _removeCommand ?? ( _removeCommand = ReactiveCommand.CreateFromTask<ScavengerEntry>( Remove,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+            _removeCommand ?? ( _removeCommand = new RelayCommandAsync( Remove, o => SelectedItem != null ) );
 
         public ScavengerEntry SelectedItem
         {
@@ -256,7 +254,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             await Task.CompletedTask;
         }
 
-        private async Task ClearAll( CancellationToken cancellationToken )
+        private async Task ClearAll( object obj )
         {
             Items.Clear();
 

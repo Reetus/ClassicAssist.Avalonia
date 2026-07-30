@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive;
+using System.Windows.Input;
 using System.Reflection;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Hotkeys;
@@ -12,7 +12,6 @@ using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.Misc;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -20,8 +19,8 @@ namespace ClassicAssist.UI.ViewModels
     {
         private readonly HotkeyManager _hotkeyManager;
         private readonly List<HotkeyCommand> _serializeCategories = new List<HotkeyCommand>();
-        private ReactiveCommand<HotkeyEntry, Unit> _clearHotkeyCommand;
-        private ReactiveCommand<HotkeyEntry, Unit> _executeCommand;
+        private ICommand _clearHotkeyCommand;
+        private ICommand _executeCommand;
         private HotkeyCommand _masteriesCategory;
         private HotkeyEntry _selectedItem;
         private HotkeyCommand _spellsCategory;
@@ -32,13 +31,12 @@ namespace ClassicAssist.UI.ViewModels
             _hotkeyManager.ClearAllHotkeys = ClearAllHotkeys;
         }
 
-        public ReactiveCommand<HotkeyEntry, Unit> ClearHotkeyCommand =>
-            _clearHotkeyCommand ?? ( _clearHotkeyCommand = ReactiveCommand.Create<HotkeyEntry>( ClearHotkey,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+        public ICommand ClearHotkeyCommand =>
+            _clearHotkeyCommand ?? ( _clearHotkeyCommand = new RelayCommand( ClearHotkey, o => SelectedItem != null ) );
 
-        public ReactiveCommand<HotkeyEntry, Unit> ExecuteCommand =>
-            _executeCommand ?? ( _executeCommand = ReactiveCommand.Create<HotkeyEntry>( ExecuteHotkey,
-                this.WhenAnyValue( e => e.SelectedItem, e => e != null && !e.IsCategory ) ) );
+        public ICommand ExecuteCommand =>
+            _executeCommand ?? ( _executeCommand =
+                new RelayCommand( ExecuteHotkey, o => SelectedItem != null && !SelectedItem.IsCategory ) );
 
         public ShortcutKeys Hotkey
         {
@@ -359,7 +357,7 @@ namespace ClassicAssist.UI.ViewModels
             if ( obj is HotkeyEntry cmd )
             {
                 cmd.Hotkey = ShortcutKeys.Default;
-                this.RaisePropertyChanged( nameof( Hotkey ) );
+                NotifyPropertyChanged( nameof( Hotkey ) );
             }
         }
 

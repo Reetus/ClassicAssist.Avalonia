@@ -14,7 +14,6 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
@@ -32,7 +31,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand InsertCommand =>
-            _insertCommand ?? ( _insertCommand = ReactiveCommand.CreateFromTask( Insert ) );
+            _insertCommand ?? ( _insertCommand = new RelayCommandAsync( Insert, o => true ) );
 
         public ObservableCollection<VendorSellAgentEntry> Items
         {
@@ -41,8 +40,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand RemoveCommand =>
-            _removeCommand ?? ( _removeCommand = ReactiveCommand.Create<VendorSellAgentEntry>( Remove,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+            _removeCommand ?? ( _removeCommand = new RelayCommand( Remove, o => SelectedItem != null ) );
 
         public VendorSellAgentEntry SelectedItem
         {
@@ -167,7 +165,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             Engine.SendPacketToServer( pw );
         }
 
-        private async Task Insert( CancellationToken cancellationToken )
+        private async Task Insert( object obj )
         {
             int serial = await UOC.GetTargeSerialAsync( Strings.Target_object___ );
 

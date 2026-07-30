@@ -31,11 +31,6 @@ namespace ClassicAssist.Tests.Filters
         [TestMethod]
         public void WillFilterOldAsciiSystemMessages()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillFilterOldAsciiSystemMessages",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 byte[] packet =
                 {
                     0x1C, 0x00, 0x4B, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x04, 0x81, 0x00, 0x03, 0x53, 0x79,
@@ -60,17 +55,11 @@ namespace ClassicAssist.Tests.Filters
                 bool result = IncomingPacketFilters.CheckPacket( ref packet, ref length );
 
                 Assert.IsTrue( result );
-            } );
         }
 
         [TestMethod]
         public void WillSendToJournalFilteredMessages()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WillSendToJournalFilteredMessages",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 byte[] packet =
                 {
                     0x1C, 0x00, 0x4B, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x04, 0x81, 0x00, 0x03, 0x53, 0x79,
@@ -97,17 +86,11 @@ namespace ClassicAssist.Tests.Filters
 
                 Assert.IsTrue( result );
                 Assert.IsTrue( Engine.Journal.Count > 0 );
-            } );
         }
 
         [TestMethod]
         public void WontSendToJournalFilteredMessagesDisabled()
         {
-            AppDomain appDomain = AppDomain.CreateDomain( "WontSendToJournalFilteredMessagesDisabled",
-                AppDomain.CurrentDomain.Evidence, AppDomain.CurrentDomain.SetupInformation );
-
-            appDomain.DoCallBack( () =>
-            {
                 byte[] packet =
                 {
                     0x1C, 0x00, 0x4B, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x04, 0x81, 0x00, 0x03, 0x53, 0x79,
@@ -123,6 +106,9 @@ namespace ClassicAssist.Tests.Filters
                 RepeatedMessagesFilter.IsEnabled = true;
                 RepeatedMessagesFilter.FilterOptions.SendToJournal = false;
 
+                // Engine.Journal is a process-wide static that earlier tests have written to.
+                Engine.Journal.Clear();
+
                 IncomingPacketFilters.CheckPacket( ref packet, ref length );
                 IncomingPacketFilters.CheckPacket( ref packet, ref length );
                 IncomingPacketFilters.CheckPacket( ref packet, ref length );
@@ -134,7 +120,6 @@ namespace ClassicAssist.Tests.Filters
 
                 Assert.IsTrue( result );
                 Assert.AreEqual( 0, Engine.Journal.Count );
-            } );
         }
     }
 }

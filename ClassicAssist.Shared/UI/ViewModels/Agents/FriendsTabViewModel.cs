@@ -7,7 +7,6 @@ using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Misc;
 using ClassicAssist.UI.ViewModels;
 using Newtonsoft.Json.Linq;
-using ReactiveUI;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
 {
@@ -33,8 +32,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand RemoveFriendCommand =>
-            _removeFriendCommand ?? ( _removeFriendCommand = ReactiveCommand.CreateFromTask<FriendEntry>( RemoveFriend,
-                this.WhenAnyValue( e => e.SelectedItem, selector: e => e != null ) ) );
+            _removeFriendCommand ?? ( _removeFriendCommand =
+                new RelayCommandAsync( RemoveFriend, o => SelectedItem != null ) );
         //new RelayCommandAsync( RemoveFriend, o => SelectedItem != null ) );
 
         public FriendEntry SelectedItem
@@ -44,8 +43,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         }
 
         public ICommand SelectHueCommand =>
-            _selectHueCommand ?? ( _selectHueCommand = ReactiveCommand.CreateFromTask( SelectHue,
-                this.WhenAnyValue( e => e.Options.RehueFriends, selector: e => e ) ) );
+            _selectHueCommand ?? ( _selectHueCommand =
+                new RelayCommandAsync( SelectHue, o => Options?.RehueFriends ?? false ) );
 
         public void Serialize( JObject json )
         {
@@ -105,7 +104,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             MainCommands.Resync();
         }
 
-        private static async Task SelectHue( CancellationToken token )
+        private static async Task SelectHue( object obj )
         {
             int hue = await Engine.UIInvoker.GetHueAsync();
 

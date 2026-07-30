@@ -2,14 +2,10 @@
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <OutputPath>..\Output\</OutputPath>
     </PropertyGroup>
 
-    <ItemGroup>
-        <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Microsoft.CSharp" />
-    </ItemGroup>
+    <!--
+      Contracts only (IHostMethods / IPluginMethods / the ClassicUO reflection layer). Deliberately
+      free of any transport dependency so the RPC mechanism can be swapped without touching Shared.
+    -->
 </Project>
