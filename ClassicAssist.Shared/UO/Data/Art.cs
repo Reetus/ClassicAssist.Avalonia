@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using ClassicAssist.Misc;
@@ -114,62 +112,91 @@ namespace ClassicAssist.UO.Data
             return indexes;
         }
 
-        public static Bitmap GetStatic( int itemID, int hue )
+        /// <summary>
+        ///     Decodes a static item tile and applies a hue to it.
+        /// </summary>
+        /// <returns>The tile, or <see cref="Pixmap.Empty" /> if the item has no art.</returns>
+        public static Pixmap GetStatic( int itemID, int hue )
         {
-            Bitmap bmp = GetStatic( itemID );
+            ushort[] colours = DecodeStatic( itemID, out int width, out int height );
 
-            if ( hue == 0 || bmp == null )
+            if ( colours == null )
             {
-                return bmp;
+                return Pixmap.Empty;
             }
 
-            StaticTile tileData = TileData.GetStaticTile( itemID );
+            if ( hue != 0 )
+            {
+                StaticTile tileData = TileData.GetStaticTile( itemID );
 
-            Hues.ApplyHue( hue, bmp, tileData.Flags.HasFlag( TileFlags.PartialHue ) );
+                // Hue while the pixels are still colour words. Doing it after the widen to RGBA would mean
+                // mapping 8-bit channels back to 5-bit to index the hue table, which is lossy.
+                Hues.ApplyHue( hue, colours, tileData.Flags.HasFlag( TileFlags.PartialHue ) );
+            }
 
-            return bmp;
+            return HuesHelper.ToPixmap( colours, width, height );
         }
 
-        public static unsafe Bitmap GetStatic( int itemId )
+        /// <summary>
+        ///     Decodes a static item tile.
+        /// </summary>
+        /// <returns>The tile, or <see cref="Pixmap.Empty" /> if the item has no art.</returns>
+        public static Pixmap GetStatic( int itemId )
         {
+            ushort[] colours = DecodeStatic( itemId, out int width, out int height );
+
+            return colours == null ? Pixmap.Empty : HuesHelper.ToPixmap( colours, width, height );
+        }
+
+        /// <summary>
+        ///     Reads one tile out of art.mul / artLegacyMUL.uop as ARGB1555 colour words.
+        ///     <para>
+        ///         The body is a run-length stream: per row, pairs of (x offset, run length) followed by that
+        ///         many colour words, terminated when both are zero. Anything not covered by a run stays 0 and
+        ///         reads as transparent.
+        ///     </para>
+        /// </summary>
+        private static ushort[] DecodeStatic( int itemId, out int width, out int height )
+        {
+            width = 0;
+            height = 0;
+
             itemId += 0x4000;
 
-            string fileName = Path.Combine( _dataPath, "art.mul" );
+            string fileName = Path.Combine( _dataPath, _isUOPFormat ? "artLegacyMUL.uop" : "art.mul" );
 
-            if ( _isUOPFormat )
+            if ( !File.Exists( fileName ) )
             {
-                fileName = Path.Combine( _dataPath, "artLegacyMUL.uop" );
+                return null;
             }
-
-            FileStream artFile = File.Open( fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite );
 
             Entry3D entry;
 
-            try
+            if ( !_lazyIndex.Value.TryGetValue( itemId, out entry ) && !_lazyIndex.Value.TryGetValue( 0x4000, out entry ) )
             {
-                entry = _lazyIndex.Value[itemId];
-            }
-            catch ( KeyNotFoundException )
-            {
-                entry = _lazyIndex.Value[0x4000];
+                return null;
             }
 
-            artFile.Seek( entry.Lookup, SeekOrigin.Begin );
-
+            using ( FileStream artFile =
+                File.Open( fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) )
             using ( BinaryReader reader = new BinaryReader( artFile ) )
             {
+                artFile.Seek( entry.Lookup, SeekOrigin.Begin );
+
                 reader.ReadInt32();
 
-                int width = reader.ReadInt16();
-                int height = reader.ReadInt16();
+                width = reader.ReadInt16();
+                height = reader.ReadInt16();
 
                 if ( width <= 0 || height <= 0 )
                 {
+                    width = 0;
+                    height = 0;
+
                     return null;
                 }
 
                 int[] lookups = new int[height];
-
                 int start = (int) reader.BaseStream.Position + height * 2;
 
                 for ( int i = 0; i < height; i++ )
@@ -177,65 +204,36 @@ namespace ClassicAssist.UO.Data
                     lookups[i] = start + reader.ReadUInt16() * 2;
                 }
 
-                Bitmap bmp = new Bitmap( width, height, PixelFormat.Format16bppArgb1555 );
+                ushort[] pixels = new ushort[width * height];
 
-                BitmapData bd = bmp.LockBits( new Rectangle( 0, 0, width, height ), ImageLockMode.WriteOnly,
-                    PixelFormat.Format16bppArgb1555 );
-
-                ushort* line = (ushort*) bd.Scan0;
-                int delta = bd.Stride >> 1;
-
-                int largestX = 0;
-                int smallestX = width;
-                int largestY = 0;
-                int smallestY = height;
-
-                for ( int y = 0; y < height; y++, line += delta )
+                for ( int y = 0; y < height; y++ )
                 {
                     reader.BaseStream.Seek( lookups[y], SeekOrigin.Begin );
 
-                    ushort* cur = line;
-
-                    int xOffset, xRun;
+                    int rowStart = y * width;
                     int x = 0;
 
-                    if ( y > largestY )
-                    {
-                        largestY = y + 1;
-                    }
-
-                    if ( y < smallestY )
-                    {
-                        smallestY = y;
-                    }
+                    int xOffset, xRun;
 
                     while ( ( xOffset = reader.ReadUInt16() ) + ( xRun = reader.ReadUInt16() ) != 0 )
                     {
-                        cur += xOffset;
-                        ushort* end = cur + xRun;
                         x += xOffset;
 
-                        if ( x < smallestX )
+                        // A corrupt or truncated entry can run off the end of the row; stop rather than
+                        // throw, so one bad tile does not take the caller down.
+                        if ( x < 0 || x + xRun > width )
                         {
-                            smallestX = x;
+                            break;
                         }
 
-                        while ( cur < end )
+                        for ( int i = 0; i < xRun; i++ )
                         {
-                            *cur++ = (ushort) ( reader.ReadUInt16() ^ 0x8000 );
-                            x++;
-                        }
-
-                        if ( x > largestX )
-                        {
-                            largestX = x;
+                            pixels[rowStart + x++] = (ushort) ( reader.ReadUInt16() ^ 0x8000 );
                         }
                     }
                 }
 
-                bmp.UnlockBits( bd );
-
-                return bmp;
+                return pixels;
             }
         }
 

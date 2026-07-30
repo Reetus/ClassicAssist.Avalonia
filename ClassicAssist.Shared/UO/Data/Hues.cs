@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -50,72 +48,67 @@ namespace ClassicAssist.UO.Data
             return entries;
         }
 
-        public static unsafe void ApplyHue( int hue, Bitmap bmp, bool onlyHueGrayPixels )
+        /// <summary>
+        ///     Recolours a block of ARGB1555 colour words in place.
+        ///     <para>
+        ///         A hue is a 32-entry ramp indexed by the pixel's red channel, so hueing is a table lookup per
+        ///         pixel rather than a blend. Fully transparent pixels are left alone.
+        ///     </para>
+        /// </summary>
+        /// <param name="hue">1-based hue id as it arrives from the server; the upper bits are flags.</param>
+        /// <param name="colours">Tightly packed colour words, modified in place.</param>
+        /// <param name="onlyHueGrayPixels">
+        ///     Partial hue: only recolour pixels that are already grey, leaving coloured detail alone.
+        /// </param>
+        public static void ApplyHue( int hue, ushort[] colours, bool onlyHueGrayPixels )
         {
-            BitmapData bd = bmp.LockBits( new Rectangle( 0, 0, bmp.Width, bmp.Height ), ImageLockMode.ReadWrite,
-                PixelFormat.Format16bppArgb1555 );
+            if ( colours == null )
+            {
+                return;
+            }
 
             hue = ( hue & 0x3FFF ) - 1;
 
-            int stride = bd.Stride >> 1;
-            int width = bd.Width;
-            int height = bd.Height;
-            int delta = stride - width;
+            HueEntry[] entries = _lazyHueEntries.Value;
 
-            ushort* pBuffer = (ushort*) bd.Scan0;
-            ushort* pLineEnd = pBuffer + width;
-            ushort* pImageEnd = pBuffer + stride * height;
-
-            if ( onlyHueGrayPixels )
+            if ( hue < 0 || hue >= entries.Length )
             {
-                while ( pBuffer < pImageEnd )
-                {
-                    while ( pBuffer < pLineEnd )
-                    {
-                        int c = *pBuffer;
-
-                        if ( c != 0 )
-                        {
-                            int r = ( c >> 10 ) & 0x1F;
-                            int g = ( c >> 5 ) & 0x1F;
-                            int b = c & 0x1F;
-
-                            if ( r == g && r == b )
-                            {
-                                *pBuffer = (ushort) _lazyHueEntries.Value[hue].Colors[( c >> 10 ) & 0x1F];
-                            }
-                        }
-
-                        ++pBuffer;
-                    }
-
-                    pBuffer += delta;
-                    pLineEnd += stride;
-                }
-            }
-            else
-            {
-                while ( pBuffer < pImageEnd )
-                {
-                    while ( pBuffer < pLineEnd )
-                    {
-                        if ( *pBuffer != 0 )
-                        {
-                            int index = ( *pBuffer >> 10 ) & 0x1F;
-                            HueEntry hueEntry = _lazyHueEntries.Value[hue];
-                            *pBuffer = (ushort) hueEntry.Colors[index];
-                        }
-
-                        ++pBuffer;
-                    }
-
-                    pBuffer += delta;
-                    pLineEnd += stride;
-                }
+                return;
             }
 
-            bmp.UnlockBits( bd );
+            short[] rampColours = entries[hue].Colors;
+
+            if ( rampColours == null )
+            {
+                return;
+            }
+
+            for ( int i = 0; i < colours.Length; i++ )
+            {
+                int c = colours[i];
+
+                if ( c == 0 )
+                {
+                    continue;
+                }
+
+                int r = ( c >> 10 ) & 0x1F;
+
+                if ( onlyHueGrayPixels )
+                {
+                    int g = ( c >> 5 ) & 0x1F;
+                    int b = c & 0x1F;
+
+                    if ( r != g || r != b )
+                    {
+                        continue;
+                    }
+                }
+
+                colours[i] = (ushort) rampColours[r];
+            }
         }
+
     }
 
     [StructLayout( LayoutKind.Sequential, Pack = 1 )]

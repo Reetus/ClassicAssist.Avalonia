@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -49,10 +48,6 @@ namespace ClassicAssist.Misc
 
             return attr != null ? attr : default;
         }
-
-        [DllImport( "gdi32.dll", EntryPoint = "DeleteObject" )]
-        [return: MarshalAs( UnmanagedType.Bool )]
-        public static extern bool DeleteObject( [In] IntPtr hObject );
 
         public static void AddSorted<T>( this IList<T> list, T item, IComparer<T> comparer = null )
         {

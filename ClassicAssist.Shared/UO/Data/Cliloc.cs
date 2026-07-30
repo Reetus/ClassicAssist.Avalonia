@@ -2,15 +2,19 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using ClassicAssist.Data;
+using ClassicAssist.Shared;
 
 namespace ClassicAssist.UO.Data
 {
     public static class Cliloc
     {
-        private static readonly Lazy<Dictionary<int, string>> _lazyClilocList =
+        private static Lazy<Dictionary<int, string>> _lazyClilocList =
             new Lazy<Dictionary<int, string>>( LoadClilocs );
 
         private static string _dataPath;
+
+        private static readonly Version _bwtClientVersion = new Version( 7, 0, 104, 0 );
 
         private static Dictionary<int, string> LoadClilocs()
         {
@@ -21,7 +25,13 @@ namespace ClassicAssist.UO.Data
                 throw new FileNotFoundException( "File not found.", filename );
             }
 
-            byte[] fileBytes = File.ReadAllBytes( filename );
+            byte[] rawBytes = File.ReadAllBytes( filename );
+
+            // From 7.0.104 the cliloc files are BWT compressed. Read as-is they decode to garbage, which
+            // is why every string comes out wrong on a modern client rather than merely missing.
+            bool newFormat = Engine.ClientVersion != null && Engine.ClientVersion >= _bwtClientVersion;
+
+            byte[] fileBytes = newFormat ? BwtDecompress.Decompress( rawBytes ) : rawBytes;
 
             Dictionary<int, string> clilocList = new Dictionary<int, string>( 100000 );
 
@@ -30,8 +40,25 @@ namespace ClassicAssist.UO.Data
             for ( int x = 6; x < fileBytes.Length; x += 7 + len )
             {
                 len = BitConverter.ToUInt16( fileBytes, x + 5 );
-                clilocList.Add( BitConverter.ToInt32( fileBytes, x ),
-                    Encoding.UTF8.GetString( fileBytes, x + 7, len ) );
+                int cliloc = BitConverter.ToInt32( fileBytes, x );
+
+                // A truncated file would otherwise read past the end of the buffer. Zero is a legitimate
+                // length - plenty of clilocs are empty strings - so only a negative remainder, meaning
+                // the header itself ran off the end, ends the loop.
+                int readLen = fileBytes.Length < x + 7 + len ? fileBytes.Length - ( x + 7 ) : len;
+
+                if ( readLen < 0 )
+                {
+                    break;
+                }
+
+                string value = Encoding.UTF8.GetString( fileBytes, x + 7, readLen );
+
+                // Duplicates do occur; first definition wins rather than throwing.
+                if ( !clilocList.ContainsKey( cliloc ) )
+                {
+                    clilocList.Add( cliloc, value );
+                }
             }
 
             return clilocList;
@@ -143,6 +170,11 @@ namespace ClassicAssist.UO.Data
         public static void Initialize( string dataPath )
         {
             _dataPath = dataPath;
+
+            // Reset the cache: the list is keyed off both the path and the client version, and Initialize
+            // runs after the version is known. Leaving a list loaded from an earlier call in place would
+            // pin whatever was read first for the lifetime of the process.
+            _lazyClilocList = new Lazy<Dictionary<int, string>>( LoadClilocs );
         }
 
         public static string GetProperty( int property )
