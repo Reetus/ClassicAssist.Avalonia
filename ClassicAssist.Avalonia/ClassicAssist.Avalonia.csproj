@@ -17,6 +17,9 @@
    <ItemGroup>
         <Folder Include="Models\" />
         <AvaloniaResource Include="Assets\**" />
+        <!-- Python modules the macro engine puts on its search path; must be files on disk, not
+             embedded resources, because IronPython imports them by name from that folder. -->
+        <None Include="Modules\**" CopyToOutputDirectory="PreserveNewest" />
         <AvaloniaResource Include="Controls\GroupBox.Theme.xaml" />
         <AvaloniaResource Include="Controls\TabControl.Theme.xaml" />
         <AvaloniaResource Include="Controls\Compact.Theme.xaml" />

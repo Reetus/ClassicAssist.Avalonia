@@ -22,4 +22,11 @@
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
   </ItemGroup>
+    <!-- The macro engine imports these by name from a Modules folder beside the app, so the tests
+         need the same layout to exercise the real file rather than a copy of its contents. -->
+    <ItemGroup>
+        <None Include="..\ClassicAssist.Avalonia\Modules\**" Link="Modules\%(RecursiveDir)%(Filename)%(Extension)"
+              CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
 </Project>
