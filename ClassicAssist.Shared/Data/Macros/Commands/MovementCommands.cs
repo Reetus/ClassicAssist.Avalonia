@@ -95,46 +95,51 @@ namespace ClassicAssist.Data.Macros.Commands
                 nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ),
                 nameof( ParameterType.ZCoordinate )
             } )]
-        public static void Pathfind( int x, int y, int z )
+        public static bool Pathfind( int x, int y, int z, bool checkDistance = true, int desiredDistance = 0 )
         {
             int distance = Math.Max( Math.Abs( x - Engine.Player?.X ?? x ), Math.Abs( y - Engine.Player?.Y ?? y ) );
 
-            if ( distance > PATHFIND_MAX_DISTANCE )
+            if ( checkDistance && distance > PATHFIND_MAX_DISTANCE )
             {
                 UOC.SystemMessage( Strings.Maximum_distance_exceeded_ );
-                return;
+                return false;
             }
 
             if ( Engine.Host != null && Engine.ReflectionAvailable )
             {
-                if ( !ReflectionCommands.WalkTo( x, y, z, 0 ) )
+                // The client's own WalkTo result, carried back over the bridge - false means it found
+                // no path at all, so there is nothing to wait for.
+                if ( !ReflectionCommands.WalkTo( x, y, z, desiredDistance ) )
                 {
                     UOC.SystemMessage( Strings.Pathfind_failed_to_start_ );
-                    return;
+                    return false;
                 }
-            }
-            else
-            {
-                Engine.SendPacketToClient( new Pathfind( x, y, z ) );
+
+                WaitForPathfindingToStart();
+
+                return true;
             }
 
-            WaitForPathfindingToStart();
+            // The injected packet is fire-and-forget, so the only answer available here is whether
+            // the client visibly started walking.
+            Engine.SendPacketToClient( new Pathfind( x, y, z ) );
+
+            return WaitForPathfindingToStart();
         }
 
         /// <summary>
-        ///     Blocks until <see cref="Pathfinding" /> reports true, or the walk demonstrably never
-        ///     started.
+        ///     Blocks until <see cref="Pathfinding" /> reports true, returning whether it ever did.
         ///     <para>
         ///         Upstream ClassicAssist runs in the client's own process and calls
         ///         <c>Pathfinder.WalkTo</c> directly, so <c>AutoWalking</c> is already set by the time
-        ///         <see cref="Pathfind(int,int,int)" /> returns - which is why the idiomatic
+        ///         <see cref="Pathfind(int,int,int,bool,int)" /> returns - which is why the idiomatic
         ///         <c>Pathfind(...)</c> / <c>while Pathfinding():</c> macro works there with no pause.
         ///         Here the call crosses to the plugin process and the client only picks the walk up on
         ///         a later tick, so without this a macro that checks immediately sees false and exits
         ///         straight away.
         ///     </para>
         /// </summary>
-        private static void WaitForPathfindingToStart()
+        private static bool WaitForPathfindingToStart()
         {
             DateTime timeout = DateTime.Now + TimeSpan.FromMilliseconds( PATHFIND_START_TIMEOUT );
 
@@ -142,11 +147,13 @@ namespace ClassicAssist.Data.Macros.Commands
             {
                 if ( Pathfinding() )
                 {
-                    return;
+                    return true;
                 }
 
                 Thread.Sleep( PATHFIND_START_POLL_INTERVAL );
             }
+
+            return false;
         }
 
         [CommandsDisplay( Category = nameof( Strings.Movement ),
@@ -154,14 +161,20 @@ namespace ClassicAssist.Data.Macros.Commands
             {
                 nameof( ParameterType.SerialOrAlias )
             } )]
-        public static void Pathfind( object obj )
+        public static bool Pathfind( object obj, bool checkDistance = true, int desiredDistance = 0 )
         {
+            // Pathfind(-1) cancels a walk in progress - already documented in the shipped help.
+            if ( obj is int i && i == -1 )
+            {
+                return ReflectionCommands.CancelPathfinding();
+            }
+
             int serial = AliasCommands.ResolveSerial( obj );
 
             if ( serial == 0 )
             {
                 UOC.SystemMessage( Strings.Entity_not_found___ );
-                return;
+                return false;
             }
 
             Entity entity = UOMath.IsMobile( serial )
@@ -171,10 +184,10 @@ namespace ClassicAssist.Data.Macros.Commands
             if ( entity == null )
             {
                 UOC.SystemMessage( Strings.Entity_not_found___ );
-                return;
+                return false;
             }
 
-            Pathfind( entity.X, entity.Y, entity.Z );
+            return Pathfind( entity.X, entity.Y, entity.Z, checkDistance, desiredDistance );
         }
 
         [CommandsDisplay( Category = nameof( Strings.Movement ) )]

@@ -10,7 +10,7 @@ commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled
 
 - **52 commands missing entirely** (6 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
   `Pathfinding`)
-- **22 commands whose signature changed** (5 of them behavioural rather than additive)
+- **22 commands whose signature changed** (5 of them behavioural rather than additive; 1 done: `Pathfind`)
 
 ## Before porting anything
 
@@ -39,8 +39,14 @@ These are not additive - existing macros behave differently, and porting them ch
 - [ ] **Lists hold `object` upstream, `int` here.** `PushList`, `InList`, `GetList`
       (`int[]` -> `object[]`) and the internal `GetAllLists`. Upstream macros can store strings
       and other values in lists; this fork cannot.
-- [ ] **`Pathfind` returns `bool` upstream, `void` here**, and gained `checkDistance` /
-      `desiredDistance`. Macros cannot currently test whether pathfinding succeeded.
+- [x] ~~**`Pathfind` returns `bool` upstream, `void` here**, and gained `checkDistance` /
+      `desiredDistance`.~~ Done - both overloads now match upstream, including the `Pathfind(-1)`
+      cancel case the shipped help already documented. The `bool` is the client's own
+      `Pathfinder.WalkTo` result carried back over the RPC bridge. On the packet fallback path
+      (no reflection) there is no such result, so it returns whether the client visibly started
+      walking instead. Note `Pathfind` also now blocks until `Pathfinding()` goes true (up to 1s) -
+      upstream gets that for free by running in-process, where `AutoWalking` is already set on
+      return; across the bridge the client only picks the walk up on a later tick.
 - [ ] **`PlayMacro` / `Replay` gained `params object[] args`.** Macro arguments are entirely
       unsupported in this fork.
 - [ ] **`Hotkeys` gained `onOff`.** This fork can only toggle, not set a specific state.
@@ -244,12 +250,10 @@ fork cannot express what upstream can.
 - upstream: `void Msg( string message, int hue = DERIVED_SPEAK_HUE )`
 - here:     `void Msg( string message, int hue = DEFAULT_SPEAK_HUE )`
 
-### `Pathfind` — MovementCommands.cs
+### ~~`Pathfind` — MovementCommands.cs~~ Done, signatures now match
 
 - upstream: `bool Pathfind( int x, int y, int z, bool checkDistance = true, int desiredDistance = 0 )`
 - upstream: `bool Pathfind( object obj, bool checkDistance = true, int desiredDistance = 0 )`
-- here:     `void Pathfind( int x, int y, int z )`
-- here:     `void Pathfind( object obj )`
 
 ### `PlayMacro` — MacroCommands.cs
 
