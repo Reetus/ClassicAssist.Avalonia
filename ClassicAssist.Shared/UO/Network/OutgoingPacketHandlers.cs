@@ -227,6 +227,8 @@ namespace ClassicAssist.UO.Network
             Direction direction = (Direction) ( reader.ReadByte() & 0x07 );
             int sequence = reader.ReadByte();
 
+            Engine.LastMoveRequested = DateTime.Now;
+
             Engine.SetSequence( sequence, direction );
         }
 

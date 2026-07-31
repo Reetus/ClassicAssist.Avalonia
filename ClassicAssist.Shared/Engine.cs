@@ -88,6 +88,7 @@ namespace ClassicAssist.Shared
         public static CircularBuffer<JournalEntry> Journal { get; set; } = new CircularBuffer<JournalEntry>( 1024 );
 
         public static DateTime LastActionPacket { get; set; }
+        public static DateTime LastMoveRequested { get; set; }
         public static int LastPromptID { get; set; }
         public static int LastPromptSerial { get; set; }
         public static TargetQueue<object> LastTargetQueue { get; set; } = new TargetQueue<object>();

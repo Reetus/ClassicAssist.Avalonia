@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
+using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
@@ -51,6 +52,12 @@ namespace ClassicAssist.Data.Macros.Commands
             manager.Replay = true;
 
             Task.Run( () => current.Action( current ) );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.MacroName ) } )]
+        public static void PlayCUOMacro( string name )
+        {
+            ReflectionCommands.PlayCUOMacro( name );
         }
     }
 }

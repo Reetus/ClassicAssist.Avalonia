@@ -187,5 +187,17 @@ namespace ClassicAssist.Data.Macros.Commands
 
             return macro != null && ( macro.IsRunning || manager.Replay );
         }
+
+        [CommandsDisplay( Category = nameof( Strings.Main ) )]
+        public static void Logout()
+        {
+            ReflectionCommands.Logout();
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Main ) )]
+        public static void Quit()
+        {
+            ReflectionCommands.Quit();
+        }
     }
 }

@@ -132,5 +132,33 @@ namespace ClassicAssist.Data.Macros.Commands
 
             Pathfind( entity.X, entity.Y, entity.Z );
         }
+
+        [CommandsDisplay( Category = nameof( Strings.Movement ) )]
+        public static bool Pathfinding()
+        {
+            return ReflectionCommands.Pathfinding();
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Movement ) )]
+        public static bool Following()
+        {
+            return ReflectionCommands.Following();
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Movement ),
+            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+        public static void Follow( object obj = null )
+        {
+            int serial = 0;
+
+            if ( obj != null )
+            {
+                serial = AliasCommands.ResolveSerial( obj );
+            }
+
+            bool result = ReflectionCommands.Follow( serial );
+
+            UOC.SystemMessage( result ? Strings.Activated_following : Strings.Deactivated_following );
+        }
     }
 }

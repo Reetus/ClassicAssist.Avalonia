@@ -8,17 +8,24 @@ of it for macro commands (nothing in `tazuo-net9` is absent from `develop`). It 
 commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled` and
 `DropItemToGround` - and changes how speech hue is resolved.
 
-- **52 commands missing entirely**
+- **52 commands missing entirely** (6 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
+  `Pathfinding`)
 - **22 commands whose signature changed** (5 of them behavioural rather than additive)
 
 ## Before porting anything
 
-- [ ] **Port `ReflectionCommands.cs`.** Upstream keeps it at the repo root of the `ClassicAssist`
-      project. It is the bridge from macro commands to the client, routing through `Engine.Host`
-      with a `ReflectionImpl` fallback. This repo has no equivalent, and it blocks the largest
-      single group of missing commands. `IHostMethods` is already **identical** between the two
-      repos (this repo only adds `OnShutdown`), so the RPC methods these commands need already
-      exist and work - nothing new has to be plumbed.
+- [x] ~~**Port `ReflectionCommands.cs`.**~~ Done - `ClassicAssist.Shared/ReflectionCommands.cs` now
+      has the full bridge, routing every method through `Engine.Host` with a `ReflectionImpl`
+      fallback, same as upstream. The fallback only matters if this process is itself the plugin
+      (reflection access into the client); against a normal out-of-process TazUO/modern-ClassicUO
+      session `Engine.Host` is expected to always be set, so the fallback path is untested/unused in
+      practice and any failures there are expected, not bugs. `Pathfinding()` is the one exception -
+      it falls back to "was a move packet sent in the last second" via `Engine.LastMoveRequested`
+      (set by `OutgoingPacketHandlers.OnMoveRequested`) rather than `ReflectionImpl.Pathfinding()`.
+      `IHostMethods` is already **identical** between the two repos (this repo only adds
+      `OnShutdown`), so the RPC methods these commands need already exist and work - nothing new has
+      to be plumbed. Still open: wiring up the 7 macro commands that depend on it (see Suggested
+      order below) - only the bridge class itself is ported so far.
 - [x] ~~**Sync `Resources/MacroCommandHelp.resx`.**~~ Done - taken wholesale from `develop`, so help
       text for every command below is already present. That also fixed the designer pointing at the
       wrong resource name, which had been making *all* macro help throw
@@ -45,8 +52,11 @@ These are not additive - existing macros behave differently, and porting them ch
 
 ## Suggested order
 
-1. `ReflectionCommands.cs`, then the 7 commands that depend on it - they are pure wrappers over
-   RPC methods that already work, so this is the cheapest win.
+1. ~~`ReflectionCommands.cs`, then the 7 commands that depend on it~~ Mostly done - the bridge class
+   and 6 of the wrapper commands (`PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
+   `Pathfinding`) are ported. `BringClientWindowToFront` turned out not to be one of these - upstream
+   implements it with Win32 calls, not `ReflectionCommands`, so it's still open and needs its own
+   Linux-appropriate design.
 2. `MapCommands.cs` as a whole file (3 commands, one of which is already covered by step 1).
 3. The additive signature changes, which are mechanical and low risk.
 4. Agent commands (15) - the largest group, and where `WaitForTradeWindow` and the rest of the
@@ -101,17 +111,18 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 ### Macro (2)
 
 - [ ] `bool IsRunning( string name )`
-- [ ] `void PlayCUOMacro( string name )`
+- [x] ~~`void PlayCUOMacro( string name )`~~ Done - via `ReflectionCommands.PlayCUOMacro()`.
 
 ### Main (8)
 
-- [ ] `void BringClientWindowToFront()`
+- [ ] `void BringClientWindowToFront()` - not a `ReflectionCommands` wrapper upstream, uses raw Win32
+      `ShowWindowAsync`/`SetForegroundWindow`; needs a Linux-appropriate (X11/Wayland) implementation.
 - [ ] `void DisplayQuestPointer( int x, int y, bool enabled = true )`
-- [ ] `void Logout()`
+- [x] ~~`void Logout()`~~ Done - via `ReflectionCommands.Logout()`.
 - [ ] `void MessageBox( string title, string body )`
 - [ ] `void OpenECV( object obj )`
 - [ ] `void PlaySound( object param, bool playSync = true )`
-- [ ] `void Quit()`
+- [x] ~~`void Quit()`~~ Done - via `ReflectionCommands.Quit()`.
 - [ ] `void SetAutologin( bool enabled, string account = "", int serverIndex = -1, int characterIndex = -1 )`
 
 ### Map (3)
@@ -131,9 +142,15 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 ### Movement (3)
 
-- [ ] `void Follow( object obj = null )`
-- [ ] `bool Following()`
-- [ ] `bool Pathfinding()`
+- [x] ~~`void Follow( object obj = null )`~~ Done - via `ReflectionCommands.Follow()`. Ported without
+      the upstream `AliasCommands.ResolveSerial( obj, false )` overload's silent-alias-lookup flag -
+      this fork's `ResolveSerial` only has the single-arg form, so `Follow` picks up the (harmless)
+      "Unknown alias" message on a bad lookup that upstream suppresses here.
+- [x] ~~`bool Following()`~~ Done - via `ReflectionCommands.Following()`.
+- [x] ~~`bool Pathfinding()`~~ Done - via `ReflectionCommands.Pathfinding()`. `Engine.Host` is expected to
+      always be set on this fork (no in-process reflection mode), but as a defensive fallback it
+      returns true if `Engine.LastMoveRequested` (set by `OutgoingPacketHandlers.OnMoveRequested`) was
+      less than a second ago.
 
 ### Object (5)
 
