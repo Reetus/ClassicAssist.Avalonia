@@ -6,86 +6,149 @@
              xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="ClassicAssist.Avalonia.Views.AboutControl"             >
+             mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+             x:Class="ClassicAssist.Avalonia.Views.AboutControl">
   <UserControl.DataContext>
     <viewModels:AboutControlViewModel/>
   </UserControl.DataContext>
   <UserControl.Resources>
     <misc:DateTimeToTimeSpanValueConverter x:Key="DateTimeToTimeSpanValueConverter" />
   </UserControl.Resources>
-  <DockPanel>
-    <Grid RowDefinitions="*,*" ColumnDefinitions="*,*" DockPanel.Dock="Top">
-      <Grid.Styles>
-        <Style Selector="controls|GroupBox">
-          <Setter Property="Margin" Value="5"/>
-        </Style>
-      </Grid.Styles>
-      <controls:GroupBox Header="{x:Static resources:Strings.Software}" Grid.Row="0" Grid.Column="0">
+  <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*">
+    <Grid.Styles>
+      <Style Selector="controls|GroupBox">
+        <Setter Property="Margin" Value="5"/>
+        <Setter Property="Padding" Value="5"/>
+      </Style>
+      <!-- Stands in for the WPF build's HorizontalHeaderedContentControl: a label sized to its own text
+           but never narrower than HeaderMinWidth, then the value filling the rest of the row. -->
+      <Style Selector="DockPanel.HeaderedRow > TextBlock">
+        <Setter Property="TextWrapping" Value="WrapWithOverflow"/>
+      </Style>
+      <Style Selector="DockPanel.HeaderedRow > TextBlock.Header">
+        <Setter Property="MinWidth" Value="65"/>
+        <Setter Property="Margin" Value="0,0,5,0"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+      </Style>
+      <!-- The donate button is the logo itself, so it only shows a border on hover. The theme paints the
+           button chrome on the content presenter, so that is where it has to be overridden. -->
+      <Style Selector="Button.Paypal /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+      </Style>
+      <Style Selector="Button.Paypal:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+      </Style>
+      <Style Selector="Button.Paypal:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderBrush}"/>
+      </Style>
+      <Style Selector="Button.Paypal:pointerover">
+        <Setter Property="Cursor" Value="Hand"/>
+      </Style>
+    </Grid.Styles>
+    <controls:GroupBox Header="{x:Static resources:Strings.Software}" Grid.Row="0" Grid.Column="0">
+      <StackPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Product_}"/>
+          <TextBlock Text="{Binding Product}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Version_}"/>
+          <TextBlock Text="{Binding Version}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Build_Date_}"/>
+          <TextBlock Text="{Binding BuildDate}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Framework_}"/>
+          <TextBlock Text="{Binding Framework}"/>
+        </DockPanel>
+        <Grid Margin="5">
+          <TextBlock x:Name="CreditText"
+                     Text="{x:Static resources:Strings.Avalonia_port_assistance_provided_by_Kevin_}"
+                     HorizontalAlignment="Center" FontWeight="Bold" TextDecorations="Underline"
+                     TextAlignment="Center" TextWrapping="Wrap" Margin="0,10"/>
+        </Grid>
+        <Grid ColumnDefinitions="*,*" Margin="0,10">
+          <Button Grid.Column="0" Margin="0,0,5,0" HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Content="{x:Static resources:Strings.Project_Homepage}"
+                  Command="{Binding LaunchHomepageCommand}"/>
+          <Button Grid.Column="1" Margin="5,0,0,0" HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Content="{x:Static resources:Strings.Check_For_Updates}"
+                  Command="{Binding CheckForUpdatesCommand}"/>
+        </Grid>
+      </StackPanel>
+    </controls:GroupBox>
+    <controls:GroupBox Header="{x:Static resources:Strings.World_Status}" Grid.Row="0" Grid.Column="1">
+      <Grid RowDefinitions="*,Auto">
         <StackPanel>
-          <DockPanel>
-            <StackPanel DockPanel.Dock="Left" Margin="0,0,10,0">
-              <TextBlock Text="{x:Static resources:Strings.Product_}"/>
-              <TextBlock Text="{x:Static resources:Strings.Version_}"/>
-              <TextBlock Text="{x:Static resources:Strings.Build_Date_}"/>
-            </StackPanel>
-            <StackPanel DockPanel.Dock="Right">
-              <TextBlock Text="{Binding Product}"/>
-              <TextBlock Text="{Binding Version}"/>
-              <TextBlock Text="{Binding BuildDate}"/>
-            </StackPanel>
+          <DockPanel Classes="HeaderedRow">
+            <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Connected_}"/>
+            <TextBlock IsVisible="{Binding Connected}"
+                       Text="{Binding ConnectedTime, Converter={StaticResource DateTimeToTimeSpanValueConverter}}"/>
           </DockPanel>
-          <Grid Margin="5">
-            <TextBlock x:Name="CreditText" Text="{x:Static resources:Strings.Avalonia_port_assistance_provided_by_Kevin_}" HorizontalAlignment="Center" FontWeight="Bold" TextDecorations="Underline" TextWrapping="Wrap"/>
-          </Grid>
-        </StackPanel>
-      </controls:GroupBox>
-      <controls:GroupBox Header="{x:Static resources:Strings.World_Status}" Grid.Row="0" Grid.Column="1">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Left" Margin="0,0,10,0">
-            <TextBlock Text="{x:Static resources:Strings.Connected_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Items_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Mobiles_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Latency_}"/>
-          </StackPanel>
-          <StackPanel DockPanel.Dock="Right">
-            <TextBlock Text="{Binding ConnectedTime, Converter={StaticResource DateTimeToTimeSpanValueConverter}}"/>
+          <DockPanel Classes="HeaderedRow">
+            <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Items_}"/>
             <TextBlock Text="{Binding ItemCount}"/>
+          </DockPanel>
+          <DockPanel Classes="HeaderedRow">
+            <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Mobiles_}"/>
             <TextBlock Text="{Binding MobileCount}"/>
+          </DockPanel>
+          <DockPanel Classes="HeaderedRow">
+            <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Latency_}"/>
             <TextBlock Text="{Binding Latency, StringFormat={}{0}ms}"/>
-          </StackPanel>
-        </DockPanel>
-      </controls:GroupBox>
-      <controls:GroupBox Header="{x:Static resources:Strings.Misc}" Grid.Row="1">
-        <StackPanel>
-          <Button Background="Transparent" BorderThickness="0" Command="{Binding OpenPayPalCommand}">
-            <Image Source="{StaticResource PayPalIcon}" Height="35"/>
-          </Button>
-          <TextBlock Text="{x:Static resources:Strings.Donating_helps_support_continued_development__your_support_is_appreciated_}" TextWrapping="Wrap" TextAlignment="Center"/>
+          </DockPanel>
         </StackPanel>
-      </controls:GroupBox>
-      <controls:GroupBox Header="{x:Static resources:Strings.Player}" Grid.Row="1" Grid.Column="1">
-        <DockPanel>
-          <StackPanel DockPanel.Dock="Left" Margin="0,0,10,0">
-            <TextBlock Text="{x:Static resources:Strings.Shard_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Name_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Serial_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Last_Target_}"/>
-            <TextBlock Text="{x:Static resources:Strings.Status_}"/>
-          </StackPanel>
-          <StackPanel DockPanel.Dock="Right">
-            <TextBlock Text="{Binding ShardName}"/>
-            <TextBlock Text="{Binding PlayerName}"/>
-            <TextBlock Text="{Binding PlayerSerial, StringFormat={}0x{0:x}}"/>
-            <TextBlock Text="{Binding LastTargetSerial, StringFormat={}0x{0:x}}"/>
-            <TextBlock Text="{Binding PlayerStatus}"/>
-          </StackPanel>
+        <Button Grid.Row="1" Margin="0,10" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                Content="{x:Static resources:Strings.Show_World_Items}"
+                IsEnabled="{Binding Connected}" Command="{Binding ShowItemsCommand}"/>
+      </Grid>
+    </controls:GroupBox>
+    <controls:GroupBox Header="{x:Static resources:Strings.Misc}" Grid.Row="1" Grid.Column="0">
+      <StackPanel Margin="10">
+        <Button Classes="Paypal" MaxWidth="80" HorizontalAlignment="Center" Padding="0"
+                Background="Transparent" BorderBrush="Transparent" BorderThickness="1"
+                Command="{Binding OpenPayPalCommand}">
+          <Image Source="{StaticResource PayPalIcon}" Height="50" Stretch="Uniform"/>
+        </Button>
+        <TextBlock
+          Text="{x:Static resources:Strings.Donating_helps_support_continued_development__your_support_is_appreciated_}"
+          TextWrapping="Wrap" TextAlignment="Center"/>
+      </StackPanel>
+    </controls:GroupBox>
+    <controls:GroupBox Header="{x:Static resources:Strings.Player}" Grid.Row="1" Grid.Column="1">
+      <StackPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Shard_}"/>
+          <TextBlock Text="{Binding ShardName}"/>
         </DockPanel>
-      </controls:GroupBox>
-    </Grid>
-    <StackPanel Orientation="Horizontal" DockPanel.Dock="Bottom" Height="45" HorizontalAlignment="Center" Margin="10">
-      <Button Content="{x:Static resources:Strings.Project_Homepage}" Margin="0,0,10,0" Command="{Binding LaunchHomepageCommand}"/>
-      <Button Content="{x:Static resources:Strings.Check_For_Updates}" IsEnabled="false"/>
-    </StackPanel>
-  </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Features_}"/>
+          <TextBlock Text="{Binding ShardFeatures}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Name_}"/>
+          <TextBlock Text="{Binding PlayerName}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Serial_}"/>
+          <TextBlock Text="{Binding PlayerSerial, StringFormat={}0x{0:x}}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Last_Target_}"/>
+          <TextBlock Text="{Binding LastTargetSerial, StringFormat={}0x{0:x}}"/>
+        </DockPanel>
+        <DockPanel Classes="HeaderedRow">
+          <TextBlock Classes="Header" DockPanel.Dock="Left" Text="{x:Static resources:Strings.Status_}"/>
+          <TextBlock Text="{Binding PlayerStatus}"/>
+        </DockPanel>
+      </StackPanel>
+    </controls:GroupBox>
+  </Grid>
 </UserControl>

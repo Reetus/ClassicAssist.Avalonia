@@ -239,13 +239,13 @@ namespace ClassicAssist.Shared.UI.ViewModels
 
         private void ViewPlayerEquipment( object obj )
         {
-            //TODO UI
-            //EntityCollectionViewer window = new EntityCollectionViewer
-            //{
-            //    DataContext = new EntityCollectionViewerViewModel( Engine.Player?.Equipment ) { Topmost = Topmost }
-            //};
+            if ( Engine.Player?.Equipment == null )
+            {
+                return;
+            }
 
-            //window.Show();
+            Engine.UIInvoker?.Invoke( "EntityCollectionViewer", null, typeof( EntityCollectionViewerViewModel ),
+                new object[] { Engine.Player.Equipment } );
         }
 
         private void Clear( object obj )

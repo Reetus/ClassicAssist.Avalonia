@@ -418,16 +418,11 @@ namespace ClassicAssist.UI.ViewModels
         {
             if ( collection == null )
             {
+                return;
             }
 
-            //TODO
-            //EntityCollectionViewer window = new EntityCollectionViewer
-            //{
-            //    DataContext = new EntityCollectionViewerViewModel( collection ),
-            //    Topmost = true
-            //};
-
-            //window.ShowDialog();
+            Engine.UIInvoker?.Invoke( "EntityCollectionViewer", null, typeof( EntityCollectionViewerViewModel ),
+                new object[] { collection } );
         }
     }
 

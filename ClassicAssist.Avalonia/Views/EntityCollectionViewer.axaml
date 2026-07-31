@@ -1,0 +1,78 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
+        xmlns:models="clr-namespace:ClassicAssist.UI.Models;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
+        x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewer"
+        x:DataType="viewModels:EntityCollectionViewerViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Title="{x:Static resources:Strings.Entity_Collection_Viewer}"
+        Width="600" Height="600" MinHeight="400">
+  <Window.Resources>
+    <misc:PixmapValueConverter x:Key="PixmapValueConverter"/>
+  </Window.Resources>
+  <Grid RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="3" Spacing="3">
+      <Button Padding="4,2" Command="{Binding RefreshCommand}" ToolTip.Tip="{x:Static resources:Strings.Refresh}">
+        <Image Source="{StaticResource RefreshIcon}" Height="16"/>
+      </Button>
+      <ToggleButton Padding="4,2" IsChecked="{Binding ShowProperties}"
+                    Content="{x:Static resources:Strings.Properties}"
+                    ToolTip.Tip="{x:Static resources:Strings.Toggle_item_properties}"/>
+      <ToggleButton Padding="4,2" IsChecked="{Binding ShowChildItems}"
+                    Command="{Binding ToggleChildItemsCommand}"
+                    Content="{x:Static resources:Strings.Show_Child_Items}"/>
+      <ComboBox MinWidth="110" VerticalAlignment="Center"
+                ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type models:EntityCollectionSortStyle}}}"
+                SelectedItem="{Binding SortStyle}"/>
+    </StackPanel>
+    <ListBox x:Name="ListBox" Grid.Row="1" ItemsSource="{Binding Entities}"
+             Classes.properties="{Binding ShowProperties}"
+             SelectionMode="Multiple" BorderThickness="0"
+             Background="{DynamicResource ThemeInnerControlBackgroundBrush}"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             SelectionChanged="OnSelectionChanged" DoubleTapped="OnItemDoubleTapped">
+      <ListBox.Styles>
+        <!-- Tiles are a fixed width so the wrap panel lays out in even columns; the wider one is for when
+             the label carries the whole property list rather than just the name. -->
+        <Style Selector="ListBox ListBoxItem">
+          <Setter Property="Width" Value="60"/>
+          <Setter Property="Margin" Value="5"/>
+          <Setter Property="Padding" Value="0"/>
+          <Setter Property="VerticalAlignment" Value="Top"/>
+        </Style>
+        <Style Selector="ListBox.properties ListBoxItem">
+          <Setter Property="Width" Value="120"/>
+        </Style>
+      </ListBox.Styles>
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="viewModels:EntityCollectionData">
+          <StackPanel Background="Transparent">
+            <Image Height="32" Stretch="Uniform" HorizontalAlignment="Center"
+                   Source="{Binding Pixmap, Converter={StaticResource PixmapValueConverter}}"/>
+            <TextBlock FontSize="10" Padding="1" TextAlignment="Center" TextWrapping="WrapWithOverflow"
+                       ToolTip.Tip="{Binding FullName}"
+                       IsVisible="{Binding !$parent[ListBox].DataContext.ShowProperties}"
+                       Text="{Binding Name}"/>
+            <TextBlock FontSize="10" Padding="1" TextAlignment="Center" TextWrapping="WrapWithOverflow"
+                       ToolTip.Tip="{Binding FullName}"
+                       IsVisible="{Binding $parent[ListBox].DataContext.ShowProperties}"
+                       Text="{Binding FullName}"/>
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}" Padding="4,2">
+      <TextBlock Text="{Binding StatusLabel}"/>
+    </Border>
+  </Grid>
+</Window>

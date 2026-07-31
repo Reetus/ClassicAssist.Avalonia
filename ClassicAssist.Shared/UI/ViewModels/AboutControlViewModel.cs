@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Timers;
 using System.Windows.Input;
 using ClassicAssist.Shared.Resources;
@@ -33,6 +34,8 @@ namespace ClassicAssist.UI.ViewModels
         private string _shardName = "Unknown";
         private ICommand _showItemsCommand;
         private Timer _timer;
+
+        public string Framework { get; } = RuntimeInformation.FrameworkDescription;
 
         public AboutControlViewModel()
         {
@@ -172,7 +175,8 @@ namespace ClassicAssist.UI.ViewModels
         {
             Item[] e = ItemCollection.GetAllItems( Engine.Items.GetItems() );
 
-            Engine.UIInvoker?.Invoke( "EntityCollectionViewer", new[] { (object) new ItemCollection( 0 ) { e } } );
+            Engine.UIInvoker?.Invoke( "EntityCollectionViewer", null, typeof( EntityCollectionViewerViewModel ),
+                new object[] { new ItemCollection( 0 ) { e } } );
         }
 
         private void PlayerInitializedEvent( PlayerMobile player )
