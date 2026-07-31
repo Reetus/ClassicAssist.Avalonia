@@ -147,6 +147,38 @@ namespace ClassicAssist.Plugin
         /// </summary>
         private static unsafe void RegisterCallbacks( PluginHeader* plugin )
         {
+#if NETFRAMEWORK
+            // .NET Framework has no [UnmanagedCallersOnly], so our side of the header has to be
+            // marshalled delegates. That is safe here in a way it is not under DNNE: the legacy client
+            // loads us with Assembly.LoadFile into the default AppDomain, so there is a single CUO_API
+            // identity, GetDelegateForFunctionPointer hands the original delegate straight back, and no
+            // marshalling stub is ever built. The delegates are rooted in static fields because the
+            // header retains only their unmanaged thunk, which is not a GC reference.
+            plugin->OnConnected = Marshal.GetFunctionPointerForDelegate( _onConnectedDelegate = OnConnected );
+            plugin->OnDisconnected =
+                Marshal.GetFunctionPointerForDelegate( _onDisconnectedDelegate = OnDisconnected );
+            plugin->OnClientClosing =
+                Marshal.GetFunctionPointerForDelegate( _onClientClosingDelegate = OnClientClosing );
+            plugin->Tick = Marshal.GetFunctionPointerForDelegate( _onTickDelegate = OnTick );
+            plugin->OnFocusGained =
+                Marshal.GetFunctionPointerForDelegate( _onFocusGainedDelegate = () => OnFocusChanged( true ) );
+            plugin->OnFocusLost =
+                Marshal.GetFunctionPointerForDelegate( _onFocusLostDelegate = () => OnFocusChanged( false ) );
+            plugin->OnMouse = Marshal.GetFunctionPointerForDelegate( _onMouseDelegate = OnMouse );
+            plugin->OnPlayerPositionChanged =
+                Marshal.GetFunctionPointerForDelegate( _onPlayerPositionChangedDelegate = OnPlayerPositionChanged );
+            plugin->OnHotkeyPressed =
+                Marshal.GetFunctionPointerForDelegate( _onHotkeyDelegate = OnHotkeyPressed );
+
+            byte* raw = (byte*) plugin;
+
+            *(IntPtr*) ( raw + 184 ) = Marshal.GetFunctionPointerForDelegate(
+                _onRecvNewDelegate = ( IntPtr data, ref int length ) => FilterPacketFramework( data, ref length,
+                    ( pluginMethods, buffer ) => pluginMethods.OnPacketReceive( buffer, buffer.Length ) ) );
+            *(IntPtr*) ( raw + 192 ) = Marshal.GetFunctionPointerForDelegate(
+                _onSendNewDelegate = ( IntPtr data, ref int length ) => FilterPacketFramework( data, ref length,
+                    ( pluginMethods, buffer ) => pluginMethods.OnPacketSend( buffer, buffer.Length ) ) );
+#else
             plugin->OnConnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnConnected;
             plugin->OnDisconnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnDisconnected;
             plugin->OnClientClosing = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnClientClosing;
@@ -173,6 +205,7 @@ namespace ClassicAssist.Plugin
 
             *(IntPtr*) ( raw + 184 ) = (IntPtr) (delegate* unmanaged[Cdecl]<IntPtr, int*, byte>) &OnPacketReceiveNative;
             *(IntPtr*) ( raw + 192 ) = (IntPtr) (delegate* unmanaged[Cdecl]<IntPtr, int*, byte>) &OnPacketSendNative;
+#endif
         }
 
         /// <summary>
@@ -189,57 +222,126 @@ namespace ClassicAssist.Plugin
             _setTitlePtr = plugin->SetTitle;
             _sendToClientNewPtr = *(IntPtr*) ( raw + 200 );
             _sendToServerNewPtr = *(IntPtr*) ( raw + 208 );
+
+#if NETFRAMEWORK
+            // Calling back into the host goes through delegates too, rather than calli. The IL would
+            // compile, but this build runs on the Mono the legacy client ships, and marshalled
+            // delegates are the path that client's own plugins have always used.
+            _getPacketLength = Get<OnGetPacketLength>( _getPacketLengthPtr );
+            _getUOFilePath = Get<OnGetUOFilePath>( _getUOFilePathPtr );
+            _requestMove = Get<RequestMove>( _requestMovePtr );
+            _setTitle = Get<OnSetTitle>( _setTitlePtr );
+            _sendToClientNew = Get<SendPacketNative>( _sendToClientNewPtr );
+            _sendToServerNew = Get<SendPacketNative>( _sendToServerNewPtr );
+#endif
         }
 
+#if NETFRAMEWORK
+        private static T Get<T>( IntPtr ptr ) where T : class
+        {
+            return ptr == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer( ptr, typeof( T ) ) as T;
+        }
+
+        /// <summary>
+        ///     The host keeps its own delegate types for the <c>_new</c> slots private, so declare matching
+        ///     ones. The host marshals its <c>byte[]</c> to a pinned pointer on the way out, which is the
+        ///     same thing the <see cref="UnmanagedCallersOnlyAttribute" /> path receives.
+        /// </summary>
+        [UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+        [return: MarshalAs( UnmanagedType.I1 )]
+        private delegate bool PacketFilterNative( IntPtr data, ref int length );
+
+        [UnmanagedFunctionPointer( CallingConvention.Cdecl )]
+        [return: MarshalAs( UnmanagedType.I1 )]
+        private delegate bool SendPacketNative( IntPtr data, ref int length );
+
+        private static OnConnected _onConnectedDelegate;
+        private static OnDisconnected _onDisconnectedDelegate;
+        private static OnClientClose _onClientClosingDelegate;
+        private static OnTick _onTickDelegate;
+        private static OnFocusGained _onFocusGainedDelegate;
+        private static OnFocusLost _onFocusLostDelegate;
+        private static OnMouse _onMouseDelegate;
+        private static OnUpdatePlayerPosition _onPlayerPositionChangedDelegate;
+        private static OnHotkey _onHotkeyDelegate;
+        private static PacketFilterNative _onRecvNewDelegate;
+        private static PacketFilterNative _onSendNewDelegate;
+
+        private static OnGetPacketLength _getPacketLength;
+        private static OnGetUOFilePath _getUOFilePath;
+        private static RequestMove _requestMove;
+        private static OnSetTitle _setTitle;
+        private static SendPacketNative _sendToClientNew;
+        private static SendPacketNative _sendToServerNew;
+#endif
+
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnConnected()
         {
             OnConnected();
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnDisconnected()
         {
             OnDisconnected();
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnClientClosing()
         {
             OnClientClosing();
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnTick()
         {
             OnTick();
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnFocusGained()
         {
             OnFocusChanged( true );
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnFocusLost()
         {
             OnFocusChanged( false );
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnMouse( int button, int wheel )
         {
             OnMouse( button, wheel );
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static void NativeOnPlayerPositionChanged( int x, int y, int z )
         {
             OnPlayerPositionChanged( x, y, z );
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static int NativeOnHotkeyPressed( int key, int mod, int pressed )
         {
             return OnHotkeyPressed( key, mod, pressed != 0 ) ? 1 : 0;
@@ -247,13 +349,21 @@ namespace ClassicAssist.Plugin
 
         private static unsafe short GetPacketLength( int id )
         {
+#if NETFRAMEWORK
+            return _getPacketLength?.Invoke( id ) ?? -1;
+#else
             return _getPacketLengthPtr == IntPtr.Zero
                 ? (short) -1
                 : ( (delegate* unmanaged[Cdecl]<int, short>) _getPacketLengthPtr )( id );
+#endif
         }
 
         private static unsafe string GetUOFilePath()
         {
+#if NETFRAMEWORK
+            // The host's delegate already declares a string return, so its marshaller does the work.
+            return _getUOFilePath?.Invoke();
+#else
             if ( _getUOFilePathPtr == IntPtr.Zero )
             {
                 return null;
@@ -263,16 +373,24 @@ namespace ClassicAssist.Plugin
             // by the host's return-value marshaller and is ours to free, but this runs once at startup
             // and guessing the wrong allocator would corrupt its heap, so leave it.
             return Marshal.PtrToStringAnsi( ( (delegate* unmanaged[Cdecl]<IntPtr>) _getUOFilePathPtr )() );
+#endif
         }
 
         private static unsafe bool RequestMove( int dir, bool run )
         {
+#if NETFRAMEWORK
+            return _requestMove?.Invoke( dir, run ) ?? false;
+#else
             return _requestMovePtr != IntPtr.Zero &&
                    ( (delegate* unmanaged[Cdecl]<int, int, int>) _requestMovePtr )( dir, run ? 1 : 0 ) != 0;
+#endif
         }
 
         private static unsafe void SetTitle( string title )
         {
+#if NETFRAMEWORK
+            _setTitle?.Invoke( title );
+#else
             if ( _setTitlePtr == IntPtr.Zero )
             {
                 return;
@@ -288,6 +406,7 @@ namespace ClassicAssist.Plugin
             {
                 Marshal.FreeHGlobal( ptr );
             }
+#endif
         }
 
         private const int UI_CONNECT_TIMEOUT_MS = 30000;
@@ -303,7 +422,13 @@ namespace ClassicAssist.Plugin
                 ? "ClassicAssist.Avalonia.exe"
                 : "ClassicAssist.Avalonia";
 
-            string[] candidates = { Path.Combine( StartupPath, "ui", fileName ), Path.Combine( StartupPath, fileName ) };
+            // The last candidate is for the net472 build, which sits in a "framework" subfolder beside the
+            // net9.0 one so the two dependency closures stay apart. Both share the single "ui" copy.
+            string[] candidates =
+            {
+                Path.Combine( StartupPath, "ui", fileName ), Path.Combine( StartupPath, fileName ),
+                Path.Combine( StartupPath, "..", "ui", fileName )
+            };
 
             return Array.Find( candidates, File.Exists );
         }
@@ -516,14 +641,18 @@ namespace ClassicAssist.Plugin
         ///     Outgoing half of the OnSend_new / OnRecv_new pair. See <see cref="FilterPacketNative" /> for why
         ///     these exist at all.
         /// </summary>
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static unsafe byte OnPacketSendNative( IntPtr data, int* length )
         {
             return FilterPacketNative( data, length,
                 ( plugin, buffer ) => plugin.OnPacketSend( buffer, buffer.Length ) );
         }
 
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( CallConvs = new[] { typeof( CallConvCdecl ) } )]
+#endif
         private static unsafe byte OnPacketReceiveNative( IntPtr data, int* length )
         {
             return FilterPacketNative( data, length,
@@ -552,6 +681,21 @@ namespace ClassicAssist.Plugin
         ///         handed us, since that is all it allocated.
         ///     </para>
         /// </summary>
+#if NETFRAMEWORK
+        /// <summary>
+        ///     Framework's flavour of <see cref="FilterPacketNative" />: identical, but taking the length
+        ///     as a managed <c>ref</c> because the host's delegate signature is what the marshaller sees.
+        /// </summary>
+        private static unsafe bool FilterPacketFramework( IntPtr data, ref int length,
+            Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
+        {
+            fixed ( int* pointer = &length )
+            {
+                return FilterPacketNative( data, pointer, call ) != 0;
+            }
+        }
+
+#endif
         private static unsafe byte FilterPacketNative( IntPtr data, int* length,
             Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
         {
@@ -638,6 +782,15 @@ namespace ClassicAssist.Plugin
             {
                 int len = length;
 
+#if NETFRAMEWORK
+                if ( _sendToServerNew != null )
+                {
+                    fixed ( byte* ptr = packet )
+                    {
+                        _sendToServerNew( (IntPtr) ptr, ref len );
+                    }
+                }
+#else
                 if ( _sendToServerNewPtr != IntPtr.Zero )
                 {
                     fixed ( byte* ptr = packet )
@@ -647,6 +800,7 @@ namespace ClassicAssist.Plugin
                             (IntPtr) ptr, ref len );
                     }
                 }
+#endif
                 else
                 {
                     WarnOnce( "client did not provide Send_new; outgoing packets cannot be injected." );
@@ -659,6 +813,15 @@ namespace ClassicAssist.Plugin
             {
                 int len = length;
 
+#if NETFRAMEWORK
+                if ( _sendToClientNew != null )
+                {
+                    fixed ( byte* ptr = packet )
+                    {
+                        _sendToClientNew( (IntPtr) ptr, ref len );
+                    }
+                }
+#else
                 if ( _sendToClientNewPtr != IntPtr.Zero )
                 {
                     fixed ( byte* ptr = packet )
@@ -668,6 +831,7 @@ namespace ClassicAssist.Plugin
                             (IntPtr) ptr, ref len );
                     }
                 }
+#endif
                 else
                 {
                     WarnOnce( "client did not provide Recv_new; incoming packets cannot be injected." );

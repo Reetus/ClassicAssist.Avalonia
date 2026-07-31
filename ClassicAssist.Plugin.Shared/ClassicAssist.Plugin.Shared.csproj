@@ -1,11 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <!-- net472 is for the Mono-based legacy TazUO, which cannot load a modern .NET assembly at all. -->
+        <TargetFrameworks>net10.0;net472</TargetFrameworks>
+        <LangVersion>latest</LangVersion>
     </PropertyGroup>
 
     <!--
       Contracts only (IHostMethods / IPluginMethods / the ClassicUO reflection layer). Deliberately
       free of any transport dependency so the RPC mechanism can be swapped without touching Shared.
     -->
+    <!-- 'dynamic' in the ClassicUO reflection layer needs the binder, which Framework does not ship. -->
+    <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+    </ItemGroup>
+
 </Project>

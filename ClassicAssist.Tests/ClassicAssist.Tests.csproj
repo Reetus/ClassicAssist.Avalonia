@@ -1,9 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
-    <!-- Target net9.0 but run on whatever newer runtime the user has (TazUO itself ships net10). -->
+    <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
     <RollForward>LatestMajor</RollForward>
   </PropertyGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <!-- Embedded in the apphost binary. Separate from Window.Icon, which is what X11 reports as
@@ -9,9 +9,9 @@
         <!-- Deployed as a subfolder of the plugin; the plugin launches this apphost as a child process. -->
         <OutputPath>..\Output\ClassicAssist\ui\</OutputPath>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-            <TargetFramework>net9.0</TargetFramework>
+            <TargetFramework>net10.0</TargetFramework>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    <!-- Target net9.0 but run on whatever newer runtime the user has (TazUO itself ships net10). -->
+    <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
     <RollForward>LatestMajor</RollForward>
     </PropertyGroup>
    <ItemGroup>

@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // Copyright (C) 2025 Reetus
 //
@@ -17,7 +17,9 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+#if !NETFRAMEWORK
 using System.Runtime.Loader;
+#endif
 
 // ReSharper disable once CheckNamespace
 namespace Assistant
@@ -47,7 +49,9 @@ namespace Assistant
         /// <param name="header">Pointer to the client's PluginHeader.</param>
         public static void Install( IntPtr header )
         {
+#if !NETFRAMEWORK
             AssemblyLoadContext.Default.Resolving += OnResolving;
+#endif
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
             Start( header );
@@ -63,11 +67,13 @@ namespace Assistant
         ///         which would break the reflection path every client on Linux relies on.
         ///     </para>
         /// </summary>
+#if !NETFRAMEWORK
         [UnmanagedCallersOnly( EntryPoint = "Install" )]
         public static void NativeInstall( IntPtr header )
         {
             Install( header );
         }
+#endif
 
         [MethodImpl( MethodImplOptions.NoInlining )]
         private static void Start( IntPtr header )
@@ -75,10 +81,12 @@ namespace Assistant
             ClassicAssist.Plugin.PluginEngine.Install( header );
         }
 
+#if !NETFRAMEWORK
         private static Assembly OnResolving( AssemblyLoadContext context, AssemblyName name )
         {
             return LoadFromPluginDirectory( name.Name, name.CultureName );
         }
+#endif
 
         private static Assembly OnAssemblyResolve( object sender, ResolveEventArgs args )
         {
@@ -101,7 +109,11 @@ namespace Assistant
                 path = Path.Combine( _pluginDirectory, culture, name + ".dll" );
             }
 
+#if NETFRAMEWORK
+            return File.Exists( path ) ? Assembly.LoadFrom( path ) : null;
+#else
             return File.Exists( path ) ? AssemblyLoadContext.Default.LoadFromAssemblyPath( path ) : null;
+#endif
         }
     }
 }

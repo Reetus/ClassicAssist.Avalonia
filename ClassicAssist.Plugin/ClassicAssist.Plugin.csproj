@@ -1,13 +1,30 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <!--
+      net10.0 matches the runtime modern TazUO ships. net472 is the build the legacy Mono-based
+      TazUO loads; it rejects a modern assembly outright with "Could not load file or assembly
+      'System.Runtime, Version=9.0.0.0'". The UI is unaffected either way - the plugin only ever
+      launches it as a separate child process, so it stays a normal .NET app.
+    -->
+    <TargetFrameworks>net10.0;net472</TargetFrameworks>
+    <!-- net472 defaults to C# 7.3, which has no function pointers. -->
+    <LangVersion>latest</LangVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- ClassicUO/TazUO look for the type Assistant.Engine inside a file named ClassicAssist.dll -->
     <AssemblyName>ClassicAssist</AssemblyName>
     <RootNamespace>ClassicAssist.Plugin</RootNamespace>
     <OutputPath>..\Output\ClassicAssist\</OutputPath>
+    <!-- Its own folder: the two builds have different dependency closures and cannot share one. -->
+    <OutputPath Condition="'$(TargetFramework)' == 'net472'">..\Output\ClassicAssist\framework\</OutputPath>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!--
+      AppendTargetFrameworkToOutputPath=false strips the framework from the intermediate path too, so
+      both inner builds would compile to the same obj\Debug\ClassicAssist.dll and each would then copy
+      whichever one was written last. Keep the final output flat, but give the intermediates a
+      per-framework home. Guarded because the outer multi-targeting build has no TargetFramework.
+    -->
+    <IntermediateOutputPath Condition="'$(TargetFramework)' != ''">obj\$(Configuration)\$(TargetFramework)\</IntermediateOutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
@@ -16,18 +33,35 @@
     dlopen()s the plugin and never falls back to a managed load. TazUO does fall back, and on Linux
     it always takes that path (there is no standalone libdl.so on modern distros, so its dlopen
     throws immediately), so the managed Assistant.Engine.Install entry point is sufficient there.
-    Building the shim requires clang, so it is opt-in: dotnet build -p:EnableDnne=true
+
+    Building the shim needs clang, so it turns itself on only when clang is actually there - that
+    way one plain `dotnet build` produces every artifact the machine can produce, and a machine
+    without a C toolchain still builds rather than failing. Force either way with -p:EnableDnne=.
+
+    The shim is meaningless for net472: that build exists for a Mono host which always takes the
+    managed path.
   -->
-  <PropertyGroup>
+  <PropertyGroup Condition="'$(EnableDnne)' == ''">
+    <EnableDnne Condition="Exists('/usr/bin/clang') Or Exists('/usr/local/bin/clang')">true</EnableDnne>
     <EnableDnne Condition="'$(EnableDnne)' == ''">false</EnableDnne>
   </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net472'">
+    <EnableDnne>false</EnableDnne>
+  </PropertyGroup>
+
+  <Target Name="WarnDnneSkipped" BeforeTargets="Build"
+          Condition="'$(EnableDnne)' != 'true' And '$(TargetFramework)' != 'net472'">
+    <Message Importance="high"
+             Text="ClassicAssist: clang not found, skipping the DNNE native shim. The managed entry point still works for TazUO; modern ClassicUO needs the shim." />
+  </Target>
 
   <PropertyGroup Condition="'$(EnableDnne)' == 'true'">
     <!--
       The shim starts the runtime through hostfxr, which needs a runtimeconfig.json beside the
       managed assembly. Class libraries do not emit one, so dlsym would find `Install` and the call
       would then fail to activate the runtime. RollForward lets it run on a newer shared runtime
-      than the net9.0 it targets.
+      than the net10.0 it targets.
     -->
     <DnneGenRollForward>LatestMajor</DnneGenRollForward>
   </PropertyGroup>
@@ -41,10 +75,10 @@
       File="$(OutputPath)\ClassicAssist.runtimeconfig.json"
       Lines="{
   &quot;runtimeOptions&quot;: {
-    &quot;tfm&quot;: &quot;net9.0&quot;,
+    &quot;tfm&quot;: &quot;net10.0&quot;,
     &quot;framework&quot;: {
       &quot;name&quot;: &quot;Microsoft.NETCore.App&quot;,
-      &quot;version&quot;: &quot;9.0.0&quot;
+      &quot;version&quot;: &quot;10.0.0&quot;
     },
     &quot;rollForward&quot;: &quot;LatestMajor&quot;
   }
