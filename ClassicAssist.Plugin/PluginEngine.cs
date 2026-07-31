@@ -427,7 +427,35 @@ namespace ClassicAssist.Plugin
                 Path.Combine( StartupPath, "..", "ui", fileName )
             };
 
-            return Array.Find( candidates, File.Exists );
+            string found = Array.Find( candidates, File.Exists );
+
+            if ( found == null )
+            {
+                Trace( $"no UI executable at any of: {string.Join( ", ", candidates )}" );
+            }
+
+            return found;
+        }
+
+        /// <summary>
+        ///     Writes a diagnostic where it will actually be seen.
+        ///     <para>
+        ///         Flushed explicitly: Mono buffers stdout when the game's output is redirected to a
+        ///         file, so a message written just before the process is killed - which is every message
+        ///         here worth reading - would otherwise never reach the log.
+        ///     </para>
+        /// </summary>
+        private static void Trace( string message )
+        {
+            try
+            {
+                Console.WriteLine( $"ClassicAssist: {message}" );
+                Console.Out.Flush();
+            }
+            catch ( Exception )
+            {
+                // A plugin must never take the client down over a log line.
+            }
         }
 
         /// <summary>
@@ -443,7 +471,7 @@ namespace ClassicAssist.Plugin
 
             if ( exePath == null )
             {
-                Console.WriteLine( "ClassicAssist: couldn't find the UI executable, plugin will stay idle." );
+                Trace( $"couldn't find the UI executable next to {StartupPath}, plugin will stay idle." );
 
                 return;
             }
@@ -473,7 +501,7 @@ namespace ClassicAssist.Plugin
             }
             catch ( Exception e )
             {
-                Console.WriteLine( $"ClassicAssist: couldn't start the UI process: {e.Message}" );
+                Trace( $"couldn't start the UI process {exePath}: {e.Message}" );
                 pipe.Dispose();
 
                 return;
@@ -494,7 +522,7 @@ namespace ClassicAssist.Plugin
                 }
                 catch ( Exception e )
                 {
-                    Console.WriteLine( $"ClassicAssist: UI didn't attach: {e.Message}" );
+                    Trace( $"UI didn't attach: {e.Message}" );
 
                     Detach();
                     pipe.Dispose();
@@ -582,7 +610,7 @@ namespace ClassicAssist.Plugin
                 }
             }
 
-            Console.WriteLine( $"ClassicAssist: {message}" );
+            Trace( message );
         }
 
         /// <summary>
@@ -598,12 +626,12 @@ namespace ClassicAssist.Plugin
             if ( inner is RemoteInvocationException || inner is RemoteMethodNotFoundException ||
                  inner is RemoteRpcException && !( inner is ConnectionLostException ) )
             {
-                Console.WriteLine( $"ClassicAssist: {call} failed in the UI: {inner.Message}" );
+                Trace( $"{call} failed in the UI: {inner.Message}" );
 
                 return;
             }
 
-            Console.WriteLine( $"ClassicAssist: lost the UI connection during {call}: {inner.Message}" );
+            Trace( $"lost the UI connection during {call}: {inner.Message}" );
 
             Detach();
         }
