@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared;
@@ -15,6 +16,8 @@ namespace ClassicAssist.Data.Macros.Commands
     {
         private const int MOVEMENT_TIMEOUT = 500;
         private const int PATHFIND_MAX_DISTANCE = 32;
+        private const int PATHFIND_START_TIMEOUT = 1000;
+        private const int PATHFIND_START_POLL_INTERVAL = 25;
         private static bool _forceWalk;
 
         [CommandsDisplay( Category = nameof( Strings.Movement ),
@@ -107,11 +110,42 @@ namespace ClassicAssist.Data.Macros.Commands
                 if ( !ReflectionCommands.WalkTo( x, y, z, 0 ) )
                 {
                     UOC.SystemMessage( Strings.Pathfind_failed_to_start_ );
+                    return;
                 }
             }
             else
             {
                 Engine.SendPacketToClient( new Pathfind( x, y, z ) );
+            }
+
+            WaitForPathfindingToStart();
+        }
+
+        /// <summary>
+        ///     Blocks until <see cref="Pathfinding" /> reports true, or the walk demonstrably never
+        ///     started.
+        ///     <para>
+        ///         Upstream ClassicAssist runs in the client's own process and calls
+        ///         <c>Pathfinder.WalkTo</c> directly, so <c>AutoWalking</c> is already set by the time
+        ///         <see cref="Pathfind(int,int,int)" /> returns - which is why the idiomatic
+        ///         <c>Pathfind(...)</c> / <c>while Pathfinding():</c> macro works there with no pause.
+        ///         Here the call crosses to the plugin process and the client only picks the walk up on
+        ///         a later tick, so without this a macro that checks immediately sees false and exits
+        ///         straight away.
+        ///     </para>
+        /// </summary>
+        private static void WaitForPathfindingToStart()
+        {
+            DateTime timeout = DateTime.Now + TimeSpan.FromMilliseconds( PATHFIND_START_TIMEOUT );
+
+            while ( DateTime.Now < timeout )
+            {
+                if ( Pathfinding() )
+                {
+                    return;
+                }
+
+                Thread.Sleep( PATHFIND_START_POLL_INTERVAL );
             }
         }
 
