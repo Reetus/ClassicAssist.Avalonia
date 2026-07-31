@@ -77,27 +77,32 @@ namespace Assistant
 
 #if NETFRAMEWORK
         /// <summary>
-        ///     Last resort for a facade assembly with no file behind it.
+        ///     Answers the System.Reflection.Emit contracts with mscorlib.
         ///     <para>
-        ///         A facade contains nothing but type forwards, and on Mono the types it forwards to all
-        ///         live in mscorlib anyway. Handing back mscorlib makes the type loader look for them
-        ///         there, which is where they actually are - so a reference to, say,
-        ///         <c>System.Reflection.Emit, Version=4.0.0.0</c> resolves even though the Mono BCL the
-        ///         client bundles ships no such assembly. .NET Framework solves this with facades in its
-        ///         Facades folder; this stands in for that folder.
+        ///         StreamJsonRpc generates its client proxies at runtime and so binds these, but they are
+        ///         inbox on .NET Framework - NuGet ships only a placeholder for net45 - and the Mono BCL the
+        ///         legacy client bundles has no facade for them. Every type they forward to (AssemblyBuilder,
+        ///         ModuleBuilder, ILGenerator and the rest) really is in mscorlib there, so pointing the type
+        ///         loader at it resolves all of them.
+        ///     </para>
+        ///     <para>
+        ///         Deliberately limited to these three names. The same trick does not work for netstandard,
+        ///         which forwards across several assemblies - System.Diagnostics.TraceSource lives in
+        ///         System.dll - and AssemblyResolve can only answer with one, which is why that facade is
+        ///         shipped as a file instead.
         ///     </para>
         /// </summary>
-        private static Assembly ResolveFacadeToCorlib( string name )
+        private static Assembly ResolveReflectionEmit( string name )
         {
-            // Only for the split-out BCL contract names. Anything else genuinely is a missing
-            // dependency and should fail loudly rather than resolve to something that cannot satisfy it.
-            if ( name != "netstandard" && !name.StartsWith( "System.", StringComparison.Ordinal ) &&
-                 !name.StartsWith( "Microsoft.Win32.", StringComparison.Ordinal ) )
+            switch ( name )
             {
-                return null;
+                case "System.Reflection.Emit":
+                case "System.Reflection.Emit.ILGeneration":
+                case "System.Reflection.Emit.Lightweight":
+                    return typeof( object ).Assembly;
+                default:
+                    return null;
             }
-
-            return typeof( object ).Assembly;
         }
 
 #endif
@@ -141,7 +146,7 @@ namespace Assistant
                 return Assembly.LoadFrom( path );
             }
 
-            return ResolveFacadeToCorlib( name );
+            return ResolveReflectionEmit( name );
 #else
             return File.Exists( path ) ? AssemblyLoadContext.Default.LoadFromAssemblyPath( path ) : null;
 #endif

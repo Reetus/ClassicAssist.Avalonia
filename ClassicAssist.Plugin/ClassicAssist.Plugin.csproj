@@ -114,6 +114,36 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    StreamJsonRpc ships only netstandard2.0 assets for Framework, so it binds types like
+    System.Diagnostics.TraceSource through the netstandard facade. The Mono BCL that legacy TazUO
+    bundles has no such facade - every dependency the game itself ships is a net46x flavour binding
+    straight to mscorlib, so it never needed one.
+
+    It has to be the *implementation* facade from NETStandard.Library.NETFramework. The one in the
+    targeting pack is a reference assembly, which Mono rejects with BadImageFormatException. Answering
+    the name with mscorlib instead does not work either: a facade forwards to several assemblies
+    (TraceSource is in System.dll) and AssemblyResolve can only hand back one.
+
+    The package is Microsoft's, published for exactly this case, and MIT licensed via corefx - the
+    notice ships beside the assembly.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="NETStandard.Library.NETFramework" Version="2.0.0-preview2-25405-01"
+                      GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+  </ItemGroup>
+
+  <Target Name="CopyNetStandardFacade" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net472'">
+    <ItemGroup>
+      <NetStandardFacade Include="$(PkgNETStandard_Library_NETFramework)\build\net461\lib\netstandard.dll" />
+    </ItemGroup>
+    <Error Condition="!Exists('%(NetStandardFacade.FullPath)')"
+           Text="Could not find the netstandard implementation facade; the net472 plugin will not reach its RPC layer without it." />
+    <Copy SourceFiles="@(NetStandardFacade)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+    <WriteLinesToFile File="$(OutputPath)netstandard.dll.LICENSE.txt" Overwrite="true"
+                      Lines="netstandard.dll is redistributed from Microsoft's NETStandard.Library.NETFramework package (MIT, https://github.com/dotnet/corefx/blob/master/LICENSE.TXT). It is required because StreamJsonRpc targets netstandard2.0 and the Mono runtime this build loads into ships no netstandard facade." />
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
   </ItemGroup>

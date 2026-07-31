@@ -19,9 +19,12 @@ using System.Drawing;
 using System.IO;
 using System.IO.Pipes;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Plugin.Shared;
@@ -476,11 +479,82 @@ namespace ClassicAssist.Plugin
                 return;
             }
 
-#if NET
-            string pipeName = $"CAPlugin_{Environment.ProcessId}";
+#if NETFRAMEWORK
+            // TCP rather than a named pipe on this build. Mono's System.IO.Pipes and .NET's are not the
+            // same thing on Unix, so a server pipe created here is not connectable from the net10.0 UI -
+            // the child would start, fail to connect, and exit with nothing to show for it. A loopback
+            // socket is the one transport both runtimes implement identically.
+            TcpListener listener = new TcpListener( IPAddress.Loopback, 0 );
+
+            listener.Start();
+
+            int port = ( (IPEndPoint) listener.LocalEndpoint ).Port;
+
+            // Anything else on this machine can reach a loopback port, where a pipe at least carried
+            // file permissions. The UI proves it is the process we started by echoing this back.
+            string token = Guid.NewGuid().ToString( "N" );
+
+            ProcessStartInfo startInfo = new ProcessStartInfo
+            {
+                FileName = exePath,
+                WorkingDirectory = Path.GetDirectoryName( exePath ),
+                Arguments = $"tcp:{port}:{token}",
+                UseShellExecute = false
+            };
+
+            try
+            {
+                Process.Start( startInfo );
+            }
+            catch ( Exception e )
+            {
+                Trace( $"couldn't start the UI process {exePath}: {e.Message}" );
+                listener.Stop();
+
+                return;
+            }
+
+            // A dedicated thread, not Task.Run: nothing queued to the thread pool from a plugin runs
+            // under this client's Mono - the continuation simply never executes - so the accept has to
+            // happen somewhere we control. Blocking calls throughout for the same reason.
+            Thread accept = new Thread( () =>
+            {
+                try
+                {
+                    TcpClient client = listener.AcceptTcpClient();
+
+                    client.NoDelay = true;
+
+                    NetworkStream stream = client.GetStream();
+
+                    if ( !ReadToken( stream, token ) )
+                    {
+                        Trace( "a connection arrived on the UI port without the right token; ignoring it." );
+                        client.Close();
+
+                        return;
+                    }
+
+                    _hostMethods = new HostMethods();
+
+                    JsonRpc rpc = JsonRpc.Attach( stream, _hostMethods );
+                    rpc.Disconnected += ( _, _ ) => Detach();
+
+                    _plugin = rpc.Attach<IPluginMethods>();
+                }
+                catch ( Exception e )
+                {
+                    Trace( $"UI didn't attach: {e.Message}" );
+                }
+                finally
+                {
+                    listener.Stop();
+                }
+            } ) { IsBackground = true, Name = "ClassicAssist UI attach" };
+
+            accept.Start();
 #else
-            string pipeName = $"CAPlugin_{Process.GetCurrentProcess().Id}";
-#endif
+            string pipeName = $"CAPlugin_{Environment.ProcessId}";
 
             NamedPipeServerStream pipe =
                 new NamedPipeServerStream( pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous );
@@ -540,7 +614,33 @@ namespace ClassicAssist.Plugin
                     }
                 }
             } );
+#endif
         }
+
+#if NETFRAMEWORK
+        /// <summary>
+        ///     Reads the handshake token the UI sends as its first line, stopping at the newline so that
+        ///     nothing past it is consumed - everything after belongs to the RPC stream.
+        /// </summary>
+        private static bool ReadToken( Stream stream, string expected )
+        {
+            StringBuilder builder = new StringBuilder();
+
+            for ( int i = 0; i <= expected.Length; i++ )
+            {
+                int b = stream.ReadByte();
+
+                if ( b < 0 || b == '\n' )
+                {
+                    break;
+                }
+
+                builder.Append( (char) b );
+            }
+
+            return builder.ToString() == expected;
+        }
+#endif
 
         /// <summary>
         ///     Drops the UI connection so the game keeps running unassisted rather than blocking forever on

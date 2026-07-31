@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 
 // Copyright (C) 2025 Reetus
 //
@@ -13,7 +13,10 @@
 #endregion
 
 using System;
+using System.IO;
 using System.IO.Pipes;
+using System.Net;
+using System.Net.Sockets;
 using Avalonia;
 using ClassicAssist.Plugin.Shared;
 using StreamJsonRpc;
@@ -40,28 +43,20 @@ namespace ClassicAssist.Avalonia
         {
             if ( args == null || args.Length == 0 )
             {
-                Console.Error.WriteLine( "ClassicAssist UI expects the plugin's pipe name as its first argument." );
+                Console.Error.WriteLine(
+                    "ClassicAssist UI expects the plugin's endpoint as its first argument." );
 
                 return;
             }
 
-            string pipeName = args[0];
+            Stream stream = Connect( args[0] );
 
-            NamedPipeClientStream clientStream =
-                new NamedPipeClientStream( ".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous );
-
-            try
+            if ( stream == null )
             {
-                clientStream.Connect( CONNECT_TIMEOUT_MS );
-            }
-            catch ( Exception e )
-            {
-                Console.Error.WriteLine( $"Couldn't connect to plugin pipe '{pipeName}': {e.Message}" );
-
                 return;
             }
 
-            Rpc = JsonRpc.Attach( clientStream, new Shared.Engine.PluginMethods() );
+            Rpc = JsonRpc.Attach( stream, new Shared.Engine.PluginMethods() );
             Host = Rpc.Attach<IHostMethods>();
 
             // If the game process goes away, so do we - there is nothing left to assist.
@@ -70,6 +65,71 @@ namespace ClassicAssist.Avalonia
             // Avalonia on Linux requires the UI to own the process main thread, which is the entire
             // reason this runs as a separate process rather than inside the plugin. Blocking call.
             BuildAvaloniaApp().StartWithClassicDesktopLifetime( args );
+        }
+
+        /// <summary>
+        ///     Opens the connection back to the plugin.
+        ///     <para>
+        ///         Two forms, because the plugin has two builds. "tcp:port:token" is the .NET Framework one
+        ///         loaded by the Mono-based legacy client: Mono's named pipes are not the same thing as
+        ///         .NET's on Unix, so a pipe created there is not connectable from here. Anything else is a
+        ///         pipe name, which is what the modern build still uses.
+        ///     </para>
+        /// </summary>
+        private static Stream Connect( string endpoint )
+        {
+            if ( !endpoint.StartsWith( "tcp:", StringComparison.Ordinal ) )
+            {
+                NamedPipeClientStream pipe =
+                    new NamedPipeClientStream( ".", endpoint, PipeDirection.InOut, PipeOptions.Asynchronous );
+
+                try
+                {
+                    pipe.Connect( CONNECT_TIMEOUT_MS );
+
+                    return pipe;
+                }
+                catch ( Exception e )
+                {
+                    Console.Error.WriteLine( $"Couldn't connect to plugin pipe '{endpoint}': {e.Message}" );
+
+                    return null;
+                }
+            }
+
+            string[] parts = endpoint.Split( new[] { ':' }, 3 );
+
+            if ( parts.Length != 3 || !int.TryParse( parts[1], out int port ) )
+            {
+                Console.Error.WriteLine( $"Malformed endpoint '{endpoint}'." );
+
+                return null;
+            }
+
+            try
+            {
+                TcpClient client = new TcpClient();
+
+                client.Connect( IPAddress.Loopback, port );
+                client.NoDelay = true;
+
+                NetworkStream stream = client.GetStream();
+
+                // The listener is on loopback, so anything else on this machine could reach it. Prove we
+                // are the process the plugin started before it will talk to us.
+                byte[] token = System.Text.Encoding.ASCII.GetBytes( parts[2] + "\n" );
+
+                stream.Write( token, 0, token.Length );
+                stream.Flush();
+
+                return stream;
+            }
+            catch ( Exception e )
+            {
+                Console.Error.WriteLine( $"Couldn't connect to the plugin on port {port}: {e.Message}" );
+
+                return null;
+            }
         }
 
         // Avalonia configuration, don't remove; also used by visual designer.
