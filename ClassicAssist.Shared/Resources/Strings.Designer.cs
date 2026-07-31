@@ -2636,7 +2636,13 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Maximum distance exceeded.", resourceCulture);
             }
         }
-        
+
+        public static string Pathfind_failed_to_start_ {
+            get {
+                return ResourceManager.GetString("Pathfind failed to start.", resourceCulture);
+            }
+        }
+
         public static string Show_Child_Items {
             get {
                 return ResourceManager.GetString("Show Child Items", resourceCulture);

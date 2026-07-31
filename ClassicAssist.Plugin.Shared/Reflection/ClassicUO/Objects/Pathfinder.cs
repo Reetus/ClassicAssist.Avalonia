@@ -163,13 +163,22 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
 
                 return retval;
             }
-            catch
+            catch ( Exception e )
             {
-                // TODO
-                return true;
-                // // Fallback to old method
-                // Engine.SendPacketToClient( new Pathfind( x, y, z ) );
-                // return true;
+                // Surfaced here rather than swallowed: a caller that gets `true` back has no way to
+                // tell a real walk apart from a reflection failure that never touched the client at
+                // all, which is indistinguishable from Pathfinding() reading false immediately after.
+                try
+                {
+                    Console.WriteLine( $"ClassicAssist: Pathfinder.WalkTo failed: {e}" );
+                    Console.Out.Flush();
+                }
+                catch ( Exception )
+                {
+                    // A plugin must never take the client down over a log line.
+                }
+
+                return false;
             }
         }
     }

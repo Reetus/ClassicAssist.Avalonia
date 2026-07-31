@@ -104,7 +104,10 @@ namespace ClassicAssist.Data.Macros.Commands
 
             if ( Engine.Host != null && Engine.ReflectionAvailable )
             {
-                ReflectionCommands.WalkTo( x, y, z, 0 );
+                if ( !ReflectionCommands.WalkTo( x, y, z, 0 ) )
+                {
+                    UOC.SystemMessage( Strings.Pathfind_failed_to_start_ );
+                }
             }
             else
             {
