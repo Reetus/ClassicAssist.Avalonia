@@ -55,36 +55,6 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
             return _pathfinderInstance = property?.GetValue( player );
         }
 
-        /// <summary>
-        ///     One-off diagnostic, written the first time <see cref="AutoWalking" /> is read. Every way
-        ///     this reflection can go wrong - wrong assembly, missing type, missing property, a null
-        ///     instance - reads back as a plain <c>false</c>, which is indistinguishable from "not
-        ///     walking". This says which.
-        /// </summary>
-        private static void TraceResolution( PropertyInfo property, object instance )
-        {
-            if ( _tracedResolution )
-            {
-                return;
-            }
-
-            _tracedResolution = true;
-
-            try
-            {
-                Console.WriteLine( $"ClassicAssist: Pathfinder.AutoWalking resolution: assembly={ReflectionImpl.DefaultAssembly?.FullName ?? "<null>"}, " +
-                                   $"type={( _type != null ? _type.FullName : "<null>" )}, property={( property != null ? "found" : "<null>" )}, " +
-                                   $"static={property?.GetMethod?.IsStatic}, instance={( instance != null ? instance.GetType().FullName : "<null>" )}" );
-                Console.Out.Flush();
-            }
-            catch ( Exception )
-            {
-                // A plugin must never take the client down over a log line.
-            }
-        }
-
-        private static bool _tracedResolution;
-
         public static bool AutoWalking
         {
             get
@@ -98,19 +68,15 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
 
                 if ( property?.GetMethod == null )
                 {
-                    TraceResolution( property, null );
                     return false;
                 }
 
                 if ( property.GetMethod.IsStatic )
                 {
-                    TraceResolution( property, null );
                     return (bool) property.GetValue( null );
                 }
 
                 object instance = GetPathfinderInstance();
-
-                TraceResolution( property, instance );
 
                 return instance != null && (bool) property.GetValue( instance );
             }
@@ -193,19 +159,9 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
                     are.Set();
                 } );
 
-                // A timeout here means the client never drained the tick queue, so the walk was never
-                // handed over at all - distinct from it running and finding no path.
-                bool ran = are.WaitOne( 5000 );
-
-                try
-                {
-                    Console.WriteLine( $"ClassicAssist: Pathfinder.WalkTo({x}, {y}, {z}, {distance}) static={_walkMethod.IsStatic} ran={ran} result={retval} autoWalking={AutoWalking}" );
-                    Console.Out.Flush();
-                }
-                catch ( Exception )
-                {
-                    // A plugin must never take the client down over a log line.
-                }
+                // A timeout leaves retval false, which is the right answer: the client never drained
+                // the tick queue, so the walk was never handed over at all.
+                are.WaitOne( 5000 );
 
                 return retval;
             }
