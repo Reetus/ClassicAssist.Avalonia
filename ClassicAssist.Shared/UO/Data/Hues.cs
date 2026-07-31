@@ -69,9 +69,16 @@ namespace ClassicAssist.UO.Data
 
             hue = ( hue & 0x3FFF ) - 1;
 
+            // Checked before touching _lazyHueEntries: hue 0 means unhued, and an unhued draw has no
+            // business loading hues.mul - it would make every caller depend on Initialize having run.
+            if ( hue < 0 )
+            {
+                return;
+            }
+
             HueEntry[] entries = _lazyHueEntries.Value;
 
-            if ( hue < 0 || hue >= entries.Length )
+            if ( hue >= entries.Length )
             {
                 return;
             }
