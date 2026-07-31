@@ -30,6 +30,31 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
         private static Type _type;
         private static MethodInfo _walkMethod;
 
+        /// <summary>
+        ///     `ClassicUO.Game.Pathfinder` is <c>static</c> on legacy TazUO (Mono/net472) but an
+        ///     instance class hung off the player (<c>PlayerMobile.Pathfinder</c>) on modern
+        ///     TazUO/ClassicUO. <see cref="AutoWalking" />, <see cref="Cancel" /> and
+        ///     <see cref="WalkTo" /> all need to resolve a live instance on demand for the modern
+        ///     shape, rather than relying on <see cref="_pathfinderInstance" /> already being
+        ///     populated by a prior <see cref="WalkTo" /> call. Without this, calling e.g.
+        ///     `Pathfinding()` before `Pathfind()` reads `AutoWalking` with a null target, which
+        ///     throws `TargetException` ("RFLCT.Targ_StatMethReqTarg" / "Non-static method requires
+        ///     a target.").
+        /// </summary>
+        private static object GetPathfinderInstance()
+        {
+            if ( _pathfinderInstance != null )
+            {
+                return _pathfinderInstance;
+            }
+
+            object player = new World().Player?.AssociatedObject;
+
+            PropertyInfo property = player?.GetType().GetProperty( "Pathfinder" );
+
+            return _pathfinderInstance = property?.GetValue( player );
+        }
+
         public static bool AutoWalking
         {
             get
@@ -39,19 +64,21 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
                     _type = ReflectionImpl.DefaultAssembly?.GetType( TYPE );
                 }
 
-                if ( _type == null )
+                PropertyInfo property = _type?.GetProperty( "AutoWalking" );
+
+                if ( property?.GetMethod == null )
                 {
                     return false;
                 }
 
-                PropertyInfo property = _type.GetProperty( "AutoWalking" );
-
-                if ( property == null )
+                if ( property.GetMethod.IsStatic )
                 {
-                    return false;
+                    return (bool) property.GetValue( null );
                 }
 
-                return (bool) property.GetValue( _pathfinderInstance );
+                object instance = GetPathfinderInstance();
+
+                return instance != null && (bool) property.GetValue( instance );
             }
         }
 
@@ -62,19 +89,21 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
                 _type = ReflectionImpl.DefaultAssembly?.GetType( TYPE );
             }
 
-            if ( _type == null )
+            PropertyInfo property = _type?.GetProperty( "AutoWalking" );
+
+            if ( property?.SetMethod == null )
             {
                 return false;
             }
 
-            PropertyInfo property = _type.GetProperty( "AutoWalking" );
+            object instance = property.SetMethod.IsStatic ? null : GetPathfinderInstance();
 
-            if ( property == null )
+            if ( !property.SetMethod.IsStatic && instance == null )
             {
                 return false;
             }
 
-            property.SetValue( _pathfinderInstance, false );
+            property.SetValue( instance, false );
 
             return !AutoWalking;
         }
@@ -101,24 +130,23 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
                 if ( _walkMethod == null )
                 {
                     _walkMethod = _type?.GetMethod( "WalkTo", BindingFlags.Instance | BindingFlags.Public );
-
-                    if ( _walkMethod != null )
-                    {
-                        World world = new World();
-                        PropertyInfo property;
-
-                        if ( (property = world.Player.AssociatedObject.GetType().GetProperty( "Pathfinder" )) != null )
-                        {
-                            object pathfinder = property.GetValue( world.Player.AssociatedObject );
-
-                            _pathfinderInstance = pathfinder ?? throw new InvalidOperationException( "Failed to get Pathfinder" );
-                        }
-                    }
                 }
 
                 if ( _walkMethod == null )
                 {
                     throw new Exception( "Cannot find method" );
+                }
+
+                object instance = null;
+
+                if ( !_walkMethod.IsStatic )
+                {
+                    instance = GetPathfinderInstance();
+
+                    if ( instance == null )
+                    {
+                        throw new InvalidOperationException( "Failed to get Pathfinder" );
+                    }
                 }
 
                 AutoResetEvent are = new AutoResetEvent( false );
@@ -127,7 +155,7 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
 
                 ReflectionImpl.TickWorkQueue.Enqueue( () =>
                 {
-                    retval = (bool) _walkMethod.Invoke( _pathfinderInstance, new object[] { x, y, z, distance } );
+                    retval = (bool) _walkMethod.Invoke( instance, new object[] { x, y, z, distance } );
                     are.Set();
                 } );
 
