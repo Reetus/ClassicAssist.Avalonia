@@ -554,6 +554,13 @@ namespace ClassicAssist.Plugin
                 catch ( Exception e )
                 {
                     Trace( $"UI didn't attach: {e.Message}" );
+
+                    // A MissingMethodException here is almost always the client's copy of a shared
+                    // assembly winning the bind over ours, so say which one actually loaded.
+                    if ( e is MissingMethodException || e is TypeLoadException )
+                    {
+                        ReportLoadedDependencies();
+                    }
                 }
                 finally
                 {
@@ -627,6 +634,43 @@ namespace ClassicAssist.Plugin
         }
 
 #if NETFRAMEWORK
+        /// <summary>
+        ///     Prints where the assemblies we share with the client were actually loaded from, and at what
+        ///     version. Ours live beside the plugin; anything resolving to the client's folder is the
+        ///     problem rather than a symptom of it.
+        /// </summary>
+        private static void ReportLoadedDependencies()
+        {
+            string[] shared =
+            {
+                "System.IO.Pipelines", "System.Buffers", "System.Memory", "System.Threading.Tasks.Extensions",
+                "System.Runtime.CompilerServices.Unsafe", "Nerdbank.Streams", "StreamJsonRpc", "Newtonsoft.Json"
+            };
+
+            foreach ( Assembly assembly in AppDomain.CurrentDomain.GetAssemblies() )
+            {
+                AssemblyName name = assembly.GetName();
+
+                if ( Array.IndexOf( shared, name.Name ) < 0 )
+                {
+                    continue;
+                }
+
+                string location;
+
+                try
+                {
+                    location = assembly.Location;
+                }
+                catch ( Exception )
+                {
+                    location = "<unknown>";
+                }
+
+                Trace( $"  bound {name.Name} {name.Version} from {location}" );
+            }
+        }
+
         /// <summary>
         ///     Reads the handshake token the UI sends as its first line, stopping at the newline so that
         ///     nothing past it is consumed - everything after belongs to the RPC stream.

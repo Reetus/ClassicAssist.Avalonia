@@ -65,6 +65,10 @@ namespace Assistant
 #endif
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
+#if NETFRAMEWORK
+            PreloadDependencies();
+#endif
+
             Start( header );
         }
 
@@ -88,6 +92,43 @@ namespace Assistant
 #endif
 
 #if NETFRAMEWORK
+        /// <summary>
+        ///     Loads our own copy of every dependency before anything asks for one.
+        ///     <para>
+        ///         The client's folder is the AppBase, so .NET Framework probes it first, and its
+        ///         <c>.exe.config</c> may redirect a shared assembly to whatever version it ships. Either
+        ///         way the bind succeeds against the client's copy and <see cref="OnAssemblyResolve" />
+        ///         never fires, so the plugin ends up running against assemblies older than the ones it was
+        ///         built against - which surfaces as MissingMethodException deep inside StreamJsonRpc
+        ///         rather than as a load failure. Loading ours by full path first means they are already in
+        ///         the load set when those references are resolved.
+        ///     </para>
+        /// </summary>
+        private static void PreloadDependencies()
+        {
+            foreach ( string path in Directory.GetFiles( _pluginDirectory, "*.dll" ) )
+            {
+                string name = Path.GetFileNameWithoutExtension( path );
+
+                // Never cuoapi: the client already has it loaded, and a second identity is what breaks
+                // the delegate exchange in PluginEngine.
+                if ( string.Equals( name, "cuoapi", StringComparison.OrdinalIgnoreCase ) ||
+                     string.Equals( name, "ClassicAssist", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Assembly.LoadFrom( path );
+                }
+                catch ( Exception )
+                {
+                    // Not every file beside us has to be a loadable managed assembly.
+                }
+            }
+        }
+
         /// <summary>
         ///     Answers the System.Reflection.Emit contracts with mscorlib.
         ///     <para>

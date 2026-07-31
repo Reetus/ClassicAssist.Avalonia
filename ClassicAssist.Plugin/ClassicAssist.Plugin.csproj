@@ -90,8 +90,34 @@
     <PackageReference Include="DNNE" Version="1.0.33" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net472'">
     <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
+  </ItemGroup>
+
+  <!--
+    The Framework build loads into the client's own AppDomain, so any assembly both of us use has to
+    resolve to a single identity. It does not by default: the client ships its own System.Buffers,
+    System.Memory and friends, and with two copies loaded a MemoryPool<byte> from one is not the same
+    type as from the other - which surfaces as
+
+      Method not found: System.IO.Pipelines.StreamPipeReaderOptions..ctor(MemoryPool<byte>, ...)
+
+    deep inside StreamJsonRpc rather than as anything resembling a load error.
+
+    So these are pinned to exactly the assembly versions legacy TazUO ships (System.Buffers 4.0.3.0,
+    System.Memory 4.0.1.2, Tasks.Extensions 4.2.0.1, Unsafe 6.0.0.0), and StreamJsonRpc is held at the
+    last release whose closure agrees with them - 2.13.33 wants System.IO.Pipelines 6.0.3, which is
+    built against these same versions. Newer StreamJsonRpc pulls Pipelines 8.x, built against a newer
+    System.Buffers than any of these clients have.
+
+    The net10.0 build has no such constraint and stays current.
+  -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+    <PackageReference Include="StreamJsonRpc" Version="2.13.33" />
+    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+    <PackageReference Include="System.Threading.Tasks.Extensions" Version="4.5.4" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
 
   <!--
