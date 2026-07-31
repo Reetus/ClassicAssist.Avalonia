@@ -2,73 +2,87 @@
 using System.IO;
 using System.Text;
 
-namespace ClassicAssist.UO.Data
+namespace ClassicAssist.Shared.UO.Data
 {
-    public class PacketReader
+    public class PacketReader( byte[] data, int size, bool fixedSize )
     {
-        private readonly MemoryStream _stream;
+        private int _position = fixedSize ? 1 : 3;
 
-        public PacketReader( byte[] data, int size, bool fixedSize )
-        {
-            _stream = new MemoryStream( data, 0, size, false );
-
-            _stream.Seek( fixedSize ? 1 : 3, SeekOrigin.Current );
-        }
-
-        public long Index => _stream.Position;
-        public long Size => _stream.Length;
+        public long Index => _position;
+        public long Size => size;
 
         public byte[] GetData()
         {
-            return _stream.ToArray();
+            byte[] copy = new byte[size];
+            Buffer.BlockCopy(data, 0, copy, 0, size);
+            return copy;
         }
 
-        public static bool IsSafeChar( int c )
+        public static bool IsSafeChar(int c)
         {
             return c >= 0x20 && c < 0xFFFE;
         }
 
         public bool ReadBoolean()
         {
-            return _stream.ReadByte() != 0;
+            if (_position >= size)
+            {
+                return false;
+            }
+
+            return data[_position++] != 0;
         }
 
         public byte ReadByte()
         {
-            return (byte) _stream.ReadByte();
-        }
-
-        public byte[] ReadByteArray( int length )
-        {
-            byte[] bytes = new byte[length];
-
-            for ( int i = 0; i < length; i++ )
+            if (_position >= size)
             {
-                bytes[i] = ReadByte();
+                return 0;
             }
 
+            return data[_position++];
+        }
+
+        public byte[] ReadByteArray(int length)
+        {
+            byte[] bytes = new byte[length];
+            int available = Math.Min(length, size - _position);
+
+            if (available > 0)
+            {
+                Buffer.BlockCopy(data, _position, bytes, 0, available);
+            }
+
+            _position += length;
             return bytes;
         }
 
         public short ReadInt16()
         {
-            byte[] buffer = new byte[2];
-            _stream.Read( buffer, 0, 2 );
-
-            return (short) ( ( buffer[0] << 8 ) | buffer[1] );
+            int b0 = _position < size ? data[_position] : 0;
+            int b1 = _position + 1 < size ? data[_position + 1] : 0;
+            _position += 2;
+            return (short)((b0 << 8) | b1);
         }
 
         public int ReadInt32()
         {
-            byte[] buffer = new byte[4];
-            _stream.Read( buffer, 0, 4 );
-
-            return ( buffer[0] << 24 ) | ( buffer[1] << 16 ) | ( buffer[2] << 8 ) | buffer[3];
+            int b0 = _position < size ? data[_position] : 0;
+            int b1 = _position + 1 < size ? data[_position + 1] : 0;
+            int b2 = _position + 2 < size ? data[_position + 2] : 0;
+            int b3 = _position + 3 < size ? data[_position + 3] : 0;
+            _position += 4;
+            return (b0 << 24) | (b1 << 16) | (b2 << 8) | b3;
         }
 
         public sbyte ReadSByte()
         {
-            return (sbyte) ReadByte();
+            if (_position >= size)
+            {
+                return 0;
+            }
+
+            return (sbyte)data[_position++];
         }
 
         public string ReadString()
@@ -77,21 +91,24 @@ namespace ClassicAssist.UO.Data
 
             int c;
 
-            while ( Index + 1 < Size && ( c = ReadByte() ) != 0 )
+            while (_position + 1 < size && (c = data[_position++]) != 0)
             {
-                sb.Append( (char) c );
+                sb.Append((char)c);
             }
 
             return sb.ToString();
         }
 
-        public string ReadString( int fixedLength )
+        public string ReadString(int fixedLength)
         {
-            byte[] buffer = new byte[fixedLength];
+            int available = Math.Min(fixedLength, size - _position);
 
-            _stream.Read( buffer, 0, fixedLength );
+            string result = available > 0
+                ? Encoding.ASCII.GetString(data, _position, available).TrimEnd('\0')
+                : string.Empty;
 
-            return Encoding.ASCII.GetString( buffer ).TrimEnd( '\0' );
+            _position += fixedLength;
+            return result;
         }
 
         public string ReadStringSafe()
@@ -99,23 +116,25 @@ namespace ClassicAssist.UO.Data
             throw new NotImplementedException();
         }
 
-        public string ReadStringSafe( int fixedLength )
+        public string ReadStringSafe(int fixedLength)
         {
             StringBuilder output = new StringBuilder();
 
-            for ( int i = 0; i < fixedLength; i++ )
-            {
-                char c = (char) ReadByte();
+            int end = _position + fixedLength;
 
-                if ( c == '\0' )
+            for (int i = 0; i < fixedLength && _position < size; i++)
+            {
+                char c = (char)data[_position++];
+
+                if (c == '\0')
                 {
-                    ReadByteArray( fixedLength - i - 1 );
+                    _position = end;
                     break;
                 }
 
-                if ( IsSafeChar( c ) )
+                if (IsSafeChar(c))
                 {
-                    output.Append( c );
+                    output.Append(c);
                 }
             }
 
@@ -124,12 +143,12 @@ namespace ClassicAssist.UO.Data
 
         public ushort ReadUInt16()
         {
-            return (ushort) ReadInt16();
+            return (ushort)ReadInt16();
         }
 
         public uint ReadUInt32()
         {
-            return (uint) ReadInt32();
+            return (uint)ReadInt32();
         }
 
         public string ReadUnicodeString()
@@ -138,21 +157,37 @@ namespace ClassicAssist.UO.Data
 
             int c;
 
-            while ( Index + 1 < Size && ( c = ( ReadByte() << 8 ) | ReadByte() ) != 0 )
+            while (_position + 1 < size && (c = (data[_position++] << 8) | data[_position++]) != 0)
             {
-                sb.Append( (char) c );
+                sb.Append((char)c);
             }
 
             return sb.ToString();
         }
 
-        public string ReadUnicodeString( int fixedLength )
+        public string ReadUnicodeString(int fixedLength)
         {
-            byte[] buffer = new byte[fixedLength];
+            int available = Math.Min(fixedLength, size - _position);
 
-            _stream.Read( buffer, 0, fixedLength );
+            string result = available > 0
+                ? Encoding.Unicode.GetString(data, _position, available)
+                : string.Empty;
 
-            return Encoding.Unicode.GetString( buffer );
+            _position += fixedLength;
+            return result;
+        }
+
+        public string ReadUnicodeStringBE(int fixedLength)
+        {
+            int byteLength = fixedLength * 2;
+            int available = Math.Min(byteLength, size - _position);
+
+            string result = available > 0
+                ? Encoding.BigEndianUnicode.GetString(data, _position, available)
+                : string.Empty;
+
+            _position += byteLength;
+            return result;
         }
 
         public string ReadUnicodeStringLE()
@@ -161,15 +196,15 @@ namespace ClassicAssist.UO.Data
 
             int c;
 
-            while ( Index + 1 < Size && ( c = ReadByte() | ( ReadByte() << 8 ) ) != 0 )
+            while (_position + 1 < size && (c = data[_position++] | (data[_position++] << 8)) != 0)
             {
-                sb.Append( (char) c );
+                sb.Append((char)c);
             }
 
             return sb.ToString();
         }
 
-        public string ReadUnicodeStringLESafe( int fixedLength )
+        public string ReadUnicodeStringLESafe(int fixedLength)
         {
             throw new NotImplementedException();
         }
@@ -184,14 +219,27 @@ namespace ClassicAssist.UO.Data
             throw new NotImplementedException();
         }
 
-        public string ReadUnicodeStringSafe( int fixedLength )
+        public string ReadUnicodeStringSafe(int fixedLength)
         {
             throw new NotImplementedException();
         }
 
-        public long Seek( int offset, SeekOrigin origin )
+        public long Seek(int offset, SeekOrigin origin)
         {
-            return _stream.Seek( offset, origin );
+            switch (origin)
+            {
+                case SeekOrigin.Begin:
+                    _position = offset;
+                    break;
+                case SeekOrigin.Current:
+                    _position += offset;
+                    break;
+                case SeekOrigin.End:
+                    _position = size + offset;
+                    break;
+            }
+
+            return _position;
         }
     }
 }

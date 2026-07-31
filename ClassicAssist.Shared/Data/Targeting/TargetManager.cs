@@ -6,6 +6,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
@@ -266,7 +267,7 @@ namespace ClassicAssist.Data.Targeting
 
         public Entity PromptTarget()
         {
-            int serial = UOC.GetTargeSerialAsync( Strings.Target_object___ ).Result;
+            int serial = UOC.GetTargetSerialAsync( Strings.Target_object___ ).Result;
 
             if ( serial == 0 )
             {

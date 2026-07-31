@@ -3,9 +3,15 @@ using System.Runtime.CompilerServices;
 
 namespace ClassicAssist.Data.Vendors;
 
-public class VendorSellAgentEntry : INotifyPropertyChanged
+public class VendorBuyAgentItem : INotifyPropertyChanged
 {
     public int Amount
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int BackpackGraphic
     {
         get;
         set => SetProperty( ref field, value );
@@ -29,13 +35,25 @@ public class VendorSellAgentEntry : INotifyPropertyChanged
         set => SetProperty( ref field, value );
     }
 
-    public int MinPrice
+    public int MaxPrice
     {
         get;
         set => SetProperty( ref field, value );
     }
 
     public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool Stackable
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public double Weight
     {
         get;
         set => SetProperty( ref field, value );

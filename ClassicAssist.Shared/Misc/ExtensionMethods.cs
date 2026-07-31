@@ -6,108 +6,112 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Windows;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public static class ExtensionMethods
 {
-    public static class ExtensionMethods
+    public static T ReadStruct<T>( this Stream stream ) where T : struct
     {
-        public static T ReadStruct<T>( this Stream stream ) where T : struct
+        int size = Marshal.SizeOf( typeof( T ) );
+
+        byte[] buffer = new byte[size];
+
+        stream.Read( buffer, 0, size );
+
+        GCHandle pinnedBuffer = GCHandle.Alloc( buffer, GCHandleType.Pinned );
+
+        T structure = ( T )Marshal.PtrToStructure( pinnedBuffer.AddrOfPinnedObject(), typeof( T ) );
+
+        pinnedBuffer.Free();
+
+        return structure;
+    }
+
+    public static T GetPropertyAttribute<T>( this Type type, string propertyName )
+    {
+        if ( type == null )
         {
-            int size = Marshal.SizeOf( typeof( T ) );
-
-            byte[] buffer = new byte[size];
-
-            stream.Read( buffer, 0, size );
-
-            GCHandle pinnedBuffer = GCHandle.Alloc( buffer, GCHandleType.Pinned );
-
-            T structure = (T) Marshal.PtrToStructure( pinnedBuffer.AddrOfPinnedObject(), typeof( T ) );
-
-            pinnedBuffer.Free();
-
-            return structure;
+            return default;
         }
 
-        public static T GetPropertyAttribute<T>( this Type type, string propertyName )
+        T attr = default;
+
+        PropertyInfo pi = type.GetProperty( propertyName );
+
+        if ( pi != null )
         {
-            if ( type == null )
-            {
-                return default;
-            }
-
-            T attr = default;
-
-            PropertyInfo pi = type.GetProperty( propertyName );
-
-            if ( pi != null )
-            {
-                attr = pi.GetCustomAttributes( false ).OfType<T>().SingleOrDefault();
-            }
-
-            return attr != null ? attr : default;
+            attr = pi.GetCustomAttributes( false ).OfType<T>().SingleOrDefault();
         }
 
-        public static void AddSorted<T>( this IList<T> list, T item, IComparer<T> comparer = null )
+        return attr != null ? attr : default;
+    }
+
+    public static void AddSorted<T>( this IList<T> list, T item, IComparer<T> comparer = null )
+    {
+        if ( comparer == null )
         {
-            if ( comparer == null )
-            {
-                comparer = Comparer<T>.Default;
-            }
-
-            int i = 0;
-
-            while ( i < list.Count && comparer.Compare( list[i], item ) < 0 )
-            {
-                i++;
-            }
-
-            list.Insert( i, item );
+            comparer = Comparer<T>.Default;
         }
 
-        public static JArray ToJArray( this int[] arr )
+        int i = 0;
+
+        while ( i < list.Count && comparer.Compare( list[i], item ) < 0 )
         {
-            JArray jArray = new JArray();
-
-            foreach ( int i in arr )
-            {
-                jArray.Add( i );
-            }
-
-            return jArray;
+            i++;
         }
 
-        public static int[] ToIntArray( this JToken jToken )
+        list.Insert( i, item );
+    }
+
+    public static IEnumerable<IEnumerable<T>> Split<T>( this IEnumerable<T> source, int chunkSize )
+    {
+        IEnumerable<T> enumerable = source.ToList();
+
+        return enumerable.Where( ( x, i ) => i % chunkSize == 0 ).Select( ( x, i ) => enumerable.Skip( i * chunkSize ).Take( chunkSize ) );
+    }
+
+    public static JArray ToJArray( this int[] arr )
+    {
+        JArray jArray = new();
+
+        foreach ( int i in arr )
         {
-            return jToken.Select( token => token.ToObject<int>() ).ToArray();
+            jArray.Add( i );
         }
 
-        // https://docs.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types?redirectedfrom=MSDN#WHToTap
-        public static Task ToTask( this EventWaitHandle waitHandle )
+        return jArray;
+    }
+
+    public static int[] ToIntArray( this JToken jToken )
+    {
+        return jToken.Select( token => token.ToObject<int>() ).ToArray();
+    }
+
+    // https://docs.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types?redirectedfrom=MSDN#WHToTap
+    public static Task<bool> ToTask( this EventWaitHandle waitHandle, Func<bool> resultAction = null )
+    {
+        if ( waitHandle == null )
         {
-            if ( waitHandle == null )
-            {
-                throw new ArgumentNullException( nameof( waitHandle ) );
-            }
-
-            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
-
-            RegisteredWaitHandle rwh = ThreadPool.RegisterWaitForSingleObject( waitHandle,
-                delegate { tcs.TrySetResult( true ); }, null, -1, true );
-
-            Task<bool> t = tcs.Task;
-
-            t.ContinueWith( antecedent => rwh.Unregister( null ) );
-
-            return t;
+            throw new ArgumentNullException( nameof( waitHandle ) );
         }
 
-        public static Task ToTask( this IEnumerable<EventWaitHandle> waitHandles )
-        {
-            List<Task> tasks = waitHandles.Select( waitHandle => waitHandle.ToTask() ).ToList();
+        TaskCompletionSource<bool> tcs = new();
 
-            return Task.WhenAll( tasks );
-        }
+        RegisteredWaitHandle rwh = ThreadPool.RegisterWaitForSingleObject( waitHandle, delegate { tcs.TrySetResult( resultAction?.Invoke() ?? true ); }, null, -1, true );
+
+        Task<bool> t = tcs.Task;
+
+        t.ContinueWith( antecedent => rwh.Unregister( null ) );
+
+        return t;
+    }
+
+    public static Task ToTask( this IEnumerable<EventWaitHandle> waitHandles )
+    {
+        List<Task<bool>> tasks = waitHandles.Select( waitHandle => waitHandle.ToTask() ).ToList();
+
+        return Task.WhenAll( tasks );
     }
 }

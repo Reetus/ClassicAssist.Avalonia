@@ -1,4 +1,5 @@
-﻿using ClassicAssist.UO.Data;
+﻿using ClassicAssist.Shared.UO.Data;
+using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
 namespace ClassicAssist.UO.Network.Packets

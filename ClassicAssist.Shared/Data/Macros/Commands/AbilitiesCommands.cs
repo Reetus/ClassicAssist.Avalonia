@@ -1,6 +1,7 @@
 ﻿using ClassicAssist.Shared;
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;

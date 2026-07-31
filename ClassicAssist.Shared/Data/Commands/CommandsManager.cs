@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
@@ -37,7 +38,7 @@ namespace ClassicAssist.Data.Commands
         {
             Task.Run( async () =>
             {
-                int serial = await UOC.GetTargeSerialAsync();
+                int serial = await UOC.GetTargetSerialAsync();
 
                 if ( serial == 0 )
                 {

@@ -2,6 +2,7 @@
 using System.IO;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;

@@ -25,6 +25,7 @@ using System.Windows.Input;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
@@ -49,7 +50,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Debug
 
         private async Task Target( object arg )
         {
-            int serial = await Commands.GetTargeSerialAsync( Strings.Target_object___ );
+            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
 
             if ( serial == 0 )
             {

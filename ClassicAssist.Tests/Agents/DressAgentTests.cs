@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Dress;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;

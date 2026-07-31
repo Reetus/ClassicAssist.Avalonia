@@ -213,7 +213,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                 return;
             }
 
-            int serial = await Commands.GetTargeSerialAsync( Strings.Target_new_item___ );
+            int serial = await Commands.GetTargetSerialAsync( Strings.Target_new_item___ );
 
             if ( serial <= 0 )
             {

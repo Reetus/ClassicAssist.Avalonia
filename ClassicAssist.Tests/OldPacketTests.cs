@@ -21,6 +21,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using ClassicAssist.Shared;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;

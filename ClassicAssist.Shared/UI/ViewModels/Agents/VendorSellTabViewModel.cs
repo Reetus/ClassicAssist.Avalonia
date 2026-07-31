@@ -167,7 +167,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         private async Task Insert( object obj )
         {
-            int serial = await UOC.GetTargeSerialAsync( Strings.Target_object___ );
+            int serial = await UOC.GetTargetSerialAsync( Strings.Target_object___ );
 
             if ( serial == 0 )
             {

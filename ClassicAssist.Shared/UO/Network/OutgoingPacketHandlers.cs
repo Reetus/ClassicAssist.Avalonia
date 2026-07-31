@@ -7,6 +7,7 @@ using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Counters;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Targeting;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using ClassicAssist.UO.Objects.Gumps;

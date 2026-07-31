@@ -7,6 +7,7 @@ using System.Timers;
 using System.Windows.Input;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;

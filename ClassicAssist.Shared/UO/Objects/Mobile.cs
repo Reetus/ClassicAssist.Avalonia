@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Vendors;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.UO.Objects

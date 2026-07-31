@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using Newtonsoft.Json.Linq;
 

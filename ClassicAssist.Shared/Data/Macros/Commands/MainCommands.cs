@@ -6,6 +6,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
@@ -63,7 +64,7 @@ namespace ClassicAssist.Data.Macros.Commands
 
             if ( obj == null )
             {
-                serial = UOC.GetTargeSerialAsync( Strings.Target_object___ ).Result;
+                serial = UOC.GetTargetSerialAsync( Strings.Target_object___ ).Result;
 
                 if ( serial == 0 )
                 {

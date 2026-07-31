@@ -1,15 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
-using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Vendors;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
@@ -17,85 +17,117 @@ using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Agents
+namespace ClassicAssist.Shared.UI.ViewModels.Agents;
+
+public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 {
-    public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
+    public VendorBuyTabViewModel()
     {
-        private bool _enabled;
-        private bool _includeBackpackAmount;
-        private bool _includePurchasedAmount;
-        private ICommand _insertCommand;
-        private ObservableCollection<VendorBuyAgentEntry> _items = new ObservableCollection<VendorBuyAgentEntry>();
-        private ICommand _removeCommand;
-        private VendorBuyAgentEntry _selectedItem;
+        IncomingPacketHandlers.VendorBuyDisplayEvent += OnVendorBuyDisplayEvent;
+    }
 
-        public VendorBuyTabViewModel()
+    public bool AutoDisableOnLogin
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool CheckItemCount
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool CheckWeight
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool Enabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool IncludeBackpackAmount
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool IncludePurchasedAmount
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand InsertCommand => field ??= new RelayCommand( Insert, o => true );
+
+    public ICommand InsertEntryCommand => field ??= new RelayCommandAsync( InsertEntry, o => Engine.Connected && SelectedItem != null );
+
+    public ObservableCollection<VendorBuyAgentEntry> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = new();
+
+    public int MinItemsAvailable
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int MinWeightAvailable
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand RemoveCommand => field ??= new RelayCommand( Remove, o => SelectedItem != null );
+
+    public VendorBuyAgentEntry SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public void Serialize( JObject json )
+    {
+        if ( json == null )
         {
-            IncomingPacketHandlers.VendorBuyDisplayEvent += OnVendorBuyDisplayEvent;
+            return;
         }
 
-        public bool Enabled
+        JObject vendorBuy = new();
+
+        JArray items = new();
+
+        vendorBuy.Add( "AutoDisableOnLogin", AutoDisableOnLogin );
+        vendorBuy.Add( "CheckWeight", CheckWeight );
+        vendorBuy.Add( "MinWeightAvailable", MinWeightAvailable );
+        vendorBuy.Add( "CheckItemCount", CheckItemCount );
+        vendorBuy.Add( "MinItemsAvailable", MinItemsAvailable );
+
+        foreach ( VendorBuyAgentEntry entry in Items )
         {
-            get => _enabled;
-            set => SetProperty( ref _enabled, value );
-        }
+            JObject config = new() { { "Name", entry.Name }, { "Enabled", entry.Enabled }, { "IncludeBackpackAmount", entry.IncludeBackpackAmount } };
 
-        public bool IncludeBackpackAmount
-        {
-            get => _includeBackpackAmount;
-            set => SetProperty( ref _includeBackpackAmount, value );
-        }
+            JArray itemObj = new();
 
-        public bool IncludePurchasedAmount
-        {
-            get => _includePurchasedAmount;
-            set => SetProperty( ref _includePurchasedAmount, value );
-        }
-
-        public ICommand InsertCommand =>
-            _insertCommand ?? ( _insertCommand = new RelayCommandAsync( Insert, o => true ) );
-
-        public ObservableCollection<VendorBuyAgentEntry> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public ICommand RemoveCommand =>
-            _removeCommand ?? ( _removeCommand = new RelayCommand( Remove, o => SelectedItem != null ) );
-
-        public VendorBuyAgentEntry SelectedItem
-        {
-            get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
-        }
-
-        public void Serialize( JObject json )
-        {
-            if ( json == null )
+            foreach ( VendorBuyAgentItem item in entry.Items )
             {
-                return;
-            }
-
-            JObject config = new JObject
-            {
-                { "Enabled", Enabled },
-                { "IncludeBackpackAmount", IncludeBackpackAmount },
-                { "IncludePurchasedAmount", IncludePurchasedAmount }
-            };
-
-            JArray itemObj = new JArray();
-
-            foreach ( VendorBuyAgentEntry entry in Items )
-            {
-                JObject entryObj = new JObject
+                JObject entryObj = new()
                 {
-                    { "Enabled", entry.Enabled },
-                    { "Name", entry.Name },
-                    { "Graphic", entry.Graphic },
-                    { "Hue", entry.Hue },
-                    { "Amount", entry.Amount },
-                    { "MaxPrice", entry.MaxPrice }
+                    { "Enabled", item.Enabled },
+                    { "Name", item.Name },
+                    { "Graphic", item.Graphic },
+                    { "Hue", item.Hue },
+                    { "Amount", item.Amount },
+                    { "MaxPrice", item.MaxPrice },
+                    { "BackpackGraphic", item.BackpackGraphic },
+                    { "Weight", item.Weight },
+                    { "Stackable", item.Stackable }
                 };
 
                 itemObj.Add( entryObj );
@@ -103,134 +135,297 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
             config.Add( "Items", itemObj );
 
-            json.Add( "VendorBuy", config );
+            items.Add( config );
         }
 
-        public void Deserialize( JObject json, Options options )
+        vendorBuy.Add( "Entries", items );
+        json.Add( "VendorBuy", vendorBuy );
+    }
+
+    private static async Task InsertEntry( object arg )
+    {
+        if ( !( arg is VendorBuyAgentEntry entry ) )
         {
-            Items.Clear();
+            return;
+        }
 
-            if ( json?["VendorBuy"] == null )
+        int serial = await UOC.GetTargetSerialAsync( Strings.Target_object___ );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id, true );
+            return;
+        }
+
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return;
+        }
+
+        string name = TileData.GetStaticTile( item.ID ).Name ?? item.Name;
+        double weight = 0;
+
+        if ( Engine.CharacterListFlags.HasFlag( CharacterListFlags.PaladinNecromancerClassTooltips ) && item.Properties != null )
+        {
+            //1072788 - Weight: ~1_WEIGHT~ stone
+            //1072789 - Weight: ~1_WEIGHT~ stones
+            Property weightProperty = item.Properties.FirstOrDefault( p => p.Cliloc == 1072788 || p.Cliloc == 1072789 );
+
+            if ( weightProperty != null && weightProperty.Arguments.Length > 0 )
             {
-                return;
+                weight = Math.Round( double.Parse( weightProperty.Arguments[0] ) / item.Count, 2 );
             }
+        }
 
-            JToken config = json["VendorBuy"];
+        StaticTile staticTile = TileData.GetStaticTile( item.ID );
 
-            Enabled = config["Enabled"]?.ToObject<bool>() ?? false;
-            IncludeBackpackAmount = config["IncludeBackpackAmount"]?.ToObject<bool>() ?? false;
-            IncludePurchasedAmount = config["IncludePurchasedAmount"]?.ToObject<bool>() ?? false;
+        bool stackable = staticTile.Flags.HasFlag( TileFlags.Stackable );
+
+        entry.Items.Add( new VendorBuyAgentItem
+        {
+            Enabled = true,
+            Name = name,
+            Graphic = item.ID,
+            Amount = -1,
+            Hue = item.Hue,
+            MaxPrice = -1,
+            BackpackGraphic = item.ID,
+            Weight = weight,
+            Stackable = stackable
+        } );
+    }
+
+    public void Deserialize( JObject json, Options options )
+    {
+        Items.Clear();
+
+        JToken config = json?["VendorBuy"];
+
+        if ( config == null )
+        {
+            return;
+        }
+
+        AutoDisableOnLogin = config["AutoDisableOnLogin"]?.ToObject<bool>() ?? false;
+        CheckWeight = config["CheckWeight"]?.ToObject<bool>() ?? false;
+        MinWeightAvailable = config["MinWeightAvailable"]?.ToObject<int>() ?? 0;
+        CheckItemCount = config["CheckItemCount"]?.ToObject<bool>() ?? false;
+        MinItemsAvailable = config["MinItemsAvailable"]?.ToObject<int>() ?? 0;
+
+        if ( config["Items"] != null )
+        {
+            // Convert from Legacy "Items" to "Entries"
+            VendorBuyAgentEntry entry = new()
+            {
+                Name = "Legacy", Enabled = config["Enabled"]?.ToObject<bool>() ?? false, IncludeBackpackAmount = config["IncludeBackpackAmount"]?.ToObject<bool>() ?? false
+            };
 
             foreach ( JToken token in config["Items"] )
             {
-                VendorBuyAgentEntry vbae = new VendorBuyAgentEntry
+                VendorBuyAgentItem vbae = new()
                 {
                     Enabled = token["Enabled"]?.ToObject<bool>() ?? false,
                     Name = token["Name"]?.ToObject<string>() ?? "Unknown",
                     Graphic = token["Graphic"]?.ToObject<int>() ?? 0,
                     Hue = token["Hue"]?.ToObject<int>() ?? 0,
                     Amount = token["Amount"]?.ToObject<int>() ?? 0,
-                    MaxPrice = token["MaxPrice"]?.ToObject<int>() ?? 0
+                    MaxPrice = token["MaxPrice"]?.ToObject<int>() ?? 0,
+                    BackpackGraphic = token["BackpackGraphic"]?.ToObject<int>() ?? 0,
+                    Weight = token["Weight"]?.ToObject<double>() ?? 0,
+                    Stackable = token["Stackable"]?.ToObject<bool>() ?? false
                 };
 
-                Items.Add( vbae );
+                if ( vbae.BackpackGraphic == 0 )
+                {
+                    vbae.BackpackGraphic = vbae.Graphic;
+                }
+
+                entry.Items.Add( vbae );
+            }
+
+            Items.Add( entry );
+        }
+
+        if ( config["Entries"] == null )
+        {
+            return;
+        }
+
+        foreach ( JToken token in config["Entries"] )
+        {
+            VendorBuyAgentEntry entry = new()
+            {
+                Name = token["Name"]?.ToObject<string>() ?? "Unknown",
+                Enabled = !AutoDisableOnLogin && ( token["Enabled"]?.ToObject<bool>() ?? false ),
+                IncludeBackpackAmount = token["IncludeBackpackAmount"]?.ToObject<bool>() ?? false
+            };
+
+            if ( token["Items"] != null )
+            {
+                foreach ( JToken item in token["Items"] )
+                {
+                    VendorBuyAgentItem vbae = new()
+                    {
+                        Enabled = item["Enabled"]?.ToObject<bool>() ?? false,
+                        Name = item["Name"]?.ToObject<string>() ?? "Unknown",
+                        Graphic = item["Graphic"]?.ToObject<int>() ?? 0,
+                        Hue = item["Hue"]?.ToObject<int>() ?? 0,
+                        Amount = item["Amount"]?.ToObject<int>() ?? 0,
+                        MaxPrice = item["MaxPrice"]?.ToObject<int>() ?? 0,
+                        BackpackGraphic = item["BackpackGraphic"]?.ToObject<int>() ?? 0,
+                        Weight = item["Weight"]?.ToObject<double>() ?? 0,
+                        Stackable = item["Stackable"]?.ToObject<bool>() ?? false
+                    };
+
+                    if ( vbae.BackpackGraphic == 0 )
+                    {
+                        vbae.BackpackGraphic = vbae.Graphic;
+                    }
+
+                    entry.Items.Add( vbae );
+                }
+            }
+
+            Items.Add( entry );
+        }
+    }
+
+    private void OnVendorBuyDisplayEvent( int serial, ShopListEntry[] entries )
+    {
+        if ( CheckWeight && Engine.Player.WeightMax - Engine.Player.Weight < MinWeightAvailable )
+        {
+            UOC.SystemMessage( Strings.Buy_Agent__Not_enough_weight_available___, false );
+            return;
+        }
+
+        if ( CheckItemCount && Engine.TooltipsEnabled )
+        {
+            ( int count, int max ) = GetBackpackItemCount();
+
+            if ( max - count < MinItemsAvailable )
+            {
+                UOC.SystemMessage( Strings.Buy_Agent__Not_enough_backpack_space_available___, false );
+                return;
             }
         }
 
-        private void OnVendorBuyDisplayEvent( int serial, ShopListEntry[] entries )
+        List<ShopListEntry> buyList = new();
+
+        int purchasedWeight = 0;
+
+        foreach ( VendorBuyAgentEntry entry in Items.Where( e => e.Enabled ) )
         {
-            if ( !Enabled )
+            foreach ( VendorBuyAgentItem item in entry.Items.Where( e => e.Enabled ) )
             {
-                return;
-            }
+                ShopListEntry[] matches = entries.Where( i =>
+                    i.Item.ID == item.Graphic && ( item.Hue == -1 || i.Item.Hue == item.Hue ) && ( item.MaxPrice == -1 || i.Price <= item.MaxPrice ) ).ToArray();
 
-            IEnumerable<VendorBuyAgentEntry> items = Items.Where( i => i.Enabled );
-
-            List<ShopListEntry> buyList = new List<ShopListEntry>();
-
-            foreach ( VendorBuyAgentEntry entry in items )
-            {
-                IEnumerable<ShopListEntry> matches = entries.Where( i =>
-                    i.Item.ID == entry.Graphic && ( entry.Hue == -1 || i.Item.Hue == entry.Hue ) &&
-                    ( entry.MaxPrice == -1 || i.Price <= entry.MaxPrice ) );
+                if ( matches.Length > 0 && Engine.CharacterListFlags.HasFlag( CharacterListFlags.PaladinNecromancerClassTooltips ) )
+                {
+                    UOC.WaitForPropertiesAsync( matches.Select( e => e.Item ), 2000 ).ConfigureAwait( false );
+                }
 
                 foreach ( ShopListEntry match in matches )
                 {
-                    if ( entry.Amount != -1 )
+                    if ( item.Amount != -1 )
                     {
-                        if ( match.Amount > entry.Amount )
+                        if ( match.Amount > item.Amount )
                         {
-                            match.Amount = entry.Amount;
+                            match.Amount = item.Amount;
                         }
 
-                        if ( IncludeBackpackAmount )
+                        if ( entry.IncludeBackpackAmount )
                         {
-                            int currentAmount = ObjectCommands.CountType( entry.Graphic, "backpack", entry.Hue );
+                            int currentAmount = ObjectCommands.CountType( item.BackpackGraphic, "backpack", item.Hue );
 
-                            if ( currentAmount + match.Amount > entry.Amount )
+                            if ( currentAmount + match.Amount > item.Amount )
                             {
-                                match.Amount = entry.Amount - currentAmount;
+                                match.Amount = item.Amount - currentAmount;
                             }
                         }
                     }
 
-                    if ( match.Amount > 0 )
+                    if ( item.Weight > 0 )
+                    {
+                        int availableWeight = Engine.Player.WeightMax - Engine.Player.Weight - MinWeightAvailable - purchasedWeight;
+
+                        int maxBuy = ( int )( availableWeight / item.Weight );
+
+                        if ( match.Amount > maxBuy )
+                        {
+                            match.Amount = maxBuy;
+                        }
+
+                        purchasedWeight += ( int )( match.Amount * item.Weight );
+                    }
+
+                    if ( CheckItemCount && Engine.TooltipsEnabled )
+                    {
+                        int itemCount = item.Stackable ? 1 : match.Amount;
+
+                        ( int count, int max ) = GetBackpackItemCount();
+
+                        if ( max - count - MinItemsAvailable < itemCount )
+                        {
+                            match.Amount = Math.Max( 0, max - count - MinItemsAvailable );
+                        }
+                    }
+
+                    if ( match.Amount > 0 && buyList.All( e => e.Item.Serial != match.Item.Serial ) )
                     {
                         buyList.Add( match );
                     }
                 }
             }
-
-            if ( buyList.Count > 0 )
-            {
-                UOC.VendorBuy( serial, buyList.ToArray() );
-            }
-
-            if ( !MacroManager.QuietMode && buyList.Count == 0 )
-            {
-                UOC.SystemMessage( Strings.Buy_Agent__No_matches_found_ );
-            }
         }
 
-        private async Task Insert( object obj )
+        if ( buyList.Count > 0 )
         {
-            int serial = await UOC.GetTargeSerialAsync( Strings.Target_object___ );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            string name = TileData.GetStaticTile( item.ID ).Name ?? item.Name;
-
-            Items.Add( new VendorBuyAgentEntry
-            {
-                Enabled = true,
-                Name = name,
-                Graphic = item.ID,
-                Amount = -1,
-                Hue = item.Hue,
-                MaxPrice = -1
-            } );
+            UOC.VendorBuy( serial, buyList.ToArray() );
         }
 
-        private void Remove( object obj )
+        if ( buyList.Count == 0 )
         {
-            if ( !( obj is VendorBuyAgentEntry entry ) )
-            {
-                return;
-            }
-
-            Items.Remove( entry );
+            UOC.SystemMessage( Strings.Buy_Agent__No_matches_found_, true );
         }
+    }
+
+    private void Insert( object obj )
+    {
+        Items.Add( new VendorBuyAgentEntry { Name = $"Buy-{Items.Count + 1}", Enabled = true } );
+    }
+
+    private void Remove( object obj )
+    {
+        if ( !( obj is VendorBuyAgentEntry entry ) )
+        {
+            return;
+        }
+
+        Items.Remove( entry );
+    }
+
+    public (int count, int max) GetBackpackItemCount()
+    {
+        if ( Engine.Player?.Backpack == null || Engine.Player.Backpack.Properties == null )
+        {
+            return ( -1, -1 );
+        }
+
+        int count = -1;
+        int max = -1;
+
+        Property contentsProperty = Engine.Player.Backpack.Properties.FirstOrDefault( p => p.Cliloc == 1072241 || p.Cliloc == 1073841 );
+
+        if ( contentsProperty != null && contentsProperty.Arguments.Length > 0 )
+        {
+            int.TryParse( contentsProperty.Arguments[0], out count );
+            int.TryParse( contentsProperty.Arguments[1], out max );
+        }
+
+        return ( count, max );
     }
 }

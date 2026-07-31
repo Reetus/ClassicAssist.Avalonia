@@ -18,6 +18,7 @@
 #endregion
 
 using ClassicAssist.Data.BuffIcons;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

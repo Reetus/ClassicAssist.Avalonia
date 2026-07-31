@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 

@@ -20,103 +20,66 @@ namespace ClassicAssist.Data
 
         public const string DEFAULT_SETTINGS_FILENAME = "settings.json";
         private static string _profilePath;
-        private bool _abilitiesGump = true;
-        private int _abilitiesGumpX = 100;
-        private int _abilitiesGumpY = 100;
-        private bool _actionDelay;
-        private int _actionDelayMs;
-        private bool _alwaysOnTop;
-        private bool _autoAcceptPartyInvite;
-        private bool _autoAcceptPartyOnlyFromFriends;
-        private bool _checkHandsPotions;
         private char _commandPrefix = '+';
-        private bool _debug;
-        private bool _defaultMacroQuietMode;
-        private string _enemyTargetMessage;
-        private ObservableCollection<FriendEntry> _friends = new ObservableCollection<FriendEntry>();
-        private string _friendTargetMessage;
-        private bool _getFriendEnemyUsesIgnoreList;
-        private bool _includePartyMembersInFriends;
-        private string _lastTargetMessage;
-        private int _lightLevel;
-        private bool _limitMouseWheelTrigger;
-        private int _limitMouseWheelTriggerMS;
-        private bool _macrosGump;
-        private int _macrosGumpX;
-        private int _macrosGumpY;
-        private int _maxTargetQueueLength = 1;
-        private string _name;
-        private bool _persistUseOnce;
-        private bool _preventAttackingFriendsInWarMode;
-        private bool _preventAttackingInnocentsInGuardzone;
-        private bool _preventTargetingFriendsWithHarmful;
-        private bool _preventTargetingInnocentsInGuardzone;
-        private bool _queueLastTarget;
-        private bool _rangeCheckLastTarget;
-        private int _rangeCheckLastTargetAmount = 11;
-        private bool _rehueFriends;
-        private int _rehueFriendsHue;
-        private bool _showProfileNameWindowTitle;
-        private bool _showResurrectionWaypoints;
-        private SmartTargetOption _smartTargetOption;
-        private bool _sortMacrosAlphabetical;
-        private bool _useDeathScreenWhilstHidden;
-        private bool _useExperimentalFizzleDetection;
-        private bool _useObjectQueue;
-        private int _useObjectQueueAmount = 5;
+
+        public int ExpireTargetsMS
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
 
         public bool AbilitiesGump
         {
-            get => _abilitiesGump;
-            set => SetProperty( ref _abilitiesGump, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = true;
 
         public int AbilitiesGumpX
         {
-            get => _abilitiesGumpX;
-            set => SetProperty( ref _abilitiesGumpX, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = 100;
 
         public int AbilitiesGumpY
         {
-            get => _abilitiesGumpY;
-            set => SetProperty( ref _abilitiesGumpY, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = 100;
 
         public bool ActionDelay
         {
-            get => _actionDelay;
-            set => SetProperty( ref _actionDelay, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int ActionDelayMS
         {
-            get => _actionDelayMs;
-            set => SetProperty( ref _actionDelayMs, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool AlwaysOnTop
         {
-            get => _alwaysOnTop;
-            set => SetProperty( ref _alwaysOnTop, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool AutoAcceptPartyInvite
         {
-            get => _autoAcceptPartyInvite;
-            set => SetProperty( ref _autoAcceptPartyInvite, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool AutoAcceptPartyOnlyFromFriends
         {
-            get => _autoAcceptPartyOnlyFromFriends;
-            set => SetProperty( ref _autoAcceptPartyOnlyFromFriends, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool CheckHandsPotions
         {
-            get => _checkHandsPotions;
-            set => SetProperty( ref _checkHandsPotions, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public char CommandPrefix
@@ -155,215 +118,215 @@ namespace ClassicAssist.Data
 
         public bool Debug
         {
-            get => _debug;
-            set => SetProperty( ref _debug, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool DefaultMacroQuietMode
         {
-            get => _defaultMacroQuietMode;
-            set => SetProperty( ref _defaultMacroQuietMode, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public string EnemyTargetMessage
         {
-            get => _enemyTargetMessage;
-            set => SetProperty( ref _enemyTargetMessage, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public ObservableCollection<FriendEntry> Friends
         {
-            get => _friends;
-            set => SetProperty( ref _friends, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = new();
 
         public string FriendTargetMessage
         {
-            get => _friendTargetMessage;
-            set => SetProperty( ref _friendTargetMessage, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool GetFriendEnemyUsesIgnoreList
         {
-            get => _getFriendEnemyUsesIgnoreList;
-            set => SetProperty( ref _getFriendEnemyUsesIgnoreList, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool IncludePartyMembersInFriends
         {
-            get => _includePartyMembersInFriends;
-            set => SetProperty( ref _includePartyMembersInFriends, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public string LastTargetMessage
         {
-            get => _lastTargetMessage;
-            set => SetProperty( ref _lastTargetMessage, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int LightLevel
         {
-            get => _lightLevel;
+            get;
             set
             {
-                SetProperty(ref _lightLevel, value);
-                Engine.SendPacketToClient(new byte[] { 0x4F, (byte)CurrentOptions.LightLevel }, 2);
+                SetProperty( ref field, value );
+                Engine.SendPacketToClient( new byte[] { 0x4F, ( byte )CurrentOptions.LightLevel }, 2 );
             }
         }
 
         public bool LimitMouseWheelTrigger
         {
-            get => _limitMouseWheelTrigger;
-            set => SetProperty( ref _limitMouseWheelTrigger, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int LimitMouseWheelTriggerMS
         {
-            get => _limitMouseWheelTriggerMS;
-            set => SetProperty( ref _limitMouseWheelTriggerMS, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool MacrosGump
         {
-            get => _macrosGump;
-            set => SetProperty( ref _macrosGump, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int MacrosGumpX
         {
-            get => _macrosGumpX;
-            set => SetProperty( ref _macrosGumpX, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int MacrosGumpY
         {
-            get => _macrosGumpY;
-            set => SetProperty( ref _macrosGumpY, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int MaxTargetQueueLength
         {
-            get => _maxTargetQueueLength;
-            set => SetProperty( ref _maxTargetQueueLength, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = 1;
 
         public string Name
         {
-            get => _name;
-            set => SetProperty( ref _name, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool PersistUseOnce
         {
-            get => _persistUseOnce;
-            set => SetProperty( ref _persistUseOnce, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool PreventAttackingFriendsInWarMode
         {
-            get => _preventAttackingFriendsInWarMode;
-            set => SetProperty( ref _preventAttackingFriendsInWarMode, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool PreventAttackingInnocentsInGuardzone
         {
-            get => _preventAttackingInnocentsInGuardzone;
-            set => SetProperty( ref _preventAttackingInnocentsInGuardzone, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool PreventTargetingFriendsWithHarmful
         {
-            get => _preventTargetingFriendsWithHarmful;
-            set => SetProperty( ref _preventTargetingFriendsWithHarmful, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool PreventTargetingInnocentsInGuardzone
         {
-            get => _preventTargetingInnocentsInGuardzone;
-            set => SetProperty( ref _preventTargetingInnocentsInGuardzone, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool QueueLastTarget
         {
-            get => _queueLastTarget;
-            set => SetProperty( ref _queueLastTarget, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool RangeCheckLastTarget
         {
-            get => _rangeCheckLastTarget;
-            set => SetProperty( ref _rangeCheckLastTarget, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int RangeCheckLastTargetAmount
         {
-            get => _rangeCheckLastTargetAmount;
-            set => SetProperty( ref _rangeCheckLastTargetAmount, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = 11;
 
         public bool RehueFriends
         {
-            get => _rehueFriends;
-            set => SetProperty( ref _rehueFriends, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int RehueFriendsHue
         {
-            get => _rehueFriendsHue;
-            set => SetProperty( ref _rehueFriendsHue, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool ShowProfileNameWindowTitle
         {
-            get => _showProfileNameWindowTitle;
+            get;
             set
             {
-                SetProperty( ref _showProfileNameWindowTitle, value );
+                SetProperty( ref field, value );
                 Engine.UpdateWindowTitle();
             }
         }
 
         public bool ShowResurrectionWaypoints
         {
-            get => _showResurrectionWaypoints;
-            set => SetProperty( ref _showResurrectionWaypoints, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public SmartTargetOption SmartTargetOption
         {
-            get => _smartTargetOption;
-            set => SetProperty( ref _smartTargetOption, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool SortMacrosAlphabetical
         {
-            get => _sortMacrosAlphabetical;
-            set => SetProperty( ref _sortMacrosAlphabetical, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool UseDeathScreenWhilstHidden
         {
-            get => _useDeathScreenWhilstHidden;
-            set => SetProperty( ref _useDeathScreenWhilstHidden, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool UseExperimentalFizzleDetection
         {
-            get => _useExperimentalFizzleDetection;
-            set => SetProperty( ref _useExperimentalFizzleDetection, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool UseObjectQueue
         {
-            get => _useObjectQueue;
-            set => SetProperty( ref _useObjectQueue, value );
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public int UseObjectQueueAmount
         {
-            get => _useObjectQueueAmount;
-            set => SetProperty( ref _useObjectQueueAmount, value );
-        }
+            get;
+            set => SetProperty( ref field, value );
+        } = 5;
 
         public event PropertyChangedEventHandler PropertyChanged;
 

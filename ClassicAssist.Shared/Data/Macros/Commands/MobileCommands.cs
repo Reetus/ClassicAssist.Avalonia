@@ -3,6 +3,7 @@ using System.Reflection;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Friends;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
@@ -44,7 +45,7 @@ namespace ClassicAssist.Data.Macros.Commands
         {
             int serial = obj != null
                 ? AliasCommands.ResolveSerial( obj )
-                : UOC.GetTargeSerialAsync( Strings.Target_new_friend___ ).Result;
+                : UOC.GetTargetSerialAsync( Strings.Target_new_friend___ ).Result;
 
             if ( serial == 0 )
             {
@@ -84,7 +85,7 @@ namespace ClassicAssist.Data.Macros.Commands
         {
             int serial = obj != null
                 ? AliasCommands.ResolveSerial( obj )
-                : UOC.GetTargeSerialAsync( Strings.Target_friend_to_remove___ ).Result;
+                : UOC.GetTargetSerialAsync( Strings.Target_friend_to_remove___ ).Result;
 
             if ( serial == 0 )
             {

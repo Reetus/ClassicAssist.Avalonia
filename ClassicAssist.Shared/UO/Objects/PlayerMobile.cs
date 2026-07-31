@@ -2,6 +2,7 @@
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Misc;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.UO.Objects
@@ -105,6 +106,7 @@ namespace ClassicAssist.UO.Objects
         public int TithingPoints { get; set; }
         public int Weight { get; set; }
         public int WeightMax { get; set; }
+        public byte MovementSpeed { get; set; }
 
         public static event dLayerChanged LayerChangedEvent;
 

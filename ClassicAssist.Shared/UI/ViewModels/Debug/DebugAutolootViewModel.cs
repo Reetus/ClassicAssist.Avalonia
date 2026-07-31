@@ -71,7 +71,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Debug
 
         private async Task TestContainerAsync( object arg )
         {
-            int serial = await Commands.GetTargeSerialAsync( "Choose container...", 60000 );
+            int serial = await Commands.GetTargetSerialAsync( "Choose container...", 60000 );
 
             if ( serial == 0 )
             {

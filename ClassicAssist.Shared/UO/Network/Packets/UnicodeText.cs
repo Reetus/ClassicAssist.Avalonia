@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.UO.Network.Packets

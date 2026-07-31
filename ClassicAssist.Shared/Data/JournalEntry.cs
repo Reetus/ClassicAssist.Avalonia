@@ -1,4 +1,5 @@
-﻿using ClassicAssist.UO.Data;
+﻿using ClassicAssist.Shared.UO.Data;
+using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.Data
 {

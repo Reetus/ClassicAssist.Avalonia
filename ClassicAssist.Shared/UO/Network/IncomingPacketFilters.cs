@@ -4,6 +4,7 @@ using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Filters;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
