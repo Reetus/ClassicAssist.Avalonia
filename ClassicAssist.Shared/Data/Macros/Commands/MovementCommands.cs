@@ -102,7 +102,14 @@ namespace ClassicAssist.Data.Macros.Commands
                 return;
             }
 
-            Engine.SendPacketToClient( new Pathfind( x, y, z ) );
+            if ( Engine.Host != null )
+            {
+                ReflectionCommands.WalkTo( x, y, z, 0 );
+            }
+            else
+            {
+                Engine.SendPacketToClient( new Pathfind( x, y, z ) );
+            }
         }
 
         [CommandsDisplay( Category = nameof( Strings.Movement ),
