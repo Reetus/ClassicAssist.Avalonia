@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Counters;
@@ -37,6 +38,7 @@ namespace ClassicAssist.UO.Network
             Register( 0x06, 5, OnUseRequest );
             Register( 0x07, 7, OnLiftRequest );
             Register( 0x08, 15, OnDropRequest );
+            Register( 0x12, 0, OnUseSkillOrLegacySpell );
             Register( 0x13, 10, OnEquipRequest );
             Register( 0x6C, 19, OnTargetSent );
             Register( 0x7D, 13, OnMenuResponse );
@@ -64,6 +66,61 @@ namespace ClassicAssist.UO.Network
 
             Engine.Trade.GoldLocal = value1;
             Engine.Trade.PlatinumLocal = value2;
+        }
+
+        /// <summary>
+        ///     0x12 is the generic client command; the sub-command says what it actually is.
+        /// </summary>
+        private static void OnUseSkillOrLegacySpell( PacketReader reader )
+        {
+            int command = reader.ReadByte();
+
+            switch ( command )
+            {
+                case 0x24:
+
+                    if ( ReadIdAsString( reader, out int skillId ) )
+                    {
+                        Engine.LastSkillID = skillId;
+                    }
+
+                    break;
+                case 0x56:
+
+                    // The extended 0xBF 0x1C path below covers modern clients; this is the same
+                    // information from a client old enough to still send the text command.
+                    if ( ReadIdAsString( reader, out int spellId ) )
+                    {
+                        Engine.LastSpellID = spellId;
+                    }
+
+                    break;
+            }
+        }
+
+        /// <summary>
+        ///     0x12's payload is ASCII text of the form "<c>id arg</c>", not a binary id.
+        /// </summary>
+        private static bool ReadIdAsString( PacketReader reader, out int id )
+        {
+            id = 0;
+
+            byte[] data = reader.GetData();
+            int start = (int) reader.Index;
+            int length = (int) reader.Size - start;
+
+            if ( length <= 0 )
+            {
+                return false;
+            }
+
+            string text = Encoding.ASCII.GetString( data, start, length );
+
+            int separator = text.IndexOf( ' ' );
+
+            // Guard the separator: upstream substrings on the result of IndexOf unchecked, which
+            // throws on a malformed packet rather than ignoring it.
+            return separator > 0 && int.TryParse( text.Substring( 0, separator ), out id );
         }
 
         private static void OnSpellCast( PacketReader reader )

@@ -7,7 +7,6 @@
         xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ClassicAssist.Avalonia.Views.ObjectInspectorWindow"
-        Icon="/Assets/avalonia-logo.ico"
         Title="{x:Static r:Strings.Object_Inspector}" Height="396.8" Width="450" Topmost="True">
   <Window.DataContext>
     <viewModels:ObjectInspectorViewModel/>

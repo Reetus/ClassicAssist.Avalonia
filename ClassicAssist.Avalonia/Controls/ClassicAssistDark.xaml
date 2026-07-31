@@ -20,6 +20,9 @@
     <Setter Property="FontSize" Value="12"/>
     <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}"/>
     <Setter Property="Foreground" Value="{DynamicResource ThemeForegroundBrush}"/>
+    <!-- Set here rather than per window: out of process we no longer inherit the game's icon, and
+         every window we open needs one, including any added later. -->
+    <Setter Property="Icon" Value="/Assets/logo.ico"/>
   </Style>
 
   <Style Selector="TextBlock">

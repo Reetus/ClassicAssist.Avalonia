@@ -32,6 +32,8 @@ namespace ClassicAssist.UO.Network.Packets
 
         public UseSkill( int index )
         {
+            Shared.Engine.LastSkillID = index;
+
             string args = $"{index} 0";
 
             _writer = new PacketWriter( 5 + args.Length );

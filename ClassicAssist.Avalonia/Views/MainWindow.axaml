@@ -9,7 +9,6 @@
         xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
         mc:Ignorable="d"
-        Icon="/Assets/avalonia-logo.ico"
         Height="400" Width="625"
         x:Class="ClassicAssist.Avalonia.Views.MainWindow"
         Title="{Binding Title}" Topmost="{Binding AlwaysOnTop}">

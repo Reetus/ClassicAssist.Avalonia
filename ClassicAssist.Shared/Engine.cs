@@ -72,6 +72,7 @@ namespace ClassicAssist.Shared
         private static readonly TimeSpan PACKET_SEND_DELAY = TimeSpan.FromMilliseconds( 5 );
         private static DateTime _nextPacketSendTime;
         public static int LastSpellID;
+        public static int LastSkillID;
 
         public static Assembly ClassicAssembly { get; set; }
 

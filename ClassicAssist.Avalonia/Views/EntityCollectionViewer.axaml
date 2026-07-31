@@ -9,7 +9,6 @@
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
         x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewer"
         x:DataType="viewModels:EntityCollectionViewerViewModel"
-        Icon="/Assets/avalonia-logo.ico"
         Title="{x:Static resources:Strings.Entity_Collection_Viewer}"
         Width="600" Height="600" MinHeight="400">
   <Window.Resources>

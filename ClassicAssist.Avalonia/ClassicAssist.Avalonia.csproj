@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
+        <!-- Embedded in the apphost binary. Separate from Window.Icon, which is what X11 reports as
+             _NET_WM_ICON; this is the icon a file manager or a Windows shortcut shows. -->
+        <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
         <!-- Deployed as a subfolder of the plugin; the plugin launches this apphost as a child process. -->
