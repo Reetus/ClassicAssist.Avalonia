@@ -569,7 +569,7 @@
     <value>产品：</value>
   </data>
   <data name="ProductName" xml:space="preserve">
-    <value>经典辅助</value>
+    <value>经典辅助 Avalonia</value>
   </data>
   <data name="Profile name contains illegal characters." xml:space="preserve">
     <value>配置文件名称包含非法字符。</value>

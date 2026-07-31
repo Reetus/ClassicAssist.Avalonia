@@ -569,7 +569,7 @@
     <value>제품:</value>
   </data>
   <data name="ProductName" xml:space="preserve">
-    <value>클래식어시스트</value>
+    <value>클래식어시스트 Avalonia</value>
   </data>
   <data name="Profile name contains illegal characters." xml:space="preserve">
     <value>프로필 이름에 잘못된 글자가 있습니다.</value>

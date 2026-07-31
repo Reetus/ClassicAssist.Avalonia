@@ -569,7 +569,7 @@
     <value>Prodotto:</value>
   </data>
   <data name="ProductName" xml:space="preserve">
-    <value>ClassicAssist</value>
+    <value>ClassicAssist Avalonia</value>
   </data>
   <data name="Profile name contains illegal characters." xml:space="preserve">
     <value>Il nome del profilo contiene caratteri non validi.</value>
