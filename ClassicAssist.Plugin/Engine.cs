@@ -43,6 +43,17 @@ namespace Assistant
             Path.GetDirectoryName( typeof( Engine ).Assembly.Location ) ?? AppContext.BaseDirectory;
 
         /// <summary>
+        ///     True once <see cref="NativeInstall" /> has run - i.e. the client dlopen'd us and called the
+        ///     native export directly, rather than falling back to a managed <c>Assembly.LoadFile</c> load.
+        ///     TazUO always takes the managed path (see <see cref="Install" />); this is the modern-CUO
+        ///     native loader. <see cref="ClassicAssist.Plugin.PluginEngine.ReflectionAvailable" /> is derived
+        ///     from this - client-internals reflection is only expected to work against the TazUO shapes
+        ///     this plugin was built against, so it is treated as unavailable on that path rather than
+        ///     failing unpredictably per call.
+        /// </summary>
+        internal static bool LoadedNatively { get; private set; }
+
+        /// <summary>
         ///     Managed entry point, found by name through reflection. This is the path TazUO takes, and the
         ///     only one that works on Linux.
         /// </summary>
@@ -71,6 +82,7 @@ namespace Assistant
         [UnmanagedCallersOnly( EntryPoint = "Install" )]
         public static void NativeInstall( IntPtr header )
         {
+            LoadedNatively = true;
             Install( header );
         }
 #endif

@@ -52,6 +52,15 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> Follow( int serial );
         void PlayCUOMacro( string name );
         Task<bool> HasDisconnectedGump();
+
+        /// <summary>
+        ///     False when the plugin was loaded via the native DNNE export (modern ClassicUO) rather than
+        ///     the managed load path TazUO always uses. Client-internals reflection
+        ///     (<see cref="ClassicAssist.Plugin.Shared.Reflection" />) targets TazUO's shapes specifically
+        ///     and is not expected to work against other clients reached this way.
+        /// </summary>
+        Task<bool> IsReflectionAvailable();
+
         void OnShutdown();
     }
 }

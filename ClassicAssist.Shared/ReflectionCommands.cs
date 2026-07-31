@@ -125,11 +125,15 @@ namespace ClassicAssist.Shared
         /// <summary>
         ///     Falls back to whether a move packet was sent in the last second rather than
         ///     <see cref="ReflectionImpl.Pathfinding" />, since this fork's UI process is never the one
-        ///     with reflection access into the client - unlike upstream, where the two can coincide.
+        ///     with reflection access into the client - unlike upstream, where the two can coincide. Also
+        ///     used when <see cref="Engine.Host" /> is up but <see cref="Engine.ReflectionAvailable" /> is
+        ///     false (plugin loaded via the native DNNE export) - in that case the client-side
+        ///     `AutoWalking` reflection would just read back false regardless of actual state, and this
+        ///     heuristic is a better signal.
         /// </summary>
         public static bool Pathfinding()
         {
-            if ( Engine.Host != null )
+            if ( Engine.Host != null && Engine.ReflectionAvailable )
             {
                 return Engine.Host.Pathfinding().Result;
             }

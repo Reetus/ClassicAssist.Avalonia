@@ -103,6 +103,15 @@ namespace ClassicAssist.Shared
         public static PlayerMobile Player { get; set; }
         public static QuestPointerList QuestPointers { get; set; } = new QuestPointerList();
         public static RehueList RehueList { get; set; } = new RehueList();
+
+        /// <summary>
+        ///     False when the plugin was loaded via the native DNNE export (modern ClassicUO) rather than
+        ///     the managed load path TazUO always uses - see <see cref="IHostMethods.IsReflectionAvailable" />.
+        ///     Client-internals reflection (<see cref="ReflectionCommands" />) is only expected to work
+        ///     against the TazUO shapes it targets, so callers with a non-reflection fallback should check
+        ///     this rather than assume <see cref="Host" /> being set means reflection works.
+        /// </summary>
+        public static bool ReflectionAvailable { get; set; }
         public static List<ShardEntry> Shards { get; set; }
         public static string StartupPath { get; set; }
         public static bool TargetExists { get; set; }
@@ -152,6 +161,7 @@ namespace ClassicAssist.Shared
                 ? clientVersion
                 : new Version( 0, 0, 0, 0 );
             WindowHandle = Host.GetWindowHandle().Result;
+            ReflectionAvailable = Host.IsReflectionAvailable().Result;
 
             if ( !Path.IsPathRooted( ClientPath ) )
             {

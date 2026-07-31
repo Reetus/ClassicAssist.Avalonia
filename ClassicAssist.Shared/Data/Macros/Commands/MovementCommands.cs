@@ -102,7 +102,7 @@ namespace ClassicAssist.Data.Macros.Commands
                 return;
             }
 
-            if ( Engine.Host != null )
+            if ( Engine.Host != null && Engine.ReflectionAvailable )
             {
                 ReflectionCommands.WalkTo( x, y, z, 0 );
             }

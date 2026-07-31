@@ -87,6 +87,15 @@ namespace ClassicAssist.Plugin
 
         public static string CUOPath { get; set; }
 
+        /// <summary>
+        ///     False when the client dlopen'd us and called the native <c>Install</c> export directly
+        ///     (modern ClassicUO) rather than falling back to a managed load (TazUO, always the case on
+        ///     Linux - see <see cref="Assistant.Engine.LoadedNatively" />). The reflection layer under
+        ///     <see cref="ClassicAssist.Plugin.Shared.Reflection" /> targets TazUO's internals
+        ///     specifically, so it is not expected to work against other clients reached this way.
+        /// </summary>
+        public static bool ReflectionAvailable => !Assistant.Engine.LoadedNatively;
+
         private static unsafe void InitializePlugin( PluginHeader* plugin )
         {
             WindowHandle = plugin->HWND;
@@ -1088,6 +1097,11 @@ namespace ClassicAssist.Plugin
             public Task<bool> HasDisconnectedGump()
             {
                 return Task.FromResult( ReflectionImpl.HasDisconnectedGump() );
+            }
+
+            public Task<bool> IsReflectionAvailable()
+            {
+                return Task.FromResult( PluginEngine.ReflectionAvailable );
             }
 
             public void OnShutdown()
