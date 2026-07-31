@@ -114,6 +114,30 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    StreamJsonRpc and its dependencies ship only netstandard2.0 assets for Framework, so they - and
+    therefore we - reference the netstandard 2.0 facade. The Mono BCL that legacy TazUO bundles does
+    not include it: every dependency the game itself ships is a net46x flavour that binds straight to
+    mscorlib, so it never needed one. Without this the plugin loads, reaches Install, and dies with
+    "Could not load file or assembly 'netstandard, Version=2.0.0.0'".
+
+    Taken from the reference path the SDK already resolved rather than a hardcoded package path.
+    Assistant.Engine's AssemblyResolve handler probes the plugin directory, so dropping it beside the
+    assembly is enough.
+
+    Caveat: this facade carries [ReferenceAssembly]. It is pure type-forwards with no method bodies,
+    and Mono does not enforce that attribute the way .NET Framework does, but if a runtime ever
+    refuses it the fix is a real facade from a Mono or .NET Framework install.
+  -->
+  <Target Name="CopyNetStandardFacade" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net472'">
+    <ItemGroup>
+      <NetStandardFacade Include="@(ReferencePath)" Condition="'%(FileName)' == 'netstandard'" />
+    </ItemGroup>
+    <Error Condition="'@(NetStandardFacade)' == ''"
+           Text="Could not locate the netstandard facade in the reference path; the net472 plugin will not load without it." />
+    <Copy SourceFiles="@(NetStandardFacade)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
   </ItemGroup>
