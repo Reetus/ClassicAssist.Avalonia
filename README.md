@@ -1,83 +1,107 @@
-﻿﻿# ClassicAssist.Avalonia
+# ClassicAssist.Avalonia
 
-[Avalonia](https://github.com/AvaloniaUI/Avalonia) port for
-[ClassicAssist](https://github.com/Reetus/ClassicAssist/)
+[Avalonia](https://github.com/AvaloniaUI/Avalonia) port of
+[ClassicAssist](https://github.com/Reetus/ClassicAssist/).
 
-ClassicAssist.Avalonia is under development but is in a useable state, features
-are being added constantly.
+> **Status:** under development and usable, but **not** at feature parity with ClassicAssist.
+> A number of macro commands and hotkeys are still missing — see [MACRO_COMMANDS_TODO.md](MACRO_COMMANDS_TODO.md)
+> and [HOTKEYS_TODO.md](HOTKEYS_TODO.md) for what is currently absent.
 
-## Installation
+## How it works
 
-Add the full path to ClassicAssist.Avalonia.exe to the plugin section of the
-ClassicUO settings.json config file. When running ClassicUO via `mono`, set the
-`MONO_PATH` directory to the plugin's main folder.
+Avalonia requires the UI to own the process **main** thread, which a plugin loaded into the game
+process can never provide. ClassicAssist is therefore split in two:
+
+| Piece | What it is | Where it runs |
+| --- | --- | --- |
+| `ClassicAssist.dll` | thin plugin (`ClassicAssist.Plugin`) | inside the game process |
+| `ui/ClassicAssist.Avalonia` | the assistant and its UI | its own child process |
+
+The plugin launches the UI process and the two talk over RPC (StreamJsonRpc) against the
+`IHostMethods` / `IPluginMethods` contracts in `ClassicAssist.Plugin.Shared`. Every packet the client
+sends or receives is round-tripped through the UI process so it can be inspected, blocked or
+rewritten.
+
+## Which file to point the client at
+
+The client is told about the plugin through the `plugins` array in its `settings.json`. **Which file
+you name depends on how your client loads plugins**, and getting it wrong is the most common reason
+nothing happens:
+
+| Client | Point it at | Why |
+| --- | --- | --- |
+| Modern ClassicUO | `ClassicAssistNE.dll` / `ClassicAssistNE.so` / `ClassicAssistNE.dylib` | Only loads plugins natively — it needs a real exported `Install` symbol |
+| TazUO | `ClassicAssist.dll` | Tries the native path, then falls back to a managed load of `Assistant.Engine.Install` |
+| Legacy ClassicUO/TazUO (Mono) | `framework/ClassicAssist.dll` | .NET Framework build; a modern .NET assembly is rejected outright |
+
+`ClassicAssistNE` is the DNNE native shim; the extension follows the platform. The `NE` suffix is
+deliberate — a native binary named `ClassicAssist.dll` would collide with the managed assembly of the
+same name.
+
+Both entry points end up in the same place, so a client that supports either will work with either.
+The native shim is only built if a C toolchain is present; see below.
 
 Example:
 
-```
-MONO_PATH=./ClassicAssist.Avalonia-macos-latest/ \
-DYLD_LIBRARY_PATH=./ClassicUO/bin/Debug/osx \
-mono ./ClassicUO/bin/Debug/ClassicUO.exe -plugins $(pwd)/ClassicAssist.Avalonia-macos-latest/ClassicAssist.Avalonia.exe
+```json
+"plugins": [ "/full/path/to/Output/ClassicAssist/ClassicAssist.dll" ]
 ```
 
-### Mac-specific 
+Relative paths are resolved against the client's `Data/Plugins/` directory, so you can also copy the
+whole folder there and use `ClassicAssist/ClassicAssist.dll`.
 
-1. When using the plugin downloaded from GitHub, you may be prompted that the
-   authenticy of various executables cannot be verified, and therefore blocked
-   from loading. You will need to go to System Preferences to allow the three
-   libraries to be loaded without verification:
+## Building
 
-- `libAvaloniaNative.dylib`
-- `libHarfBuzzSharp.dylib`
-- `libSkiaSharp.dylib`
-### Linux-specific
+Requires the .NET 10 SDK.
 
-TODO
-
-## Troubleshooting
-
-1. ClassicUO starts, but plugin does not load. Possibly with an error like:
-
-```
-06:34:33 |  Error   | Plugin threw an error during Initialization. Exception has been thrown by the target of an invocation.   at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x00083] in <d8f7443201d046bba21dd0e544991bc5>:0 
-  at System.Reflection.MethodBase.Invoke (System.Object obj, System.Object[] parameters) [0x00000] in <d8f7443201d046bba21dd0e544991bc5>:0 
-  at ClassicUO.Network.Plugin.Load () [0x00404] in <a9bfc21b3c9b4501a0fff70af202b994>:0  Could not resolve field token 0x04000001, due to: Could not load type of field 'Assistant.Engine:<MainWindow>k__BackingField' (1) due to: Could not load file or assembly 'Avalonia.Controls, Version=0.10.0.0, Culture=neutral, PublicKeyToken=null' or one of its dependencies. assembly:/Users/kevineady/UO/ClassicAssist.Avalonia-macos-latest/ClassicAssist.Avalonia.exe type:Engine member:(null)   at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
-  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <d8f7443201d046bba21dd0e544991bc5>:0
+```bash
+dotnet build ClassicAssist.slnx
+dotnet test  ClassicAssist.Tests/ClassicAssist.Tests.csproj
 ```
 
-Solution: You are missing the `MONO_PATH` environmental variable; set it to the
-plugin's directory.
-
-2. ClassicUO fails to start. Possibly with an error like:
+Everything lands in `Output/ClassicAssist/`, which **is** the deployable folder:
 
 ```
-06:36:24 |  Trace   | Running game...
-[ERROR] FATAL UNHANDLED EXCEPTION: System.DllNotFoundException: libFNA3D.0.dylib assembly:<unknown assembly> type:<unknown type> member:(null)
-  at (wrapper managed-to-native) Microsoft.Xna.Framework.Graphics.FNA3D.FNA3D_PrepareWindowAttributes()
-  at Microsoft.Xna.Framework.SDL2_FNAPlatform.CreateWindow () [0x00001] in <862046ce91544f70b4ccd941bd46d589>:0 
-  at Microsoft.Xna.Framework.Game..ctor () [0x0010b] in <862046ce91544f70b4ccd941bd46d589>:0 
-  at ClassicUO.GameController..ctor () [0x00024] in <a9bfc21b3c9b4501a0fff70af202b994>:0 
-  at ClassicUO.Client.Run () [0x0001a] in <a9bfc21b3c9b4501a0fff70af202b994>:0 
-  at ClassicUO.Bootstrap.Main (System.String[] args) [0x00339
+Output/ClassicAssist/
+├── ClassicAssist.dll          managed plugin (net10.0)
+├── ClassicAssistNE.{so,dll,dylib}   native shim, only if clang was available
+├── framework/                 .NET Framework plugin for legacy Mono hosts
+└── ui/                        the assistant and Avalonia UI
 ```
 
-Solution: You are missing the `DYLD_LIBRARY_PATH` environmental variable; set it
-to the correct native libraries folder within ClassicUO (eg. `./bin/Debug/osx`
-on Mac)
+Note that the two halves are produced by different projects. Building a single project is usually not
+enough to update what actually runs:
 
-## Known Issues 
+| To rebuild | Build |
+| --- | --- |
+| the plugin | `ClassicAssist.Plugin/ClassicAssist.Plugin.csproj` |
+| the assistant / UI (including macro commands) | `ClassicAssist.Avalonia/ClassicAssist.Avalonia.csproj` |
 
-### Mac-specific
+Building `ClassicAssist.Shared` on its own only writes to that project's `bin/` — it does not reach
+`Output/ClassicAssist/ui/`.
 
-1. When exiting ClassicUO, you will see a native mono crash; see issues at
-   [Avalonia](https://github.com/AvaloniaUI/Avalonia/issues/4423),
-   [SkiaSharp](https://github.com/mono/SkiaSharp/issues/1442)
+### The native shim
 
-### Linux-specific
+The shim needs `clang`, so it builds itself only when clang is actually present. That way a plain
+`dotnet build` produces everything the machine can produce, and a machine without a C toolchain still
+builds rather than failing — you will see a message saying the shim was skipped.
 
-Need to symlink libdl.so to libdl.so.2
+```bash
+# force it on or off
+dotnet build ClassicAssist.Plugin/ClassicAssist.Plugin.csproj -p:EnableDnne=true
+```
 
-![image](https://user-images.githubusercontent.com/6239195/211748863-681850a0-3275-4386-895a-46dff587556c.png)
+To confirm the export exists:
+
+```bash
+nm -D --defined-only ClassicAssistNE.so | grep ' T Install'
+```
+
+The shim is deliberately not built for the .NET Framework target: that build exists for a Mono host,
+which always takes the managed path.
+
+See [BUILDING.md](BUILDING.md) for the details behind the two-process split, the DNNE load context and
+the raw-function-pointer header exchange.
 
 ## License
 

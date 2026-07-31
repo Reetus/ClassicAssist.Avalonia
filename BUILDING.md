@@ -43,8 +43,10 @@ TazUO tries `dlopen` first and falls back to a managed load of `Assistant.Engine
 the native attempt always fails immediately (no standalone `libdl.so` on modern distros), so the
 managed path is what runs and **no native shim is needed**.
 
-Modern ClassicUO only does the native path, so it needs a real exported `Install` symbol. That build
-is opt-in because it requires `clang`:
+Modern ClassicUO only does the native path, so it needs a real exported `Install` symbol. Building the
+shim requires `clang`, so it turns itself on only when clang is actually present — a plain
+`dotnet build` produces every artifact the machine can produce, and a machine without a C toolchain
+still builds rather than failing (with a message saying the shim was skipped). Force it either way:
 
 ```bash
 sudo apt install clang
@@ -103,8 +105,9 @@ nm -D --defined-only ClassicAssistNE.so | grep ' T Install'
 
 ## Notes
 
-- The plugin targets `net9.0`; TazUO ships a self-contained `net10.0` runtime and rolls forward
-  automatically. The UI sets `RollForward=LatestMajor` so it runs on whatever runtime is installed.
+- The plugin multi-targets `net10.0` and `net472`; the latter lands in `framework/` and exists for
+  legacy Mono hosts. The UI sets `RollForward=LatestMajor` so it runs on whatever runtime is
+  installed.
 - `cuoapi.dll` is referenced with `<Private>false</Private>` for the managed build — compile-time
   only, since the client's own copy is what binds at run time. The DNNE build sets `Private=true`,
   because the isolated load context has to resolve it from the plugin folder. Either way the plugin
