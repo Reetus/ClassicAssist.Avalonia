@@ -75,6 +75,32 @@ namespace Assistant
         }
 #endif
 
+#if NETFRAMEWORK
+        /// <summary>
+        ///     Last resort for a facade assembly with no file behind it.
+        ///     <para>
+        ///         A facade contains nothing but type forwards, and on Mono the types it forwards to all
+        ///         live in mscorlib anyway. Handing back mscorlib makes the type loader look for them
+        ///         there, which is where they actually are - so a reference to, say,
+        ///         <c>System.Reflection.Emit, Version=4.0.0.0</c> resolves even though the Mono BCL the
+        ///         client bundles ships no such assembly. .NET Framework solves this with facades in its
+        ///         Facades folder; this stands in for that folder.
+        ///     </para>
+        /// </summary>
+        private static Assembly ResolveFacadeToCorlib( string name )
+        {
+            // Only for the split-out BCL contract names. Anything else genuinely is a missing
+            // dependency and should fail loudly rather than resolve to something that cannot satisfy it.
+            if ( name != "netstandard" && !name.StartsWith( "System.", StringComparison.Ordinal ) &&
+                 !name.StartsWith( "Microsoft.Win32.", StringComparison.Ordinal ) )
+            {
+                return null;
+            }
+
+            return typeof( object ).Assembly;
+        }
+
+#endif
         [MethodImpl( MethodImplOptions.NoInlining )]
         private static void Start( IntPtr header )
         {
@@ -110,7 +136,12 @@ namespace Assistant
             }
 
 #if NETFRAMEWORK
-            return File.Exists( path ) ? Assembly.LoadFrom( path ) : null;
+            if ( File.Exists( path ) )
+            {
+                return Assembly.LoadFrom( path );
+            }
+
+            return ResolveFacadeToCorlib( name );
 #else
             return File.Exists( path ) ? AssemblyLoadContext.Default.LoadFromAssemblyPath( path ) : null;
 #endif

@@ -170,13 +170,20 @@ namespace ClassicAssist.Plugin
             plugin->OnHotkeyPressed =
                 Marshal.GetFunctionPointerForDelegate( _onHotkeyDelegate = OnHotkeyPressed );
 
-            byte* raw = (byte*) plugin;
-
-            *(IntPtr*) ( raw + 184 ) = Marshal.GetFunctionPointerForDelegate(
-                _onRecvNewDelegate = ( IntPtr data, ref int length ) => FilterPacketFramework( data, ref length,
+            // The old ref byte[] pair, not OnRecv_new/OnSend_new. Mono's GetDelegateForFunctionPointer
+            // hands back the original delegate object and casts it, rather than building a marshalling
+            // stub the way CoreCLR does, so the type has to be one both sides share - and the client
+            // keeps its _new delegate types private. CUO_API.OnPacketSendRecv is public, and the client
+            // falls back to this pair whenever the _new slots are null.
+            //
+            // ref byte[] is safe here for the same reason it is unsafe under DNNE: one CUO_API identity
+            // means no marshalling stub, so the array arrives as the real managed array with its length
+            // intact rather than as a bare pointer.
+            plugin->OnRecv = Marshal.GetFunctionPointerForDelegate( _onRecvDelegate =
+                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length,
                     ( pluginMethods, buffer ) => pluginMethods.OnPacketReceive( buffer, buffer.Length ) ) );
-            *(IntPtr*) ( raw + 192 ) = Marshal.GetFunctionPointerForDelegate(
-                _onSendNewDelegate = ( IntPtr data, ref int length ) => FilterPacketFramework( data, ref length,
+            plugin->OnSend = Marshal.GetFunctionPointerForDelegate( _onSendDelegate =
+                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length,
                     ( pluginMethods, buffer ) => pluginMethods.OnPacketSend( buffer, buffer.Length ) ) );
 #else
             plugin->OnConnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnConnected;
@@ -231,8 +238,11 @@ namespace ClassicAssist.Plugin
             _getUOFilePath = Get<OnGetUOFilePath>( _getUOFilePathPtr );
             _requestMove = Get<RequestMove>( _requestMovePtr );
             _setTitle = Get<OnSetTitle>( _setTitlePtr );
-            _sendToClientNew = Get<SendPacketNative>( _sendToClientNewPtr );
-            _sendToServerNew = Get<SendPacketNative>( _sendToServerNewPtr );
+
+            // Recv/Send rather than Recv_new/Send_new, for the same reason RegisterCallbacks uses the
+            // old pair: these are typed CUO_API.OnPacketSendRecv, which both sides can name.
+            _sendToClient = Get<OnPacketSendRecv>( plugin->Recv );
+            _sendToServer = Get<OnPacketSendRecv>( plugin->Send );
 #endif
         }
 
@@ -241,19 +251,6 @@ namespace ClassicAssist.Plugin
         {
             return ptr == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer( ptr, typeof( T ) ) as T;
         }
-
-        /// <summary>
-        ///     The host keeps its own delegate types for the <c>_new</c> slots private, so declare matching
-        ///     ones. The host marshals its <c>byte[]</c> to a pinned pointer on the way out, which is the
-        ///     same thing the <see cref="UnmanagedCallersOnlyAttribute" /> path receives.
-        /// </summary>
-        [UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-        [return: MarshalAs( UnmanagedType.I1 )]
-        private delegate bool PacketFilterNative( IntPtr data, ref int length );
-
-        [UnmanagedFunctionPointer( CallingConvention.Cdecl )]
-        [return: MarshalAs( UnmanagedType.I1 )]
-        private delegate bool SendPacketNative( IntPtr data, ref int length );
 
         private static OnConnected _onConnectedDelegate;
         private static OnDisconnected _onDisconnectedDelegate;
@@ -264,15 +261,15 @@ namespace ClassicAssist.Plugin
         private static OnMouse _onMouseDelegate;
         private static OnUpdatePlayerPosition _onPlayerPositionChangedDelegate;
         private static OnHotkey _onHotkeyDelegate;
-        private static PacketFilterNative _onRecvNewDelegate;
-        private static PacketFilterNative _onSendNewDelegate;
+        private static OnPacketSendRecv _onRecvDelegate;
+        private static OnPacketSendRecv _onSendDelegate;
 
         private static OnGetPacketLength _getPacketLength;
         private static OnGetUOFilePath _getUOFilePath;
         private static RequestMove _requestMove;
         private static OnSetTitle _setTitle;
-        private static SendPacketNative _sendToClientNew;
-        private static SendPacketNative _sendToServerNew;
+        private static OnPacketSendRecv _sendToClient;
+        private static OnPacketSendRecv _sendToServer;
 #endif
 
 #if !NETFRAMEWORK
@@ -686,13 +683,31 @@ namespace ClassicAssist.Plugin
         ///     Framework's flavour of <see cref="FilterPacketNative" />: identical, but taking the length
         ///     as a managed <c>ref</c> because the host's delegate signature is what the marshaller sees.
         /// </summary>
-        private static unsafe bool FilterPacketFramework( IntPtr data, ref int length,
+        private static bool FilterPacketFramework( ref byte[] data, ref int length,
             Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
         {
-            fixed ( int* pointer = &length )
+            IPluginMethods plugin = _plugin;
+
+            if ( plugin == null || data == null || length <= 0 )
             {
-                return FilterPacketNative( data, pointer, call ) != 0;
+                return true;
             }
+
+            // The client hands over a copy sized to the packet, but trust length over data.Length.
+            byte[] buffer = new byte[length];
+            Buffer.BlockCopy( data, 0, buffer, 0, length );
+
+            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, call );
+
+            if ( newPacket != null && newLength > 0 )
+            {
+                // Replacing the array outright is allowed here: this parameter really is ref byte[],
+                // and the client copies back out of whatever we leave in it.
+                data = newPacket;
+                length = newLength;
+            }
+
+            return result;
         }
 
 #endif
@@ -783,12 +798,11 @@ namespace ClassicAssist.Plugin
                 int len = length;
 
 #if NETFRAMEWORK
-                if ( _sendToServerNew != null )
+                if ( _sendToServer != null )
                 {
-                    fixed ( byte* ptr = packet )
-                    {
-                        _sendToServerNew( (IntPtr) ptr, ref len );
-                    }
+                    byte[] data = packet;
+
+                    _sendToServer( ref data, ref len );
                 }
 #else
                 if ( _sendToServerNewPtr != IntPtr.Zero )
@@ -814,12 +828,11 @@ namespace ClassicAssist.Plugin
                 int len = length;
 
 #if NETFRAMEWORK
-                if ( _sendToClientNew != null )
+                if ( _sendToClient != null )
                 {
-                    fixed ( byte* ptr = packet )
-                    {
-                        _sendToClientNew( (IntPtr) ptr, ref len );
-                    }
+                    byte[] data = packet;
+
+                    _sendToClient( ref data, ref len );
                 }
 #else
                 if ( _sendToClientNewPtr != IntPtr.Zero )
