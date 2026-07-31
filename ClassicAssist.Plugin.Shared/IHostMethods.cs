@@ -1,4 +1,4 @@
-#region License
+﻿#region License
 // Copyright (C) 2025 Reetus
 // 
 // This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,16 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> SendPacketToServer( byte[] packet, int length );
         Task<bool> SendPacketToClient( byte[] packet, int length );
         Task<string> GetClientPath();
-        Task<Version> GetClientVersion();
+        /// <summary>
+        ///     The client version, as a string rather than a <see cref="Version" />.
+        ///     <para>
+        ///         Version does not survive the wire consistently: Newtonsoft on .NET serialises it as a
+        ///         string, while on the Mono the legacy client bundles it comes out as an object of its
+        ///         Major/Minor/Build/Revision properties, which the other end then refuses to read back.
+        ///         A string means both runtimes agree.
+        ///     </para>
+        /// </summary>
+        Task<string> GetClientVersion();
         Task<short> GetPacketLength( int id );
         Task<string> GetUOFilePath();
         Task<bool> RequestMove( int dir, bool run );

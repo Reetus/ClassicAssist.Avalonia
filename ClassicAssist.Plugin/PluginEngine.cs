@@ -858,11 +858,10 @@ namespace ClassicAssist.Plugin
                 return Task.FromResult( ClientPath );
             }
 
-            public Task<Version> GetClientVersion()
+            public Task<string> GetClientVersion()
             {
-                return Task.FromResult( ClientVersion );
+                return Task.FromResult( ClientVersion?.ToString() );
             }
-
             public Task<short> GetPacketLength( int id )
             {
                 return Task.FromResult( PluginEngine.GetPacketLength( id ) );

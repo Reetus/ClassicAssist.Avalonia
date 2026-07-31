@@ -147,7 +147,9 @@ namespace ClassicAssist.Shared
             Initialize();
 
             ClientPath = Host.GetClientPath().Result;
-            ClientVersion = Host.GetClientVersion().Result;
+            ClientVersion = Version.TryParse( Host.GetClientVersion().Result, out Version clientVersion )
+                ? clientVersion
+                : new Version( 0, 0, 0, 0 );
             WindowHandle = Host.GetWindowHandle().Result;
 
             if ( !Path.IsPathRooted( ClientPath ) )
