@@ -4,6 +4,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 
 namespace ClassicAssist.Avalonia.Controls
 {
@@ -17,10 +18,15 @@ namespace ClassicAssist.Avalonia.Controls
             AvaloniaProperty.RegisterDirect<EditTextBlock, bool>( nameof( ShowIcon ), o => o.ShowIcon,
                 ( o, v ) => o.ShowIcon = v, defaultBindingMode: BindingMode.TwoWay );
 
+        public static readonly DirectProperty<EditTextBlock, TextDecorationCollection> TextDecorationsProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, TextDecorationCollection>( nameof( TextDecorations ),
+                o => o.TextDecorations, ( o, v ) => o.TextDecorations = v );
+
         private readonly Button _pencilButton;
         private bool _showIcon;
 
         private string _text;
+        private TextDecorationCollection _textDecorations;
         private readonly TextBlock _textBlock;
         private readonly TextBox _textBox;
 
@@ -56,6 +62,12 @@ namespace ClassicAssist.Avalonia.Controls
         {
             get => _showIcon;
             set => SetAndRaise( ShowIconProperty, ref _showIcon, value );
+        }
+
+        public TextDecorationCollection TextDecorations
+        {
+            get => _textDecorations;
+            set => SetAndRaise( TextDecorationsProperty, ref _textDecorations, value );
         }
 
         public string Text

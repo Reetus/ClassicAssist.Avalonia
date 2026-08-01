@@ -5,11 +5,15 @@
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
              xmlns:agents="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Agents;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+             xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.VendorBuyTabControl">
   <UserControl.DataContext>
     <agents:VendorBuyTabViewModel/>
   </UserControl.DataContext>
+  <UserControl.Resources>
+    <misc:BooleanToStrikethroughValueConverter x:Key="BooleanToStrikethroughConverter" />
+  </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="controls|EditTextBlock">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -21,7 +25,8 @@
         <ListBox ItemsSource="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}">
           <ListBox.ItemTemplate>
             <DataTemplate>
-              <controls:EditTextBlock Text="{Binding Name}" ShowIcon="True"/>
+              <controls:EditTextBlock Text="{Binding Name}" ShowIcon="True"
+                  TextDecorations="{Binding Enabled, Converter={StaticResource BooleanToStrikethroughConverter}}"/>
             </DataTemplate>
           </ListBox.ItemTemplate>
         </ListBox>
