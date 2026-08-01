@@ -22,11 +22,25 @@ namespace ClassicAssist.Avalonia.Controls
             AvaloniaProperty.RegisterDirect<EditTextBlock, TextDecorationCollection>( nameof( TextDecorations ),
                 o => o.TextDecorations, ( o, v ) => o.TextDecorations = v );
 
+        // TemplatedControl already declares FontWeight/FontStyle as inherited styled properties, but
+        // that inheritance doesn't reach across the UserControl's content presenter into textBlock (see
+        // the ElementName bindings in EditTextBlock.axaml) - so these are deliberately new, direct
+        // properties forwarded explicitly, the same as TextDecorations above.
+        public static new readonly DirectProperty<EditTextBlock, FontWeight> FontWeightProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, FontWeight>( nameof( FontWeight ), o => o.FontWeight,
+                ( o, v ) => o.FontWeight = v );
+
+        public static new readonly DirectProperty<EditTextBlock, FontStyle> FontStyleProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, FontStyle>( nameof( FontStyle ), o => o.FontStyle,
+                ( o, v ) => o.FontStyle = v );
+
         private readonly Button _pencilButton;
         private bool _showIcon;
 
         private string _text;
         private TextDecorationCollection _textDecorations;
+        private FontWeight _fontWeight = FontWeight.Normal;
+        private FontStyle _fontStyle = FontStyle.Normal;
         private readonly TextBlock _textBlock;
         private readonly TextBox _textBox;
 
@@ -68,6 +82,18 @@ namespace ClassicAssist.Avalonia.Controls
         {
             get => _textDecorations;
             set => SetAndRaise( TextDecorationsProperty, ref _textDecorations, value );
+        }
+
+        public new FontWeight FontWeight
+        {
+            get => _fontWeight;
+            set => SetAndRaise( FontWeightProperty, ref _fontWeight, value );
+        }
+
+        public new FontStyle FontStyle
+        {
+            get => _fontStyle;
+            set => SetAndRaise( FontStyleProperty, ref _fontStyle, value );
         }
 
         public string Text
