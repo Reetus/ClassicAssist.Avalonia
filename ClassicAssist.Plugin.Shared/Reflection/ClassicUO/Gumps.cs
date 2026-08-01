@@ -24,16 +24,19 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO
 {
     public static class Gumps
     {
-        private static readonly dynamic _gumps;
-
-        static Gumps()
-        {
-            _gumps = Reflections.Helpers.ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Game.Managers.UIManager", "Gumps", null );
-        }
-
+        /// <summary>
+        ///     Re-resolved on every call rather than cached: this used to be a <c>static readonly</c>
+        ///     field set from a static constructor, which locked in whatever
+        ///     <c>UIManager.Gumps</c> resolved to (including a permanent <c>null</c>) the first time
+        ///     anything touched this type - there was no way to recover if that first call happened to
+        ///     run before <see cref="ReflectionImpl.DefaultAssembly" /> was set, or against a client
+        ///     shape it didn't expect. The property lookup itself is cheap.
+        /// </summary>
         public static IEnumerable<dynamic> GetGumps()
         {
-            return ( (IEnumerable<dynamic>) _gumps )?.ToList();
+            dynamic gumps = Reflections.Helpers.ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Game.Managers.UIManager", "Gumps", null );
+
+            return ( (IEnumerable<dynamic>) gumps )?.ToList();
         }
     }
 }

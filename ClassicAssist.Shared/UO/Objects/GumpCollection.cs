@@ -51,6 +51,8 @@ namespace ClassicAssist.UO.Objects
                 OnCollectionChanged();
             }
 
+            g?.OnClosing();
+
             return result;
         }
 

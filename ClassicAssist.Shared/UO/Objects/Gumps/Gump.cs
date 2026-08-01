@@ -347,6 +347,10 @@ namespace ClassicAssist.UO.Objects.Gumps
         {
         }
 
+        public virtual void OnClosing()
+        {
+        }
+
         public virtual void SendGump()
         {
             byte[] bytes = Compile();

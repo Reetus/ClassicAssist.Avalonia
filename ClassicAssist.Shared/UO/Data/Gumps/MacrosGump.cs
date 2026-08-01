@@ -28,7 +28,7 @@ using ClassicAssist.UO.Objects.Gumps;
 
 namespace ClassicAssist.UO.Gumps
 {
-    public class MacrosGump : RepositionableGump
+    public class MacrosGump : ReflectionRepositionableGump
     {
         private static Timer _timer;
         private static string _lastList;
@@ -107,6 +107,21 @@ namespace ClassicAssist.UO.Gumps
             Options.CurrentOptions.MacrosGumpY = y;
 
             ResendGump( true );
+        }
+
+        public override void OnClosing()
+        {
+            base.OnClosing();
+
+            ( int x, int y ) = GetPosition();
+
+            if ( x == default || y == default )
+            {
+                return;
+            }
+
+            Options.CurrentOptions.MacrosGumpX = x;
+            Options.CurrentOptions.MacrosGumpY = y;
         }
     }
 }

@@ -6,7 +6,7 @@ using ClassicAssist.UO.Objects.Gumps;
 
 namespace ClassicAssist.UO.Data.Gumps
 {
-    public class WeaponAbilitiesGump : RepositionableGump
+    public class WeaponAbilitiesGump : ReflectionRepositionableGump
     {
         private readonly bool _primaryEnable;
         private readonly int _primaryId;
@@ -76,6 +76,21 @@ namespace ClassicAssist.UO.Data.Gumps
             Options.CurrentOptions.AbilitiesGumpY = y;
 
             ResendGump();
+        }
+
+        public override void OnClosing()
+        {
+            base.OnClosing();
+
+            ( int x, int y ) = GetPosition();
+
+            if ( x == default || y == default )
+            {
+                return;
+            }
+
+            Options.CurrentOptions.AbilitiesGumpX = x;
+            Options.CurrentOptions.AbilitiesGumpY = y;
         }
     }
 }

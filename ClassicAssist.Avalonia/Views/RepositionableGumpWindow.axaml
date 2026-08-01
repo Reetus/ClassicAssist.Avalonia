@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="220" d:DesignHeight="150"
+        x:Class="ClassicAssist.Avalonia.Views.RepositionableGumpWindow"
+        Title="Position" Width="220" Height="150"
+        WindowStartupLocation="CenterScreen" SystemDecorations="None" CanResize="False"
+        ShowInTaskbar="False" Topmost="True" Opacity="0.85">
+  <Grid Margin="10" ColumnDefinitions="Auto,*,Auto" RowDefinitions="*,Auto">
+    <Slider Grid.Row="0" Grid.Column="0" Orientation="Vertical" Maximum="{Binding VerticalMax}"
+            Value="{Binding Y}" IsDirectionReversed="True" />
+    <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Top" Margin="5,0">
+      <StackPanel Orientation="Horizontal" Margin="0,5">
+        <TextBlock Text="X:" Margin="0,0,5,0" VerticalAlignment="Center" Width="15" />
+        <TextBox Width="100" Text="{Binding X}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Margin="0,5">
+        <TextBlock Text="Y:" Margin="0,0,5,0" VerticalAlignment="Center" Width="15" />
+        <TextBox Width="100" Text="{Binding Y}" />
+      </StackPanel>
+    </StackPanel>
+    <Button Grid.Row="0" Grid.Column="2" VerticalAlignment="Top" Padding="10,4"
+            Content="{x:Static resources:Strings.OK}">
+      <Interaction.Behaviors>
+        <misc:CloseOnClickBehaviour />
+      </Interaction.Behaviors>
+    </Button>
+    <Slider Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3" Margin="0,10,0,0"
+            Maximum="{Binding HorizontalMax}" Value="{Binding X}" />
+  </Grid>
+</Window>

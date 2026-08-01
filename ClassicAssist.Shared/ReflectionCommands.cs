@@ -151,6 +151,11 @@ namespace ClassicAssist.Shared
             return Engine.Host != null ? Engine.Host.GetGameWindowCenter().Result : ReflectionImpl.GetGameWindowCenter();
         }
 
+        public static Size GetGameWindowSize()
+        {
+            return Engine.Host != null ? Engine.Host.GetGameWindowSize().Result : ReflectionImpl.GetGameWindowSize();
+        }
+
         public static bool UsePrimaryAbility()
         {
             return Engine.Host != null ? Engine.Host.UsePrimaryAbility().Result : GameActions.UsePrimaryAbility();

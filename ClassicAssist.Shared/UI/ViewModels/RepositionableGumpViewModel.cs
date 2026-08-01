@@ -17,10 +17,9 @@
 
 #endregion
 
+using System.Drawing;
 using ClassicAssist.Shared;
-using ClassicAssist.Misc;
 using ClassicAssist.UO.Gumps;
-using NativeMethods = ClassicAssist.Misc.NativeMethods;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -44,13 +43,15 @@ namespace ClassicAssist.UI.ViewModels
             HorizontalMax = 3840;
             VerticalMax = 2160;
 
-            if ( !NativeMethods.GetWindowRect( Engine.WindowHandle, out NativeMethods.RECT rect ) )
+            Size gameWindowSize = ReflectionCommands.GetGameWindowSize();
+
+            if ( gameWindowSize == Size.Empty )
             {
                 return;
             }
 
-            HorizontalMax = rect.Right - rect.Left;
-            VerticalMax = rect.Bottom - rect.Top;
+            HorizontalMax = gameWindowSize.Width;
+            VerticalMax = gameWindowSize.Height;
         }
 
         public int HorizontalMax

@@ -43,6 +43,7 @@ namespace ClassicAssist.Plugin.Shared
         Task<IntPtr> GetWindowHandle();
         void CreateMacroButton( string name, string value );
         Task<Point> GetGameWindowCenter();
+        Task<Size> GetGameWindowSize();
         Task<bool> UsePrimaryAbility();
         Task<bool> UseSecondaryAbility();
         Task<bool> Following();

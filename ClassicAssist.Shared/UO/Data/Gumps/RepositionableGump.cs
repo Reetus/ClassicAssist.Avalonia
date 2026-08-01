@@ -17,7 +17,6 @@
 
 #endregion
 
-using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects.Gumps;
@@ -40,36 +39,39 @@ namespace ClassicAssist.UO.Gumps
         public int GumpX { get; set; } = 100;
         public int GumpY { get; set; } = 100;
 
+        /// <summary>
+        ///     True to fall back to the slider-overlay reposition button/window. False lets the gump be
+        ///     dragged in-client instead - see <see cref="ReflectionRepositionableGump" />, which turns
+        ///     this off when it can read the gump's position back via reflection.
+        /// </summary>
+        protected virtual bool UseManualReposition => true;
+
         public override void SendGump()
         {
             X = GumpX;
             Y = GumpY;
-            AddButton( _width - 15, 5, 0x82C, 0x82C, REPOSITION_BUTTON_ID, GumpButtonType.Reply, 0 );
+
+            if ( UseManualReposition )
+            {
+                AddButton( _width - 15, 5, 0x82C, 0x82C, REPOSITION_BUTTON_ID, GumpButtonType.Reply, 0 );
+            }
+            else
+            {
+                Movable = true;
+            }
 
             base.SendGump();
         }
 
         public override void OnResponse( int buttonID, int[] switches )
         {
-            if ( buttonID == REPOSITION_BUTTON_ID )
+            if ( UseManualReposition && buttonID == REPOSITION_BUTTON_ID )
             {
-                Engine.Dispatcher.Invoke( () =>
-                {
-                    Thread t = new Thread( () =>
-                    {
-                        SetPosition( GumpX, GumpY );
-                        RepositionableGumpViewModel vm = new RepositionableGumpViewModel( this, GumpX, GumpY );
-                        //TODO UI
-                        //RepositionableGumpWindow window = new RepositionableGumpWindow { DataContext = vm };
-                        //WindowInteropHelper helper = new WindowInteropHelper( window ) { Owner = Engine.WindowHandle };
-                        //window.ShowInTaskbar = false;
-                        //window.ShowDialog();
-                    } )
-                    { IsBackground = true };
+                SetPosition( GumpX, GumpY );
 
-                    t.SetApartmentState( ApartmentState.STA );
-                    t.Start();
-                } );
+                RepositionableGumpViewModel vm = new RepositionableGumpViewModel( this, GumpX, GumpY );
+
+                _ = Engine.UIInvoker.InvokeDialog( "RepositionableGumpWindow", dataContext: vm );
             }
 
             base.OnResponse( buttonID, switches );

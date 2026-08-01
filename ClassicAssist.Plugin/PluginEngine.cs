@@ -1098,6 +1098,11 @@ namespace ClassicAssist.Plugin
                 return Task.FromResult( ReflectionImpl.GetGameWindowCenter() );
             }
 
+            public Task<Size> GetGameWindowSize()
+            {
+                return Task.FromResult( ReflectionImpl.GetGameWindowSize() );
+            }
+
             public Task<bool> UsePrimaryAbility()
             {
                 return Task.FromResult( GameActions.UsePrimaryAbility() );

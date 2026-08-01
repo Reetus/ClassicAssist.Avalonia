@@ -41,40 +41,59 @@ namespace ClassicAssist.Plugin.Shared.Reflection
             Move = move;
         }
 
+        /// <summary>
+        ///     Everything here is wrapped in one try/catch rather than checked step by step: legacy and
+        ///     modern TazUO expose the gump list under different element types (legacy is
+        ///     <c>LinkedList&lt;Gump&gt;</c>, modern is <c>LinkedList&lt;IGui&gt;</c> - see
+        ///     <see cref="Gumps.GetGumps" />), and this is the one place that walks it dynamically by
+        ///     member name. A shape this doesn't expect should fall back to "unknown", the same as gump
+        ///     not found, rather than throwing back across the RPC boundary to
+        ///     <see cref="ClassicAssist.Shared.ReflectionCommands.GetGumpPosition" /> and taking out
+        ///     whatever UI called it.
+        /// </summary>
         public static (int x, int y) GetGumpPosition( uint id )
         {
-            IEnumerable<dynamic> gumps = Gumps.GetGumps();
-
-            dynamic gump = gumps.FirstOrDefault( e => e.ServerSerial == id );
-
-            if ( gump != null )
+            try
             {
+                IEnumerable<dynamic> gumps = Gumps.GetGumps();
+
+                dynamic gump = gumps?.FirstOrDefault( e => e.ServerSerial == id );
+
+                if ( gump == null )
+                {
+                    return ( -1, -1 );
+                }
+
                 dynamic location = gump.Location;
-                int x = location.X;
-                int y = location.Y;
-                return ( x, y );
+
+                return ( (int) location.X, (int) location.Y );
+            }
+            catch
+            {
+                return ( -1, -1 );
+            }
+        }
+
+        private static dynamic GetCurrentProfile()
+        {
+            string[] possibleProperties = { "Current", "CurrentProfile" };
+
+            foreach ( string possibleProperty in possibleProperties )
+            {
+                dynamic currentProfile = ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Configuration.ProfileManager", possibleProperty, null );
+
+                if ( currentProfile != null )
+                {
+                    return currentProfile;
+                }
             }
 
-            return ( -1, -1 );
+            return null;
         }
 
         public static Point GetGameWindowCenter()
         {
-            dynamic settings = ReflectionHelper.GetTypeFieldValue<dynamic>( "ClassicUO.Configuration.Settings", "GlobalSettings", null );
-
-            string[] possibleProperties = { "Current", "CurrentProfile" };
-
-            dynamic currentProfile = null;
-
-            foreach ( string possibleProperty in possibleProperties )
-            {
-                currentProfile = ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Configuration.ProfileManager", possibleProperty, null );
-
-                if ( currentProfile != null )
-                {
-                    break;
-                }
-            }
+            dynamic currentProfile = GetCurrentProfile();
 
             if ( currentProfile == null )
             {
@@ -90,6 +109,32 @@ namespace ClassicAssist.Plugin.Shared.Reflection
             }
 
             return new Point( gameWindowPosition.X + ( gameWindowSize.X >> 1 ), gameWindowPosition.Y + ( gameWindowSize.Y >> 1 ) );
+        }
+
+        /// <summary>
+        ///     Used by <see cref="ClassicAssist.UO.Gumps.RepositionableGump" />'s reposition slider to
+        ///     bound the drag range. There is no native window handle to query on Linux (WPF's
+        ///     RepositionableGumpViewModel used <c>NativeMethods.GetWindowRect</c>, which is a
+        ///     user32.dll P/Invoke), so this reads ClassicUO's own game window size via reflection,
+        ///     same as <see cref="GetGameWindowCenter" />.
+        /// </summary>
+        public static Size GetGameWindowSize()
+        {
+            dynamic currentProfile = GetCurrentProfile();
+
+            if ( currentProfile == null )
+            {
+                return Size.Empty;
+            }
+
+            dynamic gameWindowSize = ReflectionHelper.GetTypePropertyValue<dynamic>( currentProfile.GetType(), "GameWindowSize", currentProfile );
+
+            if ( gameWindowSize == null )
+            {
+                return Size.Empty;
+            }
+
+            return new Size( gameWindowSize.X, gameWindowSize.Y );
         }
 
         public static bool Following()
