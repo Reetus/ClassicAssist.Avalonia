@@ -24,6 +24,9 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
     public VendorBuyTabViewModel()
     {
         IncomingPacketHandlers.VendorBuyDisplayEvent += OnVendorBuyDisplayEvent;
+
+        VendorBuyManager manager = VendorBuyManager.GetInstance();
+        manager.Items = Items;
     }
 
     public bool AutoDisableOnLogin
@@ -85,6 +88,14 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
     }
 
     public ICommand RemoveCommand => field ??= new RelayCommand( Remove, o => SelectedItem != null );
+
+    public ICommand RemoveEntryCommand => field ??= new RelayCommand( RemoveEntry, o => SelectedEntry != null );
+
+    public VendorBuyAgentItem SelectedEntry
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
     public VendorBuyAgentEntry SelectedItem
     {
@@ -406,6 +417,16 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
         }
 
         Items.Remove( entry );
+    }
+
+    private void RemoveEntry( object obj )
+    {
+        if ( !( obj is VendorBuyAgentItem item ) )
+        {
+            return;
+        }
+
+        SelectedItem?.Items.Remove( item );
     }
 
     public (int count, int max) GetBackpackItemCount()
