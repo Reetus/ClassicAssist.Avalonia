@@ -4118,5 +4118,23 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Target Owner", resourceCulture);
             }
         }
+
+        public static string Drop_to_ground {
+            get {
+                return ResourceManager.GetString("Drop to ground", resourceCulture);
+            }
+        }
+
+        public static string Lock_Item {
+            get {
+                return ResourceManager.GetString("Lock Item", resourceCulture);
+            }
+        }
+
+        public static string Unlock_Item {
+            get {
+                return ResourceManager.GetString("Unlock Item", resourceCulture);
+            }
+        }
     }
 }

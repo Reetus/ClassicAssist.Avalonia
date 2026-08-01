@@ -72,60 +72,58 @@ things that comment doesn't call out (context menu, locking, clipboard, hotkey w
 ## Context menu
 
 Old: `UI/Views/ECV/ContextMenu.xaml` (a `ContextMenu` resource named `ContextMenu`, merged in via
-`ListStyles.xaml`, applied to each item's `StackPanel`). Avalonia has **no context menu at all** on
-the ECV item template (`EntityCollectionViewer.axaml`) - confirmed by grepping the whole Avalonia
-tree for `ContextMenu` near anything ECV-related; nothing partial exists. Every entry below is
-missing:
+`ListStyles.xaml`, applied to each item's `StackPanel`). **Ported** to a plain
+`<ListBox.ContextMenu>` in `EntityCollectionViewer.axaml` (Avalonia's `ContextMenu` inherits the
+owning control's `DataContext` directly, so none of WPF's `BindingProxy` indirection is needed) plus
+the corresponding commands/handlers on `EntityCollectionViewerViewModel`. Everything below is done
+except where noted:
 
-- [ ] **Use item** - `ContextUseItemCommand` (`ContextMenu.xaml:12-13`; VM line 274, handler
-      `ContextUseItem` at line 1608).
-- [ ] **Move to backpack** (gesture `B`) - `ContextMoveToBackpackCommand` (xaml:14-15; VM line 245,
-      handler `ContextMoveToBackpack` at line 1723).
-- [ ] **Move to container** (gesture `C`) - `ContextMoveToContainerCommand` (xaml:16-17; VM line
-      251, handler `ContextMoveToContainer` at line 1622) - prompts for a target if none given.
-- [ ] **Move to bank** (gesture `K`) - `ContextMoveToBankCommand` (xaml:18-19; VM line 248, handler
-      `ContextMoveToBank` at line 761).
-- [ ] **Move to ground** (gesture `G`) - `ContextMoveToGroundCommand` (xaml:20-21; VM line 254,
-      handler `ContextMoveToGround` at line 513).
-- [ ] **Move to set** submenu - `ContextMoveToSetCommand`, items sourced from
-      `Options.ContainerSets` (xaml:22-43; VM line 257, handler `ContextMoveToSet` at line 591).
-      Depends on `EntityCollectionViewerOptions.ContainerSets` and the Settings dialog's
-      "Container Sets" tab - see Settings/Options persistence.
-- [ ] **Open container** - `ContextOpenContainerCommand` (xaml:44-45; VM line 259, handler
-      `ContextOpenContainer` at line 735).
-- [ ] **Drop to ground** (gesture `D`) - `ContextDropToGroundCommand` (xaml:46-47; VM line 263,
-      handler `ContextDropToGround` at line 543).
-- [ ] **Lock item / Unlock item** - two mutually-exclusive `MenuItem`s bound to the same
-      `ContextToggleLockCommand`, visibility toggled by `SelectedItemsAllLocked` (xaml:49-76; VM
-      line 271, handlers `ContextToggleLock`/`ApplyLockState` around lines 1184-1218). See Locking.
-- [ ] **Context menu request** - `ContextContextMenuRequestCommand` sends the server's native
-      right-click context menu packet (xaml:78-79; VM line 239, handler `ContextMenuRequest` at
-      line 1855). The underlying `ContextMenuRequest`/`ContextMenuClick` packets and the
-      `ContextMenu()`/`WaitForContext()` macro commands already exist in
-      `ClassicAssist.Shared/UO/Network/Packets/` and `ActionCommands.cs` - only the ECV wiring is
-      missing.
-- [ ] **Equip Item** - `EquipItemCommand` (xaml:80-81; VM line 298, handler `EquipItem` at line
-      1369).
-- [ ] **Hide** - `HideItemCommand`, removes the item from the viewer's own list without touching
-      the server (xaml:82-83; VM line 300, handler `HideItem` at line 1176).
-- [ ] **Custom Actions** submenu - items sourced from `CustomContextActions` (a
-      `ObservableCollection<KeyValuePair<string, Action<Item>>>`, declared line 280), commands via
-      `ContextCustomActionCommand` (xaml:84-105; VM line 242, handler `ContextCustomAction` at line
-      492). Note this is a *different, older* extensibility mechanism than
-      `IEntityCollectionViewerAction`/`EntityCollectionViewerExtensions` used for toolbar actions -
-      populated by direct `CustomContextActions.Add(...)` calls (line 147), not a registry. See
-      Extensibility.
-- [ ] **Target** - `ContextTargetCommand` (xaml:107-108; VM line 266, handler `ContextTarget` at
-      line 1100).
-- [ ] **Target Owner** - `ContextTargetOwnerCommand`, targets the mobile/container the selected
-      item is inside of rather than the item itself (xaml:109-110; VM line 268, handler
-      `ContextTargetOwner` at line 423).
-- [ ] **Copy to clipboard** - not on the context menu XAML but bound elsewhere in the old UI;
-      `CopyToClipboardCommand` (VM line 394, handler `CopyToClipboard` at line 396). Worth folding
-      into this section's port since it has no other home.
-- [ ] **Double-click drills into a container OR opens the Object Inspector** - this part *is*
-      ported (`ItemDoubleClickCommand` exists both sides and behaves the same way); noted here only
-      so it isn't mistaken for a missing context-menu-adjacent feature.
+- [x] **Use item** - `ContextUseItemCommand`, sends `UseObject` for every selected item via
+      `ActionPacketQueue.EnqueueActionPackets`.
+- [x] **Move to backpack** - `ContextMoveToBackpackCommand`.
+- [x] **Move to container** - `ContextMoveToContainerCommand` - prompts for a target via
+      `Commands.GetTargetSerialAsync` if none given.
+- [x] **Move to bank** - `ContextMoveToBankCommand`.
+- [x] **Move to ground** - `ContextMoveToGroundCommand` - prompts for a drop location via
+      `Commands.GetTargetInfoAsync`.
+- [ ] **Move to set** submenu - explicitly out of scope for this pass (depends on
+      `Options.ContainerSets`, which doesn't exist - see Settings/Options persistence). Not ported.
+- [x] **Open container** - `ContextOpenContainerCommand`.
+- [x] **Drop to ground** - `ContextDropToGroundCommand`, with one behavioral simplification: old
+      probes the 8 tiles around the player for a free spot via `MapInfo.ItemCanFit`, which this port
+      doesn't have (`ClassicAssist.Shared/UO/Data/Map.cs`'s `MapInfo` has no such method). Avalonia
+      just drops at the player's own feet instead.
+- [x] **Lock item / Unlock item** - `ContextToggleLockCommand`, visibility toggled by
+      `SelectedItemsAllLocked`, exactly as old. The lock flag itself
+      (`EntityCollectionData.IsLocked`) is now ported too, and move commands skip locked items - but
+      it's **session-only**: `Options.LockedItems` persistence and the padlock overlay icon are
+      still not ported (see Locking).
+- [x] **Context menu request** - `ContextContextMenuRequestCommand`.
+- [x] **Equip Item** - `EquipItemCommand`, via the already-existing `Commands.EquipItem`. Layer
+      resolution needed a local `GetLayer(int id)` helper in the view model since this port's
+      `StaticTile` has no dedicated `Layer` field the way old's does - it's the same tiledata.mul
+      byte, just exposed as `StaticTile.Quality` (see Data model gaps).
+- [x] **Hide** - `HideItemCommand`.
+- [x] **Custom Actions** submenu plumbing (`CustomContextActions` + `ContextCustomActionCommand`)
+      exists so a future caller can populate it the same ad-hoc way old-side does, but nothing
+      constructs this Avalonia view model with any entries yet, so in practice the submenu is
+      always empty. Distinct from the toolbar's `IEntityCollectionViewerAction` registry, which
+      remains unported - see Extensibility.
+- [x] **Target** - `ContextTargetCommand`, using the already-ported `Commands.WaitForTarget` for the
+      "wait for an active target cursor" step.
+- [x] **Target Owner** - `ContextTargetOwnerCommand`.
+- [x] **Copy to clipboard** - `CopyToClipboardCommand`, via `Engine.UIInvoker.SetClipboardText`
+      (the cross-process-safe path already used by `AutolootViewModel`) rather than WPF's direct
+      `Clipboard.SetText`, since the ECV view model can't touch UI-framework clipboard APIs
+      directly in this repo's out-of-process architecture.
+- [x] **Double-click drills into a container OR opens the Object Inspector** - unchanged, already
+      ported both sides.
+
+Note on the old queued-action/status-row wrapping (`EnqueueAction`/`QueueAction`) that every one of
+these handlers went through old-side: it's still not ported (see Queued actions & cancellation
+below) - commands here run inline via `async`/`await` instead of through a cancellable queue with UI
+feedback. The packet-level ordering it protected against is still handled by `ActionPacketQueue`
+underneath; what's missing is only the progress/cancel UI.
 
 ## Filter
 
@@ -292,13 +290,16 @@ tiles (`ListStyles.xaml:24-27`, `LockIcon` `Image` bound to
 `ContextMoveToContainer` filters `SelectedItems.Where(i => !i.IsLocked)`, line 1624) and can be
 hidden entirely via Hide Locked Items (see Toolbar section).
 
-- [ ] **Nothing here is ported.** `ClassicAssist.Avalonia`'s `EntityCollectionData` (
-      `ClassicAssist.Shared/UI/ViewModels/EntityCollectionData.cs`) has no `IsLocked` property at
-      all, so there's no per-item lock state to render a padlock over, filter on, or skip during a
-      move - all of which are currently moot anyway since none of the move commands exist yet
-      either. Needs `Options.LockedItems` persistence (part of Settings/Options above) plus the
-      `IsLocked` flag, the padlock overlay, `SelectedItemsAllLocked`, and the toggle-lock context
-      command.
+- [x] **The lock/unlock behavior itself is ported**: `EntityCollectionData.IsLocked`,
+      `SelectedItemsAllLocked`, and `ContextToggleLockCommand` all exist now (see Context menu), and
+      the move-to-* / drop-to-ground context commands skip locked items exactly like old's
+      `.Where(i => !i.IsLocked)` filters.
+- [ ] **Still missing: persistence and the padlock overlay.** `IsLocked` is a plain, session-only
+      property - nothing writes it to `Options.LockedItems` (which doesn't exist; see
+      Settings/Options persistence), so closing and reopening an ECV window forgets every lock. The
+      padlock overlay icon on locked tiles (`ListStyles.xaml:24-27`/`39-41` old-side) also isn't
+      drawn - `EntityCollectionViewer.axaml`'s item template has no equivalent `Image` bound to
+      `IsLocked`. Hide Locked Items (Toolbar section) still depends on both of these.
 
 ## Sorting
 
@@ -327,15 +328,23 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       EntityCollectionViewer { DataContext = ... }; window.Show()`, which is correct for this
       repo's out-of-process architecture (see the `classicassist-linux-out-of-process-architecture`
       note) and not a gap.
-- [ ] **In-window hotkeys are a separate, unported feature** - see "Enable Hotkeys toggle" under
-      Toolbar & window chrome. `Options.EnableHotkeys` + `HotkeyActionCommand` let the ECV window
-      itself respond to B/C/K/G/D while focused; this has nothing to do with the global hotkey
-      system and isn't touched by the comparison above.
+- [x]/[ ] **In-window hotkeys are partially ported.** Old gated B/C/K/G/D (plus Ctrl+C) behind
+      `Options.EnableHotkeys` and routed them through `HotkeyActionCommand`
+      (`ClassicAssist/UI/Views/EntityCollectionViewer.xaml:205-212`, `ListView.InputBindings`).
+      Avalonia now has the same five single-key gestures plus Ctrl+C wired directly as
+      `<ListBox.KeyBindings>` in `EntityCollectionViewer.axaml`, bound straight to the real context
+      commands (`ContextMoveToBackpackCommand`, etc.) rather than through an indirection layer -
+      there's no `Options.EnableHotkeys` to gate through since Settings/Options persistence isn't
+      ported (see that section). Practical effect: these hotkeys fire unconditionally whenever the
+      item list has focus, with no way to turn them off. The **toggle itself**
+      (`ToggleEnableHotkeysCommand`/`Options.EnableHotkeys`) is what's still not ported; this has
+      nothing to do with the global "Grid Container Viewer" hotkey system compared above.
 
 ## Data model gaps
 
-- [ ] **`EntityCollectionData` is missing `IsLocked`** (see Locking) and is missing
-      **`NotifyPropertiesUpdated()`** - old-side (`ClassicAssist/UI/ViewModels/EntityCollectionData.cs:98-108`)
+- [x] **`EntityCollectionData.IsLocked`** - now ported (see Locking), as a plain settable bool with
+      no persistence behind it yet.
+- [ ] **`EntityCollectionData` is missing `NotifyPropertiesUpdated()`** - old-side (`ClassicAssist/UI/ViewModels/EntityCollectionData.cs:98-108`)
       re-raises `PropertyChanged` for `Name`/`FullName`/`Bitmap` when an OPL packet updates the
       underlying entity's name/properties/hue *after* the row was already created and displayed.
       Avalonia's `EntityCollectionData`
@@ -350,6 +359,13 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       (join item `Properties` text with `\r\n`, fall back to `Name`); not a gap, listed only to
       confirm it was checked.
 - [ ] **`EntityCollectionSortStyle` enum missing `None` and `Weight`** - see Sorting.
+- [x] **`StaticTile` has no `Layer` field, unlike old's** (`ClassicAssist.Shared/UO/Data/StaticTile.cs`
+      vs `ClassicAssist/ClassicAssist/UO/Data/StaticTile.cs`) - it's the same tiledata.mul byte at
+      the same offset, just already exposed under the name `Quality` and already relied on that way
+      by `Commands.EquipItem`/`EquipType` (`ClassicAssist.Shared/UO/Commands.cs`). Not a parsing bug,
+      just a naming divergence - the ECV's Equip Item command and `CopyToClipboard`'s layer line
+      both work around it with a local `GetLayer(int id)` helper rather than adding a `TileData.GetLayer`
+      static to match old, since nothing else in this port calls it by that name yet.
 - [x] **Everything else on `EntityCollectionData` matches**: `Entity`, `IsCoin` (same three coin
       graphic IDs), `Pixmap`/`Bitmap` (same stack-size-dependent coin-graphic bump, same mount
       layer → statue-graphic substitution via `MountIDEntries`), `Name`/`GetName` (same mount-name
@@ -375,3 +391,6 @@ Not gaps - confirmed present and functioning in the Avalonia view model
 - Refresh (including the `_customRefresh` hook for a caller-supplied re-fetch)
 - Status label (`{0} items, {1} selected, {2} total amount}`) tracking selection
 - The `Grid Container Viewer` global hotkey that opens an ECV window (full port, see Hotkeys)
+- The item context menu and its commands (see Context menu), except "Move to set", which is
+  intentionally excluded, and the queue/status-row UI the old commands ran through (see Queued
+  actions & cancellation)

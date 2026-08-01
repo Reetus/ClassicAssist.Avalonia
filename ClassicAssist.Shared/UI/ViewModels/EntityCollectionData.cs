@@ -37,6 +37,10 @@ namespace ClassicAssist.UI.ViewModels
 
         public bool IsCoin => Entity?.ID == 0x0EEA || Entity?.ID == 0x0EED || Entity?.ID == 0x0EF0;
 
+        // Session-only: the WPF side persists this to EntityCollectionViewerOptions.LockedItems, which
+        // hasn't been ported yet, so a lock here doesn't survive closing the window.
+        public bool IsLocked { get; set; }
+
         public string Name => GetName( Entity );
 
         public Pixmap Pixmap

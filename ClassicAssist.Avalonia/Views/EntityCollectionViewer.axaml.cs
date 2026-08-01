@@ -68,6 +68,30 @@ namespace ClassicAssist.Avalonia.Views
             }
         }
 
+        /// <summary>
+        ///     Right-clicking an item outside the current selection collapses the selection to just that
+        ///     item, so the context menu it opens operates on what you actually right-clicked rather than
+        ///     whatever was left selected from before. Right-clicking within an existing multi-selection
+        ///     leaves it untouched.
+        /// </summary>
+        private void OnItemPointerPressed( object sender, PointerPressedEventArgs e )
+        {
+            if ( !( sender is ListBox listBox ) ||
+                 !e.GetCurrentPoint( listBox ).Properties.IsRightButtonPressed )
+            {
+                return;
+            }
+
+            ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
+
+            if ( !( item?.DataContext is EntityCollectionData data ) || listBox.SelectedItems.Contains( data ) )
+            {
+                return;
+            }
+
+            listBox.SelectedItem = data;
+        }
+
         private void OnItemDoubleTapped( object sender, TappedEventArgs e )
         {
             EntityCollectionViewerViewModel viewModel = ViewModel;

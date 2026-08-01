@@ -18,14 +18,22 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.Models;
+using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
+using ClassicAssist.UO.Network;
+using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json;
+using Commands = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -51,6 +59,21 @@ namespace ClassicAssist.UI.ViewModels
         private ItemCollection _collection = new ItemCollection( 0 );
         private ObservableCollection<EntityCollectionData> _entities =
             new ObservableCollection<EntityCollectionData>();
+        private ICommand _contextContextMenuRequestCommand;
+        private ICommand _contextCustomActionCommand;
+        private ICommand _contextDropToGroundCommand;
+        private ICommand _contextMoveToBackpackCommand;
+        private ICommand _contextMoveToBankCommand;
+        private ICommand _contextMoveToContainerCommand;
+        private ICommand _contextMoveToGroundCommand;
+        private ICommand _contextOpenContainerCommand;
+        private ICommand _contextTargetCommand;
+        private ICommand _contextTargetOwnerCommand;
+        private ICommand _contextToggleLockCommand;
+        private ICommand _contextUseItemCommand;
+        private ICommand _copyToClipboardCommand;
+        private ICommand _equipItemCommand;
+        private ICommand _hideItemCommand;
         private ICommand _itemDoubleClickCommand;
         private ICommand _refreshCommand;
 
@@ -99,17 +122,92 @@ namespace ClassicAssist.UI.ViewModels
             set => SetProperty( ref _collection, value );
         }
 
+        public ICommand ContextContextMenuRequestCommand =>
+            _contextContextMenuRequestCommand ?? ( _contextContextMenuRequestCommand =
+                new RelayCommand( ContextMenuRequest, o => SelectedItems.Count > 0 ) );
+
+        /// <summary>
+        ///     Sourced from <see cref="CustomContextActions" />, a thin, non-registry extension point old-side
+        ///     (unlike the toolbar's <c>IEntityCollectionViewerAction</c> registry). Nothing populates it yet,
+        ///     so the "Custom Actions" submenu stays empty/hidden until a caller does.
+        /// </summary>
+        public ICommand ContextCustomActionCommand =>
+            _contextCustomActionCommand ?? ( _contextCustomActionCommand =
+                new RelayCommand( ContextCustomAction, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextDropToGroundCommand =>
+            _contextDropToGroundCommand ?? ( _contextDropToGroundCommand =
+                new RelayCommandAsync( ContextDropToGround, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextMoveToBackpackCommand =>
+            _contextMoveToBackpackCommand ?? ( _contextMoveToBackpackCommand =
+                new RelayCommandAsync( ContextMoveToBackpack, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextMoveToBankCommand =>
+            _contextMoveToBankCommand ?? ( _contextMoveToBankCommand =
+                new RelayCommandAsync( ContextMoveToBank, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextMoveToContainerCommand =>
+            _contextMoveToContainerCommand ?? ( _contextMoveToContainerCommand =
+                new RelayCommandAsync( ContextMoveToContainer, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextMoveToGroundCommand =>
+            _contextMoveToGroundCommand ?? ( _contextMoveToGroundCommand =
+                new RelayCommandAsync( ContextMoveToGround, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextOpenContainerCommand =>
+            _contextOpenContainerCommand ?? ( _contextOpenContainerCommand = new RelayCommandAsync(
+                ContextOpenContainer,
+                o => SelectedItems.Any( e =>
+                    e.Entity is Item item && item.Owner != 0 && !UOMath.IsMobile( item.Owner ) ) ) );
+
+        public ICommand ContextTargetCommand =>
+            _contextTargetCommand ?? ( _contextTargetCommand =
+                new RelayCommandAsync( ContextTarget, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextTargetOwnerCommand =>
+            _contextTargetOwnerCommand ?? ( _contextTargetOwnerCommand =
+                new RelayCommand( ContextTargetOwner, o => SelectedItems.Count == 1 ) );
+
+        public ICommand ContextToggleLockCommand =>
+            _contextToggleLockCommand ?? ( _contextToggleLockCommand =
+                new RelayCommand( ContextToggleLock, o => SelectedItems.Count > 0 ) );
+
+        public ICommand ContextUseItemCommand =>
+            _contextUseItemCommand ?? ( _contextUseItemCommand =
+                new RelayCommandAsync( ContextUseItem, o => SelectedItems.Count > 0 ) );
+
+        public ICommand CopyToClipboardCommand =>
+            _copyToClipboardCommand ?? ( _copyToClipboardCommand = new RelayCommand( o => CopyToClipboard(), o => true ) );
+
+        /// <summary>
+        ///     Old-side's ad-hoc, non-registry context-menu extension point: an owning window can add entries
+        ///     directly (<c>CustomContextActions.Add(...)</c>) rather than through a public registration API
+        ///     like the toolbar's. Nothing constructs this Avalonia view model with any yet, so the "Custom
+        ///     Actions" submenu is present but empty.
+        /// </summary>
+        public ObservableCollection<KeyValuePair<string, Action<Item>>> CustomContextActions { get; } =
+            new ObservableCollection<KeyValuePair<string, Action<Item>>>();
+
         public ObservableCollection<EntityCollectionData> Entities
         {
             get => _entities;
             set => SetProperty( ref _entities, value );
         }
 
+        public ICommand EquipItemCommand =>
+            _equipItemCommand ?? ( _equipItemCommand = new RelayCommandAsync( EquipItem, o => SelectedItems.Count > 0 ) );
+
+        public ICommand HideItemCommand =>
+            _hideItemCommand ?? ( _hideItemCommand = new RelayCommand( HideItem, o => SelectedItems.Count > 0 ) );
+
         public ICommand ItemDoubleClickCommand =>
             _itemDoubleClickCommand ?? ( _itemDoubleClickCommand = new RelayCommand( ItemDoubleClick, o => true ) );
 
         public ICommand RefreshCommand =>
             _refreshCommand ?? ( _refreshCommand = new RelayCommand( o => Refresh(), o => true ) );
+
+        public bool SelectedItemsAllLocked => SelectedItems.Count > 0 && SelectedItems.All( e => e.IsLocked );
 
         public ObservableCollection<EntityCollectionData> SelectedItems
         {
@@ -234,6 +332,8 @@ namespace ClassicAssist.UI.ViewModels
         private void OnSelectedItemsChanged( object sender, NotifyCollectionChangedEventArgs e )
         {
             UpdateStatusLabel();
+
+            NotifyPropertyChanged( nameof( SelectedItemsAllLocked ) );
         }
 
         private void Rebuild()
@@ -266,6 +366,215 @@ namespace ClassicAssist.UI.ViewModels
             ShowChildItems = !ShowChildItems;
 
             Rebuild();
+        }
+
+        private void ContextCustomAction( object arg )
+        {
+            if ( !( arg is KeyValuePair<string, Action<Item>> action ) )
+            {
+                return;
+            }
+
+            foreach ( Item item in SelectedItems.Select( e => e.Entity ).OfType<Item>().ToList() )
+            {
+                action.Value?.Invoke( item );
+            }
+        }
+
+        private async Task ContextDropToGround( object arg )
+        {
+            // Old-side probes the 8 tiles around the player for a free spot via MapInfo.ItemCanFit, which
+            // this port doesn't have yet. Dropping at the player's own feet is a plain stand-in until it does.
+            if ( Engine.Player == null )
+            {
+                return;
+            }
+
+            foreach ( Item item in SelectedItems.Where( i => !i.IsLocked ).Select( i => i.Entity ).OfType<Item>()
+                         .ToList() )
+            {
+                await ActionPacketQueue.EnqueueDragDropGround( item.Serial, item.Count, Engine.Player.X,
+                    Engine.Player.Y, Engine.Player.Z );
+            }
+        }
+
+        private void ContextMenuRequest( object obj )
+        {
+            foreach ( EntityCollectionData ecd in SelectedItems.ToList() )
+            {
+                Engine.SendPacketToServer( new ContextMenuRequest( ecd.Entity.Serial ) );
+            }
+        }
+
+        private async Task ContextMoveToBackpack( object arg )
+        {
+            if ( Engine.Player?.Backpack == null )
+            {
+                return;
+            }
+
+            await ContextMoveToContainer( Engine.Player.Backpack.Serial );
+        }
+
+        private async Task ContextMoveToBank( object arg )
+        {
+            Item bankBox = Engine.Player?.GetEquippedItems().FirstOrDefault( i => i.Layer == Layer.Bank );
+
+            if ( bankBox != null )
+            {
+                await ContextMoveToContainer( bankBox.Serial );
+            }
+        }
+
+        private async Task ContextMoveToContainer( object arg )
+        {
+            List<Item> items = SelectedItems.Where( i => !i.IsLocked ).Select( i => i.Entity ).OfType<Item>()
+                .ToList();
+
+            int serial = arg is int s ? s : 0;
+
+            if ( serial == 0 )
+            {
+                serial = await Commands.GetTargetSerialAsync( Strings.Target_container___ );
+            }
+
+            if ( serial == 0 )
+            {
+                Commands.SystemMessage( Strings.Invalid_container___ );
+
+                return;
+            }
+
+            foreach ( Item item in items )
+            {
+                await ActionPacketQueue.EnqueueDragDrop( item.Serial, item.Count, serial );
+            }
+        }
+
+        private async Task ContextMoveToGround( object arg )
+        {
+            ( TargetType _, TargetFlags _, int _, int x, int y, int z, int _ ) =
+                await Commands.GetTargetInfoAsync( Strings.Target_location___ );
+
+            if ( x == -1 || y == -1 )
+            {
+                return;
+            }
+
+            foreach ( Item item in SelectedItems.Where( i => !i.IsLocked ).Select( i => i.Entity ).OfType<Item>()
+                         .ToList() )
+            {
+                await ActionPacketQueue.EnqueueDragDropGround( item.Serial, item.Count, x, y, z );
+            }
+        }
+
+        private Task ContextOpenContainer( object arg )
+        {
+            int[] containerSerials = SelectedItems
+                .Where( e => e.Entity is Item item && item.Owner != 0 && !UOMath.IsMobile( item.Owner ) )
+                .Select( e => ( (Item) e.Entity ).Owner ).ToArray();
+
+            return ActionPacketQueue.EnqueueActionPackets(
+                containerSerials.Select( s => (BasePacket) new UseObject( s ) ) );
+        }
+
+        private async Task ContextTarget( object obj )
+        {
+            foreach ( EntityCollectionData ecd in SelectedItems.ToList() )
+            {
+                if ( Engine.TargetExists || await Task.Run( () => Commands.WaitForTarget( 5000 ) ) )
+                {
+                    TargetCommands.Target( ecd.Entity.Serial );
+                }
+            }
+        }
+
+        private void ContextTargetOwner( object obj )
+        {
+            if ( !( SelectedItems.FirstOrDefault()?.Entity is Item item ) )
+            {
+                return;
+            }
+
+            TargetCommands.Target( item.Owner );
+        }
+
+        private void ContextToggleLock( object obj )
+        {
+            bool lockTarget = !SelectedItemsAllLocked;
+
+            foreach ( EntityCollectionData ecd in SelectedItems.ToList() )
+            {
+                ecd.IsLocked = lockTarget;
+            }
+
+            NotifyPropertyChanged( nameof( SelectedItemsAllLocked ) );
+        }
+
+        private Task ContextUseItem( object arg )
+        {
+            return ActionPacketQueue.EnqueueActionPackets(
+                SelectedItems.Select( i => (BasePacket) new UseObject( i.Entity.Serial ) ) );
+        }
+
+        private void CopyToClipboard()
+        {
+            IEnumerable<EntityCollectionData> items = SelectedItems.Any() ? SelectedItems : (IEnumerable<EntityCollectionData>) Entities;
+
+            StringBuilder stringBuilder = new StringBuilder();
+
+            foreach ( EntityCollectionData item in items )
+            {
+                stringBuilder.AppendLine( $"Serial: 0x{item.Entity.Serial:x8}" );
+                stringBuilder.AppendLine( "Properties:" );
+                stringBuilder.Append( item.FullName );
+
+                Layer layer = GetLayer( item.Entity.ID );
+
+                if ( layer != Layer.Invalid )
+                {
+                    stringBuilder.AppendLine();
+                    stringBuilder.AppendLine( $"Layer: {layer}" );
+                }
+
+                stringBuilder.AppendLine();
+                stringBuilder.AppendLine();
+            }
+
+            Engine.UIInvoker?.SetClipboardText( stringBuilder.ToString() );
+        }
+
+        private async Task EquipItem( object obj )
+        {
+            foreach ( Item item in SelectedItems.Select( i => i.Entity ).OfType<Item>().ToList() )
+            {
+                if ( GetLayer( item.ID ) == Layer.Invalid )
+                {
+                    continue;
+                }
+
+                await Commands.EquipItem( item, Layer.Invalid );
+            }
+        }
+
+        /// <summary>
+        ///     Mirrors the WPF-side <c>TileData.GetLayer</c>, which this port doesn't have - the Avalonia
+        ///     <see cref="StaticTile" /> exposes the same tiledata.mul byte as <see cref="StaticTile.Quality" />
+        ///     rather than a dedicated <c>Layer</c> field.
+        /// </summary>
+        private static Layer GetLayer( int id )
+        {
+            StaticTile tileData = TileData.GetStaticTile( id );
+
+            return tileData.Flags.HasFlag( TileFlags.Wearable ) ? (Layer) tileData.Quality : Layer.Invalid;
+        }
+
+        private void HideItem( object obj )
+        {
+            foreach ( Entity entity in SelectedItems.Select( e => e.Entity ).ToList() )
+            {
+                Commands.RemoveObject( entity.Serial );
+            }
         }
 
         private void UpdateStatusLabel()

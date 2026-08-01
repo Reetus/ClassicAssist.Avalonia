@@ -2101,4 +2101,13 @@ Are you sure you wish to continue?</value>
   <data name="Avalonia port assistance provided by Kevin_" xml:space="preserve">
     <value>Avalonia port assistance provided by Kevin_</value>
   </data>
+  <data name="Drop to ground" xml:space="preserve">
+    <value>Drop to ground</value>
+  </data>
+  <data name="Lock Item" xml:space="preserve">
+    <value>Lock Item</value>
+  </data>
+  <data name="Unlock Item" xml:space="preserve">
+    <value>Unlock Item</value>
+  </data>
 </root>

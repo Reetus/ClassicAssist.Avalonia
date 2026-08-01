@@ -34,7 +34,58 @@
              SelectionMode="Multiple" BorderThickness="0"
              Background="{DynamicResource ThemeInnerControlBackgroundBrush}"
              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-             SelectionChanged="OnSelectionChanged" DoubleTapped="OnItemDoubleTapped">
+             SelectionChanged="OnSelectionChanged" DoubleTapped="OnItemDoubleTapped"
+             PointerPressed="OnItemPointerPressed">
+      <ListBox.KeyBindings>
+        <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyToClipboardCommand}" />
+        <KeyBinding Gesture="B" Command="{Binding ContextMoveToBackpackCommand}" />
+        <KeyBinding Gesture="C" Command="{Binding ContextMoveToContainerCommand}" />
+        <KeyBinding Gesture="K" Command="{Binding ContextMoveToBankCommand}" />
+        <KeyBinding Gesture="G" Command="{Binding ContextMoveToGroundCommand}" />
+        <KeyBinding Gesture="D" Command="{Binding ContextDropToGroundCommand}" />
+      </ListBox.KeyBindings>
+      <ListBox.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="{x:Static resources:Strings.Use_item}" Command="{Binding ContextUseItemCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Move_to_backpack}"
+                    Command="{Binding ContextMoveToBackpackCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Move_to_container}"
+                    Command="{Binding ContextMoveToContainerCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Move_to_bank}"
+                    Command="{Binding ContextMoveToBankCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Move_to_ground}"
+                    Command="{Binding ContextMoveToGroundCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Open_container}"
+                    Command="{Binding ContextOpenContainerCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Drop_to_ground}"
+                    Command="{Binding ContextDropToGroundCommand}" />
+          <Separator />
+          <MenuItem Header="{x:Static resources:Strings.Lock_Item}" Command="{Binding ContextToggleLockCommand}"
+                    IsVisible="{Binding !SelectedItemsAllLocked}" />
+          <MenuItem Header="{x:Static resources:Strings.Unlock_Item}" Command="{Binding ContextToggleLockCommand}"
+                    IsVisible="{Binding SelectedItemsAllLocked}" />
+          <Separator />
+          <MenuItem Header="{x:Static resources:Strings.Context_menu_request}"
+                    Command="{Binding ContextContextMenuRequestCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Equip_Item}" Command="{Binding EquipItemCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Hide}" Command="{Binding HideItemCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Custom_Actions}"
+                    ItemsSource="{Binding CustomContextActions}">
+            <MenuItem.ItemTemplate>
+              <DataTemplate>
+                <MenuItem Header="{Binding Key}" />
+              </DataTemplate>
+            </MenuItem.ItemTemplate>
+          </MenuItem>
+          <Separator />
+          <MenuItem Header="{x:Static resources:Strings.Target}" Command="{Binding ContextTargetCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Target_Owner}"
+                    Command="{Binding ContextTargetOwnerCommand}" />
+          <Separator />
+          <MenuItem Header="{x:Static resources:Strings.Copy_to_clipboard}"
+                    Command="{Binding CopyToClipboardCommand}" />
+        </ContextMenu>
+      </ListBox.ContextMenu>
       <ListBox.Styles>
         <!-- Tiles are a fixed width so the wrap panel lays out in even columns; the wider one is for when
              the label carries the whole property list rather than just the name. -->
