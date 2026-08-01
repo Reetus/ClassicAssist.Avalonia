@@ -18,11 +18,13 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data;
@@ -142,6 +144,22 @@ namespace ClassicAssist.Avalonia
                 await window.ShowDialog( Engine.MainWindow );
 
                 return window.SelectedHue;
+            } );
+        }
+
+        public Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions )
+        {
+            return _dispatcher.InvokeAsync( async () =>
+            {
+                IReadOnlyList<IStorageFile> files = await Engine.MainWindow.StorageProvider.OpenFilePickerAsync(
+                    new FilePickerOpenOptions
+                    {
+                        Title = title,
+                        AllowMultiple = false,
+                        FileTypeFilter = new[] { new FilePickerFileType( filterName ) { Patterns = extensions } }
+                    } );
+
+                return files.Count > 0 ? files[0].TryGetLocalPath() : null;
             } );
         }
 

@@ -89,7 +89,8 @@
     <TabItem Header="{x:Static resources:Strings.Journal}">
       <debug:DebugJournalControl/>
     </TabItem>
-    <!--<TabItem Header="{x:Static resources:Strings.Additional_Assemblies}">
-    </TabItem>-->
+    <TabItem Header="{x:Static resources:Strings.Additional_Assemblies}">
+      <debug:DebugAssembliesControl/>
+    </TabItem>
   </TabControl>
 </Window>

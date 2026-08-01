@@ -110,9 +110,6 @@ public class MacroInvoker
                     .Where( t =>
                         t.Namespace != null && t.IsPublic && t.IsClass && t.Namespace.EndsWith( "Macros.Commands" ) )
                     .Aggregate( string.Empty, ( current, t ) => current + $"from {t.FullName} import * \n" );
-                
-                prepend += "from System import Array\n";
-                prepend += "import sys";
             }
             catch ( Exception )
             {
@@ -120,12 +117,30 @@ public class MacroInvoker
             }
         }
 
+        prepend += "from System import Array\n";
+        prepend += "import sys";
+
         return prepend;
     }
 
     public static Dictionary<string, object> InitializeImports( ScriptEngine engine )
     {
         Dictionary<string, object> dictionary = new();
+
+        // A freshly Assembly.LoadFile'd assembly is visible to the CLR but not yet to IronPython's own
+        // import machinery - "from Namespace import *" below needs it registered with the runtime first,
+        // same as the executing assembly is registered in the constructor.
+        foreach ( string assemblyName in AssistantOptions.Assemblies ?? new string[0] )
+        {
+            try
+            {
+                engine.Runtime.LoadAssembly( Assembly.LoadFile( assemblyName ) );
+            }
+            catch ( Exception )
+            {
+                // ignored
+            }
+        }
 
         ScriptSource importSource =
             engine.CreateScriptSourceFromString( GetScriptingImports(), SourceCodeKind.Statements );
@@ -135,6 +150,22 @@ public class MacroInvoker
         importCompiled.Execute( importScope );
 
         return dictionary;
+    }
+
+    /// <summary>
+    ///     Rebuilds the shared import cache so assemblies added at runtime (see
+    ///     <see cref="ClassicAssist.Shared.UI.ViewModels.Debug.DebugAssembliesViewModel" />) become
+    ///     importable without an app restart, then re-imports every currently loaded module so already-open
+    ///     macro scopes pick up the change too.
+    /// </summary>
+    public static void ResetImportCache()
+    {
+        _importCache = InitializeImports( _engine );
+
+        foreach ( string module in _engine.GetModuleFilenames() )
+        {
+            _engine.Execute( $"import {module};reload({module})" );
+        }
     }
 
     public void Execute( MacroEntry macro, object[] parameters = null )

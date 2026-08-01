@@ -29,6 +29,7 @@ namespace ClassicAssist.Shared
         Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default ) where T: class;
 
         Task<int> GetHueAsync();
+        Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions );
         void SetClipboardText( string text );
         string GetClipboardText();
     }
