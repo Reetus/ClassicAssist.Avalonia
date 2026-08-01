@@ -164,7 +164,19 @@ public class MacroInvoker
 
         foreach ( string module in _engine.GetModuleFilenames() )
         {
-            _engine.Execute( $"import {module};reload({module})" );
+            try
+            {
+                // Old (IronPython 2.7) used the builtin reload(); IronPython 3 dropped it in favour of
+                // importlib.reload(), which isn't available here since this project doesn't bundle the
+                // stdlib importlib package. Deleting the cached module and re-importing it forces the
+                // same re-execution without needing it. Wrapped per-module since this also sees
+                // interpreter-internal modules (e.g. _frozen_importlib) that can't be re-imported this way.
+                _engine.Execute( $"import sys\ndel sys.modules['{module}']\nimport {module}" );
+            }
+            catch ( Exception )
+            {
+                // ignored
+            }
         }
     }
 
