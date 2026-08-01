@@ -27,6 +27,7 @@ namespace ClassicAssist.Data
         public static DateTime AutoBackupProfilesLast { get; set; }
         public static Language LanguageOverride { get; set; }
         public static string LastProfile { get; set; }
+        public static string ProfileDirectory { get; set; } = "Profiles";
         public static Dictionary<string, string> SavedPasswords { get; set; } = new Dictionary<string, string>();
         public static bool SavePasswords { get; set; }
         public static bool SavePasswordsOnlyBlank { get; set; }
@@ -51,6 +52,7 @@ namespace ClassicAssist.Data
                 { "AutoBackupProfilesDays", AutoBackupProfilesDays },
                 { "AutoBackupProfilesDirectory", AutoBackupProfilesDirectory },
                 { "AutoBackupProfilesLast", AutoBackupProfilesLast },
+                { "ProfileDirectory", ProfileDirectory },
                 { "SavePasswords", SavePasswords },
                 { "SavePasswordsOnlyBlank", SavePasswordsOnlyBlank },
                 { "UserId", UserId },
@@ -119,6 +121,7 @@ namespace ClassicAssist.Data
             AutoBackupProfilesDirectory =
                 json?["AutoBackupProfilesDirectory"]?.ToObject<string>() ?? DEFAULT_BACKUP_PATH;
             AutoBackupProfilesLast = json?["AutoBackupProfilesLast"]?.ToObject<DateTime>() ?? default;
+            ProfileDirectory = json?["ProfileDirectory"]?.ToObject<string>() ?? "Profiles";
             SavePasswords = json?["SavePasswords"]?.ToObject<bool>() ?? false;
             SavePasswordsOnlyBlank = json?["SavePasswordsOnlyBlank"]?.ToObject<bool>() ?? false;
             UserId = json?["UserId"]?.ToObject<string>() ?? Guid.NewGuid().ToString();

@@ -347,7 +347,9 @@ namespace ClassicAssist.Data
 
         private static void EnsureProfilePath( string startupPath )
         {
-            _profilePath = Path.Combine( startupPath, "Profiles" );
+            _profilePath = Path.IsPathRooted( AssistantOptions.ProfileDirectory )
+                ? AssistantOptions.ProfileDirectory
+                : Path.Combine( startupPath, AssistantOptions.ProfileDirectory );
 
             if ( !Directory.Exists( _profilePath ) )
             {
