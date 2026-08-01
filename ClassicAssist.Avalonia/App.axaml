@@ -19,6 +19,13 @@
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/Compact.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/GroupBox.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/TabControl.Theme.xaml"/>
+    <!-- Windows shows the ApplicationIcon baked into the apphost's PE resources (see the csproj) as the
+         taskbar icon automatically, with no Window.Icon needed. X11 has no such fallback - it only reads
+         _NET_WM_ICON, which Avalonia sets from Window.Icon, so without this every window is iconless on
+         Linux even though the same build looks fine on Windows. -->
+    <Style Selector="Window">
+      <Setter Property="Icon" Value="avares://ClassicAssist.Avalonia/Assets/logo.ico"/>
+    </Style>
     <Style Selector="Button">
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
       <Setter Property="HorizontalContentAlignment" Value="Center"/>
