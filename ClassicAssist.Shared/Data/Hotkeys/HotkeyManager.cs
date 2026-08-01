@@ -152,7 +152,7 @@ namespace ClassicAssist.Data.Hotkeys
 
                             AliasCommands.SetDefaultAliases();
 
-                            Task.Run( () => hks.Action.Invoke( hks ) );
+                            Task.Run( () => hks.Action.Invoke( hks, null ) );
 
                             break;
                         }
@@ -202,7 +202,7 @@ namespace ClassicAssist.Data.Hotkeys
 
                             AliasCommands.SetDefaultAliases();
 
-                            Task.Run( () => hks.Action.Invoke( hks ) );
+                            Task.Run( () => hks.Action.Invoke( hks, null ) );
 
                             break;
                         }

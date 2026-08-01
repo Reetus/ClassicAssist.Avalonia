@@ -224,7 +224,7 @@ namespace ClassicAssist.UI.ViewModels
                 HotkeyCommand hkc = new HotkeyCommand
                 {
                     Name = spell.Name,
-                    Action = hks => spellManager.CastSpell( spell.ID ),
+                    Action = ( hks, _ ) => spellManager.CastSpell( spell.ID ),
                     Hotkey = ShortcutKeys.Default,
                     PassToUO = true
                 };
@@ -273,7 +273,7 @@ namespace ClassicAssist.UI.ViewModels
                 HotkeyCommand hkc = new HotkeyCommand
                 {
                     Name = mastery.Name,
-                    Action = hks => spellManager.CastSpell( mastery.ID ),
+                    Action = ( hks, _ ) => spellManager.CastSpell( mastery.ID ),
                     Hotkey = ShortcutKeys.Default,
                     PassToUO = true
                 };
@@ -365,7 +365,7 @@ namespace ClassicAssist.UI.ViewModels
         {
             if ( obj is HotkeyEntry cmd )
             {
-                cmd.Action( cmd );
+                cmd.Action( cmd, null );
             }
         }
     }

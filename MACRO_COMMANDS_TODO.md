@@ -10,7 +10,8 @@ commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled
 
 - **52 commands missing entirely** (6 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
   `Pathfinding`)
-- **22 commands whose signature changed** (5 of them behavioural rather than additive; 1 done: `Pathfind`)
+- **22 commands whose signature changed** (5 of them behavioural rather than additive; 3 done:
+  `Pathfind`, `PlayMacro`, `Replay`)
 
 ## Before porting anything
 
@@ -47,8 +48,15 @@ These are not additive - existing macros behave differently, and porting them ch
       walking instead. Note `Pathfind` also now blocks until `Pathfinding()` goes true (up to 1s) -
       upstream gets that for free by running in-process, where `AutoWalking` is already set on
       return; across the bridge the client only picks the walk up on a later tick.
-- [ ] **`PlayMacro` / `Replay` gained `params object[] args`.** Macro arguments are entirely
-      unsupported in this fork.
+- [x] ~~**`PlayMacro` / `Replay` gained `params object[] args`.**~~ Done - both now take
+      `params object[] args`. `MacroInvoker.Execute` already bound a Python `args` variable into the
+      macro's scope (`_macroScope.SetVariable( "args", parameters ?? Array.Empty<object>() )`), but
+      every caller always passed `null` for `parameters` - nothing above it could get an array there.
+      What was missing was plumbing one up through `MacroEntry.Execute`, `MacroManager.Execute` and
+      `HotkeyEntry.Action` (which changed from `Action<HotkeyEntry>` to `Action<HotkeyEntry, object[]>`,
+      matching upstream, since that delegate is what `PlayMacro`/`Replay` invoke to start/resume a
+      macro run). Every other assignment/invocation of `HotkeyEntry.Action` - regular hotkeys, dress,
+      organizer - passes `null` through since only macro-triggered runs have arguments to give it.
 - [ ] **`Hotkeys` gained `onOff`.** This fork can only toggle, not set a specific state.
 - [ ] **Speech hue is derived upstream, hardcoded here.** This fork has
       `DEFAULT_SPEAK_HUE = 34` baked into `Msg`, `YellMsg`, `WhisperMsg`, `EmoteMsg`, `GuildMsg`,
@@ -255,20 +263,18 @@ fork cannot express what upstream can.
 - upstream: `bool Pathfind( int x, int y, int z, bool checkDistance = true, int desiredDistance = 0 )`
 - upstream: `bool Pathfind( object obj, bool checkDistance = true, int desiredDistance = 0 )`
 
-### `PlayMacro` — MacroCommands.cs
+### ~~`PlayMacro` — MacroCommands.cs~~ Done, signatures now match
 
 - upstream: `void PlayMacro( string name, params object[] args )`
-- here:     `void PlayMacro( string name )`
 
 ### `PushList` — ListCommands.cs
 
 - upstream: `void PushList( string listName, object value )`
 - here:     `void PushList( string listName, int value )`
 
-### `Replay` — MacroCommands.cs
+### ~~`Replay` — MacroCommands.cs~~ Done, signatures now match
 
 - upstream: `void Replay( params object[] args )`
-- here:     `void Replay()`
 
 ### `ReplyGump` — GumpCommands.cs
 

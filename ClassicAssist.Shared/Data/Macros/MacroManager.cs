@@ -93,7 +93,7 @@ namespace ClassicAssist.Data.Macros
             return _instance;
         }
 
-        public void Execute( MacroEntry macro )
+        public void Execute( MacroEntry macro, object[] parameters = null )
         {
             if ( macro.IsBackground )
             {
@@ -103,7 +103,7 @@ namespace ClassicAssist.Data.Macros
                 }
                 else
                 {
-                    macro.Execute();
+                    macro.Execute( parameters );
                 }
             }
             else
@@ -119,7 +119,7 @@ namespace ClassicAssist.Data.Macros
                 }
 
                 CurrentMacro = macro;
-                CurrentMacro.Execute();
+                CurrentMacro.Execute( parameters );
             }
         }
 

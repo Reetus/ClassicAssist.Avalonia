@@ -215,7 +215,7 @@ namespace ClassicAssist.Data.Macros
             SetProperty( ref _name, value );
         }
 
-        public void Execute()
+        public void Execute( object[] parameters = null )
         {
             Engine.Dispatcher.Invoke( () => IsRunning = true );
 
@@ -224,7 +224,7 @@ namespace ClassicAssist.Data.Macros
                 Shared.UO.Commands.SystemMessage( string.Format( Strings.Background_macro___0___started___, Name ) );
             }
 
-            _macroInvoker.Execute( this );
+            _macroInvoker.Execute( this, parameters );
         }
 
         public void Stop()

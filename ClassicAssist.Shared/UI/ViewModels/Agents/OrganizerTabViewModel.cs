@@ -138,7 +138,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                     Complete = GetJsonValue( token, "Complete", false )
                 };
 
-                entry.Action = hks => Task.Run( async () => await _manager.Organize( entry ) );
+                entry.Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( entry ) );
                 entry.IsRunning = () => IsOrganizing;
 
                 foreach ( JToken itemToken in token["Items"] )
@@ -179,7 +179,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             OrganizerEntry entry = new OrganizerEntry
             {
                 Name = $"Organizer-{count}",
-                Action = hks => Task.Run( async () => await _manager.Organize( SelectedItem ) ),
+                Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( SelectedItem ) ),
                 IsRunning = () => IsOrganizing
             };
 

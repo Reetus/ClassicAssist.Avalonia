@@ -121,7 +121,7 @@ namespace ClassicAssist.UI.ViewModels
             {
                 hotkeyEntries.Add( new HotkeyCommand
                 {
-                    Action = hks => SkillCommands.UseSkill( skill.Name ), Name = skill.Name
+                    Action = ( hks, _ ) => SkillCommands.UseSkill( skill.Name ), Name = skill.Name
                 } );
             }
 

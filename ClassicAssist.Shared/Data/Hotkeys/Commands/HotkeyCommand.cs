@@ -26,7 +26,7 @@ namespace ClassicAssist.Data.Hotkeys.Commands
                 Tooltip = string.IsNullOrEmpty( tooltipName ) ? a.Tooltip : tooltipName;
             }
 
-            Action = hs => Task.Run( Execute );
+            Action = ( hs, _ ) => Task.Run( Execute );
         }
 
         public string Tooltip
