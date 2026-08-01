@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -114,7 +115,18 @@ namespace ClassicAssist.UI.ViewModels
             get => _selectedItem;
             set
             {
+                if ( _selectedItem != null )
+                {
+                    _selectedItem.PropertyChanged -= OnSelectedItemPropertyChanged;
+                }
+
                 SetProperty( ref _selectedItem, value );
+
+                if ( _selectedItem != null )
+                {
+                    _selectedItem.PropertyChanged += OnSelectedItemPropertyChanged;
+                }
+
                 NotifyPropertyChanged( nameof( Hotkey ) );
             }
         }
@@ -401,6 +413,22 @@ namespace ClassicAssist.UI.ViewModels
         private void OnDisconnectedEvent()
         {
             _manager.StopAll();
+        }
+
+        /// <summary>
+        ///     ExecuteCommand/StopCommand/NewMacroCommand's CanExecute all key off SelectedItem.IsRunning,
+        ///     but that flips on a MacroEntry the ViewModel doesn't otherwise listen to - nothing re-queries
+        ///     CanExecute when it changes, so the Play/Stop buttons only caught up whenever some other
+        ///     ViewModel property change happened to trigger BaseViewModel's CanExecute sweep (e.g.
+        ///     reselecting the macro). Re-raising a ViewModel-level change here makes that sweep run as soon
+        ///     as the macro actually starts or stops.
+        /// </summary>
+        private void OnSelectedItemPropertyChanged( object sender, PropertyChangedEventArgs e )
+        {
+            if ( e.PropertyName == nameof( MacroEntry.IsRunning ) )
+            {
+                NotifyPropertyChanged( nameof( SelectedItem ) );
+            }
         }
 
         private void ClearHotkey( object obj )
