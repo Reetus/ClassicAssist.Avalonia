@@ -249,8 +249,9 @@ public static partial class Engine
         }
 
         Key keys = SDLKeys.SDLKeyToKeys( key );
+        Key modifier = SDLKeys.SDLKeymodToKey( mod );
 
-        bool pass = HotkeyManager.GetInstance().OnHotkeyPressed( keys );
+        bool pass = HotkeyManager.GetInstance().OnHotkeyPressed( keys, modifier );
 
         return !pass;
     }

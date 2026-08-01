@@ -729,6 +729,28 @@ namespace ClassicAssist.Misc
             return Key.None;
         }
 
+        public static Key SDLKeymodToKey( int sdlMod )
+        {
+            SDL_Keymod mod = (SDL_Keymod) sdlMod;
+
+            if ( ( mod & SDL_Keymod.KMOD_CTRL ) != 0 )
+            {
+                return Key.LeftCtrl;
+            }
+
+            if ( ( mod & SDL_Keymod.KMOD_ALT ) != 0 )
+            {
+                return Key.LeftAlt;
+            }
+
+            if ( ( mod & SDL_Keymod.KMOD_SHIFT ) != 0 )
+            {
+                return Key.LeftShift;
+            }
+
+            return Key.None;
+        }
+
         public static SDL_Keycode SDL_SCANCODE_TO_KEYCODE( SDL_Scancode X )
         {
             return (SDL_Keycode) ( (int) X | SDLK_SCANCODE_MASK );

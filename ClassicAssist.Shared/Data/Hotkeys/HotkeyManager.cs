@@ -3,28 +3,14 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Misc;
 using ClassicAssist.UI.Misc;
-using static ClassicAssist.Misc.SDLKeys;
 
 namespace ClassicAssist.Data.Hotkeys
 {
-    public class KeyState
-    {
-        [DllImport("libSDL2-2.0.so.0", EntryPoint = "SDL_GetKeyboardState", CallingConvention = CallingConvention.Cdecl)]
-        private static unsafe extern byte* GetKeyboardState(out int numKeys);
-
-        public static unsafe bool GetKeyState(SDL_Scancode scanCode)
-        {
-            var result = GetKeyboardState(out int numKeys);
-            int code = (int) scanCode;
-            return code < numKeys && result[(int)code] == 1;
-        }
-    }
     public class HotkeyManager : INotifyPropertyChanged
     {
         private static HotkeyManager _instance;
@@ -36,7 +22,6 @@ namespace ClassicAssist.Data.Hotkeys
             Key.LeftCtrl, Key.RightCtrl, Key.LeftShift, Key.RightShift, Key.LeftAlt, Key.RightAlt
         };
 
-        private readonly List<Key> _modifiers = new List<Key>();
         private bool _enabled = true;
 
         private ObservableCollectionEx<HotkeyCommand> _items = new ObservableCollectionEx<HotkeyCommand>();
@@ -131,35 +116,14 @@ namespace ClassicAssist.Data.Hotkeys
             OnPropertyChanged( propertyName );
         }
 
-        public bool OnHotkeyPressed( Key keys )
+        public bool OnHotkeyPressed( Key keys, Key modifier )
         {
             lock ( _lock )
             {
                 bool filter = false;
 
-                if ( _modifierKeys.Contains( keys ) )
-                {
-                    _modifiers.Clear();
-                    _modifiers.Add( keys );
-                    return false;
-                }
-
-                Key modifier = Key.None;
-
-                if ( _modifiers.Count > 0 )
-                {
-                    modifier = _modifiers[0];
-                }
-
-                bool down = KeyState.GetKeyState(KeysToSDLScancode(modifier));
-
-                if ( !down )
-                {
-                    modifier = Key.None;
-                }
-
-                // Sanity check
-                if ( keys == Key.None )
+                // Sanity check / modifier-only press, nothing to look up
+                if ( keys == Key.None || _modifierKeys.Contains( keys ) )
                 {
                     return false;
                 }
@@ -201,28 +165,6 @@ namespace ClassicAssist.Data.Hotkeys
 
                 return filter;
             }
-        }
-
-        private SDL_Scancode KeysToSDLScancode(Key modifier )
-        {
-            //TODO Enter keys / find better way
-            switch ( modifier )
-            {
-                case Key.LeftAlt:
-                    return SDL_Scancode.SDL_SCANCODE_LALT;
-                case Key.Right:
-                    return SDL_Scancode.SDL_SCANCODE_RIGHT;
-                case Key.LeftCtrl:
-                    return SDL_Scancode.SDL_SCANCODE_LCTRL;
-                case Key.RightCtrl:
-                    return SDL_Scancode.SDL_SCANCODE_RCTRL;
-                case Key.LeftShift:
-                    return SDL_Scancode.SDL_SCANCODE_LSHIFT;
-                case Key.RightShift:
-                    return SDL_Scancode.SDL_SCANCODE_RSHIFT;
-            }
-
-            return 0;
         }
 
         public void OnMouseAction( MouseOptions mouse )
