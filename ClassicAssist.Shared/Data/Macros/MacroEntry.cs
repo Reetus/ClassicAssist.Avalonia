@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using ClassicAssist.Data.Hotkeys;
+using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
@@ -15,15 +19,20 @@ namespace ClassicAssist.Data.Macros
     {
         //private readonly Dispatcher _dispatcher;
         private Dictionary<string, int> _aliases = new Dictionary<string, int>();
+        private AutoResetEvent _autoResetEvent;
+        private ObservableCollection<int> _breakpoints = new ObservableCollection<int>();
         private bool _doNotAutoInterrupt;
+        private Dictionary<string, object> _frameVariables;
         private bool _global;
         private bool _isAutostart;
         private bool _isBackground;
+        private bool _isPaused;
         private bool _isRunning;
         private bool _loop;
         private string _macro = string.Empty;
         private MacroInvoker _macroInvoker = new MacroInvoker();
         private string _name;
+        private int _pausedLineNumber;
 
         public MacroEntry()
         {
@@ -31,6 +40,7 @@ namespace ClassicAssist.Data.Macros
             //_dispatcher = Dispatcher.CurrentDispatcher;
             _macroInvoker.ExceptionEvent += OnExceptionEvent;
             _macroInvoker.StoppedEvent += OnStoppedEvent;
+            _macroInvoker.PausedEvent += OnPausedEvent;
         }
 
         public Dictionary<string, int> Aliases
@@ -39,10 +49,34 @@ namespace ClassicAssist.Data.Macros
             set => SetProperty( ref _aliases, value );
         }
 
+        [JsonIgnore]
+        public AutoResetEvent AutoResetEvent
+        {
+            get => _autoResetEvent;
+            set => SetProperty( ref _autoResetEvent, value );
+        }
+
+        /// <summary>
+        ///     Line numbers the debugger should pause execution on. Not yet surfaced by any editor UI -
+        ///     nothing currently populates this, so it has no effect until a breakpoint-toggle UI exists.
+        /// </summary>
+        public ObservableCollection<int> Breakpoints
+        {
+            get => _breakpoints;
+            set => SetProperty( ref _breakpoints, value );
+        }
+
         public bool DoNotAutoInterrupt
         {
             get => _doNotAutoInterrupt;
             set => SetProperty( ref _doNotAutoInterrupt, value );
+        }
+
+        [JsonIgnore]
+        public Dictionary<string, object> FrameVariables
+        {
+            get => _frameVariables;
+            set => SetProperty( ref _frameVariables, value );
         }
 
         public bool Global
@@ -50,6 +84,9 @@ namespace ClassicAssist.Data.Macros
             get => _global;
             set => SetProperty( ref _global, value );
         }
+
+        [JsonIgnore]
+        public string Hash => _macro.SHA1();
 
         public bool IsAutostart
         {
@@ -61,6 +98,13 @@ namespace ClassicAssist.Data.Macros
         {
             get => _isBackground;
             set => SetProperty( ref _isBackground, value );
+        }
+
+        [JsonIgnore]
+        public bool IsPaused
+        {
+            get => _isPaused;
+            set => SetProperty( ref _isPaused, value );
         }
 
         public bool IsRunning
@@ -94,14 +138,49 @@ namespace ClassicAssist.Data.Macros
             set => SetName( _name, value );
         }
 
+        [JsonIgnore]
+        public int PausedLineNumber
+        {
+            get => _pausedLineNumber;
+            set => SetProperty( ref _pausedLineNumber, value );
+        }
+
         public int CompareTo( MacroEntry other )
         {
             return string.Compare( Name, other.Name, StringComparison.OrdinalIgnoreCase );
         }
 
+        private void OnPausedEvent( int lineNumber, AutoResetEvent autoResetEvent, Dictionary<string, object> frameVariables )
+        {
+            Shared.UO.Commands.SystemMessage( string.Format( Strings.Debugger_paused_on_line__0_, lineNumber ), SystemMessageHues.Yellow );
+
+            Engine.Dispatcher.Invoke( () =>
+            {
+                IsPaused = true;
+                PausedLineNumber = lineNumber;
+                AutoResetEvent = autoResetEvent;
+                FrameVariables = frameVariables;
+            } );
+        }
+
         private void OnStoppedEvent()
         {
-            Engine.Dispatcher.Invoke( () => IsRunning = false );
+            bool wasPaused = IsPaused;
+
+            if ( wasPaused )
+            {
+                AutoResetEvent?.Set();
+            }
+
+            Engine.Dispatcher.Invoke( () =>
+            {
+                IsRunning = false;
+
+                if ( wasPaused )
+                {
+                    IsPaused = false;
+                }
+            } );
 
             if ( IsBackground && !MacroManager.QuietMode )
             {

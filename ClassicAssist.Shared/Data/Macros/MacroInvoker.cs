@@ -1,16 +1,21 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.UO.Objects;
 using IronPython.Hosting;
+using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
+using IronPython.Runtime.Types;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Hosting;
 
@@ -20,13 +25,17 @@ public class MacroInvoker
 {
     public delegate void dMacroException( Exception e );
 
+    public delegate void dMacroPaused( int lineNumber, AutoResetEvent autoResetEvent, Dictionary<string, object> frameVariables );
+
     public delegate void dMacroStartStop();
 
     private static readonly ScriptEngine _engine = Python.CreateEngine();
     private static Dictionary<string, object> _importCache;
-    private readonly MemoryStream _memoryStream = new();
+    private readonly AutoResetEvent _pauseEvent = new( false );
     private readonly SystemMessageTextWriter _textWriter = new();
     private CancellationTokenSource _cancellationToken;
+    private CompiledCode _compiled;
+    private string _lastCompiledHash = string.Empty;
     private MacroEntry _macro;
     private ScriptScope _macroScope;
 
@@ -52,8 +61,12 @@ public class MacroInvoker
             _importCache = InitializeImports( _engine );
         }
 
-        _engine.Runtime.IO.SetOutput( _memoryStream, _textWriter );
-        _engine.Runtime.IO.SetErrorOutput( _memoryStream, _textWriter );
+        // The DLR encodes script output as UTF-8 before handing bytes to the Stream, regardless of
+        // TextWriter.Encoding - passing anything else here (e.g. Unicode/UTF-16, which is what
+        // SystemMessageTextWriter.Encoding used to report) makes TextStream decode those UTF-8
+        // bytes as UTF-16 pairs, turning plain ASCII output into CJK-range garbage.
+        runtime.IO.SetOutput( new TextStream( _textWriter, Encoding.UTF8, true ), Encoding.UTF8 );
+        runtime.IO.SetErrorOutput( new TextStream( _textWriter, Encoding.UTF8, true ), Encoding.UTF8 );
 
         string modulePath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Modules" );
         ICollection<string> searchPaths = _engine.GetSearchPaths();
@@ -79,6 +92,7 @@ public class MacroInvoker
     public event dMacroStartStop StartedEvent;
     public event dMacroStartStop StoppedEvent;
     public event dMacroException ExceptionEvent;
+    public event dMacroPaused PausedEvent;
 
     private static string GetScriptingImports()
     {
@@ -123,13 +137,21 @@ public class MacroInvoker
         return dictionary;
     }
 
-    public void Execute( MacroEntry macro )
+    public void Execute( MacroEntry macro, object[] parameters = null )
     {
         _macro = macro;
 
-        if ( Thread != null && Thread.IsAlive )
+        Thread previousThread = Thread;
+
+        if ( previousThread != null && previousThread.IsAlive )
         {
             Stop();
+
+            // The static engine, _macroScope, _compiled and _cancellationToken are shared state
+            // that gets replaced below. The previous run must fully exit first, otherwise it
+            // carries on against the new (un-cancelled) token as an untracked orphan - the macro
+            // disappears from the running list but keeps executing.
+            previousThread.Join( 2000 );
         }
 
         MainCommands.SetQuietMode( Options.CurrentOptions.DefaultMacroQuietMode );
@@ -158,16 +180,25 @@ public class MacroInvoker
                 AliasCommands.SetDefaultAliases();
 
                 _macroScope = _engine.CreateScope( importCache );
+                _macroScope.SetVariable( "Events", new Events() );
                 _engine.SetTrace( OnTrace );
+
+                _macroScope.SetVariable( "args", parameters ?? Array.Empty<object>() );
 
                 StopWatch.Reset();
                 StopWatch.Start();
+
+                if ( _compiled == null || !_lastCompiledHash.Equals( _macro.Hash ) )
+                {
+                    _compiled = source.Compile();
+                    _lastCompiledHash = _macro.Hash;
+                }
 
                 do
                 {
                     _cancellationToken.Token.ThrowIfCancellationRequested();
 
-                    source.Execute( _macroScope );
+                    _compiled.Execute( _macroScope );
 
                     StopWatch.Stop();
 
@@ -237,8 +268,65 @@ public class MacroInvoker
         }
     }
 
+    private static Dictionary<string, object> GetFrameVariables( TraceBackFrame frame )
+    {
+        Dictionary<string, object> variables = new();
+
+        // Locals
+        if ( frame.f_locals is PythonDictionary locals )
+        {
+            foreach ( KeyValuePair<object, object> kvp in locals )
+            {
+                if ( !( kvp.Key is string key ) )
+                {
+                    continue;
+                }
+
+                object value = kvp.Value;
+
+                // Skip built-in functions / methods
+                if ( value is BuiltinFunction || value is BuiltinMethodDescriptor || value is PythonType || value is PythonModule )
+                {
+                    continue;
+                }
+
+                variables[key] = value;
+            }
+        }
+
+        // Globals (optional)
+        if ( frame.f_globals is PythonDictionary globals )
+        {
+            foreach ( KeyValuePair<object, object> kvp in globals )
+            {
+                if ( kvp.Key is string key && !variables.ContainsKey( key ) ) // don't overwrite locals
+                {
+                    object value = kvp.Value;
+
+                    // Skip built-in functions / methods
+                    if ( value is BuiltinFunction || value is BuiltinMethodDescriptor || value is PythonType || value is PythonModule )
+                    {
+                        continue;
+                    }
+
+                    variables[key] = value;
+                }
+            }
+        }
+
+        return variables;
+    }
+
     private TracebackDelegate OnTrace( TraceBackFrame frame, string result, object payload )
     {
+        if ( ( result == "line" || result == "call" ) && _macro.Breakpoints != null && _macro.Breakpoints.Contains( (int) frame.f_lineno )
+             || result == "line" && _macro.IsPaused )
+        {
+            _pauseEvent.Reset();
+            PausedEvent?.Invoke( (int) frame.f_lineno, _pauseEvent, GetFrameVariables( frame ) );
+            _pauseEvent.WaitOne();
+        }
+
         if ( !_cancellationToken.IsCancellationRequested )
         {
             return OnTrace;
@@ -267,6 +355,19 @@ public class MacroInvoker
                 Thread.Sleep( diff );
             }
 
+            if ( _macroScope.ContainsVariable( "Events" ) )
+            {
+                try
+                {
+                    Events events = _macroScope.GetVariable<Events>( "Events" );
+                    events.InvokeShutdown();
+                }
+                catch ( Exception e )
+                {
+                    Shared.UO.Commands.SystemMessage( string.Format( Strings.Macro_error___0_, e.Message ) );
+                }
+            }
+
             Thread?.Interrupt();
             Thread?.Join( 100 );
 
@@ -278,4 +379,78 @@ public class MacroInvoker
             Shared.UO.Commands.SystemMessage( string.Format( Strings.Macro_error___0_, e.Message ) );
         }
     }
+
+    public static string GetDisplayValue( object value, bool isClipboardCopy = false )
+    {
+        switch ( value )
+        {
+            case null:
+                return "None";
+            case string s:
+                return $"\"{s}\"";
+            case bool b:
+                return b ? "True" : "False";
+            case double _:
+            case int _:
+            case long _:
+            case float _:
+            case decimal _:
+                return value.ToString();
+            case Entity entity:
+                return isClipboardCopy ? $"0x{entity.Serial:x8}" : $"{entity.Name} (0x{entity.Serial:x8})";
+        }
+
+        switch ( value )
+        {
+            case PythonDictionary pyDict:
+                if ( isClipboardCopy )
+                {
+                    return "{" + string.Join( ", ", pyDict.Select( kv => $"{GetDisplayValue( kv.Key )}: {GetDisplayValue( kv.Value )}" ) ) + "}";
+                }
+
+                return "{" + string.Join( ", ", pyDict.Take( 5 ).Select( kv => $"{GetDisplayValue( kv.Key )}: {GetDisplayValue( kv.Value )}" ) ) +
+                       ( pyDict.Count > 5 ? ", ..." : "" ) + "}";
+        }
+
+        if ( value is IEnumerable enumerable && value.GetType() != typeof( string ) )
+        {
+            if ( isClipboardCopy )
+            {
+                IEnumerable<string> allItems = enumerable.Cast<object>().Select( i => GetDisplayValue( i ) );
+                return "[" + string.Join( ", ", allItems ) + "]";
+            }
+
+            IEnumerable<string> items = enumerable.Cast<object>().Take( 10 ).Select( i => GetDisplayValue( i ) );
+            return "[" + string.Join( ", ", items ) + "]";
+        }
+
+        // Fallback to repr() if available
+        try
+        {
+            dynamic dyn = value;
+            dynamic repr = dyn.__repr__();
+
+            if ( repr is string repStr )
+            {
+                return repStr;
+            }
+        }
+        catch
+        {
+            /* ignore */
+        }
+
+        // Fallback: type name
+        return value.ToString() ?? value.GetType().Name;
+    }
+}
+
+public class Events
+{
+    public void InvokeShutdown()
+    {
+        Shutdown?.Invoke( this, EventArgs.Empty );
+    }
+
+    public event EventHandler Shutdown;
 }

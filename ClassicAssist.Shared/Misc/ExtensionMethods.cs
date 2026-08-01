@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
@@ -12,6 +14,20 @@ namespace ClassicAssist.Misc;
 
 public static class ExtensionMethods
 {
+    public static string SHA1( this string str )
+    {
+        byte[] hash = System.Security.Cryptography.SHA1.HashData( Encoding.UTF8.GetBytes( str ) );
+
+        StringBuilder formatted = new StringBuilder( 2 * hash.Length );
+
+        foreach ( byte b in hash )
+        {
+            formatted.AppendFormat( "{0:X2}", b );
+        }
+
+        return formatted.ToString();
+    }
+
     public static T ReadStruct<T>( this Stream stream ) where T : struct
     {
         int size = Marshal.SizeOf( typeof( T ) );
