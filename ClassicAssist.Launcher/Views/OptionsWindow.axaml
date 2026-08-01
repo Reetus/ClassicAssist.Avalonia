@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Launcher.ViewModels"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        mc:Ignorable="d" WindowStartupLocation="CenterOwner"
+        x:Class="ClassicAssist.Launcher.Views.OptionsWindow"
+        Title="Options" Height="400" Width="400">
+  <Window.DataContext>
+    <viewModels:OptionsViewModel />
+  </Window.DataContext>
+  <Grid RowDefinitions="*,Auto,Auto">
+    <controls:GroupBox Margin="10" Grid.Row="0" Header="Additional Plugins">
+      <Grid Margin="5" RowDefinitions="Auto,*,Auto">
+        <ListBox x:Name="PluginListBox" Grid.Row="1" SelectedItem="{Binding SelectedPlugin}"
+                 ItemsSource="{Binding Plugins}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Name}" ToolTip.Tip="{Binding FullPath}" />
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="0,10,0,0">
+          <Button Content="Add" Command="{Binding AddPluginCommand}" Margin="0,0,10,0" />
+          <Button Content="Remove" Command="{Binding RemovePluginCommand}"
+                  CommandParameter="{Binding SelectedItem, ElementName=PluginListBox}" />
+        </StackPanel>
+      </Grid>
+    </controls:GroupBox>
+    <controls:GroupBox Header="Options" Grid.Row="1" Margin="10,0,10,10">
+      <StackPanel Margin="10">
+        <CheckBox Content="Debug" IsChecked="{Binding ClassicOptions.Debug}" />
+        <CheckBox Content="Autologin" IsChecked="{Binding ClassicOptions.Autologin}" />
+        <CheckBox Content="Skip Login Screen" IsChecked="{Binding ClassicOptions.SkipLoginScreen}" />
+        <CheckBox Content="Auto Reconnect" IsChecked="{Binding ClassicOptions.AutoReconnect}" />
+        <StackPanel Orientation="Horizontal">
+          <Label Content="Reconnect Time" Margin="0,0,10,0" Padding="0" />
+          <TextBox MinWidth="80" Text="{Binding ClassicOptions.ReconnectTime, Mode=TwoWay}" />
+        </StackPanel>
+        <CheckBox Content="Override Client Version" IsChecked="{Binding ClassicOptions.OverrideClientVersion}" />
+        <StackPanel Orientation="Horizontal">
+          <Label Content="Client Version" Margin="0,0,10,0" Padding="0" />
+          <TextBox MinWidth="80" Text="{Binding ClassicOptions.ClientVersion, Mode=TwoWay}" />
+        </StackPanel>
+      </StackPanel>
+    </controls:GroupBox>
+    <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="10,0,10,10">
+      <Button Content="OK" Margin="0,0,10,0" Command="{Binding OKCommand, Mode=OneWay}" />
+      <Button Content="Cancel" Command="{Binding CancelCommand, Mode=OneWay}" />
+    </StackPanel>
+  </Grid>
+</Window>

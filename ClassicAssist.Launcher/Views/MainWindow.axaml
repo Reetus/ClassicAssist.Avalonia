@@ -1,0 +1,67 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Launcher.ViewModels"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        mc:Ignorable="d"
+        x:Class="ClassicAssist.Launcher.Views.MainWindow"
+        Title="ClassicAssist Launcher" Width="500"
+        CanResize="False" SizeToContent="Height" WindowStartupLocation="CenterScreen">
+  <Window.DataContext>
+    <viewModels:MainViewModel />
+  </Window.DataContext>
+  <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto">
+    <Grid.Styles>
+      <Style Selector="controls|GroupBox">
+        <Setter Property="Padding" Value="5" />
+        <Setter Property="Margin" Value="0,0,0,5" />
+      </Style>
+    </Grid.Styles>
+    <controls:GroupBox Header="Client Options" Grid.Row="0">
+      <Grid ColumnDefinitions="*,Auto">
+        <ComboBox Grid.Column="0" Margin="0,0,5,0" HorizontalAlignment="Stretch" IsEditable="True"
+                  ItemsSource="{Binding ClientPaths}" Text="{Binding SelectedClientPath, Mode=TwoWay}" />
+        <Button Content="…" Grid.Column="1" Padding="10,0" Command="{Binding SelectClientPathCommand, Mode=OneWay}" />
+      </Grid>
+    </controls:GroupBox>
+    <controls:GroupBox Header="Ultima Online" Grid.Row="1">
+      <Grid ColumnDefinitions="*,Auto">
+        <ComboBox Grid.Column="0" Margin="0,0,5,0" HorizontalAlignment="Stretch" IsEditable="True"
+                  ItemsSource="{Binding DataPaths}" Text="{Binding SelectedDataPath, Mode=TwoWay}" />
+        <Button Content="…" Grid.Column="1" Padding="10,0" Command="{Binding SelectDataPathCommand, Mode=OneWay}" />
+      </Grid>
+    </controls:GroupBox>
+    <controls:GroupBox Header="Shard" Grid.Row="2">
+      <Grid ColumnDefinitions="*,Auto">
+        <ComboBox Grid.Column="0" Margin="0,0,5,0" HorizontalAlignment="Stretch"
+                  ItemsSource="{Binding ShardManager.VisibleShards}" SelectedItem="{Binding SelectedShard}"
+                  DisplayMemberBinding="{Binding Name}" />
+        <Button Content="Shards" Grid.Column="1" Command="{Binding ShowShardsWindowCommand, Mode=OneWay}" />
+      </Grid>
+    </controls:GroupBox>
+    <StackPanel Orientation="Horizontal" Grid.Row="3">
+      <StackPanel.Styles>
+        <Style Selector="Button">
+          <Setter Property="Margin" Value="0,0,5,0" />
+        </Style>
+        <Style Selector="Image">
+          <Setter Property="Margin" Value="0,3,10,3" />
+          <Setter Property="Height" Value="16" />
+        </Style>
+      </StackPanel.Styles>
+      <Button Command="{Binding StartCommand, Mode=OneWay}">
+        <StackPanel Orientation="Horizontal">
+          <Image Source="{StaticResource PlayIcon}" />
+          <TextBlock Text="Start" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+      <Button Command="{Binding OptionsCommand, Mode=OneWay}">
+        <StackPanel Orientation="Horizontal">
+          <Image Source="{StaticResource OptionsIcon}" />
+          <TextBlock Text="Options" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

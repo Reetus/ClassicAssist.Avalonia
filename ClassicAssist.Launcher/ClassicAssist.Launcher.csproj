@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RollForward>LatestMajor</RollForward>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <!-- No <ApplicationIcon>: that property needs a real file at a project-relative path, but
+             logo.ico here is a linked AvaloniaResource (see below), not a physical file on disk.
+             The runtime window icon still comes from ClassicAssistDark.xaml's Window style. -->
+        <!-- Lands beside the plugin build output, so the three ClassicAssist plugin variants
+             (ClassicAssist.dll, ClassicAssistNE.*, framework\ClassicAssist.dll) are siblings the
+             launcher can resolve with no path guessing - see Client/PluginPathResolver.cs. -->
+        <OutputPath>..\Output\ClassicAssist\</OutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Styles and controls linked from ClassicAssist.Avalonia rather than referenced, so this
+             project stays free of the UI app's RPC/IronPython dependency graph. GroupBox.cs keeps
+             its original namespace so GroupBox.Theme.xaml's unqualified clr-namespace lookup still
+             resolves once compiled into this assembly. -->
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\ClassicAssistDark.xaml" Link="Controls\ClassicAssistDark.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\Compact.Theme.xaml" Link="Controls\Compact.Theme.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\GroupBox.Theme.xaml" Link="Controls\GroupBox.Theme.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\TabControl.Theme.xaml" Link="Controls\TabControl.Theme.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Assets\Icons.xaml" Link="Assets\Icons.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Assets\logo.ico" Link="Assets\logo.ico" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\EditTextBlock.axaml" Link="Controls\EditTextBlock.axaml" />
+        <Compile Include="..\ClassicAssist.Avalonia\Controls\EditTextBlock.axaml.cs" Link="Controls\EditTextBlock.axaml.cs" />
+        <Compile Include="..\ClassicAssist.Avalonia\Controls\GroupBox.cs" Link="Controls\GroupBox.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    </ItemGroup>
+    <PropertyGroup>
+        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
+        <Version>0.5.$(BuildDate).0</Version>
+    </PropertyGroup>
+</Project>
