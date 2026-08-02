@@ -134,5 +134,31 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.Items.Clear();
         }
+
+        [TestMethod]
+        public void WillGetPropertyValueBigInteger()
+        {
+            // IronPython maps `int` to System.Numerics.BigInteger; Convert.ChangeType can't target
+            // it, so this is the exact path that used to throw the InvalidCastException.
+            Item item = new Item( 0x40000001 )
+            {
+                Properties = new[]
+                {
+                    new Property
+                    {
+                        Cliloc = 1061163, Text = "Durability", Arguments = new[] { "25" }
+                    }
+                }
+            };
+
+            Engine.Items.Add( item );
+
+            System.Numerics.BigInteger value =
+                PropertiesCommands.PropertyValue<System.Numerics.BigInteger>( item.Serial, "Durability" );
+
+            Assert.AreEqual( new System.Numerics.BigInteger( 25 ), value );
+
+            Engine.Items.Clear();
+        }
     }
 }

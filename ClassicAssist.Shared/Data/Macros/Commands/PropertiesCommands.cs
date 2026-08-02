@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Globalization;
 using System.Linq;
+using System.Numerics;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO.Network.PacketFilter;
@@ -97,7 +99,32 @@ namespace ClassicAssist.Data.Macros.Commands
                     return default;
                 }
 
-                return (T) Convert.ChangeType( p?.Arguments?[argument], typeof( T ) );
+                string value = p?.Arguments?[argument];
+
+                if ( value == null )
+                {
+                    return default;
+                }
+
+                // IronPython maps the Python `int` builtin to System.Numerics.BigInteger, and
+                // Convert.ChangeType has no conversion to it, so PropertyValue[int]() used to throw
+                // "Invalid cast from 'System.String' to 'System.Numerics.BigInteger'". Parse the
+                // numeric portion of the argument (the 0xD6 packet sends pure digits, but keep it
+                // tolerant of a trailing '%' or other formatting) into a BigInteger instead.
+                if ( typeof( T ) == typeof( BigInteger ) )
+                {
+                    string numeric = new string( value.Where( char.IsDigit ).ToArray() );
+
+                    if ( !BigInteger.TryParse( numeric, NumberStyles.None, CultureInfo.InvariantCulture,
+                            out BigInteger result ) )
+                    {
+                        return default;
+                    }
+
+                    return (T) (object) result;
+                }
+
+                return (T) Convert.ChangeType( value, typeof( T ) );
             }
 
             UOC.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
