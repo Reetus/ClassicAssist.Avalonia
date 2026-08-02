@@ -29,19 +29,54 @@
         <CheckBox Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding Enabled}"/>
         <CheckBox Content="{x:Static resources:Strings.Disable_inside_guardzone}"
                   IsChecked="{Binding DisableInGuardzone}" />
+        <CheckBox Content="{x:Static resources:Strings.Loot_humanoids}" IsChecked="{Binding LootHumanoids}" />
       </StackPanel>
-      <ListBox Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
-        <!--TODO-->
-      </ListBox>
-      <Grid Grid.Row="2" RowDefinitions="Auto, Auto" Margin="0,5,0,0">
+      <TreeView x:Name="treeView" Grid.Row="1" Margin="0,10,0,10"
+                ItemsSource="{Binding Draggables}" SelectedItem="{Binding SelectedItem}">
+        <TreeView.DataTemplates>
+          <TreeDataTemplate DataType="autoloot:AutolootGroup" ItemsSource="{Binding Children}">
+            <Grid ColumnDefinitions="Auto,*">
+              <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center" Margin="0,0,5,0"/>
+              <controls:EditTextBlock Grid.Column="1" Text="{Binding Name}" ShowIcon="True"/>
+            </Grid>
+          </TreeDataTemplate>
+          <TreeDataTemplate DataType="autoloot:AutolootEntry">
+            <controls:EditTextBlock Text="{Binding Name}" Label="{Binding DisplayName}" ShowIcon="True"/>
+          </TreeDataTemplate>
+        </TreeView.DataTemplates>
+        <TreeView.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="{x:Static resources:Strings.New_Group}" Command="{Binding NewGroupCommand}"/>
+            <MenuItem Header="{x:Static resources:Strings.Remove_Group}"
+                      Command="{Binding RemoveGroupCommand}"
+                      CommandParameter="{Binding SelectedItem, ElementName=treeView}"/>
+            <Separator/>
+            <MenuItem Header="{x:Static resources:Strings.Move_to_group}" ItemsSource="{Binding Groups}">
+              <MenuItem.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </MenuItem.ItemTemplate>
+              <MenuItem.Styles>
+                <Style Selector="MenuItem">
+                  <Setter Property="Command" Value="{Binding $parent[MenuItem].DataContext.MoveToGroupCommand}"/>
+                  <Setter Property="CommandParameter" Value="{Binding}"/>
+                </Style>
+              </MenuItem.Styles>
+            </MenuItem>
+          </ContextMenu>
+        </TreeView.ContextMenu>
+      </TreeView>
+      <Grid Grid.Row="2" RowDefinitions="Auto, Auto">
         <Grid Grid.Row="0" ColumnDefinitions="*, *">
           <Button Content="{x:Static resources:Strings.Remove}" Grid.Column="0" Margin="0,0,5,0"
                   Command="{Binding RemoveCommand}"
-                  CommandParameter="{Binding SelectedItem}" />
-          <Button Content="{x:Static resources:Strings.Insert}" Grid.Column="1" Margin="5,0,0,0"
-                  Command="{Binding InsertCommand}">
+                  CommandParameter="{Binding SelectedItem, ElementName=treeView}" />
+          <Button x:Name="insertButton" Content="{x:Static resources:Strings.Insert}" Grid.Column="1" Margin="5,0,0,0"
+                  Click="OnInsertClick">
             <Button.ContextMenu>
-              <ContextMenu>
+              <ContextMenu x:Name="insertMenu">
+                <MenuItem Header="{x:Static resources:Strings.ID_from_target}" Command="{Binding InsertCommand}" />
                 <MenuItem Header="{x:Static resources:Strings.Match_Any_ID}" Command="{Binding InsertMatchAnyCommand}" />
               </ContextMenu>
             </Button.ContextMenu>
@@ -57,6 +92,8 @@
                           Command="{Binding ResetContainerCommand}" />
                 <MenuItem Header="{x:Static resources:Strings.Define_Custom_Properties}"
                           Command="{Binding DefineCustomPropertiesCommand}" />
+                <MenuItem Header="{x:Static resources:Strings.CSV_Import}"
+                          Command="{Binding CSVImportCommand}" />
               </ContextMenu>
             </Image.ContextMenu>
           </Image>
@@ -64,14 +101,23 @@
       </Grid>
     </Grid>
     <Grid Grid.Column="1" Margin="5,0,0,0" RowDefinitions="Auto, Auto, *, Auto">
-      <ComboBox x:Name="comboBox" Grid.Row="0" ItemsSource="{Binding Constraints}" SelectedIndex="0">
+      <ComboBox x:Name="comboBox" Grid.Row="0" ItemsSource="{Binding Constraints}" SelectedIndex="0"
+                HorizontalAlignment="Stretch">
         <ComboBox.ItemTemplate>
           <DataTemplate>
             <TextBlock Text="{Binding Name}"/>
           </DataTemplate>
         </ComboBox.ItemTemplate>
       </ComboBox>
-      <CheckBox Content="{x:Static resources:Strings.Enabled}" Grid.Row="1" Margin="0,10,0,0" IsChecked="{Binding SelectedItem.Enabled}" />
+      <Grid Grid.Row="1" Margin="0,10,0,0" ColumnDefinitions="*, Auto, *">
+        <CheckBox Content="{x:Static resources:Strings.Enabled}" Grid.Column="0"
+                  IsChecked="{Binding SelectedItem.Enabled}" VerticalAlignment="Center"/>
+        <TextBlock Text="{x:Static resources:Strings.Priority_}" Grid.Column="1" VerticalAlignment="Center"
+                   Margin="0,0,5,0"/>
+        <ComboBox Grid.Column="2"
+                  ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:AutolootPriority}}}"
+                  SelectedItem="{Binding SelectedItem.Priority, Mode=TwoWay}"/>
+      </Grid>
       <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedItem.Constraints}" SelectedItem="{Binding SelectedProperty, Mode=TwoWay}" Margin="0,5">
         <DataGrid.Columns>
           <DataGridTextColumn Header="{x:Static resources:Strings.Property}" Binding="{Binding Property.Name}" Width="1*"/>
@@ -101,16 +147,18 @@
                   Command="{Binding InsertConstraintCommand}"
                   CommandParameter="{Binding SelectedItem, ElementName=comboBox}" />
         </Grid>
-        <StackPanel Orientation="Horizontal">
+        <StackPanel Orientation="Horizontal" Spacing="10">
           <CheckBox Content="{x:Static resources:Strings.Rehue_matching_items}"
                     IsChecked="{Binding SelectedItem.Rehue}" />
-          <Button Margin="10,0,0,0" Command="{Binding SelectHueCommand}"
-                  CommandParameter="{Binding SelectedItem}">
+          <Button Command="{Binding SelectHueCommand}"
+                  CommandParameter="{Binding SelectedItem, ElementName=treeView}">
             <Image Source="{StaticResource ColorWheelIcon}" Height="12" Width="12" />
           </Button>
         </StackPanel>
         <CheckBox Content="{x:Static resources:Strings.Autoloot_matching_items}"
                   IsChecked="{Binding SelectedItem.Autoloot}" />
+        <CheckBox Content="{x:Static resources:Strings.Requeue_failed_items}"
+                  IsChecked="{Binding RequeueFailedItems}" />
       </StackPanel>
     </Grid>    
   </Grid>

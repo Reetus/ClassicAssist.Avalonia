@@ -1,0 +1,38 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Autoloot;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="250"
+        x:Class="ClassicAssist.Avalonia.Views.Autoloot.PropertySelectionWindow"
+        Title="{x:Static resources:Strings.Choose_from_Item}" Width="400" Height="250"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (PropertySelectionViewModel). -->
+  <Grid Margin="10" ColumnDefinitions="*,100">
+    <ListBox Grid.Column="0" ItemsSource="{Binding Properties}">
+      <ListBox.ItemTemplate>
+        <DataTemplate DataType="viewModels:SelectProperties">
+          <StackPanel Orientation="Horizontal">
+            <CheckBox IsChecked="{Binding Selected}"/>
+            <TextBlock Text="{Binding Name}" Margin="10,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap"/>
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+      <Button Content="{x:Static resources:Strings.OK}" Margin="0,0,0,10">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour Command="{Binding OKCommand}"/>
+        </Interaction.Behaviors>
+      </Button>
+      <Button Content="{x:Static resources:Strings.Cancel}">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

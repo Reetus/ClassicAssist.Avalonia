@@ -95,11 +95,18 @@ namespace ClassicAssist.Shared.UI.ViewModels.Debug
 
             Engine.SendPacketToServer( new BatchQueryProperties( items.Select( i => i.Serial ).ToArray() ) );
 
-            foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries() )
+            foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries()
+                         .OrderByDescending( x => x.Priority ) )
             {
                 if ( !entry.Enabled )
                 {
                     TestResults += $"Entry {entry.Name} disabled...\n";
+                    continue;
+                }
+
+                if ( entry.Group != null && !entry.Group.Enabled )
+                {
+                    TestResults += $"Group {entry.Group.Name} containing {entry.Name} disabled...\n";
                     continue;
                 }
 

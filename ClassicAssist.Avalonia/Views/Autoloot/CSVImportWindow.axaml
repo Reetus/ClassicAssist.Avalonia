@@ -1,0 +1,57 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Autoloot;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="350"
+        x:Class="ClassicAssist.Avalonia.Views.Autoloot.CSVImportWindow"
+        Title="{x:Static resources:Strings.CSV_Import}" Width="700" Height="350">
+  <!-- DataContext is supplied by the UI invoker (CSVImportViewModel). -->
+  <Grid Margin="10" ColumnDefinitions="*,120">
+    <Grid Grid.Column="0" RowDefinitions="*,Auto,Auto" ColumnDefinitions="100,*">
+      <ListBox Grid.Row="0" Grid.Column="0" ItemsSource="{Binding Entries}" SelectedItem="{Binding SelectedEntry}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <TextBlock Text="{Binding}"/>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <ListBox Grid.Row="0" Grid.Column="1" Margin="10,0,0,0" ItemsSource="{Binding SelectedEntry.Constraints}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <TextBlock Text="{Binding Property.Name}" Width="150" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding Operator}" Width="75"/>
+              <TextBlock Text="{Binding Value}" Width="150"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <CheckBox Grid.Row="1" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                Content="{x:Static resources:Strings.Ignore_duplicate_entries}"
+                IsChecked="{Binding IgnoreDuplicateEntries}"/>
+      <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0" TextDecorations="Underline"
+                 Cursor="Hand" PointerPressed="OnWikiLinkClick"
+                 Foreground="{DynamicResource AccentColor}"
+                 Text="{x:Static resources:Strings.Click_here_to_learn_how_to_use_CSV_Import_}"/>
+    </Grid>
+    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+      <Button Content="{x:Static resources:Strings.Select_File}" Command="{Binding SelectFileCommand}"/>
+      <StackPanel VerticalAlignment="Bottom" Spacing="5" Margin="0,10,0,0">
+        <Button Content="{x:Static resources:Strings.Import}">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour Command="{Binding SetImportCommand}"/>
+          </Interaction.Behaviors>
+        </Button>
+        <Button Content="{x:Static resources:Strings.Cancel}">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour/>
+          </Interaction.Behaviors>
+        </Button>
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</Window>

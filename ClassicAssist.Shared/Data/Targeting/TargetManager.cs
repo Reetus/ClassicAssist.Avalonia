@@ -39,6 +39,9 @@ namespace ClassicAssist.Data.Targeting
         public static event dTargetChanged FriendChangedEvent;
         public static event dTargetChanged LastTargetChangedEvent;
 
+        /// <summary>Body-data table loaded from <c>Data/Bodies.json</c> (body type -> graphic).</summary>
+        public IReadOnlyList<TargetBodyData> BodyData => _bodyData;
+
         public void SetEnemy( Entity m )
         {
             if ( !UOMath.IsMobile( m.Serial ) )

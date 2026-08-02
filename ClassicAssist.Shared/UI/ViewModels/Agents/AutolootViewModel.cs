@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -9,11 +10,13 @@ using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Data.Regions;
+using ClassicAssist.Data.Targeting;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UI.ViewModels.Autoloot;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.Misc;
+using ClassicAssist.UI.Misc.DraggableTreeView;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
@@ -38,10 +41,20 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private ObservableCollectionEx<AutolootEntry> _items = new();
 
+    private ObservableCollection<IDraggable> _draggables = new();
+
+    private bool _lootHumanoids;
+    private bool _requeueFailedItems;
+    private AutolootGroup _selectedGroup;
+
     private RelayCommand _resetContainerCommand;
 
     public AutolootViewModel()
     {
+        // Sync the groups-only view used by the Move-to-group menu before anything can populate
+        // Draggables, so the menu never lists the ungrouped entries that also live at the root.
+        Draggables.CollectionChanged += OnDraggablesChanged;
+
         if ( !File.Exists( _propertiesFile ) )
         {
             return;
@@ -58,6 +71,31 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         manager.IsEnabled = () => Enabled;
         manager.SetEnabled = enabled => Enabled = enabled;
         manager.IsRunning = () => false;
+
+        Items.CollectionChanged += UpdateDraggables;
+    }
+
+    /// <summary>
+    ///     The <see cref="AutolootGroup" /> entries in <see cref="Draggables" />, for menus that must
+    ///     offer only groups as targets (e.g. Move to group).
+    /// </summary>
+    public ObservableCollection<AutolootGroup> Groups { get; } = new();
+
+    private void OnDraggablesChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        if ( e.Action != NotifyCollectionChangedAction.Reset &&
+             e.NewItems?.OfType<AutolootGroup>().Any() != true &&
+             e.OldItems?.OfType<AutolootGroup>().Any() != true )
+        {
+            return;
+        }
+
+        Groups.Clear();
+
+        foreach ( AutolootGroup group in Draggables.OfType<AutolootGroup>() )
+        {
+            Groups.Add( group );
+        }
     }
 
     public ICommand ClipboardCopyCommand => field ??= new RelayCommand( ClipboardCopy, o => true );
@@ -76,12 +114,20 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         set => SetProperty( ref field, value );
     }
 
+    public ICommand CSVImportCommand => field ??= new RelayCommandAsync( CSVImport, o => true );
+
     public ICommand DefineCustomPropertiesCommand => field ??= new RelayCommand( DefineCustomProperties, o => true );
 
     public bool DisableInGuardzone
     {
         get;
         set => SetProperty( ref field, value );
+    }
+
+    public ObservableCollection<IDraggable> Draggables
+    {
+        get => _draggables;
+        set => SetProperty( ref _draggables, value );
     }
 
     public bool Enabled
@@ -102,14 +148,38 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         set => SetProperty( ref _items, value );
     }
 
+    public bool LootHumanoids
+    {
+        get => _lootHumanoids;
+        set => SetProperty( ref _lootHumanoids, value );
+    }
+
+    public ICommand MoveToGroupCommand => field ??= new RelayCommand( MoveToGroup, o => SelectedItem != null );
+
+    public ICommand NewGroupCommand => field ??= new RelayCommand( NewGroup, o => true );
+
     public ICommand RemoveCommand => field ??= new RelayCommandAsync( Remove, o => SelectedItem != null );
 
     public ICommand RemoveConstraintCommand => field ??= new RelayCommand( RemoveConstraint, o => SelectedProperty != null );
 
+    public ICommand RemoveGroupCommand => field ??= new RelayCommand( RemoveGroup, o => o is IDraggableGroup );
+
     public ICommand RemoveSingleConstraintCommand =>
         field ??= new RelayCommand( o => RemoveSingleConstraint( ( AutolootConstraintEntry )o ), o => SelectedProperty != null );
 
+    public bool RequeueFailedItems
+    {
+        get => _requeueFailedItems;
+        set => SetProperty( ref _requeueFailedItems, value );
+    }
+
     public ICommand ResetContainerCommand => _resetContainerCommand = new RelayCommand( ResetContainer, o => true );
+
+    public AutolootGroup SelectedGroup
+    {
+        get => _selectedGroup;
+        set => SetProperty( ref _selectedGroup, value );
+    }
 
     public AutolootEntry SelectedItem
     {
@@ -140,11 +210,30 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        JObject autolootObj = new() { { "Enabled", Enabled }, { "DisableInGuardzone", DisableInGuardzone }, { "Container", ContainerSerial } };
+        JArray groupArray = new();
+
+        foreach ( AutolootGroup draggableGroup in Draggables.Where( i => i is AutolootGroup )
+                     .OrderBy( e => DraggableTreeViewHelpers.GetIndex( e, Draggables ) )
+                     .Cast<AutolootGroup>() )
+        {
+            JObject groupEntry = new() { { "Name", draggableGroup.Name }, { "Enabled", draggableGroup.Enabled } };
+
+            groupArray.Add( groupEntry );
+        }
+
+        JObject autolootObj = new()
+        {
+            { "Enabled", Enabled },
+            { "DisableInGuardzone", DisableInGuardzone },
+            { "Container", ContainerSerial },
+            { "RequeueFailedItems", RequeueFailedItems },
+            { "LootHumanoids", LootHumanoids },
+            { "Groups", groupArray }
+        };
 
         JArray itemsArray = new();
 
-        foreach ( AutolootEntry entry in Items )
+        foreach ( AutolootEntry entry in Items.OrderBy( e => DraggableTreeViewHelpers.GetIndex( e, Draggables ) ) )
         {
             JObject entryObj = new()
             {
@@ -153,7 +242,9 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 { "Autoloot", entry.Autoloot },
                 { "Rehue", entry.Rehue },
                 { "RehueHue", entry.RehueHue },
-                { "Enabled", entry.Enabled }
+                { "Enabled", entry.Enabled },
+                { "Priority", entry.Priority.ToString() },
+                { "Group", entry.Group?.Name }
             };
 
             if ( entry.Constraints != null )
@@ -181,6 +272,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     public void Deserialize( JObject json, Options options )
     {
         Items.Clear();
+        Draggables.Clear();
 
         if ( json?["Autoloot"] == null )
         {
@@ -192,6 +284,24 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         Enabled = config["Enabled"]?.ToObject<bool>() ?? true;
         DisableInGuardzone = config["DisableInGuardzone"]?.ToObject<bool>() ?? false;
         ContainerSerial = config["Container"]?.ToObject<int>() ?? 0;
+        RequeueFailedItems = config["RequeueFailedItems"]?.ToObject<bool>() ?? false;
+        LootHumanoids = config["LootHumanoids"]?.ToObject<bool>() ?? true;
+
+        if ( config["Groups"] != null )
+        {
+            JToken groups = config["Groups"];
+
+            foreach ( JToken token in groups )
+            {
+                AutolootGroup group = new()
+                {
+                    Name = token["Name"]?.ToObject<string>() ?? "Unknown",
+                    Enabled = token["Enabled"]?.ToObject<bool>() ?? false
+                };
+
+                Draggables.Add( group );
+            }
+        }
 
         if ( config["Items"] != null )
         {
@@ -206,8 +316,25 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                     Autoloot = token["Autoloot"]?.ToObject<bool>() ?? false,
                     Rehue = token["Rehue"]?.ToObject<bool>() ?? false,
                     RehueHue = token["RehueHue"]?.ToObject<int>() ?? 0,
-                    Enabled = token["Enabled"]?.ToObject<bool>() ?? true
+                    Enabled = token["Enabled"]?.ToObject<bool>() ?? true,
+                    Priority = token["Priority"]?.ToObject<AutolootPriority>() ?? AutolootPriority.Normal
                 };
+
+                string groupName = token["Group"]?.ToObject<string>();
+
+                if ( !string.IsNullOrEmpty( groupName ) )
+                {
+                    AutolootGroup group = (AutolootGroup) Draggables.FirstOrDefault( i =>
+                        i is AutolootGroup gr && gr.Name == groupName );
+
+                    if ( group == null )
+                    {
+                        group = new AutolootGroup { Name = groupName };
+                        Draggables.Add( group );
+                    }
+
+                    entry.Group = group;
+                }
 
                 if ( token["Properties"] != null )
                 {
@@ -240,6 +367,16 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
                 Items.Add( entry );
             }
+        }
+
+        if ( SelectedItem != null && !Items.Contains( SelectedItem ) )
+        {
+            SelectedItem = null;
+        }
+
+        if ( SelectedGroup != null && !Draggables.Contains( SelectedGroup ) )
+        {
+            SelectedGroup = null;
         }
     }
 
@@ -344,6 +481,13 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 return;
             }
 
+            if ( !LootHumanoids &&
+                 TargetManager.GetInstance().BodyData.Where( bd => bd.BodyType == TargetBodyType.Humanoid )
+                     .Select( bd => bd.Graphic ).Contains( item.Count ) )
+            {
+                return;
+            }
+
             PacketWaitEntry we = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x3C, new[] { PacketFilterConditions.IntAtPositionCondition( serial, 19 ) } ),
                 PacketDirection.Incoming );
 
@@ -366,9 +510,14 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
             // If change logic, also change in DebugAutolootViewModel
 
-            foreach ( AutolootEntry entry in Items )
+            foreach ( AutolootEntry entry in Items.OrderByDescending( x => x.Priority ) )
             {
                 if ( !entry.Enabled )
+                {
+                    continue;
+                }
+
+                if ( entry.Group != null && !entry.Group.Enabled )
                 {
                     continue;
                 }
@@ -410,11 +559,26 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 }
 
                 UOC.SystemMessage( string.Format( Strings.Autolooting___0__, lootItem.Name ), 61 );
-                Task t = ActionPacketQueue.EnqueueDragDrop( lootItem.Serial, lootItem.Count, containerSerial, QueuePriority.Medium, true, true );
+                DragDropOptions options = new DragDropOptions
+                {
+                    CheckRange = true,
+                    CheckExisting = true,
+                    RequeueFailure = RequeueFailedItems,
+                    SuccessPredicate = CheckItemContainer
+                };
+
+                Task t = ActionPacketQueue.EnqueueDragDrop( lootItem.Serial, lootItem.Count, containerSerial, QueuePriority.Medium, options: options );
 
                 t.Wait( LOOT_TIMEOUT );
             }
         }
+    }
+
+    private static bool CheckItemContainer( int serial, int containerSerial )
+    {
+        Item item = Engine.Items.GetItem( serial );
+
+        return item == null || item.Owner == containerSerial;
     }
 
     private void RemoveConstraint( object obj )
@@ -520,5 +684,218 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         int hue = await Engine.UIInvoker.GetHueAsync();
 
         entry.RehueHue = hue;
+    }
+
+    private void NewGroup( object obj )
+    {
+        int count = Draggables.Count( i => i is IDraggableGroup );
+
+        string name = $"Group-{count + 1}";
+
+        while ( Draggables.Any( e => e is IDraggableGroup && e.Name == name ) )
+        {
+            name += "-";
+        }
+
+        Draggables.Add( new AutolootGroup { Name = name } );
+    }
+
+    private void RemoveGroup( object obj )
+    {
+        if ( !( obj is IDraggableGroup group ) )
+        {
+            return;
+        }
+
+        foreach ( AutolootEntry groupChild in group.Children.Where( i => i is AutolootEntry ).Cast<AutolootEntry>() )
+        {
+            Draggables.Add( groupChild );
+
+            groupChild.Group = null;
+        }
+
+        Draggables.Remove( group );
+    }
+
+    private void MoveToGroup( object obj )
+    {
+        if ( SelectedItem == null || !( obj is AutolootGroup autolootGroup ) )
+        {
+            return;
+        }
+
+        MoveToGroup( SelectedItem, autolootGroup );
+    }
+
+    /// <summary>
+    ///     Moves an entry into a group, removing it from wherever it currently lives (root
+    ///     <see cref="Draggables" /> or another group's <see cref="AutolootGroup.Children" />).
+    ///     Used by the context-menu command and by tree drag-and-drop.
+    /// </summary>
+    public void MoveToGroup( AutolootEntry item, AutolootGroup autolootGroup )
+    {
+        if ( item == null || autolootGroup == null )
+        {
+            return;
+        }
+
+        int newSelectedIndex = GetNewSelectedIndex( item );
+
+        if ( item.Group != null )
+        {
+            item.Group.Children.Remove( item );
+        }
+        else
+        {
+            Draggables.Remove( item );
+        }
+
+        item.Group = autolootGroup;
+        autolootGroup.Children.Add( item );
+
+        SetNewSelectedIndex( newSelectedIndex );
+    }
+
+    /// <summary>
+    ///     Moves an entry out of its group back to the root of <see cref="Draggables" /> (drag-drop
+    ///     "ungroup"). No-op for entries already at the root.
+    /// </summary>
+    public void MoveToRoot( AutolootEntry item )
+    {
+        if ( item == null || item.Group == null )
+        {
+            return;
+        }
+
+        item.Group.Children.Remove( item );
+        Draggables.Add( item );
+    }
+
+    private void UpdateDraggables( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        if ( e.NewItems != null )
+        {
+            foreach ( object newItem in e.NewItems )
+            {
+                if ( !( newItem is AutolootEntry autolootEntry ) )
+                {
+                    continue;
+                }
+
+                if ( autolootEntry.Group != null )
+                {
+                    autolootEntry.Group.Children.Add( autolootEntry );
+                }
+                else
+                {
+                    Draggables.Add( autolootEntry );
+                }
+            }
+        }
+
+        if ( e.OldItems == null )
+        {
+            return;
+        }
+
+        foreach ( object oldItem in e.OldItems )
+        {
+            if ( !( oldItem is AutolootEntry autolootEntry ) )
+            {
+                continue;
+            }
+
+            if ( autolootEntry.Group != null )
+            {
+                autolootEntry.Group.Children.Remove( autolootEntry );
+            }
+            else
+            {
+                Draggables.Remove( autolootEntry );
+            }
+        }
+    }
+
+    private void SetNewSelectedIndex( int newSelectedIndex )
+    {
+        try
+        {
+            IDraggable newSelection = Draggables[newSelectedIndex];
+
+            if ( newSelection is AutolootGroup group )
+            {
+                SelectedGroup = group;
+            }
+            else
+            {
+                SelectedItem = newSelection as AutolootEntry;
+            }
+        }
+        catch ( Exception )
+        {
+            // ignored
+        }
+    }
+
+    private int GetNewSelectedIndex( AutolootEntry item )
+    {
+        int newSelectedIndex = 0;
+
+        if ( item.Group == null )
+        {
+            int previousIndex = Draggables.IndexOf( item );
+
+            if ( previousIndex > 0 )
+            {
+                newSelectedIndex = previousIndex - 1;
+            }
+            else if ( previousIndex < Draggables.Count - 1 )
+            {
+                newSelectedIndex = previousIndex;
+            }
+            else
+            {
+                newSelectedIndex = -1;
+            }
+        }
+
+        return newSelectedIndex;
+    }
+
+    private async Task CSVImport( object obj )
+    {
+        CSVImportViewModel vm = new CSVImportViewModel();
+
+        await Engine.UIInvoker.InvokeDialog( "CSVImportWindow", dataContext: vm );
+
+        if ( !vm.Import )
+        {
+            return;
+        }
+
+        foreach ( AutolootEntry entry in vm.Entries )
+        {
+            if ( vm.IgnoreDuplicateEntries )
+            {
+                IEnumerable<AutolootEntry> items = Items.Where( i => i.ID == entry.ID && i.Constraints.Count == entry.Constraints.Count ).ToList();
+
+                if ( items.Any() )
+                {
+                    bool exclude = ( from item in items
+                            select item.Constraints.All( constraint =>
+                                entry.Constraints.Any( e =>
+                                    e.Property.Name == constraint.Property.Name && e.Operator == constraint.Operator &&
+                                    e.Value == constraint.Value ) ) )
+                        .Any( allMatch => allMatch );
+
+                    if ( exclude )
+                    {
+                        continue;
+                    }
+                }
+            }
+
+            Items.Add( entry );
+        }
     }
 }

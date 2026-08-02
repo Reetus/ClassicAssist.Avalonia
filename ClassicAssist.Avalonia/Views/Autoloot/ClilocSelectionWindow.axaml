@@ -1,0 +1,42 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Autoloot;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="450" d:DesignHeight="350"
+        x:Class="ClassicAssist.Avalonia.Views.Autoloot.ClilocSelectionWindow"
+        Title="{x:Static resources:Strings.Choose_by_Cliloc}" Width="450" Height="350"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (ClilocSelectionViewModel). -->
+  <Grid Margin="10" RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" RowDefinitions="Auto,*">
+      <TextBox Grid.Row="0" Text="{Binding FilterText}"/>
+      <ListBox Grid.Row="1" Margin="0,10,0,0" ItemsSource="{Binding FilteredClilocs}"
+               SelectedItem="{Binding SelectedCliloc}">
+        <ListBox.ItemTemplate>
+          <DataTemplate DataType="viewModels:ClilocSelectionViewModel+ClilocEntry">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock Text="{Binding Value}" Width="320" TextTrimming="CharacterEllipsis"/>
+              <TextBlock Text="{Binding Key}"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Grid>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button Content="{x:Static resources:Strings.OK}" Margin="0,0,5,0">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour Command="{Binding OKCommand}"/>
+        </Interaction.Behaviors>
+      </Button>
+      <Button Content="{x:Static resources:Strings.Cancel}">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

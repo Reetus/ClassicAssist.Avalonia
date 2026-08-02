@@ -20,8 +20,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data.Autoloot;
@@ -44,6 +46,13 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
         private ICommand _removeCommand;
         private ICommand _saveCommand;
         private CustomProperty _selectedProperty;
+
+        /// <summary>
+        ///     Raised after <see cref="SaveCustomProperties" /> writes <c>Properties.Custom.json</c>, so
+        ///     long-lived consumers (an already-open EntityCollectionViewer window) can reload their
+        ///     constraint list instead of waiting for the next time they're constructed.
+        /// </summary>
+        public static event EventHandler Saved;
 
         public CustomPropertiesViewModel()
         {
@@ -140,7 +149,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
                 {
                     Name = property.Name,
                     Cliloc = property.Property.Cliloc,
-                    Arguments = property.Property.Arguments != null && property.Property.Arguments.Length > 0
+                    Arguments = property.Property.Arguments != null && property.Property.Arguments.Length > 0,
+                    ArgumentIndex = property.Property.Arguments != null ? 0 : -1
                 } );
             }
         }
@@ -158,13 +168,14 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
         private void Save( object obj )
         {
             SaveCustomProperties();
+            Saved?.Invoke( this, EventArgs.Empty );
         }
 
         private void SaveCustomProperties()
         {
             List<PropertyEntry> properties = Properties.Select( property => new PropertyEntry
             {
-                ClilocIndex = property.Arguments ? 0 : -1,
+                ClilocIndex = property.ArgumentIndex,
                 Clilocs = new[] { property.Cliloc },
                 ConstraintType = 0,
                 Name = property.Name
@@ -194,7 +205,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
                         {
                             Name = constraint.Name,
                             Cliloc = constraint.Clilocs[0],
-                            Arguments = constraint.ClilocIndex == 0
+                            Arguments = constraint.ClilocIndex >= 0,
+                            ArgumentIndex = constraint.ClilocIndex
                         };
 
                         Properties.AddSorted( customProperty );
@@ -204,9 +216,36 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
         }
     }
 
-    public class CustomProperty : IComparable<CustomProperty>
+    public class CustomProperty : IComparable<CustomProperty>, INotifyPropertyChanged
     {
-        public bool Arguments { get; set; }
+        private int _argumentIndex = -1;
+        private bool _arguments;
+
+        public int ArgumentIndex
+        {
+            get => _argumentIndex;
+            set => SetField( ref _argumentIndex, value );
+        }
+
+        public bool Arguments
+        {
+            get => _arguments;
+            set
+            {
+                switch ( value )
+                {
+                    case false when ArgumentIndex != -1:
+                        ArgumentIndex = -1;
+                        break;
+                    case true when ArgumentIndex < 0:
+                        ArgumentIndex = 0;
+                        break;
+                }
+
+                SetField( ref _arguments, value );
+            }
+        }
+
         public int Cliloc { get; set; }
         public string Name { get; set; }
 
@@ -220,6 +259,25 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
             return ReferenceEquals( null, other )
                 ? 1
                 : string.Compare( Name, other.Name, StringComparison.InvariantCultureIgnoreCase );
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+        {
+            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+        }
+
+        protected bool SetField<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
+        {
+            if ( EqualityComparer<T>.Default.Equals( field, value ) )
+            {
+                return false;
+            }
+
+            field = value;
+            OnPropertyChanged( propertyName );
+            return true;
         }
     }
 }

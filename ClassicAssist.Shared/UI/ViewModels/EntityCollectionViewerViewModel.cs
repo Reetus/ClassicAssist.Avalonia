@@ -32,6 +32,7 @@ using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
+using ClassicAssist.Shared.UI.ViewModels.Autoloot;
 using ClassicAssist.UI.Models;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
@@ -72,6 +73,13 @@ namespace ClassicAssist.UI.ViewModels
 
         private readonly string _propertiesFileCustom =
             Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
+
+        /// <summary>
+        ///     The constraint entries this viewer loaded from <c>Properties.Custom.json</c>, tracked so
+        ///     <see cref="ReloadCustomProperties" /> can drop and re-read just those (the rest of
+        ///     <see cref="Constraints" /> comes from the bundled file plus the filter-only entries).
+        /// </summary>
+        private readonly List<PropertyEntry> _customPropertyEntries = new List<PropertyEntry>();
 
         private readonly string _filterProfilesFile =
             Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "FilterProfiles.json" );
@@ -153,6 +161,8 @@ namespace ClassicAssist.UI.ViewModels
             LoadCustomProperties();
             RegisterFilterOnlyConstraints();
             LoadFilterProfiles();
+
+            CustomPropertiesViewModel.Saved += OnCustomPropertiesSaved;
 
             Collection = collection ?? new ItemCollection( 0 );
 
@@ -420,6 +430,7 @@ namespace ClassicAssist.UI.ViewModels
         /// </summary>
         public void Cleanup()
         {
+            CustomPropertiesViewModel.Saved -= OnCustomPropertiesSaved;
             Collection.CollectionChanged -= OnCollectionChanged;
             SelectedItems.CollectionChanged -= OnSelectedItemsChanged;
             QueueActions.CollectionChanged -= QueueActions_CollectionChanged;
@@ -596,8 +607,40 @@ namespace ClassicAssist.UI.ViewModels
 
                 foreach ( PropertyEntry constraint in constraints ?? Array.Empty<PropertyEntry>() )
                 {
+                    _customPropertyEntries.Add( constraint );
                     Constraints.AddSorted( constraint );
                 }
+            }
+        }
+
+        /// <summary>
+        ///     Drops the entries loaded from <c>Properties.Custom.json</c> and re-reads the file, so a
+        ///     window left open across a save in the Custom Properties editor picks up added/removed
+        ///     constraints instead of keeping the stale list it was constructed with.
+        /// </summary>
+        public void ReloadCustomProperties()
+        {
+            foreach ( PropertyEntry entry in _customPropertyEntries )
+            {
+                Constraints.Remove( entry );
+            }
+
+            _customPropertyEntries.Clear();
+
+            LoadCustomProperties();
+        }
+
+        private void OnCustomPropertiesSaved( object sender, EventArgs e )
+        {
+            IDispatcher dispatcher = _dispatcher ?? Engine.Dispatcher;
+
+            if ( dispatcher != null && !dispatcher.CheckAccess() )
+            {
+                dispatcher.Invoke( ReloadCustomProperties );
+            }
+            else
+            {
+                ReloadCustomProperties();
             }
         }
 

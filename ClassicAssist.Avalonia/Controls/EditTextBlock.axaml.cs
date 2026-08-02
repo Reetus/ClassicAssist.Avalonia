@@ -14,6 +14,14 @@ namespace ClassicAssist.Avalonia.Controls
             AvaloniaProperty.RegisterDirect<EditTextBlock, string>( nameof( Text ), o => o.Text, ( o, v ) => o.Text = v,
                 defaultBindingMode: BindingMode.TwoWay );
 
+        /// <summary>
+        ///     Display text shown in place of <see cref="Text" /> when set (WPF parity: the autoloot tree
+        ///     shows "Name - 0xID" while editing edits just the plain name).
+        /// </summary>
+        public static readonly DirectProperty<EditTextBlock, string> LabelProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, string>( nameof( Label ), o => o.Label,
+                ( o, v ) => o.Label = v );
+
         public static readonly DirectProperty<EditTextBlock, bool> ShowIconProperty =
             AvaloniaProperty.RegisterDirect<EditTextBlock, bool>( nameof( ShowIcon ), o => o.ShowIcon,
                 ( o, v ) => o.ShowIcon = v, defaultBindingMode: BindingMode.TwoWay );
@@ -35,6 +43,7 @@ namespace ClassicAssist.Avalonia.Controls
                 ( o, v ) => o.FontStyle = v );
 
         private readonly Button _pencilButton;
+        private string _label;
         private bool _showIcon;
 
         private string _text;
@@ -70,12 +79,39 @@ namespace ClassicAssist.Avalonia.Controls
             };
 
             _textBox.LostFocus += OnLostFocus;
+
+            UpdateDisplay();
+        }
+
+        protected override void OnPropertyChanged( AvaloniaPropertyChangedEventArgs change )
+        {
+            base.OnPropertyChanged( change );
+
+            if ( change.Property == LabelProperty || change.Property == TextProperty )
+            {
+                UpdateDisplay();
+            }
+        }
+
+        /// <summary>
+        ///     The read-only display shows <see cref="Label" /> when set (e.g. "Name - 0xID" in the autoloot
+        ///     tree), otherwise the editable <see cref="Text" /> - WPF's Label-over-Text behavior.
+        /// </summary>
+        private void UpdateDisplay()
+        {
+            _textBlock.Text = string.IsNullOrEmpty( Label ) ? Text : Label;
         }
 
         public bool ShowIcon
         {
             get => _showIcon;
             set => SetAndRaise( ShowIconProperty, ref _showIcon, value );
+        }
+
+        public string Label
+        {
+            get => _label;
+            set => SetAndRaise( LabelProperty, ref _label, value );
         }
 
         public TextDecorationCollection TextDecorations

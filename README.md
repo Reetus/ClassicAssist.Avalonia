@@ -4,8 +4,9 @@
 [ClassicAssist](https://github.com/Reetus/ClassicAssist/).
 
 > **Status:** under development and usable, but **not** at feature parity with ClassicAssist.
-> A number of macro commands and hotkeys are still missing — see [MACRO_COMMANDS_TODO.md](MACRO_COMMANDS_TODO.md)
-> and [HOTKEYS_TODO.md](HOTKEYS_TODO.md) for what is currently absent.
+> A number of macro commands and hotkeys are still missing — see [docs/TODO.md](docs/TODO.md),
+> [docs/MACRO_COMMANDS_TODO.md](docs/MACRO_COMMANDS_TODO.md) and [docs/HOTKEYS_TODO.md](docs/HOTKEYS_TODO.md)
+> for what is currently absent.
 
 ## How it works
 

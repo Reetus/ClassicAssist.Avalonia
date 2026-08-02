@@ -23,7 +23,8 @@
     </ResourceDictionary>
   </UserControl.Resources>
   <Grid>
-    <TextBlock x:Name="textBlock" Text="{Binding Text, ElementName=root}" TextDecorations="{Binding TextDecorations, ElementName=root}"
+    <TextBlock x:Name="textBlock"
+               TextDecorations="{Binding TextDecorations, ElementName=root}"
                FontWeight="{Binding FontWeight, ElementName=root}" FontStyle="{Binding FontStyle, ElementName=root}"
                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextTrimming="CharacterEllipsis"/>
     <TextBox x:Name="textBox" IsVisible="False" Text="{Binding Text, ElementName=root}"/>

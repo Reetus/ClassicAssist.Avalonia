@@ -14,6 +14,7 @@ namespace ClassicAssist.Data.Autoloot
         private PropertyType _constraintType;
         private string _name;
         private Func<Entity, AutolootConstraintEntry, bool> _predicate;
+        private string _shortName;
 
         public int ClilocIndex
         {
@@ -37,6 +38,16 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _name;
             set => SetProperty( ref _name, value );
+        }
+
+        /// <summary>
+        ///     Abbreviated name used to match CSV-import columns against the property (e.g. "LMC" for
+        ///     "Lower Mana Cost").
+        /// </summary>
+        public string ShortName
+        {
+            get => _shortName;
+            set => SetProperty( ref _shortName, value );
         }
 
         /// <summary>

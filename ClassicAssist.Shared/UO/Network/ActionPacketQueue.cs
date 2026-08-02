@@ -35,6 +35,7 @@ namespace ClassicAssist.UO.Network
     public static class ActionPacketQueue
     {
         private const int DRAG_DROP_DISTANCE = 3;
+        private const int MAX_ATTEMPTS = 5;
 
         private static readonly ThreadPriorityQueue<BaseQueueItem> _actionPacketQueue =
             new ThreadPriorityQueue<BaseQueueItem>( ProcessActionPacketQueue );
@@ -153,11 +154,12 @@ namespace ClassicAssist.UO.Network
 
         public static Task EnqueueDragDrop( int serial, int amount, int containerSerial,
             QueuePriority priority = QueuePriority.Low, bool checkRange = false, bool checkExisting = false, bool delaySend = true, int x = -1,
-            int y = -1 )
+            int y = -1, DragDropOptions options = null, int attempt = 0 )
         {
             lock ( _actionPacketQueueLock )
             {
-                if ( checkExisting && _actionPacketQueue.Contains( e => e is ActionQueueItem aqi && aqi.Serial == serial ) )
+                if ( ( options?.CheckExisting ?? checkExisting ) &&
+                     _actionPacketQueue.Contains( e => e is ActionQueueItem aqi && aqi.Serial == serial ) )
                 {
                     return Task.CompletedTask;
                 }
@@ -183,8 +185,27 @@ namespace ClassicAssist.UO.Network
                     Thread.Sleep( 50 );
                     Engine.SendPacketToServer( new DropItem( serial, containerSerial, x, y, 0 ) );
 
-                    return true;
-                } ) { CheckRange = checkRange, DelaySend = delaySend, Serial = serial };
+                    if ( !( options?.RequeueFailure ?? false ) || options.SuccessPredicate == null ||
+                         attempt >= MAX_ATTEMPTS )
+                    {
+                        return true;
+                    }
+
+                    Commands.WaitForContainerContents( containerSerial, Options.CurrentOptions.ActionDelayMS );
+
+                    bool result = options.SuccessPredicate.Invoke( serial, containerSerial );
+
+                    if ( result )
+                    {
+                        return true;
+                    }
+
+                    EnqueueDragDrop( serial, amount, containerSerial, priority, checkRange, checkExisting, delaySend, x,
+                        y, options, ++attempt );
+
+                    // Return false so the queue processor doesn't reset the action delay before the retry.
+                    return false;
+                } ) { CheckRange = options?.CheckRange ?? checkRange, DelaySend = options?.DelaySend ?? delaySend, Serial = serial };
 
                 _actionPacketQueue.Enqueue( actionQueueItem, priority );
 

@@ -22,6 +22,15 @@ using System.Threading;
 
 namespace ClassicAssist.UO.Network
 {
+    public class DragDropOptions
+    {
+        public bool CheckExisting { get; set; }
+        public bool CheckRange { get; set; }
+        public bool DelaySend { get; set; } = true;
+        public bool RequeueFailure { get; set; }
+        public Func<int, int, bool> SuccessPredicate { get; set; }
+    }
+
     public abstract class BaseQueueItem
     {
         protected BaseQueueItem()

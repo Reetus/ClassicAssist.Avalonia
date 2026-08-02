@@ -2,10 +2,11 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using ClassicAssist.UI.Misc.DraggableTreeView;
 
 namespace ClassicAssist.Data.Autoloot
 {
-    public class AutolootEntry : INotifyPropertyChanged
+    public class AutolootEntry : INotifyPropertyChanged, IDraggableEntry
     {
         private bool _autoloot = true;
 
@@ -13,8 +14,10 @@ namespace ClassicAssist.Data.Autoloot
             new ObservableCollection<AutolootConstraintEntry>();
 
         private bool _enabled = true;
+        private AutolootGroup _group;
         private int _id;
         private string _name;
+        private AutolootPriority _priority = AutolootPriority.Normal;
         private bool _rehue;
         private int _rehueHue = 1153;
 
@@ -36,16 +39,42 @@ namespace ClassicAssist.Data.Autoloot
             set => SetProperty( ref _enabled, value );
         }
 
+        public AutolootGroup Group
+        {
+            get => _group;
+            set => SetProperty( ref _group, value );
+        }
+
         public int ID
         {
             get => _id;
-            set => SetProperty( ref _id, value );
+            set
+            {
+                SetProperty( ref _id, value );
+                OnPropertyChanged( nameof( DisplayName ) );
+            }
         }
 
         public string Name
         {
             get => _name;
-            set => SetProperty( ref _name, value );
+            set
+            {
+                SetProperty( ref _name, value );
+                OnPropertyChanged( nameof( DisplayName ) );
+            }
+        }
+
+        /// <summary>
+        ///     "Name - 0x{id:x}" shown in the autoloot tree (WPF parity). The Any entry (-1) renders as
+        ///     0xffff, matching WPF's "Match Any ID".
+        /// </summary>
+        public string DisplayName => $"{Name} - 0x{( ID & 0xFFFF ).ToString( "x" )}";
+
+        public AutolootPriority Priority
+        {
+            get => _priority;
+            set => SetProperty( ref _priority, value );
         }
 
         public bool Rehue

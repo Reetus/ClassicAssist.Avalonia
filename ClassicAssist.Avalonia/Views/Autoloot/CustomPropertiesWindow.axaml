@@ -1,0 +1,56 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Autoloot;assembly=ClassicAssist.Shared"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="725" d:DesignHeight="350"
+        x:Class="ClassicAssist.Avalonia.Views.Autoloot.CustomPropertiesWindow"
+        Title="{x:Static resources:Strings.Define_Custom_Properties}" Width="725" Height="350"
+        Topmost="True">
+  <Window.DataContext>
+    <viewModels:CustomPropertiesViewModel />
+  </Window.DataContext>
+  <Grid ColumnDefinitions="*,170">
+    <DataGrid Grid.Column="0" Margin="10" ItemsSource="{Binding Properties}"
+              SelectedItem="{Binding SelectedProperty}"
+              AutoGenerateColumns="False" GridLinesVisibility="All" CanUserReorderColumns="False"
+              CanUserResizeColumns="True">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="{x:Static resources:Strings.Property}" Binding="{Binding Name}" Width="2*" IsReadOnly="True"/>
+        <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Binding="{Binding Cliloc}" Width="1*" IsReadOnly="True"/>
+        <DataGridCheckBoxColumn Header="{x:Static resources:Strings.Arguments}" Binding="{Binding Arguments}" Width="*"/>
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Argument_Index}" Width="*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate DataType="viewModels:CustomProperty">
+              <controls:EditTextBlock Text="{Binding ArgumentIndex}" ShowIcon="True" IsVisible="{Binding Arguments}"
+                                      VerticalAlignment="Center"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </DataGrid>
+    <Grid Grid.Column="1" RowDefinitions="*,Auto">
+      <StackPanel Grid.Row="0" Margin="0,10,10,0" Spacing="10">
+        <Button Content="{x:Static resources:Strings.Choose_from_Item}" Command="{Binding ChooseFromItemCommand}"/>
+        <Button Content="{x:Static resources:Strings.Choose_by_Cliloc}" Command="{Binding ChooseFromClilocCommand}"/>
+        <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCommand}"/>
+      </StackPanel>
+      <StackPanel Grid.Row="1" Margin="0,10,10,10" Spacing="10">
+        <Button Content="{x:Static resources:Strings.Save}">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour Command="{Binding SaveCommand}"/>
+          </Interaction.Behaviors>
+        </Button>
+        <Button Content="{x:Static resources:Strings.Cancel}">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour/>
+          </Interaction.Behaviors>
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>
