@@ -116,12 +116,12 @@ namespace ClassicAssist.Tests
                 new EntityCollectionViewerViewModel( MakeCollection( ( 0x40000003, 0x1BF2, 5 ),
                     ( 0x40000001, 0x13B9, 1 ), ( 0x40000002, 0x0F0E, 9 ) ) );
 
-            viewModel.SortStyle = EntityCollectionSortStyle.Serial;
+            viewModel.Options.SortStyle = EntityCollectionSortStyle.Serial;
 
             CollectionAssert.AreEqual( new[] { 0x40000001, 0x40000002, 0x40000003 },
                 viewModel.Entities.Select( e => e.Entity.Serial ).ToArray() );
 
-            viewModel.SortStyle = EntityCollectionSortStyle.Quantity;
+            viewModel.Options.SortStyle = EntityCollectionSortStyle.Quantity;
 
             CollectionAssert.AreEqual( new[] { 1, 5, 9 },
                 viewModel.Entities.Cast<EntityCollectionData>().Select( e => ( (Item) e.Entity ).Count )
