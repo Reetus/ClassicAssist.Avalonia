@@ -6,9 +6,18 @@ namespace ClassicAssist.Data.Autoloot
 {
     public class AutolootConstraintEntry : INotifyPropertyChanged
     {
+        private string _additional;
         private AutolootOperator _operator = AutolootOperator.Equal;
         private PropertyEntry _property;
         private int _value;
+
+        /// <summary>Free-text argument for Predicate constraints that need more than an int (e.g. a
+        /// substring or an Organizer profile name).</summary>
+        public string Additional
+        {
+            get => _additional;
+            set => SetProperty( ref _additional, value );
+        }
 
         public AutolootOperator Operator
         {

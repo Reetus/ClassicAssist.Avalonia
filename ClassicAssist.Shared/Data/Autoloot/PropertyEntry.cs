@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using ClassicAssist.UO.Objects;
+using Newtonsoft.Json;
 
 namespace ClassicAssist.Data.Autoloot
 {
@@ -11,6 +13,7 @@ namespace ClassicAssist.Data.Autoloot
         private int[] _clilocs;
         private PropertyType _constraintType;
         private string _name;
+        private Func<Entity, AutolootConstraintEntry, bool> _predicate;
 
         public int ClilocIndex
         {
@@ -34,6 +37,18 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _name;
             set => SetProperty( ref _name, value );
+        }
+
+        /// <summary>
+        ///     Evaluates a <see cref="PropertyType.Predicate" />/<see cref="PropertyType.PredicateWithValue" />
+        ///     constraint - arbitrary item logic that doesn't fit the cliloc-property or reflected-object-
+        ///     property shapes the other constraint types cover (e.g. distance, tile flags).
+        /// </summary>
+        [JsonIgnore]
+        public Func<Entity, AutolootConstraintEntry, bool> Predicate
+        {
+            get => _predicate;
+            set => SetProperty( ref _predicate, value );
         }
 
         public int CompareTo( PropertyEntry other )
