@@ -12,22 +12,19 @@ using ClassicAssist.UI.Models;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.Scripting.Utils;
 
 namespace ClassicAssist.UI.ViewModels
 {
     public class ObjectInspectorViewModel : BaseViewModel
     {
         private ICommand _copyToClipboardCommand;
+        private ObservableCollection<ObjectInspectorCategory> _categories = new ObservableCollection<ObjectInspectorCategory>();
         private ObservableCollection<ObjectInspectorData> _items = new ObservableCollection<ObjectInspectorData>();
         private ObjectInspectorData _selectedItem;
 
         public ObjectInspectorViewModel()
         {
-            Items.AddRange( new List<ObjectInspectorData>
-            {
-                new ObjectInspectorData { Name = "Name", Value = "Value", Category = "Category" }
-            } );
+            AddData( new ObjectInspectorData { Name = "Name", Value = "Value", Category = "Category" } );
         }
 
         public ObjectInspectorViewModel( Entity entity )
@@ -39,7 +36,7 @@ namespace ClassicAssist.UI.ViewModels
                 AddMobileProperties( mobile );
             }
 
-            //AddPublicProperties( entity );
+            AddPublicProperties( entity );
         }
 
         public ObjectInspectorViewModel( StaticTile staticTile )
@@ -59,6 +56,12 @@ namespace ClassicAssist.UI.ViewModels
                 return _copyToClipboardCommand ?? ( _copyToClipboardCommand =
                     new RelayCommand( o => CopyToClipboard(), o => _selectedItem != null ) );
             }
+        }
+
+        public ObservableCollection<ObjectInspectorCategory> Categories
+        {
+            get => _categories;
+            set => SetProperty( ref _categories, value );
         }
 
         public ObservableCollection<ObjectInspectorData> Items
@@ -316,15 +319,41 @@ namespace ClassicAssist.UI.ViewModels
 
         private void AddData( ObjectInspectorData data )
         {
-            _dispatcher.Invoke( () => { Items.Add( data ); } );
+            void Add()
+            {
+                Items.Add( data );
+
+                ObjectInspectorCategory category = Categories.FirstOrDefault( c => c.Name == data.Category );
+
+                if ( category == null )
+                {
+                    category = new ObjectInspectorCategory { Name = data.Category, IsExpanded = data.IsExpanded };
+                    Categories.Add( category );
+                }
+
+                category.Items.Add( data );
+            }
+
+            if ( !_dispatcher.CheckAccess() )
+            {
+                _dispatcher.Invoke( Add );
+            }
+            else
+            {
+                Add();
+            }
         }
 
         private void CopyToClipboard()
         {
+            if ( _selectedItem == null )
+            {
+                return;
+            }
+
             try
             {
-                //TODO
-                //Clipboard.SetData( DataFormats.Text, _selectedItem.Value );
+                Engine.UIInvoker?.SetClipboardText( _selectedItem.Value );
             }
             catch ( Exception )
             {
@@ -334,19 +363,29 @@ namespace ClassicAssist.UI.ViewModels
 
         private void AddPublicProperties( Entity entity )
         {
-            List<ObjectInspectorData> data = new List<ObjectInspectorData>();
-
             IOrderedEnumerable<PropertyInfo> properties = entity.GetType().GetProperties().OrderBy( p => p.Name );
 
             foreach ( PropertyInfo p in properties )
             {
-                object value = p.GetValue( entity );
-                string valueString = "null";
-
-                if ( value != null )
+                // Indexers throw when GetValue is called without index arguments.
+                if ( p.GetIndexParameters().Length > 0 )
                 {
-                    valueString = value.ToString();
+                    continue;
                 }
+
+                object value;
+
+                try
+                {
+                    value = p.GetValue( entity );
+                }
+                catch ( Exception )
+                {
+                    // A single throwing getter shouldn't abort the whole inspector.
+                    continue;
+                }
+
+                string valueString = value?.ToString() ?? "null";
 
                 DisplayFormatAttribute attr = entity.GetType().GetPropertyAttribute<DisplayFormatAttribute>( p.Name );
 
@@ -355,7 +394,7 @@ namespace ClassicAssist.UI.ViewModels
                     valueString = attr.ToString( value );
                 }
 
-                data.Add( new ObjectInspectorData
+                AddData( new ObjectInspectorData
                 {
                     Name = p.Name,
                     Value = valueString,
@@ -364,8 +403,6 @@ namespace ClassicAssist.UI.ViewModels
                     OnDoubleClick = GetDoubleClickAction( value )
                 } );
             }
-
-            Items.AddRange( data );
         }
 
         private static Action<object> GetDoubleClickAction( object value )
