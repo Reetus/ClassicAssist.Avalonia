@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+             xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="40"
+             x:Class="ClassicAssist.Avalonia.Views.Autoloot.MultiClilocSelector">
+  <controls:MultiValueSelector x:Name="selector">
+    <controls:MultiValueSelector.Buttons>
+      <StackPanel Orientation="Horizontal">
+        <Button Padding="6,0" Background="Transparent" Click="OnChooseClilocClick"
+                ToolTip.Tip="{x:Static resources:Strings.Choose_by_Cliloc}">
+          <Image Source="{StaticResource ExportIcon}" Width="14" Height="14"/>
+        </Button>
+        <Button Padding="6,0" Margin="4,0,0,0" Background="Transparent" Click="OnChooseFromItemClick"
+                ToolTip.Tip="{x:Static resources:Strings.Choose_from_Item}">
+          <Image Source="{StaticResource CrosshairIcon}" Width="14" Height="14"/>
+        </Button>
+      </StackPanel>
+    </controls:MultiValueSelector.Buttons>
+  </controls:MultiValueSelector>
+</UserControl>

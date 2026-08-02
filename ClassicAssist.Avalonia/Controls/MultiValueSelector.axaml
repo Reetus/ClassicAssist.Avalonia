@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="40"
+             x:Class="ClassicAssist.Avalonia.Controls.MultiValueSelector">
+  <Grid>
+    <Grid ColumnDefinitions="*,Auto">
+      <TextBlock x:Name="valuesTextBlock" Grid.Column="0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                 ToolTip.Tip="{Binding #valuesTextBlock.Text}"/>
+      <Button x:Name="ellipsisButton" Grid.Column="1" Padding="6,0" Margin="4,0,0,0" Background="Transparent"
+              Content="..." Click="OnEllipsisClick"/>
+    </Grid>
+    <Popup x:Name="popup" IsLightDismissEnabled="True" Placement="Bottom"
+           PlacementTarget="{Binding #ellipsisButton}">
+      <Border Padding="6" Background="{DynamicResource ThemeBackgroundBrush}">
+        <StackPanel Width="260">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox x:Name="textBox" Grid.Column="0" Watermark="0x... or value" KeyDown="OnTextBoxKeyDown"/>
+            <ContentPresenter Grid.Column="1" Margin="6,0,0,0" Content="{Binding Buttons, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+          </Grid>
+          <Border MinHeight="60" MaxHeight="180" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}"
+                  Margin="0,6,0,0">
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Margin="2">
+                      <TextBlock Grid.Column="0" Text="{Binding Display}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                      <Button Grid.Column="1" Padding="4,0" Background="Transparent"
+                              Command="{Binding $parent[UserControl].RemoveItemCommand}" CommandParameter="{Binding}">
+                        <Image Source="{StaticResource RemoveIcon}" Width="12" Height="12"/>
+                      </Button>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+      </Border>
+    </Popup>
+  </Grid>
+</UserControl>

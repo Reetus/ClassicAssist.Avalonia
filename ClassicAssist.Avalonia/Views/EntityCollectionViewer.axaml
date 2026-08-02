@@ -8,6 +8,7 @@
         xmlns:autoloot="clr-namespace:ClassicAssist.Data.Autoloot;assembly=ClassicAssist.Shared"
         xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
         xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        xmlns:autolootViews="clr-namespace:ClassicAssist.Avalonia.Views.Autoloot"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
         x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewer"
         x:DataType="viewModels:EntityCollectionViewerViewModel"
@@ -16,6 +17,7 @@
   <Window.Resources>
     <misc:PixmapValueConverter x:Key="PixmapValueConverter"/>
     <misc:EnumMatchToBooleanConverter x:Key="EnumMatchToBooleanConverter"/>
+    <misc:AutolootOperatorFilterValueConverter x:Key="AutolootOperatorFilterValueConverter"/>
   </Window.Resources>
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="3" Spacing="3">
@@ -127,7 +129,7 @@
             <DataGridTemplateColumn Header="{x:Static resources:Strings.Operator}" Width="1.5*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
-                  <ComboBox ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type autoloot:AutolootOperator}}}"
+                  <ComboBox ItemsSource="{Binding Property, Converter={StaticResource AutolootOperatorFilterValueConverter}}"
                             SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
@@ -135,7 +137,7 @@
             <DataGridTemplateColumn Header="{x:Static resources:Strings.Value}" Width="1*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
-                  <controls:EditTextBlock Text="{Binding Value}" ShowIcon="True"/>
+                  <autolootViews:AutolootValueControl/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>

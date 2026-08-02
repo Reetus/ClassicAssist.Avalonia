@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+             xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+             mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="40"
+             x:Class="ClassicAssist.Avalonia.Views.Autoloot.MultiItemIDSelector">
+  <controls:MultiValueSelector x:Name="selector" HexDisplay="True">
+    <controls:MultiValueSelector.Buttons>
+      <Button Padding="6,0" Background="Transparent" Click="OnTargetClick"
+              ToolTip.Tip="{x:Static resources:Strings.Choose_from_Item}">
+        <Image Source="{StaticResource CrosshairIcon}" Width="14" Height="14"/>
+      </Button>
+    </controls:MultiValueSelector.Buttons>
+  </controls:MultiValueSelector>
+</UserControl>

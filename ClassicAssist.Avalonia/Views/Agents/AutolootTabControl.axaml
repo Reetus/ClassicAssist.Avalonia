@@ -8,11 +8,15 @@
              xmlns:agents="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Agents;assembly=ClassicAssist.Shared"
              xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
              xmlns:data="clr-namespace:ClassicAssist.Data.Autoloot;assembly=ClassicAssist.Shared"
+             xmlns:autolootViews="clr-namespace:ClassicAssist.Avalonia.Views.Autoloot"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.AutolootTabControl">
   <UserControl.DataContext>
     <agents:AutolootViewModel/>
   </UserControl.DataContext>
+  <UserControl.Resources>
+    <misc:AutolootOperatorFilterValueConverter x:Key="AutolootOperatorFilterValueConverter"/>
+  </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="controls|EditTextBlock">
       <Setter Property="VerticalAlignment" Value="Center"/>
@@ -124,14 +128,15 @@
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Operator}" Width="1*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <ComboBox ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:AutolootOperator}}}" SelectedItem="{Binding Operator}"/>
+                <ComboBox ItemsSource="{Binding Property, Converter={StaticResource AutolootOperatorFilterValueConverter}}"
+                          SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Value}" Width="1*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <controls:EditTextBlock Text="{Binding Value}" ShowIcon="True"/>
+                <autolootViews:AutolootValueControl/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>

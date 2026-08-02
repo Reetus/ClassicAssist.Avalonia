@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
@@ -10,6 +11,7 @@ namespace ClassicAssist.Data.Autoloot
         private AutolootOperator _operator = AutolootOperator.Equal;
         private PropertyEntry _property;
         private int _value;
+        private ObservableCollection<int> _values;
 
         /// <summary>Free-text argument for Predicate constraints that need more than an int (e.g. a
         /// substring or an Organizer profile name).</summary>
@@ -35,6 +37,14 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _value;
             set => SetProperty( ref _value, value );
+        }
+
+        /// <summary>Multi-value set for <see cref="PropertyEntry.UseMultipleValues" /> constraints
+        /// (e.g. ID (Multiple) / Cliloc (Multiple)).</summary>
+        public ObservableCollection<int> Values
+        {
+            get => _values;
+            set => SetProperty( ref _values, value );
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

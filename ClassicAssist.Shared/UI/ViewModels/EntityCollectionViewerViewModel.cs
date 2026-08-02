@@ -159,6 +159,7 @@ namespace ClassicAssist.UI.ViewModels
 
             LoadProperties();
             LoadCustomProperties();
+            AutolootPropertyRegistration.LoadSpecialProperties( Constraints );
             RegisterFilterOnlyConstraints();
             LoadFilterProfiles();
 

@@ -62,6 +62,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
         LoadProperties();
         LoadCustomProperties();
+        AutolootPropertyRegistration.LoadSpecialProperties( Constraints );
 
         AutolootHelpers.SetAutolootContainer = serial => ContainerSerial = serial;
         IncomingPacketHandlers.CorpseContainerDisplayEvent += OnCorpseEvent;
@@ -255,6 +256,11 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 {
                     JObject constraintObj = new() { { "Name", constraint.Property.Name }, { "Operator", constraint.Operator.ToString() }, { "Value", constraint.Value } };
 
+                    if ( constraint.Values != null && constraint.Values.Count > 0 )
+                    {
+                        constraintObj.Add( "Values", JArray.FromObject( constraint.Values ) );
+                    }
+
                     constraintsArray.Add( constraintObj );
                 }
 
@@ -358,6 +364,11 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                             Operator = constraintToken["Operator"]?.ToObject<AutolootOperator>() ?? AutolootOperator.Equal,
                             Value = constraintToken["Value"]?.ToObject<int>() ?? 0
                         };
+
+                        if ( constraintToken["Values"] != null )
+                        {
+                            constraintObj.Values = constraintToken["Values"].ToObject<ObservableCollection<int>>() ?? new ObservableCollection<int>();
+                        }
 
                         constraintsList.Add( constraintObj );
                     }
@@ -612,6 +623,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         Constraints.Clear();
         LoadProperties();
         LoadCustomProperties();
+        AutolootPropertyRegistration.LoadSpecialProperties( Constraints );
     }
 
     private void ResetContainer( object obj )

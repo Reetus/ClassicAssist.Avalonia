@@ -9,12 +9,32 @@ namespace ClassicAssist.Data.Autoloot
 {
     public class PropertyEntry : INotifyPropertyChanged, IComparable<PropertyEntry>
     {
+        private AutolootAllowedOperators _allowedOperators;
+        private Type _allowedValuesEnum;
         private int _clilocIndex;
         private int[] _clilocs;
         private PropertyType _constraintType;
         private string _name;
         private Func<Entity, AutolootConstraintEntry, bool> _predicate;
         private string _shortName;
+        private bool _useMultipleValues;
+
+        public AutolootAllowedOperators AllowedOperators
+        {
+            get => _allowedOperators;
+            set => SetProperty( ref _allowedOperators, value );
+        }
+
+        /// <summary>
+        ///     When set, the Value editor is an enum ComboBox (e.g. <see cref="Layer" /> or
+        ///     <see cref="SkillBonusSkills" />).
+        /// </summary>
+        [JsonIgnore]
+        public Type AllowedValuesEnum
+        {
+            get => _allowedValuesEnum;
+            set => SetProperty( ref _allowedValuesEnum, value );
+        }
 
         public int ClilocIndex
         {
@@ -48,6 +68,16 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _shortName;
             set => SetProperty( ref _shortName, value );
+        }
+
+        /// <summary>
+        ///     When true, the Value editor is a multi-value selector (a set of item IDs or clilocs) backed
+        ///     by <see cref="AutolootConstraintEntry.Values" /> rather than a single int.
+        /// </summary>
+        public bool UseMultipleValues
+        {
+            get => _useMultipleValues;
+            set => SetProperty( ref _useMultipleValues, value );
         }
 
         /// <summary>
