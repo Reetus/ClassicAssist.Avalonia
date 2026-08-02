@@ -117,6 +117,22 @@ namespace ClassicAssist.UO
             }
         }
 
+        /// <summary>
+        ///     Convenience overload matching upstream's <c>byte[] Compress(byte[] bytes)</c> - allocates its
+        ///     own destination buffer (sized the same way upstream's zlib-based version did) and returns the
+        ///     compressed bytes directly, for macro scripts that don't want to manage a buffer themselves.
+        /// </summary>
+        public static byte[] Compress( byte[] bytes )
+        {
+            byte[] destBuffer = new byte[(int) ( bytes.Length * 1.001 ) + 12];
+
+            int length = Compress( bytes, ref destBuffer );
+
+            Array.Resize( ref destBuffer, length );
+
+            return destBuffer;
+        }
+
         public static bool Uncompress( ref byte[] destBuffer, ref int destLength, byte[] sourceBuffer, int sourceLen )
         {
             lock ( _decompressLock )
