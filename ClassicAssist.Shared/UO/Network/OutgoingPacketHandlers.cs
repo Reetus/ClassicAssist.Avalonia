@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -238,6 +239,30 @@ namespace ClassicAssist.UO.Network
             int senderSerial = reader.ReadInt32();
             uint gumpId = reader.ReadUInt32();
             int buttonId = reader.ReadInt32();
+            int switchesCount = reader.ReadInt32();
+
+            int[] switches = null;
+
+            for ( int i = 0; i < switchesCount; i++ )
+            {
+                if ( switches == null )
+                {
+                    switches = new int[switchesCount];
+                }
+
+                switches[i] = reader.ReadInt32();
+            }
+
+            int textEntryCount = reader.ReadInt32();
+            List<(int Key, string Value)> textEntries = new List<(int Key, string Value)>();
+
+            for ( int i = 0; i < textEntryCount; i++ )
+            {
+                int id = reader.ReadInt16();
+                int length = reader.ReadInt16();
+
+                textEntries.Add( ( id, reader.ReadUnicodeStringBE( length ) ) );
+            }
 
             Engine.GumpList.TryRemove( gumpId, out _ );
 
@@ -246,7 +271,7 @@ namespace ClassicAssist.UO.Network
                 GumpEvent?.Invoke( gumpId, senderSerial, gump );
             }
 
-            Engine.Gumps.Remove( gumpId, buttonId );
+            Engine.Gumps.Remove( gumpId, buttonId, switches, textEntries );
         }
 
         private static void OnTargetSent( PacketReader reader )

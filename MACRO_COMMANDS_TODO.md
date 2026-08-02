@@ -8,8 +8,8 @@ of it for macro commands (nothing in `tazuo-net9` is absent from `develop`). It 
 commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled` and
 `DropItemToGround` - and changes how speech hue is resolved.
 
-- **52 commands missing entirely** (6 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
-  `Pathfinding`)
+- **52 commands missing entirely** (9 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
+  `Pathfinding`, `ConfirmPrompt`, `ItemArrayGump`, `OpenHelpGump`)
 - **22 commands whose signature changed** (5 of them behavioural rather than additive; 3 done:
   `Pathfind`, `PlayMacro`, `Replay`)
 
@@ -114,9 +114,32 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 ### Gump (3)
 
-- [ ] `bool ConfirmPrompt( string message, bool closable = false )`
-- [ ] `int[] ItemArrayGump( IList<object> items, bool multiSelect = false, int x = 100, int y = 100, bool fixedSize = false )`
-- [ ] `void OpenHelpGump()`
+- [x] ~~`bool ConfirmPrompt( string message, bool closable = false )`~~ Done - `ConfirmPromptGump` already
+      existed but its window-centering was broken (see below); fixed and wired up.
+- [x] ~~`int[] ItemArrayGump( IList<object> items, bool multiSelect = false, int x = 100, int y = 100, bool fixedSize = false )`~~
+      Done - ported `ItemArrayGump.cs`. Two adaptations: `Bitmap` -> `Pixmap` (this fork's
+      `System.Drawing`-free image type) and `AliasCommands.ResolveSerial( item, false )` ->
+      `ResolveSerial( item )` (this fork's `ResolveSerial` only has the single-arg form, same
+      adaptation already made for `Follow`). The upstream checksum used `Force.Crc32`; replaced with
+      an inline FNV-1a hash rather than adding a new dependency for a value that only needs to be
+      deterministic.
+- [x] ~~`void OpenHelpGump()`~~ Done - ported the `HelpButtonRequest` packet (mirrors the existing
+      `GuildButtonRequest`/`QuestsButtonRequest`).
+
+**Also fixed while porting these**, all in `UO/Objects/Gumps/Gump.cs` and its subclasses - the base
+class had drifted from upstream in ways that blocked `ConfirmPrompt` specifically:
+- `Gump.OnResponse` was missing the `textEntries` parameter upstream has; added it and threaded real
+  values through `OutgoingPacketHandlers.OnGumpButtonPressed` -> `GumpCollection.Remove`, which
+  previously didn't even parse the switches/text-entry fields off the wire.
+- `GetGameWindowCenter`/`SetCenterPosition` were not on the shared base at all - `ConfirmPromptGump`
+  had a private duplicate that reflected via `Engine.ClassicAssembly`, which is only ever set in the
+  plugin process (`ClassicAssist.Plugin/PluginEngine.cs`), never in this UI process, so it silently
+  did nothing; its fallback was a `user32.dll` P/Invoke that would throw on Linux outright. Hoisted
+  both methods onto the base, routed through the already-existing (and already-correct)
+  `ReflectionCommands.GetGameWindowCenter()` RPC bridge, with a fixed `(300, 300)` fallback instead of
+  a native window query when reflection isn't available.
+- `Gump.Compile()` was `private`; changed back to `protected` to match upstream.
+- Added upstream's parameterless `Gump()` constructor (unused either side, kept for parity).
 
 ### List (1)
 

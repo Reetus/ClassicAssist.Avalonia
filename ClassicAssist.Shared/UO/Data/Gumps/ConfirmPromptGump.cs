@@ -17,14 +17,11 @@
 
 #endregion
 
-using System.Drawing;
+using System.Collections.Generic;
 using System.Threading;
 using ClassicAssist.Shared;
-using ClassicAssist.Helpers;
-using ClassicAssist.Misc;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects.Gumps;
-using NativeMethods = ClassicAssist.Misc.NativeMethods;
 
 namespace ClassicAssist.UO.Gumps
 {
@@ -51,7 +48,7 @@ namespace ClassicAssist.UO.Gumps
 
         public bool Result { get; set; }
 
-        public override void OnResponse( int buttonID, int[] switches )
+        public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
         {
             Result = buttonID == 1;
             AutoResetEvent.Set();
@@ -73,61 +70,6 @@ namespace ClassicAssist.UO.Gumps
             Engine.RemoveSendPostFilter( pfi );
 
             return gump.Result;
-        }
-
-        private static Point GetWindowSize()
-        {
-            if ( !NativeMethods.GetWindowRect( Engine.WindowHandle, out NativeMethods.RECT rect ) )
-            {
-                return Point.Empty;
-            }
-
-            int windowWidth = rect.Right - rect.Left;
-            int windowHeight = rect.Bottom - rect.Top;
-
-            return new Point( windowWidth, windowHeight );
-        }
-
-        public static Point GetGameWindowCenter()
-        {
-            dynamic currentProfile =
-                Reflection.GetTypePropertyValue<dynamic>( "ClassicUO.Configuration.ProfileManager", "Current", null );
-
-            if ( currentProfile == null )
-            {
-                return Point.Empty;
-            }
-
-            dynamic gameWindowSize =
-                Reflection.GetTypePropertyValue<dynamic>( currentProfile.GetType(), "GameWindowSize", currentProfile );
-            dynamic gameWindowPosition = Reflection.GetTypePropertyValue<dynamic>( currentProfile.GetType(),
-                "GameWindowPosition", currentProfile );
-
-            if ( gameWindowSize == null || gameWindowPosition == null )
-            {
-                return Point.Empty;
-            }
-
-            return new Point( gameWindowPosition.X + ( gameWindowSize.X >> 1 ),
-                gameWindowPosition.Y + ( gameWindowSize.Y >> 1 ) );
-        }
-
-        private void SetCenterPosition( int width, int height )
-        {
-            Point gameCenterPosition = GetGameWindowCenter();
-
-            if ( gameCenterPosition == Point.Empty )
-            {
-                Point size = GetWindowSize();
-
-                X = ( size.X - ( width  ) ) >> 1;
-                Y = ( size.Y - ( height ) ) >> 1;
-
-                return;
-            }
-
-            X = gameCenterPosition.X - width / 2;
-            Y = gameCenterPosition.Y - height / 2;
         }
     }
 }

@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -52,6 +53,10 @@ namespace ClassicAssist.UO.Objects.Gumps
         public int Serial;
         public int X;
         public int Y;
+
+        public Gump()
+        {
+        }
 
         public Gump( int x, int y, uint id, int serial, string layout, string[] strings, GumpElement[] elements,
             GumpPage[] pages )
@@ -343,12 +348,43 @@ namespace ClassicAssist.UO.Objects.Gumps
             return ID.GetHashCode() ^ Layout?.GetHashCode() ?? 0;
         }
 
-        public virtual void OnResponse( int buttonID, int[] switches )
+        public virtual void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
         {
         }
 
         public virtual void OnClosing()
         {
+        }
+
+        /// <summary>
+        ///     The client's own game window center, reached through <see cref="ReflectionCommands" />
+        ///     rather than the WPF original's in-process reflection, since this fork's UI runs out of
+        ///     process from the client.
+        /// </summary>
+        public static Point GetGameWindowCenter()
+        {
+            return ReflectionCommands.GetGameWindowCenter();
+        }
+
+        /// <summary>
+        ///     Centers the gump on the client's game window. Falls back to a fixed (300, 300) when the
+        ///     center can't be determined (reflection unavailable) - unlike the WPF original there is no
+        ///     native window handle to fall back to querying on Linux.
+        /// </summary>
+        public void SetCenterPosition( int width, int height )
+        {
+            Point gameCenterPosition = GetGameWindowCenter();
+
+            if ( gameCenterPosition == Point.Empty )
+            {
+                X = 300;
+                Y = 300;
+
+                return;
+            }
+
+            X = gameCenterPosition.X - width / 2;
+            Y = gameCenterPosition.Y - height / 2;
         }
 
         public virtual void SendGump()
@@ -695,7 +731,7 @@ namespace ClassicAssist.UO.Objects.Gumps
             return Encoding.ASCII.GetBytes( str );
         }
 
-        private byte[] Compile()
+        protected byte[] Compile()
         {
             IGumpWriter disp = new GumpWriter( this );
 

@@ -17,6 +17,7 @@
 
 #endregion
 
+using System.Collections.Generic;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects.Gumps;
@@ -63,7 +64,7 @@ namespace ClassicAssist.UO.Gumps
             base.SendGump();
         }
 
-        public override void OnResponse( int buttonID, int[] switches )
+        public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
         {
             if ( UseManualReposition && buttonID == REPOSITION_BUTTON_ID )
             {
@@ -74,7 +75,7 @@ namespace ClassicAssist.UO.Gumps
                 _ = Engine.UIInvoker.InvokeDialog( "RepositionableGumpWindow", dataContext: vm );
             }
 
-            base.OnResponse( buttonID, switches );
+            base.OnResponse( buttonID, switches, textEntries );
         }
 
         public virtual void SetPosition( int x, int y )

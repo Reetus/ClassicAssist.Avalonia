@@ -16,6 +16,7 @@
  * along with UO Machine.  If not, see <http://www.gnu.org/licenses/>. */
 
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using ClassicAssist.UO.Objects.Gumps;
 
@@ -40,11 +41,12 @@ namespace ClassicAssist.UO.Objects
             }
         }
 
-        public bool Remove( uint id, int buttonId = 0 )
+        public bool Remove( uint id, int buttonId = 0, int[] switches = null,
+            List<(int Key, string Value)> textEntries = null )
         {
             bool result = _dictionary.TryRemove( id, out Gump g );
 
-            g?.OnResponse( buttonId, null );
+            g?.OnResponse( buttonId, switches, textEntries );
 
             if ( result )
             {

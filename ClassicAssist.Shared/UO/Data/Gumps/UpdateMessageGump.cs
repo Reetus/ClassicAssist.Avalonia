@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
 using ClassicAssist.UO.Objects.Gumps;
@@ -30,10 +31,10 @@ namespace ClassicAssist.UO.Gumps
             AddButton( 420, 360, 247, 248, 0, GumpButtonType.Reply, 0 );
         }
 
-        public override void OnResponse( int buttonID, int[] switches )
+        public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
         {
             AssistantOptions.UpdateGumpVersion = _version;
-            base.OnResponse( buttonID, switches );
+            base.OnResponse( buttonID, switches, textEntries );
         }
     }
 }

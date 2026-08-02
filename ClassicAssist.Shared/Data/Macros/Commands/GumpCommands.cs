@@ -1,6 +1,8 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.UO.Gumps;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects.Gumps;
 using UOC = ClassicAssist.Shared.UO.Commands;
@@ -89,11 +91,24 @@ namespace ClassicAssist.Data.Macros.Commands
             Engine.SendPacketToServer( new QuestsButtonRequest() );
         }
 
-        //[CommandsDisplay( Category = nameof( Strings.Gumps ) )]
-        //public static bool ConfirmPrompt( string message, bool closable = false )
-        //{
-        //    return ConfirmPromptGump.ConfirmPrompt( message, closable );
-        //}
+        [CommandsDisplay( Category = nameof( Strings.Gumps ) )]
+        public static void OpenHelpGump()
+        {
+            Engine.SendPacketToServer( new HelpButtonRequest() );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Gumps ) )]
+        public static bool ConfirmPrompt( string message, bool closable = false )
+        {
+            return ConfirmPromptGump.ConfirmPrompt( message, closable );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Gumps ) )]
+        public static int[] ItemArrayGump( IList<object> items, bool multiSelect = false, int x = 100, int y = 100,
+            bool fixedSize = false )
+        {
+            return UO.Gumps.ItemArrayGump.SendGump( items.ToArray(), multiSelect, x, y, fixedSize );
+        }
 
         //public static int SendCustomGump( Gump gump )
         //{
