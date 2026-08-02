@@ -56,7 +56,7 @@ namespace ClassicAssist.Data.Dress
             Items = list;
         }
 
-        public async Task Dress( bool moveConflicting = true )
+        public async Task Dress( CancellationToken cancellationToken, bool moveConflicting = true )
         {
             PlayerMobile player = Engine.Player;
 
@@ -99,6 +99,11 @@ namespace ClassicAssist.Data.Dress
                 {
                     foreach ( DressAgentItem dai in Items )
                     {
+                        if ( cancellationToken.IsCancellationRequested )
+                        {
+                            return;
+                        }
+
                         Item item = Engine.Items.GetItem( dai.Serial );
 
                         if ( item == null && dai.Type == DressAgentItemType.Serial )
@@ -142,7 +147,7 @@ namespace ClassicAssist.Data.Dress
             }
         }
 
-        public async Task Undress()
+        public async Task Undress( CancellationToken cancellationToken = default )
         {
             if ( Engine.Player == null )
             {
@@ -172,6 +177,11 @@ namespace ClassicAssist.Data.Dress
 
                 foreach ( Item item in itemsToUnequip )
                 {
+                    if ( cancellationToken.IsCancellationRequested )
+                    {
+                        return;
+                    }
+
                     await ActionPacketQueue.EnqueueDragDrop( item.Serial, 1, container, QueuePriority.Medium );
                 }
             }

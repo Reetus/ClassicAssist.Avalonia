@@ -105,9 +105,21 @@ namespace ClassicAssist.Tests.MacroCommands
                 Name = "Tony"
             } );
 
+            // ClearJournal advances the "main" buffer past everything written so far, so the
+            // pre-existing entry is no longer matched...
             JournalCommands.ClearJournal();
 
-            Assert.AreEqual( 0, Engine.Journal.Count );
+            Assert.IsFalse( JournalCommands.InJournal( "lazy dog" ) );
+
+            // ...but entries written afterwards are.
+            Engine.Journal.Write( new JournalEntry
+            {
+                Text = "The quick brown bow jumped over the lazy dog.",
+                SpeechType = JournalSpeech.Say,
+                Name = "Tony"
+            } );
+
+            Assert.IsTrue( JournalCommands.InJournal( "lazy dog" ) );
 
             Engine.Journal.Clear();
         }

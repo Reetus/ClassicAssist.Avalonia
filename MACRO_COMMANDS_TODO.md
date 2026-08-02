@@ -8,10 +8,17 @@ of it for macro commands (nothing in `tazuo-net9` is absent from `develop`). It 
 commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled` and
 `DropItemToGround` - and changes how speech hue is resolved.
 
-- **52 commands missing entirely** (9 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
-  `Pathfinding`, `ConfirmPrompt`, `ItemArrayGump`, `OpenHelpGump`)
-- **22 commands whose signature changed** (5 of them behavioural rather than additive; 3 done:
-  `Pathfind`, `PlayMacro`, `Replay`)
+- **52 commands missing entirely** (36 done: `PlayCUOMacro`, `Logout`, `Quit`, `Follow`, `Following`,
+  `Pathfinding`, `ConfirmPrompt`, `ItemArrayGump`, `OpenHelpGump`, `ActiveAbility`, `Direction`, `Map`,
+  `DiffHitsPercent`, `FasterCastRecovery`, `FasterCasting`, `SwingSpeedIncrease`, `AutoColorPick`,
+  `ClearObjectQueue`, `DropItemToGround`, `MoveItemXYZ`, `MoveTypeXYZ`, `IsRunning`, `PlaySound`,
+  `StopOrganizer`, `SkillDelta`, `UseLastSkill`, `OpenECV`, `PopList`, `Autoloot`, `Autolooting`,
+  `SetAutoloot`, `SetOrganizerContainers`, `SetScavenger`, `SetVendorBuyAutoBuy`, `StopDress`,
+  `WaitForTradeWindow`)
+- **22 commands whose signature changed** (5 of them behavioural rather than additive; 21 done:
+  `Pathfind`, `PlayMacro`, `Replay`, `ClearJournal`, `Distance`, `FindType`, `GetEnemy`, `GetFriend`,
+  `GetFriendListOnly`, `GetList`, `HeadMsg`, `Hotkeys`, `InJournal`, `InList`, `MoveTypeOffset`, `Msg`,
+  `PushList`, `ReplyGump`, `Skill`, `Target`, `WaitForJournal`. Only `UseType` - `skipQueue` - is left.)
 
 ## Before porting anything
 
@@ -37,9 +44,9 @@ commands `tazuo-net9` does not have - `WaitForBuffEnabled`, `WaitForBuffDisabled
 
 These are not additive - existing macros behave differently, and porting them changes semantics.
 
-- [ ] **Lists hold `object` upstream, `int` here.** `PushList`, `InList`, `GetList`
-      (`int[]` -> `object[]`) and the internal `GetAllLists`. Upstream macros can store strings
-      and other values in lists; this fork cannot.
+- [x] ~~**Lists hold `object` upstream, `int` here.**~~ Done - `PushList`, `InList`, `GetList`
+      (`int[]` -> `object[]`) and `GetAllLists` now operate on `List<object>`. Upstream macros can
+      store strings and other values in lists; so can this fork now.
 - [x] ~~**`Pathfind` returns `bool` upstream, `void` here**, and gained `checkDistance` /
       `desiredDistance`.~~ Done - both overloads now match upstream, including the `Pathfind(-1)`
       cancel case the shipped help already documented. The `bool` is the client's own
@@ -57,10 +64,12 @@ These are not additive - existing macros behave differently, and porting them ch
       matching upstream, since that delegate is what `PlayMacro`/`Replay` invoke to start/resume a
       macro run). Every other assignment/invocation of `HotkeyEntry.Action` - regular hotkeys, dress,
       organizer - passes `null` through since only macro-triggered runs have arguments to give it.
-- [ ] **`Hotkeys` gained `onOff`.** This fork can only toggle, not set a specific state.
-- [ ] **Speech hue is derived upstream, hardcoded here.** This fork has
-      `DEFAULT_SPEAK_HUE = 34` baked into `Msg`, `YellMsg`, `WhisperMsg`, `EmoteMsg`, `GuildMsg`,
-      `AllianceMsg` and `HeadMsg`. `develop` replaced it with a `DERIVED_SPEAK_HUE = -1` sentinel
+- [x] ~~**`Hotkeys` gained `onOff`.**~~ Done - `Hotkeys( string onOff = "toggle" )` now supports
+      `on` / `off` / `toggle`, matching upstream.
+- [x] ~~**Speech hue is derived upstream, hardcoded here.**~~ Done - `DEFAULT_SPEAK_HUE = 34` is gone;
+      `Msg`, `YellMsg`, `WhisperMsg`, `EmoteMsg`, `GuildMsg`, `AllianceMsg` and `HeadMsg` now use the
+      `DERIVED_SPEAK_HUE = -1` sentinel resolved through `GetSpeakHue()` (per-character hue derived
+      from the player's serial), same as upstream `develop`.
       that resolves to the player's configured speech hue via `GetSpeakHue()`. Only `Msg` and
       `HeadMsg` show up as signature changes, but the behaviour differs for all seven.
 
@@ -83,21 +92,29 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 ### Abilities (1)
 
-- [ ] `bool ActiveAbility()`
+- [x] ~~`bool ActiveAbility()`~~ Done - `AbilitiesManager.IsPrimaryEnabled || IsSecondaryEnabled`.
 
 ### Agent (11)
 
-- [ ] `void Autoloot( object obj )`
-- [ ] `bool Autolooting()`
-- [ ] `void ClearTrapPouch()`
-- [ ] `void SetAutoloot( string onOff = "toggle" )`
-- [ ] `void SetOrganizerContainers( string entryName, object sourceContainer = null, object destinationContainer = null )`
-- [ ] `void SetScavenger( string onOff = "toggle" )`
-- [ ] `void SetTrapPouch( object obj )`
-- [ ] `void SetVendorBuyAutoBuy( string listName, string onOff = "toggle" )`
-- [ ] `void StopDress()`
-- [ ] `void UseTrapPouch()`
-- [ ] `bool WaitForTradeWindow( int timeout = -1 )`
+- [x] ~~`void Autoloot( object obj )`~~ Done - calls `AutolootManager.CheckContainer`, wired to the
+      `AutolootViewModel.OnCorpseEvent` loot routine.
+- [x] ~~`bool Autolooting()`~~ Done - `AutolootManager.IsRunning` (event-driven fork, so false in
+      practice until a UI sets it).
+- [ ] `void ClearTrapPouch()` - needs `TrapPouchManager` (does not exist here at all).
+- [x] ~~`void SetAutoloot( string onOff = "toggle" )`~~ Done - drives `AutolootManager.SetEnabled` /
+      `IsEnabled`, wired to `AutolootViewModel.Enabled`.
+- [x] ~~`void SetOrganizerContainers( string entryName, object sourceContainer = null, object destinationContainer = null )`~~
+      Done.
+- [x] ~~`void SetScavenger( string onOff = "toggle" )`~~ Done - drives `ScavengerManager.SetEnabled` /
+      `IsEnabled`, wired to `ScavengerTabViewModel.Enabled`.
+- [ ] `void SetTrapPouch( object obj )` - needs `TrapPouchManager`.
+- [x] ~~`void SetVendorBuyAutoBuy( string listName, string onOff = "toggle" )`~~ Done - was already
+      implemented; the TODO diff missed it.
+- [x] ~~`void StopDress()`~~ Done - added `DressManager.Stop()`, which cancels the in-progress dress /
+      undress via a `CancellationTokenSource` threaded through `DressAgentEntry.Dress` / `Undress`.
+- [ ] `void UseTrapPouch()` - needs `TrapPouchManager`.
+- [x] ~~`bool WaitForTradeWindow( int timeout = -1 )`~~ Done - packet wait on 0x6F (trade window),
+      matching upstream.
 
 ### Alias (5)
 
@@ -109,8 +126,11 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 ### Entity (2)
 
-- [ ] `string Direction( object obj = null )`
-- [ ] `int Map()`
+- [x] ~~`string Direction( object obj = null )`~~ Done - resolves the entity and returns
+      `entity.Direction.ToString()`. Note: adding it forced qualifying the `Direction.Invalid` uses in
+      the pre-existing `DirectionTo` as `UO.Data.Direction.Invalid`, since the new method name now
+      shadows the enum inside the class.
+- [x] ~~`int Map()`~~ Done - `(int) Engine.Player.Map` (0 when not connected).
 
 ### Gump (3)
 
@@ -143,11 +163,14 @@ class had drifted from upstream in ways that blocked `ConfirmPrompt` specificall
 
 ### List (1)
 
-- [ ] `int PopList( string listName, object elementValue = null )`
+- [x] ~~`int PopList( string listName, object elementValue = null )`~~ Done - pops "front" / "back",
+      or removes all matching elements when given a value. Needed the missing
+      `ParameterType.ElementValueFrontBack` enum value.
 
 ### Macro (2)
 
-- [ ] `bool IsRunning( string name )`
+- [x] ~~`bool IsRunning( string name )`~~ Done - looks the macro up by name and returns
+      `macro.IsRunning`, false with an "Unknown macro" message when it doesn't exist.
 - [x] ~~`void PlayCUOMacro( string name )`~~ Done - via `ReflectionCommands.PlayCUOMacro()`.
 
 ### Main (8)
@@ -157,8 +180,14 @@ class had drifted from upstream in ways that blocked `ConfirmPrompt` specificall
 - [ ] `void DisplayQuestPointer( int x, int y, bool enabled = true )`
 - [x] ~~`void Logout()`~~ Done - via `ReflectionCommands.Logout()`.
 - [ ] `void MessageBox( string title, string body )`
-- [ ] `void OpenECV( object obj )`
-- [ ] `void PlaySound( object param, bool playSync = true )`
+- [x] ~~`void OpenECV( object obj )`~~ Done - resolves the entity, opens the container / mobile
+      equipment through `Engine.UIInvoker.Invoke( "EntityCollectionViewer", ... )` (the Avalonia
+      equivalent of the upstream `EntityCollectionViewer` window), the same path the
+      `EntityCollectionViewerHotkey` uses. Waits for container contents first when targeting a
+      container the client hasn't opened.
+- [x] ~~`void PlaySound( object param, bool playSync = true )`~~ Done - was already implemented
+      (`MainCommands.PlaySound`); the fork replaces WPF's `SoundPlayer` with the cross-platform
+      `AudioPlayback.Play`. The TODO diff missed it because the two bodies differ.
 - [x] ~~`void Quit()`~~ Done - via `ReflectionCommands.Quit()`.
 - [ ] `void SetAutologin( bool enabled, string account = "", int serverIndex = -1, int characterIndex = -1 )`
 
@@ -172,10 +201,11 @@ class had drifted from upstream in ways that blocked `ConfirmPrompt` specificall
 
 ### Mobile (4)
 
-- [ ] `double DiffHitsPercent( object obj = null )`
-- [ ] `double FasterCastRecovery()`
-- [ ] `double FasterCasting()`
-- [ ] `int SwingSpeedIncrease()`
+- [x] ~~`double DiffHitsPercent( object obj = null )`~~ Done - mirrors `DiffHits`; returns
+      `100 - Hits / HitsMax * 100`.
+- [x] ~~`double FasterCastRecovery()`~~ Done - `Engine.Player?.FasterCastRecovery ?? 0`.
+- [x] ~~`double FasterCasting()`~~ Done - `Engine.Player?.FasterCasting ?? 0`.
+- [x] ~~`int SwingSpeedIncrease()`~~ Done - `Engine.Player?.SwingSpeedIncrease ?? 0`.
 
 ### Movement (3)
 
@@ -191,20 +221,30 @@ class had drifted from upstream in ways that blocked `ConfirmPrompt` specificall
 
 ### Object (5)
 
-- [ ] `void AutoColorPick( int hue )`
-- [ ] `void ClearObjectQueue()`
-- [ ] `bool DropItemToGround( object item, int amount = -1 )`
-- [ ] `void MoveItemXYZ( object item, int x, int y, int z, int amount = -1 )`
-- [ ] `bool MoveTypeXYZ( int id, object findLocation, int x, int y, int z, int amount = -1, int hue = -1, int range = -1 )`
+- [x] ~~`void AutoColorPick( int hue )`~~ Done - added a receive filter on 0x95 (hue picker) that
+      auto-answers with `HuePickerResponse( serial, itemid, hue )`, which needed the new
+      `UO/Network/Packets/HuePickerResponse.cs`.
+- [x] ~~`void ClearObjectQueue()`~~ Done - `ActionPacketQueue.Clear()`.
+- [x] ~~`bool DropItemToGround( object item, int amount = -1 )`~~ Done - tries the 8 tiles around the
+      player for one that passes `MapInfo.ItemCanFit`, then queues the drag/drop. This required
+      porting `MapInfo.ItemCanFit` (and its `GetAverageZ` / `InRange` / `GetItemsAtLocation` helpers
+      plus `LandTile.Ignored`) from upstream's `UO/Data/Map.cs` - the fork had `GetMapSurface` and the
+      tile/static data but not the fit algorithm.
+- [x] ~~`void MoveItemXYZ( object item, int x, int y, int z, int amount = -1 )`~~ Done - mirrors
+      `MoveItemOffset` but takes absolute coordinates.
+- [x] ~~`bool MoveTypeXYZ( int id, object findLocation, int x, int y, int z, int amount = -1, int hue = -1, int range = -1 )`~~
+      Done - matches the `ground`-vs-container logic of `MoveTypeOffset` but with absolute coordinates.
 
 ### Organizer (1)
 
-- [ ] `void StopOrganizer()`
+- [x] ~~`void StopOrganizer()`~~ Done - calls the new `OrganizerManager.Stop()`, which cancels the
+      running organize's `CancellationTokenSource` (the manager previously had no stop path).
 
 ### Skill (2)
 
-- [ ] `double SkillDelta( string name )`
-- [ ] `void UseLastSkill()`
+- [x] ~~`double SkillDelta( string name )`~~ Done - `SkillEntry.Delta`.
+- [x] ~~`void UseLastSkill()`~~ Done - sends `UseSkill( Engine.LastSkillID )`, same as the
+      pre-existing `UseLastSkill` hotkey.
 
 ### Spell (1)
 
@@ -217,69 +257,72 @@ fork cannot express what upstream can.
 
 ### `ClearJournal` — JournalCommands.cs
 
-- upstream: `void ClearJournal( string buffer = DEFAULT_JOURNAL_BUFFER )`
-- here:     `void ClearJournal()`
+- [x] ~~upstream: `void ClearJournal( string buffer = DEFAULT_JOURNAL_BUFFER )`~~
+      Done - added `buffer`. This required upgrading `CircularBuffer<T>` to the upstream named
+      read-offset model (`Clear(string key)`, `FindAny`, `GetEntireBuffer`); `InJournal` /
+      `ClearJournal` / `WaitForJournal` now operate on the named "main" buffer. A parameterless
+      physical `Clear()` was kept for callers that really want to wipe it.
 
 ### `Distance` — EntityCommands.cs
 
-- upstream: `int Distance( int x, int y )`
-- upstream: `int Distance( object obj = null )`
-- here:     `int Distance( object obj = null )`
+- [x] ~~upstream: `int Distance( int x, int y )`~~ Done - added the coordinate overload.
 
 ### `FindType` — ObjectCommands.cs
 
-- upstream: `bool FindType( int graphic, int range = -1, object findLocation = null, int hue = -1, int minimumStackAmount = -1 )`
-- here:     `bool FindType( int graphic, int range = -1, object findLocation = null, int hue = -1 )`
+- [x] ~~upstream: `bool FindType( int graphic, int range = -1, object findLocation = null, int hue = -1, int minimumStackAmount = -1 )`~~
+      Done - added `minimumStackAmount` (and fixed the item `Distance <= range` parity).
 
 ### `GetEnemy` — TargetCommands.cs
 
-- upstream: `bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )`
-- here:     `bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any" )`
+- [x] ~~upstream: `bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )`~~
+      Done - added `maxDistance`, plumbed through `TargetManager.GetEnemy` / `GetMobile` /
+      `GetClosestMobile`.
 
 ### `GetFriend` — TargetCommands.cs
 
-- upstream: `bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )`
-- here:     `bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any" )`
+- [x] ~~upstream: `bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )`~~
+      Done - added `maxDistance`, plumbed through `TargetManager.GetFriend`.
 
 ### `GetFriendListOnly` — TargetCommands.cs
 
-- upstream: `bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any", int maxDistance = -1 )`
-- here:     `bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any" )`
+- [x] ~~upstream: `bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any", int maxDistance = -1 )`~~
+      Done - added `maxDistance`.
 
 ### `GetList` — ListCommands.cs
 
-- upstream: `object[] GetList( string listName )`
-- here:     `int[] GetList( string listName )`
+- [x] ~~upstream: `object[] GetList( string listName )`~~ Done - lists hold `object` now (see the
+      breaking-change entry above).
 
 ### `HeadMsg` — MsgCommands.cs
 
-- upstream: `void HeadMsg( string message, object obj = null, int hue = DERIVED_SPEAK_HUE )`
-- here:     `void HeadMsg( string message, object obj = null, int hue = DEFAULT_SPEAK_HUE )`
+- [x] ~~upstream: `void HeadMsg( string message, object obj = null, int hue = DERIVED_SPEAK_HUE )`~~
+      Done - uses the `DERIVED_SPEAK_HUE = -1` sentinel resolved via `ResolveSpeakHue` (see the
+      breaking-change entry above).
 
 ### `Hotkeys` — MainCommands.cs
 
-- upstream: `void Hotkeys( string onOff = "toggle" )`
-- here:     `void Hotkeys()`
+- [x] ~~upstream: `void Hotkeys( string onOff = "toggle" )`~~ Done - supports `on` / `off` / `toggle`.
 
 ### `InJournal` — JournalCommands.cs
 
-- upstream: `bool InJournal( string text, string author = "", int hue = -1, int timeout = -1, string buffer = DEFAULT_JOURNAL_BUFFER )`
-- here:     `bool InJournal( string text, string author = "", int hue = -1 )`
+- [x] ~~upstream: `bool InJournal( string text, string author = "", int hue = -1, int timeout = -1, string buffer = DEFAULT_JOURNAL_BUFFER )`~~
+      Done - added `timeout` (waits via `WaitForJournal`) and `buffer` (named read-offset search).
 
 ### `InList` — ListCommands.cs
 
-- upstream: `bool InList( string listName, object value )`
-- here:     `bool InList( string listName, int value )`
+- [x] ~~upstream: `bool InList( string listName, object value )`~~ Done - lists hold `object` now (see
+      the breaking-change entry above).
 
 ### `MoveTypeOffset` — ObjectCommands.cs
 
-- upstream: `bool MoveTypeOffset( int id, object findLocation, int xOffset, int yOffset, int zOffset, int amount = -1, int hue = -1, int range = -1 )`
-- here:     `bool MoveTypeOffset( int id, object findLocation, int xOffset, int yOffset, int zOffset, int amount = -1 )`
+- [x] ~~upstream: `bool MoveTypeOffset( int id, object findLocation, int xOffset, int yOffset, int zOffset, int amount = -1, int hue = -1, int range = -1 )`~~
+      Done - added `hue` / `range` and the `ground` find-location support (previously an error).
 
 ### `Msg` — MsgCommands.cs
 
-- upstream: `void Msg( string message, int hue = DERIVED_SPEAK_HUE )`
-- here:     `void Msg( string message, int hue = DEFAULT_SPEAK_HUE )`
+- [x] ~~upstream: `void Msg( string message, int hue = DERIVED_SPEAK_HUE )`~~
+      Done - uses the `DERIVED_SPEAK_HUE = -1` sentinel resolved via `ResolveSpeakHue` (see the
+      breaking-change entry above).
 
 ### ~~`Pathfind` — MovementCommands.cs~~ Done, signatures now match
 
@@ -292,8 +335,8 @@ fork cannot express what upstream can.
 
 ### `PushList` — ListCommands.cs
 
-- upstream: `void PushList( string listName, object value )`
-- here:     `void PushList( string listName, int value )`
+- [x] ~~upstream: `void PushList( string listName, object value )`~~ Done - lists hold `object` now (see
+      the breaking-change entry above).
 
 ### ~~`Replay` — MacroCommands.cs~~ Done, signatures now match
 
@@ -301,18 +344,20 @@ fork cannot express what upstream can.
 
 ### `ReplyGump` — GumpCommands.cs
 
-- upstream: `void ReplyGump( uint gumpId, int buttonId, int[] switches = null, Dictionary<int, string> textEntries = null )`
-- here:     `void ReplyGump( uint gumpId, int buttonId, int[] switches = null )`
+- [x] ~~upstream: `void ReplyGump( uint gumpId, int buttonId, int[] switches = null, Dictionary<int, string> textEntries = null )`~~
+      Done - added `textEntries`. The `GumpButtonClick` packet was also upgraded to write the
+      text-entry section (and back-patch the 0xB1 length) instead of always `Fill()`-ing the tail.
 
 ### `Skill` — SkillCommands.cs
 
-- upstream: `double Skill( string name, bool baseSkill = false )`
-- here:     `double Skill( string name )`
+- [x] ~~upstream: `double Skill( string name, bool baseSkill = false )`~~ Done - added `baseSkill`;
+      returns `SkillEntry.Base` when true.
 
 ### `Target` — TargetCommands.cs
 
-- upstream: `void Target( object obj, bool checkRange = false, bool useQueue = false, int senderSerial = -1 )`
-- here:     `void Target( object obj, bool checkRange = false, bool useQueue = false )`
+- [x] ~~upstream: `void Target( object obj, bool checkRange = false, bool useQueue = false, int senderSerial = -1 )`~~
+      Done - was already implemented (the Avalonia copy has `senderSerial` and passes it to the
+      `Target` packet); the TODO diff missed it.
 
 ### `UseType` — ObjectCommands.cs
 
@@ -321,8 +366,8 @@ fork cannot express what upstream can.
 
 ### `WaitForJournal` — JournalCommands.cs
 
-- upstream: `bool WaitForJournal( string text, int timeout, string author = "", int hue = -1 )`
-- here:     `bool WaitForJournal( string text, int timeout, string author = "" )`
+- [x] ~~upstream: `bool WaitForJournal( string text, int timeout, string author = "", int hue = -1 )`~~
+      Done - added `hue`; `InJournal`'s `timeout` path and the wait's own match now honour it.
 
 ## Not a difference
 

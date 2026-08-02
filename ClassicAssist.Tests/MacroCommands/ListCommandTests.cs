@@ -23,7 +23,7 @@ namespace ClassicAssist.Tests.MacroCommands
         [TestMethod]
         public void GetListWillReturnArray()
         {
-            Assert.IsTrue( GetList( "shmoo" ) is int[] _ );
+            Assert.IsTrue( GetList( "shmoo" ) is object[] _ );
         }
 
         [TestMethod]

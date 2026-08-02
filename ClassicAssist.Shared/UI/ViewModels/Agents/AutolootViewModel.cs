@@ -52,7 +52,12 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
         AutolootHelpers.SetAutolootContainer = serial => ContainerSerial = serial;
         IncomingPacketHandlers.CorpseContainerDisplayEvent += OnCorpseEvent;
-        AutolootManager.GetInstance().GetEntries = () => _items.ToList();
+        AutolootManager manager = AutolootManager.GetInstance();
+        manager.GetEntries = () => _items.ToList();
+        manager.CheckContainer = OnCorpseEvent;
+        manager.IsEnabled = () => Enabled;
+        manager.SetEnabled = enabled => Enabled = enabled;
+        manager.IsRunning = () => false;
     }
 
     public ICommand ClipboardCopyCommand => field ??= new RelayCommand( ClipboardCopy, o => true );

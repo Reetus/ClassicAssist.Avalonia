@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
+using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
@@ -29,6 +31,7 @@ namespace ClassicAssist.Data.Dress
         private ObservableCollectionEx<DressAgentEntry> _items = new ObservableCollectionEx<DressAgentEntry>();
         private DressAgentEntry _temporaryDress;
         private bool _useUo3DPackets;
+        private CancellationTokenSource _cancellationTokenSource;
 
         private DressManager()
         {
@@ -95,7 +98,16 @@ namespace ClassicAssist.Data.Dress
         {
             try
             {
+                if ( IsDressing )
+                {
+                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                        (int) SystemMessageHues.Red );
+                    return;
+                }
+
                 IsDressing = true;
+                _cancellationTokenSource = new CancellationTokenSource();
+                cancellationToken = _cancellationTokenSource.Token;
 
                 PlayerMobile player = Engine.Player;
 
@@ -176,13 +188,29 @@ namespace ClassicAssist.Data.Dress
         {
             try
             {
-                IsDressing = true;
+                if ( IsDressing )
+                {
+                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                        (int) SystemMessageHues.Red );
+                    return;
+                }
 
-                await dae.Dress( moveConflictingItems );
+                IsDressing = true;
+                _cancellationTokenSource = new CancellationTokenSource();
+
+                await dae.Dress( _cancellationTokenSource.Token, moveConflictingItems );
             }
             finally
             {
                 IsDressing = false;
+            }
+        }
+
+        public void Stop()
+        {
+            if ( IsDressing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
+            {
+                _cancellationTokenSource?.Cancel();
             }
         }
     }

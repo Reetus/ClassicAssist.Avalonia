@@ -11,6 +11,7 @@ using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
+using ClassicAssist.UI.ViewModels;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Data.Macros.Commands
@@ -103,12 +104,82 @@ namespace ClassicAssist.Data.Macros.Commands
             t.Start();
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Main ) )]
-        public static void Hotkeys()
+        [CommandsDisplay( Category = nameof( Strings.Main ),
+            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+        public static void OpenECV( object obj )
+        {
+            int serial = AliasCommands.ResolveSerial( obj );
+
+            if ( serial == 0 )
+            {
+                UOC.SystemMessage( Strings.Invalid_container___ );
+                return;
+            }
+
+            Entity entity = UOMath.IsMobile( serial )
+                ? Engine.Mobiles.GetMobile( serial )
+                : (Entity) Engine.Items.GetItem( serial );
+
+            if ( entity == null )
+            {
+                UOC.SystemMessage( Strings.Cannot_find_item___ );
+                return;
+            }
+
+            ItemCollection collection;
+
+            switch ( entity )
+            {
+                case Item item:
+
+                    // Targeting a container the client has never opened leaves us with nothing to
+                    // show, so ask the server for its contents first.
+                    if ( item.Container == null )
+                    {
+                        UOC.WaitForContainerContents( item.Serial, 1000 );
+                    }
+
+                    collection = item.Container ?? new ItemCollection( item.Serial );
+
+                    break;
+                case Mobile mobile:
+                    collection = new ItemCollection( entity.Serial ) { mobile.GetEquippedItems() };
+
+                    break;
+                default:
+                    collection = new ItemCollection( entity.Serial );
+
+                    break;
+            }
+
+            // The invoker marshals onto the UI thread itself, so this stays on the macro thread.
+            Engine.UIInvoker?.Invoke( "EntityCollectionViewer", null, typeof( EntityCollectionViewerViewModel ),
+                new object[] { collection } );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Main ), Parameters = new[] { nameof( ParameterType.OnOff ) } )]
+        public static void Hotkeys( string onOff = "toggle" )
         {
             HotkeyManager manager = HotkeyManager.GetInstance();
 
-            manager.Enabled = !manager.Enabled;
+            switch ( onOff.Trim().ToLower() )
+            {
+                case "on":
+                {
+                    manager.Enabled = true;
+                    break;
+                }
+                case "off":
+                {
+                    manager.Enabled = false;
+                    break;
+                }
+                default:
+                {
+                    manager.Enabled = !manager.Enabled;
+                    break;
+                }
+            }
 
             UOC.SystemMessage( manager.Enabled ? Strings.Hotkeys_enabled___ : Strings.Hotkeys_disabled___,
                 manager.Enabled ? 0x3F : 36 );

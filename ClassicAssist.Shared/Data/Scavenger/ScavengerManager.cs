@@ -14,7 +14,11 @@ namespace ClassicAssist.Data.Scavenger
 
         public Action CheckArea { get; set; }
 
+        public Func<bool> IsEnabled { get; set; }
+
         public ObservableCollection<ScavengerEntry> Items { get; set; }
+
+        public Action<bool> SetEnabled { get; set; }
 
         public static ScavengerManager GetInstance()
         {

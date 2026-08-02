@@ -55,6 +55,23 @@ namespace ClassicAssist.Data.Macros.Commands
             Task.Run( () => current.Action( current, args ) );
         }
 
+        [CommandsDisplay( Category = nameof( Strings.Macros ),
+            Parameters = new[] { nameof( ParameterType.MacroName ) } )]
+        public static bool IsRunning( string name )
+        {
+            MacroManager manager = MacroManager.GetInstance();
+
+            MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name == name );
+
+            if ( macro != null )
+            {
+                return macro.IsRunning;
+            }
+
+            UOC.SystemMessage( Strings.Unknown_macro___ );
+            return false;
+        }
+
         [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.MacroName ) } )]
         public static void PlayCUOMacro( string name )
         {

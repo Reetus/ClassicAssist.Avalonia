@@ -36,6 +36,14 @@ namespace ClassicAssist.Data.Organizer
 
         private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
 
+        public void Stop()
+        {
+            if ( IsOrganizing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
+            {
+                _cancellationTokenSource?.Cancel();
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )

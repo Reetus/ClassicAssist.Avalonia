@@ -6,42 +6,79 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
+using ClassicAssist.UO.Objects;
 
 namespace ClassicAssist.Data.Macros.Commands
 {
     public static class JournalCommands
     {
-        [CommandsDisplay( Category = nameof( Strings.Journal ) )]
-        public static bool InJournal( string text, string author = "", int hue = -1 )
+        private const string DEFAULT_JOURNAL_BUFFER = "main";
+        private const string SYSTEM_MESSAGE_AUTHOR = "system";
+
+        [CommandsDisplay( Category = nameof( Strings.Journal ),
+            Parameters = new[]
+            {
+                nameof( ParameterType.String ), nameof( ParameterType.String ), nameof( ParameterType.Hue ),
+                nameof( ParameterType.Timeout ), nameof( ParameterType.String )
+            } )]
+        public static bool InJournal( string text, string author = "", int hue = -1, int timeout = -1,
+            string buffer = DEFAULT_JOURNAL_BUFFER )
         {
             bool match;
 
-            if ( author.ToLower().Equals( "system" ) )
+            if ( timeout != -1 )
             {
-                match = Engine.Journal.GetBuffer().Any( je =>
-                    je.Text.ToLower().Contains( text.ToLower() ) &&
-                    ( je.SpeechType == JournalSpeech.System || je.Name == "System" ) &&
-                    ( hue == -1 || je.SpeechHue == hue ) );
+                WaitForJournal( text, timeout, author, hue );
+            }
+
+            if ( string.Equals( author, SYSTEM_MESSAGE_AUTHOR, StringComparison.CurrentCultureIgnoreCase ) )
+            {
+                match = Engine.Journal.FindAny( je =>
+                    je.Text.IndexOf( text, StringComparison.CurrentCultureIgnoreCase ) >= 0 &&
+                    ( je.SpeechType == JournalSpeech.System ||
+                      string.Equals( je.Name, SYSTEM_MESSAGE_AUTHOR, StringComparison.CurrentCultureIgnoreCase ) ) &&
+                    ( hue == -1 || je.SpeechHue == hue ), buffer );
             }
             else
             {
-                match = Engine.Journal.GetBuffer().Any( je =>
-                    je.Text.ToLower().Contains( text.ToLower() ) &&
-                    ( string.IsNullOrEmpty( author ) || string.Equals( je.Name, author,
-                          StringComparison.CurrentCultureIgnoreCase ) ) && ( hue == -1 || je.SpeechHue == hue ) );
+                if ( !string.IsNullOrEmpty( author ) )
+                {
+                    int serial = AliasCommands.ResolveSerial( author );
+
+                    if ( serial > 0 )
+                    {
+                        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
+                        author = entity?.Name ?? author;
+                    }
+                }
+
+                match = Engine.Journal.FindAny( je =>
+                    je.Text.IndexOf( text, StringComparison.CurrentCultureIgnoreCase ) >= 0 &&
+                    ( string.IsNullOrEmpty( author ) ||
+                      string.Equals( je.Name, author.Trim(), StringComparison.CurrentCultureIgnoreCase ) ) &&
+                    ( hue == -1 || je.SpeechHue == hue ), buffer );
             }
 
             return match;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Journal ) )]
-        public static void ClearJournal()
+        [CommandsDisplay( Category = nameof( Strings.Journal ),
+            Parameters = new[]
+            {
+                nameof( ParameterType.String )
+            } )]
+        public static void ClearJournal( string buffer = DEFAULT_JOURNAL_BUFFER )
         {
-            Engine.Journal.Clear();
+            Engine.Journal.Clear( buffer );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Journal ) )]
-        public static bool WaitForJournal( string text, int timeout, string author = "" )
+        [CommandsDisplay( Category = nameof( Strings.Journal ),
+            Parameters = new[]
+            {
+                nameof( ParameterType.String ), nameof( ParameterType.Timeout ), nameof( ParameterType.String ),
+                nameof( ParameterType.Hue )
+            } )]
+        public static bool WaitForJournal( string text, int timeout, string author = "", int hue = -1 )
         {
             AutoResetEvent are = new AutoResetEvent( false );
 
@@ -49,16 +86,30 @@ namespace ClassicAssist.Data.Macros.Commands
             {
                 bool match;
 
-                if ( author.ToLower().Equals( "system" ) )
+                if ( string.Equals( author, SYSTEM_MESSAGE_AUTHOR, StringComparison.CurrentCultureIgnoreCase ) )
                 {
-                    match = je.Text.ToLower().Contains( text.ToLower() ) &&
-                            ( je.SpeechType == JournalSpeech.System || je.Name == "System" );
+                    match = je.Text.IndexOf( text, StringComparison.CurrentCultureIgnoreCase ) >= 0 &&
+                            ( je.SpeechType == JournalSpeech.System ||
+                              string.Equals( je.Name, SYSTEM_MESSAGE_AUTHOR, StringComparison.CurrentCultureIgnoreCase ) ) &&
+                            ( hue == -1 || je.SpeechHue == hue );
                 }
                 else
                 {
-                    match = je.Text.ToLower().Contains( text.ToLower() ) &&
-                            ( string.IsNullOrEmpty( author ) || string.Equals( je.Name, author,
-                                  StringComparison.CurrentCultureIgnoreCase ) );
+                    if ( !string.IsNullOrEmpty( author ) )
+                    {
+                        int serial = AliasCommands.ResolveSerial( author );
+
+                        if ( serial > 0 )
+                        {
+                            Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
+                            author = entity?.Name ?? author;
+                        }
+                    }
+
+                    match = je.Text.IndexOf( text, StringComparison.CurrentCultureIgnoreCase ) >= 0 &&
+                            ( string.IsNullOrEmpty( author ) ||
+                              string.Equals( je.Name, author.Trim(), StringComparison.CurrentCultureIgnoreCase ) ) &&
+                            ( hue == -1 || je.SpeechHue == hue );
                 }
 
                 if ( match )

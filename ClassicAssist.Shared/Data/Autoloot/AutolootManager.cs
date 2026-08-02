@@ -27,7 +27,18 @@ namespace ClassicAssist.Data.Autoloot
         private static AutolootManager _instance;
         private static readonly object _lock = new object();
 
+        /// <summary>
+        ///     Trigger autoloot on a container/corpse serial. Wired by the UI (AutolootViewModel).
+        /// </summary>
+        public Action<int, bool> CheckContainer { get; set; }
+
         public Func<List<AutolootEntry>> GetEntries { get; set; } = () => new List<AutolootEntry>();
+
+        public Func<bool> IsEnabled { get; set; }
+
+        public Func<bool> IsRunning { get; set; }
+
+        public Action<bool> SetEnabled { get; set; }
 
         public static AutolootManager GetInstance()
         {

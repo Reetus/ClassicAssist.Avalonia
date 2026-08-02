@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Dress;
 using ClassicAssist.Shared.UO.Data;
@@ -133,7 +134,7 @@ namespace ClassicAssist.Tests.Agents
                 }
             };
 
-            dae.Dress().Wait();
+            dae.Dress( CancellationToken.None ).Wait();
 
             Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
@@ -163,7 +164,7 @@ namespace ClassicAssist.Tests.Agents
                 UndressContainer = undressContainer.Serial
             };
 
-            dae.Dress().Wait();
+            dae.Dress( CancellationToken.None ).Wait();
 
             Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
@@ -191,7 +192,7 @@ namespace ClassicAssist.Tests.Agents
                 }
             };
 
-            dae.Dress().Wait();
+            dae.Dress( CancellationToken.None ).Wait();
 
             Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
@@ -223,7 +224,7 @@ namespace ClassicAssist.Tests.Agents
 
             Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
 
-            dae.Dress( false ).Wait();
+            dae.Dress( CancellationToken.None, false ).Wait();
 
             Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
 
@@ -251,7 +252,7 @@ namespace ClassicAssist.Tests.Agents
 
             Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
 
-            dae.Dress().Wait();
+            dae.Dress( CancellationToken.None ).Wait();
 
             Assert.AreEqual( dressItem.Serial, _player.GetLayer( Layer.Talisman ) );
 

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Reflection;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.BuffIcons;
 using ClassicAssist.Data.SpecialMoves;
@@ -28,6 +29,13 @@ namespace ClassicAssist.Data.Macros.Commands
             Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
 
             return entity?.Distance ?? int.MaxValue;
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Entity ),
+            Parameters = new[] { nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ) } )]
+        public static int Distance( int x, int y )
+        {
+            return Math.Max( Math.Abs( x - ( Engine.Player?.X ?? x ) ), Math.Abs( y - ( Engine.Player?.Y ?? y ) ) );
         }
 
         [CommandsDisplay( Category = nameof( Strings.Entity ),
@@ -168,6 +176,14 @@ namespace ClassicAssist.Data.Macros.Commands
             return 0;
         }
 
+        [CommandsDisplay( Category = nameof( Strings.Entity ) )]
+        public static int Map()
+        {
+            PlayerMobile player = Engine.Player;
+
+            return player == null ? 0 : (int) player.Map;
+        }
+
         [CommandsDisplay( Category = nameof( Strings.Entity ),
             Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
         public static int Z( object obj = null )
@@ -266,7 +282,7 @@ namespace ClassicAssist.Data.Macros.Commands
 
             if ( serial == 0 )
             {
-                return Direction.Invalid.ToString();
+                return UO.Data.Direction.Invalid.ToString();
             }
 
             Entity entity = UOMath.IsMobile( serial )
@@ -275,10 +291,29 @@ namespace ClassicAssist.Data.Macros.Commands
 
             if ( entity == null )
             {
-                return Direction.Invalid.ToString();
+                return UO.Data.Direction.Invalid.ToString();
             }
 
             return UOMath.MapDirection( Engine.Player.X, Engine.Player.Y, entity.X, entity.Y ).ToString();
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Entity ),
+            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+        public static string Direction( object obj = null )
+        {
+            int serial = AliasCommands.ResolveSerial( obj );
+
+            Entity entity = UOMath.IsMobile( serial )
+                ? Engine.Mobiles.GetMobile( serial )
+                : Engine.Items.GetItem( serial ) as Entity;
+
+            if ( serial == 0 || entity == null )
+            {
+                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+                return UO.Data.Direction.Invalid.ToString();
+            }
+
+            return entity.Direction.ToString();
         }
 
         [CommandsDisplay( Category = nameof( Strings.Entity ),

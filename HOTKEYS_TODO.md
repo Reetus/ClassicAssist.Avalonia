@@ -33,13 +33,15 @@ Nothing left here.
 These hotkeys are thin wrappers over macro commands this repo does not have. See
 `MACRO_COMMANDS_TODO.md` - porting the command makes the hotkey trivial.
 
-- [ ] **Toggle Autoloot** (`ToggleAutolootCommand.cs`) - needs `AgentCommands.SetAutoloot`.
-- [ ] **Toggle Scavenger** (`ToggleScavengerCommand.cs`) - needs `AgentCommands.SetScavenger`.
+- [x] ~~**Toggle Autoloot** (`ToggleAutolootCommand.cs`)~~ Done - added alongside the
+      `AgentCommands.SetAutoloot` port, which it calls.
+- [x] ~~**Toggle Scavenger** (`ToggleScavengerCommand.cs`)~~ Done - added alongside the
+      `AgentCommands.SetScavenger` port, which it calls.
 
-      Both are more than a copy: upstream drives `AutolootManager` / `ScavengerManager` through
-      `SetEnabled( bool )` / `IsEnabled()`, and **neither manager here has those methods**. The
-      enabled flag has to be given a home on the manager first, otherwise the hotkey has nothing
-      to toggle.
+      Both are now thin wrappers: `AutolootManager` / `ScavengerManager` gained `IsEnabled` /
+      `SetEnabled` (and `CheckContainer` / `IsRunning` for autoloot), wired to the corresponding
+      ViewModels' state in `AutolootViewModel` / `ScavengerTabViewModel`, and the `SetAutoloot` /
+      `SetScavenger` macro commands drive them.
 
 - [ ] **Take Snapshot** (`SnapshotCommand.cs`) - needs `MainCommands.Snapshot`, which returns
       `(bool, string)` and is absent here. Upstream captures the client window through the host,

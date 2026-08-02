@@ -3,11 +3,14 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Data.Counters;
 using ClassicAssist.Data.Dress;
+using ClassicAssist.Data.Organizer;
+using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Data.Vendors;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
+using ClassicAssist.UO.Network.PacketFilter;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Data.Macros.Commands
@@ -104,6 +107,120 @@ namespace ClassicAssist.Data.Macros.Commands
             int serial = AliasCommands.ResolveSerial( obj );
 
             AutolootHelpers.SetAutolootContainer?.Invoke( serial );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ),
+            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+        public static void Autoloot( object obj )
+        {
+            int serial = AliasCommands.ResolveSerial( obj );
+
+            if ( serial == 0 )
+            {
+                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            }
+
+            AutolootManager.GetInstance().CheckContainer?.Invoke( serial, true );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+        public static bool Autolooting()
+        {
+            return AutolootManager.GetInstance().IsRunning?.Invoke() ?? false;
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ),
+            Parameters = new[] { nameof( ParameterType.OnOff ) } )]
+        public static void SetAutoloot( string onOff = "toggle" )
+        {
+            AutolootManager manager = AutolootManager.GetInstance();
+
+            switch ( onOff.Trim().ToLower() )
+            {
+                case "on":
+                    manager.SetEnabled?.Invoke( true );
+                    break;
+                case "off":
+                    manager.SetEnabled?.Invoke( false );
+                    break;
+                case "toggle":
+                    manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
+                    break;
+            }
+
+            UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Autoloot,
+                ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
+                SystemMessageHues.Yellow );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ),
+            Parameters = new[] { nameof( ParameterType.OnOff ) } )]
+        public static void SetScavenger( string onOff = "toggle" )
+        {
+            ScavengerManager manager = ScavengerManager.GetInstance();
+
+            switch ( onOff.Trim().ToLower() )
+            {
+                case "on":
+                    manager.SetEnabled?.Invoke( true );
+                    break;
+                case "off":
+                    manager.SetEnabled?.Invoke( false );
+                    break;
+                case "toggle":
+                    manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
+                    break;
+            }
+
+            UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Scavenger,
+                ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
+                SystemMessageHues.Yellow );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ),
+            Parameters = new[]
+            {
+                nameof( ParameterType.AgentEntryName ), nameof( ParameterType.SerialOrAlias ),
+                nameof( ParameterType.SerialOrAlias )
+            } )]
+        public static void SetOrganizerContainers( string entryName, object sourceContainer = null,
+            object destinationContainer = null )
+        {
+            int sourceSerial = AliasCommands.ResolveSerial( sourceContainer );
+            int destinationSerial = AliasCommands.ResolveSerial( destinationContainer );
+
+            OrganizerManager manager = OrganizerManager.GetInstance();
+
+            OrganizerEntry entry = manager.Items.FirstOrDefault( e => e.Name.ToLower().Equals( entryName.ToLower() ) );
+
+            if ( entry == null )
+            {
+                UOC.SystemMessage( Strings.Invalid_organizer_agent_name___ );
+                return;
+            }
+
+            entry.SourceContainer = sourceSerial;
+            entry.DestinationContainer = destinationSerial;
+
+            UOC.SystemMessage( Strings.Organizer_containers_set___ );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+        public static void StopDress()
+        {
+            DressManager manager = DressManager.GetInstance();
+
+            manager.Stop();
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Trade ),
+            Parameters = new[] { nameof( ParameterType.Timeout ) } )]
+        public static bool WaitForTradeWindow( int timeout = -1 )
+        {
+            PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x6F,
+                new[] { PacketFilterConditions.ByteAtPositionCondition( 0, 3 ) } ), PacketDirection.Incoming, true );
+
+            return pwe.Lock.WaitOne( timeout );
         }
 
         [CommandsDisplay( Category = nameof( Strings.Agents ),

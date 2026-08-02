@@ -15,7 +15,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Debug
 
         public DebugJournalViewModel()
         {
-            JournalEntry[] buffer = Engine.Journal.GetBuffer();
+            JournalEntry[] buffer = Engine.Journal.GetEntireBuffer();
 
             foreach ( JournalEntry journalEntry in buffer )
             {

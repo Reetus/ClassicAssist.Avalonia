@@ -308,9 +308,9 @@ public static class TargetCommands
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ),
-        Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ) } )]
+        Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
     [CommandsDisplayStringSeeAlso( new[] { nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction ) } )]
-    public static bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any" )
+    public static bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )
     {
         TargetNotoriety notoFlags = TargetNotoriety.None;
 
@@ -337,12 +337,12 @@ public static class TargetCommands
             ti = TargetInfliction.Any;
         }
 
-        return TargetManager.GetInstance().GetEnemy( notoFlags, bt, td, TargetFriendType.None, ti );
+        return TargetManager.GetInstance().GetEnemy( notoFlags, bt, td, TargetFriendType.None, ti, maxDistance );
     }
 
-    [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ) } )]
+    [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
     [CommandsDisplayStringSeeAlso( new[] { nameof( TargetDistance ), nameof( TargetInfliction ), nameof( TargetBodyType ) } )]
-    public static bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any" )
+    public static bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any", int maxDistance = -1 )
     {
         if ( !Enum.TryParse( distance, true, out TargetDistance td ) )
         {
@@ -359,13 +359,13 @@ public static class TargetCommands
             bt = TargetBodyType.Any;
         }
 
-        return TargetManager.GetInstance().GetFriend( TargetNotoriety.Any, bt, td, TargetFriendType.Only, ti );
+        return TargetManager.GetInstance().GetFriend( TargetNotoriety.Any, bt, td, TargetFriendType.Only, ti, maxDistance );
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ),
-        Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ) } )]
+        Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
     [CommandsDisplayStringSeeAlso( new[] { nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction ) } )]
-    public static bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any" )
+    public static bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )
     {
         TargetNotoriety notoFlags = TargetNotoriety.None;
 
@@ -392,7 +392,7 @@ public static class TargetCommands
             ti = TargetInfliction.Any;
         }
 
-        return TargetManager.GetInstance().GetFriend( notoFlags, bt, td, TargetFriendType.Include, ti );
+        return TargetManager.GetInstance().GetFriend( notoFlags, bt, td, TargetFriendType.Include, ti, maxDistance );
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.BeneficialHarmfulNeutral ) } )]

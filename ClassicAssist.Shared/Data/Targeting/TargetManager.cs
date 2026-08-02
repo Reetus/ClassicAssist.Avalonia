@@ -114,7 +114,7 @@ namespace ClassicAssist.Data.Targeting
 
         public Mobile GetClosestMobile( IEnumerable<Notoriety> notoriety, TargetBodyType bodyType = TargetBodyType.Any,
             TargetFriendType friendType = TargetFriendType.Include,
-            TargetInfliction inflictionType = TargetInfliction.Any )
+            TargetInfliction inflictionType = TargetInfliction.Any, int maxDistance = -1 )
         {
             Mobile mobile;
 
@@ -150,8 +150,9 @@ namespace ClassicAssist.Data.Targeting
                 mobile = Engine.Mobiles.SelectEntities( m =>
                         MobileCommands.InFriendList( m.Serial ) && bodyTypePredicate( m.ID ) &&
                         ( !Options.CurrentOptions.GetFriendEnemyUsesIgnoreList ||
-                          !ObjectCommands.IgnoreList.Contains( m.Serial ) ) && m.Serial != Engine.Player?.Serial )
-                    .OrderBy( m => m.Distance ).ByInflication( inflictionType ).FirstOrDefault();
+                          !ObjectCommands.IgnoreList.Contains( m.Serial ) ) && m.Serial != Engine.Player?.Serial &&
+                        ( maxDistance == -1 || m.Distance <= maxDistance ) ).OrderBy( m => m.Distance )
+                    .ByInflication( inflictionType ).FirstOrDefault();
             }
             else
             {
@@ -159,8 +160,9 @@ namespace ClassicAssist.Data.Targeting
                         notoriety.Contains( m.Notoriety ) && m.Distance < MAX_DISTANCE && bodyTypePredicate( m.ID ) &&
                         ( friendType == TargetFriendType.Include || !MobileCommands.InFriendList( m.Serial ) ) &&
                         ( !Options.CurrentOptions.GetFriendEnemyUsesIgnoreList ||
-                          !ObjectCommands.IgnoreList.Contains( m.Serial ) ) && m.Serial != Engine.Player?.Serial )
-                    .OrderBy( m => m.Distance ).ByInflication( inflictionType )?.FirstOrDefault();
+                          !ObjectCommands.IgnoreList.Contains( m.Serial ) ) && m.Serial != Engine.Player?.Serial &&
+                        ( maxDistance == -1 || m.Distance <= maxDistance ) ).OrderBy( m => m.Distance )
+                    .ByInflication( inflictionType )?.FirstOrDefault();
             }
 
             return mobile;
@@ -308,10 +310,10 @@ namespace ClassicAssist.Data.Targeting
 
         public bool GetEnemy( TargetNotoriety notoFlags, TargetBodyType bodyType, TargetDistance targetDistance,
             TargetFriendType friendType = TargetFriendType.None,
-            TargetInfliction inflictionType = TargetInfliction.Any )
+            TargetInfliction inflictionType = TargetInfliction.Any, int maxDistance = -1 )
         {
             Mobile m = GetMobile( notoFlags, bodyType, targetDistance, friendType, inflictionType,
-                targetDistance == TargetDistance.Nearest ? AliasCommands.GetAlias( "enemy" ) : 0 );
+                targetDistance == TargetDistance.Nearest ? AliasCommands.GetAlias( "enemy" ) : 0, maxDistance );
 
             if ( m == null )
             {
@@ -324,10 +326,10 @@ namespace ClassicAssist.Data.Targeting
 
         public bool GetFriend( TargetNotoriety notoFlags, TargetBodyType bodyType, TargetDistance targetDistance,
             TargetFriendType friendType = TargetFriendType.Include,
-            TargetInfliction inflictionType = TargetInfliction.Any )
+            TargetInfliction inflictionType = TargetInfliction.Any, int maxDistance = -1 )
         {
             Mobile m = GetMobile( notoFlags, bodyType, targetDistance, friendType, inflictionType,
-                targetDistance == TargetDistance.Nearest ? AliasCommands.GetAlias( "friend" ) : 0 );
+                targetDistance == TargetDistance.Nearest ? AliasCommands.GetAlias( "friend" ) : 0, maxDistance );
 
             if ( m == null )
             {
@@ -339,9 +341,15 @@ namespace ClassicAssist.Data.Targeting
         }
 
         public Mobile GetMobile( TargetNotoriety notoFlags, TargetBodyType bodyType, TargetDistance targetDistance,
-            TargetFriendType friendType, TargetInfliction inflictionType, int previousSerial = 0 )
+            TargetFriendType friendType, TargetInfliction inflictionType, int previousSerial = 0,
+            int maxDistance = -1 )
         {
             Notoriety[] noto = NotoFlagsToArray( notoFlags );
+
+            if ( maxDistance == -1 )
+            {
+                maxDistance = MAX_DISTANCE;
+            }
 
             Mobile m;
 
@@ -349,7 +357,7 @@ namespace ClassicAssist.Data.Targeting
             {
                 case TargetDistance.Next:
 
-                    m = GetNextMobile( noto, bodyType, MAX_DISTANCE, friendType, inflictionType );
+                    m = GetNextMobile( noto, bodyType, maxDistance, friendType, inflictionType );
 
                     break;
                 case TargetDistance.Nearest:
@@ -358,23 +366,23 @@ namespace ClassicAssist.Data.Targeting
 
                     if ( previousMobile == null || previousMobile.Distance > MAX_DISTANCE )
                     {
-                        m = GetClosestMobile( noto, bodyType, friendType, inflictionType );
+                        m = GetClosestMobile( noto, bodyType, friendType, inflictionType, maxDistance );
                     }
                     else
                     {
-                        m = GetNextMobile( noto, bodyType, MAX_DISTANCE, friendType, inflictionType, false,
+                        m = GetNextMobile( noto, bodyType, maxDistance, friendType, inflictionType, false,
                             previousMobile );
                     }
 
                     break;
                 case TargetDistance.Closest:
 
-                    m = GetClosestMobile( noto, bodyType, friendType, inflictionType );
+                    m = GetClosestMobile( noto, bodyType, friendType, inflictionType, maxDistance );
 
                     break;
                 case TargetDistance.Previous:
 
-                    m = GetNextMobile( noto, bodyType, MAX_DISTANCE, friendType, inflictionType, true );
+                    m = GetNextMobile( noto, bodyType, maxDistance, friendType, inflictionType, true );
 
                     break;
                 default:
