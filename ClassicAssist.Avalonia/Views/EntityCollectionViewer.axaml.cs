@@ -23,7 +23,6 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
-using ClassicAssist.Data;
 using ClassicAssist.UI.ViewModels;
 
 namespace ClassicAssist.Avalonia.Views
@@ -33,8 +32,6 @@ namespace ClassicAssist.Avalonia.Views
         public EntityCollectionViewer()
         {
             InitializeComponent();
-
-            Topmost = Options.CurrentOptions.AlwaysOnTop;
         }
 
         private EntityCollectionViewerViewModel ViewModel => DataContext as EntityCollectionViewerViewModel;

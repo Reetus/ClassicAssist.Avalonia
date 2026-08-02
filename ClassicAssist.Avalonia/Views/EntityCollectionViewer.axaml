@@ -1,35 +1,167 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
         xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         xmlns:models="clr-namespace:ClassicAssist.UI.Models;assembly=ClassicAssist.Shared"
+        xmlns:autoloot="clr-namespace:ClassicAssist.Data.Autoloot;assembly=ClassicAssist.Shared"
         xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
         x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewer"
         x:DataType="viewModels:EntityCollectionViewerViewModel"
         Title="{x:Static resources:Strings.Entity_Collection_Viewer}"
-        Width="600" Height="600" MinHeight="400">
+        Width="600" Height="600" MinHeight="400" Topmost="{Binding Options.AlwaysOnTop}">
   <Window.Resources>
     <misc:PixmapValueConverter x:Key="PixmapValueConverter"/>
+    <misc:EnumMatchToBooleanConverter x:Key="EnumMatchToBooleanConverter"/>
   </Window.Resources>
-  <Grid RowDefinitions="Auto,*,Auto">
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="3" Spacing="3">
-      <Button Padding="4,2" Command="{Binding RefreshCommand}" ToolTip.Tip="{x:Static resources:Strings.Refresh}">
+      <Button Height="24" Padding="4,2" Command="{Binding RefreshCommand}" ToolTip.Tip="{x:Static resources:Strings.Refresh}">
         <Image Source="{StaticResource RefreshIcon}" Height="16"/>
       </Button>
-      <ToggleButton Padding="4,2" IsChecked="{Binding ShowProperties}"
-                    Content="{x:Static resources:Strings.Properties}"
-                    ToolTip.Tip="{x:Static resources:Strings.Toggle_item_properties}"/>
-      <ToggleButton Padding="4,2" IsChecked="{Binding ShowChildItems}"
-                    Command="{Binding ToggleChildItemsCommand}"
-                    Content="{x:Static resources:Strings.Show_Child_Items}"/>
-      <ComboBox MinWidth="110" VerticalAlignment="Center"
-                ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type models:EntityCollectionSortStyle}}}"
-                SelectedItem="{Binding SortStyle}"/>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding ShowProperties}"
+                    ToolTip.Tip="{x:Static resources:Strings.Toggle_item_properties}">
+        <Image Source="{StaticResource ListIcon}" Height="16"/>
+      </ToggleButton>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding ShowFilter}"
+                    ToolTip.Tip="{x:Static resources:Strings.Filter}">
+        <Image Source="{StaticResource FilterIcon}" Height="16"/>
+      </ToggleButton>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding Options.ShowChildItems}"
+                    ToolTip.Tip="{x:Static resources:Strings.Show_Child_Items}">
+        <Image Source="{StaticResource BabyIcon}" Height="16"/>
+      </ToggleButton>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding Options.AlwaysOnTop}"
+                    ToolTip.Tip="{x:Static resources:Strings.Always_On_Top}">
+        <Image Source="{StaticResource PinIcon}" Height="16"/>
+      </ToggleButton>
+      <Menu Background="Transparent" Height="24">
+        <MenuItem Height="24" ToolTip.Tip="{x:Static resources:Strings.Sort}">
+          <MenuItem.Header>
+            <Image Source="{StaticResource SortIcon}" Height="16" Width="16"/>
+          </MenuItem.Header>
+          <MenuItem Header="{x:Static resources:Strings.Name}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.Name}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.Name}"/>
+          <MenuItem Header="{x:Static resources:Strings.Serial}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.Serial}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.Serial}"/>
+          <MenuItem Header="{x:Static resources:Strings.Color}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.Hue}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.Hue}"/>
+          <MenuItem Header="{x:Static resources:Strings.Graphic}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.ID}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.ID}"/>
+          <MenuItem Header="{x:Static resources:Strings.Amount}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.Quantity}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.Quantity}"/>
+          <MenuItem Header="{x:Static resources:Strings.Item_Weight}" ToggleType="CheckBox"
+                    IsChecked="{Binding Options.SortStyle, Mode=OneWay, Converter={StaticResource EnumMatchToBooleanConverter}, ConverterParameter={x:Static models:EntityCollectionSortStyle.Weight}}"
+                    Command="{Binding ChangeSortStyleCommand}"
+                    CommandParameter="{x:Static models:EntityCollectionSortStyle.Weight}"/>
+        </MenuItem>
+      </Menu>
+      <Button Height="24" Padding="4,2" Command="{Binding OpenAllContainersCommand}"
+              ToolTip.Tip="{x:Static resources:Strings.Open_All_Containers}">
+        <Image Source="{StaticResource ContainerIcon}" Height="16"/>
+      </Button>
+      <Button Height="24" Padding="4,2" Command="{Binding CombineStacksCommand}"
+              ToolTip.Tip="{x:Static resources:Strings.Combine_stacks}">
+        <Image Source="{StaticResource ConsolidateIcon}" Height="16"/>
+      </Button>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding Options.HideLockedItems}"
+                    ToolTip.Tip="{x:Static resources:Strings.Hide_Locked_Items}">
+        <Image Source="{StaticResource HideLockedIcon}" Height="16"/>
+      </ToggleButton>
+      <ToggleButton Height="24" Padding="4,2" IsChecked="{Binding Options.EnableHotkeys}"
+                    ToolTip.Tip="{x:Static resources:Strings.Enable_Hotkeys}">
+        <Image Source="{StaticResource KeyboardIcon}" Height="16"/>
+      </ToggleButton>
+      <Button Height="24" Padding="4,2" Command="{Binding ConfigureCommand}"
+              ToolTip.Tip="{x:Static resources:Strings.Options}">
+        <Image Source="{StaticResource ConfigureIcon}" Height="16"/>
+      </Button>
     </StackPanel>
-    <ListBox x:Name="ListBox" Grid.Row="1" ItemsSource="{Binding Entities}"
+    <Border Grid.Row="1" IsVisible="{Binding ShowFilter}" BorderThickness="0,1,0,1"
+            BorderBrush="{DynamicResource ThemeBorderBrush}" Padding="4">
+      <Grid RowDefinitions="Auto,Auto,Auto">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" MinWidth="140">
+            <ComboBox.ItemTemplate>
+              <DataTemplate DataType="models:FilterProfile">
+                <TextBlock Text="{Binding Name}"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <controls:EditTextBlock Text="{Binding SelectedProfile.Name}" ShowIcon="True" VerticalAlignment="Center"
+                                   ToolTip.Tip="{x:Static resources:Strings.Rename}"/>
+          <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddProfileCommand}"/>
+          <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveProfileCommand}"/>
+          <Button Content="{x:Static resources:Strings.Save}" Command="{Binding SaveProfilesCommand}"/>
+        </StackPanel>
+        <DataGrid Grid.Row="1" ItemsSource="{Binding FilterConditions}" MaxHeight="150"
+                  AutoGenerateColumns="False" CanUserResizeColumns="True" GridLinesVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Property}" Width="2*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="autoloot:AutolootConstraintEntry">
+                  <ComboBox ItemsSource="{Binding $parent[Window].DataContext.Constraints}" SelectedItem="{Binding Property}"
+                            HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate DataType="autoloot:PropertyEntry">
+                        <TextBlock Text="{Binding Name}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Operator}" Width="1.5*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="autoloot:AutolootConstraintEntry">
+                  <ComboBox ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type autoloot:AutolootOperator}}}"
+                            SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Value}" Width="1*">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="autoloot:AutolootConstraintEntry">
+                  <controls:EditTextBlock Text="{Binding Value}" ShowIcon="True"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+            <DataGridTemplateColumn Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="autoloot:AutolootConstraintEntry">
+                  <Button Padding="4,0" Background="Transparent" BorderThickness="0"
+                          Command="{Binding $parent[Window].DataContext.RemoveFilterConditionCommand}"
+                          CommandParameter="{Binding}">
+                    <Image Source="{StaticResource CancelIcon}" Height="12"/>
+                  </Button>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0" Spacing="4">
+          <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddFilterConditionCommand}"/>
+          <Button Content="{x:Static resources:Strings.Apply}" Command="{Binding ApplyFiltersCommand}"/>
+          <Button Content="{x:Static resources:Strings.Clear}" Command="{Binding ClearFiltersCommand}"/>
+          <TextBlock Text="{x:Static resources:Strings.Filter_active}" VerticalAlignment="Center"
+                     IsVisible="{Binding IsFilterApplied}" FontWeight="Bold" Margin="8,0,0,0"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <ListBox x:Name="ListBox" Grid.Row="2" ItemsSource="{Binding Entities}"
              Classes.properties="{Binding ShowProperties}"
              SelectionMode="Multiple" BorderThickness="0"
              Background="{DynamicResource ThemeInnerControlBackgroundBrush}"
@@ -38,11 +170,11 @@
              PointerPressed="OnItemPointerPressed">
       <ListBox.KeyBindings>
         <KeyBinding Gesture="Ctrl+C" Command="{Binding CopyToClipboardCommand}" />
-        <KeyBinding Gesture="B" Command="{Binding ContextMoveToBackpackCommand}" />
-        <KeyBinding Gesture="C" Command="{Binding ContextMoveToContainerCommand}" />
-        <KeyBinding Gesture="K" Command="{Binding ContextMoveToBankCommand}" />
-        <KeyBinding Gesture="G" Command="{Binding ContextMoveToGroundCommand}" />
-        <KeyBinding Gesture="D" Command="{Binding ContextDropToGroundCommand}" />
+        <KeyBinding Gesture="B" Command="{Binding HotkeyActionCommand}" CommandParameter="Backpack" />
+        <KeyBinding Gesture="C" Command="{Binding HotkeyActionCommand}" CommandParameter="Container" />
+        <KeyBinding Gesture="K" Command="{Binding HotkeyActionCommand}" CommandParameter="Bank" />
+        <KeyBinding Gesture="G" Command="{Binding HotkeyActionCommand}" CommandParameter="Ground" />
+        <KeyBinding Gesture="D" Command="{Binding HotkeyActionCommand}" CommandParameter="Drop" />
       </ListBox.KeyBindings>
       <ListBox.ContextMenu>
         <ContextMenu>
@@ -121,7 +253,20 @@
         </DataTemplate>
       </ListBox.ItemTemplate>
     </ListBox>
-    <Border Grid.Row="2" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}" Padding="4,2">
+    <ItemsControl Grid.Row="3" ItemsSource="{Binding QueueActions}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="viewModels:QueueAction">
+          <Grid ColumnDefinitions="*,Auto" Margin="4,2">
+            <TextBlock Grid.Column="0" Text="{Binding Status}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Command="{Binding CancelCommand}" BorderThickness="0"
+                    Background="Transparent" Padding="0" ToolTip.Tip="{x:Static resources:Strings.Cancel}">
+              <Image Source="{StaticResource CancelIcon}" Height="14"/>
+            </Button>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Grid.Row="4" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource ThemeBorderBrush}" Padding="4,2">
       <TextBlock Text="{Binding StatusLabel}"/>
     </Border>
   </Grid>

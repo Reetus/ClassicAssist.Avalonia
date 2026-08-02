@@ -489,6 +489,18 @@ namespace ClassicAssist.Shared.Resources {
             }
         }
         
+        public static string Filter {
+            get {
+                return ResourceManager.GetString("Filter", resourceCulture);
+            }
+        }
+
+        public static string Filter_active {
+            get {
+                return ResourceManager.GetString("Filter active", resourceCulture);
+            }
+        }
+
         public static string Filters {
             get {
                 return ResourceManager.GetString("Filters", resourceCulture);
@@ -1154,7 +1166,13 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Remove", resourceCulture);
             }
         }
-        
+
+        public static string Rename {
+            get {
+                return ResourceManager.GetString("Rename", resourceCulture);
+            }
+        }
+
         public static string Remove_Friend {
             get {
                 return ResourceManager.GetString("Remove Friend", resourceCulture);
@@ -2306,6 +2324,12 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Sort Macros Alphabetical", resourceCulture);
             }
         }
+
+        public static string Sort {
+            get {
+                return ResourceManager.GetString("Sort", resourceCulture);
+            }
+        }
         
         public static string Equip_Item {
             get {
@@ -2474,7 +2498,19 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Hide", resourceCulture);
             }
         }
-        
+
+        public static string Hide_Locked_Items {
+            get {
+                return ResourceManager.GetString("Hide Locked Items", resourceCulture);
+            }
+        }
+
+        public static string Enable_Hotkeys {
+            get {
+                return ResourceManager.GetString("Enable Hotkeys", resourceCulture);
+            }
+        }
+
         public static string Author {
             get {
                 return ResourceManager.GetString("Author", resourceCulture);

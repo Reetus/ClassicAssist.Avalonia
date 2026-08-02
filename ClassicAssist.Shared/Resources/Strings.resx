@@ -280,6 +280,12 @@
   <data name="Explosion Potion" xml:space="preserve">
     <value>Explosion Potion</value>
   </data>
+  <data name="Filter" xml:space="preserve">
+    <value>Filter</value>
+  </data>
+  <data name="Filter active" xml:space="preserve">
+    <value>Filter active</value>
+  </data>
   <data name="Filters" xml:space="preserve">
     <value>Filters</value>
   </data>
@@ -612,6 +618,9 @@
   </data>
   <data name="Remove" xml:space="preserve">
     <value>Remove</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Rename</value>
   </data>
   <data name="Remove Friend" xml:space="preserve">
     <value>Remove Friend</value>
@@ -1189,6 +1198,9 @@
   <data name="Sort Macros Alphabetical" xml:space="preserve">
     <value>Sort Macros Alphabetical</value>
   </data>
+  <data name="Sort" xml:space="preserve">
+    <value>Sort</value>
+  </data>
   <data name="Equip Item" xml:space="preserve">
     <value>Equip Item</value>
   </data>
@@ -1272,6 +1284,12 @@
   </data>
   <data name="Hide" xml:space="preserve">
     <value>Hide</value>
+  </data>
+  <data name="Hide Locked Items" xml:space="preserve">
+    <value>Hide Locked Items</value>
+  </data>
+  <data name="Enable Hotkeys" xml:space="preserve">
+    <value>Enable Hotkeys</value>
   </data>
   <data name="Author" xml:space="preserve">
     <value>Author</value>

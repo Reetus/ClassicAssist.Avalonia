@@ -1,48 +1,64 @@
 # Entity Collection Viewer (ECV) TODO
 
-Gap between this repo's Entity Collection Viewer and the WPF `ClassicAssist` tree. The Avalonia
-version currently has only the bare browse/sort/refresh feature set; everything else on this page
-is missing or diverged.
+Gap between this repo's Entity Collection Viewer and the WPF `ClassicAssist` tree. Originally this
+doc described a bare browse/sort/refresh port with everything else missing; several passes since
+have closed most of that gap (see the `[x]` items throughout) - what's left is mainly the Organizer
+panel, the Extensibility registry, and the boolean-tree filter groups, each called out below with
+why they're still out.
 
 Old (WPF) source lives under `ClassicAssist/ClassicAssist/UI/Views/ECV/` and
 `ClassicAssist/ClassicAssist/UI/ViewModels/EntityCollectionViewerViewModel.cs` (2035 lines). New
 (Avalonia) source is `ClassicAssist.Avalonia/ClassicAssist.Shared/UI/ViewModels/EntityCollectionViewerViewModel.cs`
-(278 lines) plus `ClassicAssist.Avalonia/ClassicAssist.Avalonia/Views/EntityCollectionViewer.axaml(.cs)`.
-
-The Avalonia view model's own doc comment already says the filter editor, the organizer, the
-queued move/loot actions and the settings window are not yet ported, and neither are the toolbar
-commands that drive them. This doc fills in the specifics under each of those headings, plus a few
-things that comment doesn't call out (context menu, locking, clipboard, hotkey wiring).
+plus `ClassicAssist.Avalonia/ClassicAssist.Avalonia/Views/EntityCollectionViewer.axaml(.cs)` and
+`EntityCollectionViewerSettingsWindow.axaml(.cs)`.
 
 ## Toolbar & window chrome
 
-- [ ] **Filter toggle + panel** - old toolbar has a filter icon toggle that shows/hides the
-      `EntityCollectionFilterControl` (`UI/Views/ECV/Filter/EntityCollectionFilterControl.xaml`).
-      Not present in the Avalonia toolbar at all. See "Filter" section below for what it drives.
+- [x] **Filter toggle + panel** - ported as a right-sized MVP rather than a line-for-line port: a
+      `FilterIcon` toggle button shows/hides a `DataGrid` of flat, AND-only conditions (Property /
+      Operator / Value rows), backed by `EntityCollectionViewerViewModel.FilterConditions`
+      (`ObservableCollection<AutolootConstraintEntry>`) and `Constraints`
+      (`ObservableCollection<PropertyEntry>`, loaded from `Data/Properties.json` +
+      `Properties.Custom.json` exactly like `AutolootViewModel` does). Evaluation reuses
+      `AutolootHelpers.ConstraintsToPredicates` directly - no parallel filter-predicate system was
+      built. **Deliberately not ported**: the boolean-tree groups (`And`/`Or`/`Not`, nested
+      sub-groups), the ECV-specific extra constraints (Name substring, TileFlags, Distance, Organizer
+      Match, Is Multi), and profile persistence (`FilterProfiles.json`, add/remove/rename/switch) -
+      see the Filter section below, which still describes the full old-side shape as the reference
+      for if/when that's wanted.
 - [ ] **Organizer toggle + panel** - toggles `EntityCollectionViewerOrganizerControl.xaml`.
-      Not present. See "Organizer panel" section below.
-- [ ] **Always-on-top toggle** - `ToggleAlwaysOnTopCommand`
-      (`EntityCollectionViewerViewModel.cs:365`, handler `ToggleAlwaysOnTop` around line 1336) sets
-      `Options.AlwaysOnTop` and is persisted **per-ECV-window** via `EntityCollectionViewerOptions`.
-      The Avalonia window (`EntityCollectionViewer.axaml.cs:37`) instead reads the **global** app
-      option `Options.CurrentOptions.AlwaysOnTop` once at construction, with no toggle and no
-      independent per-window state - every ECV window just follows whatever the main app window's
-      always-on-top setting is.
-- [ ] **Sort-style submenu with icons, "None" style, and toggle-to-None** -
-      `ChangeSortStyleCommand` (line 222, handler `ChangeSortStyle` at line 1478) does
-      `SortStyle = SortStyle == val ? EntityCollectionSortStyle.None : val` - clicking the active
-      sort style again turns sorting off. The old `EntityCollectionSortStyle` enum
-      (`UI/Models/EntityCollectionSortStyle.cs`) has a `None` member plus `Weight`, neither of which
-      exist on the Avalonia enum (`ClassicAssist.Shared/UI/Models/EntityCollectionSortStyle.cs`,
-      currently `Name, Serial, Hue, ID, Quantity`). The Avalonia UI is a plain `ComboBox` bound
-      straight to `SortStyle` - no toggle-off, no icons, no "None", no "Weight".
-- [ ] **Open All Containers** - `OpenAllContainersCommand` (line 306, handler at line 1247) walks
-      the collection and sends `UseObject`/drag-drop-style packets to open every nested container,
-      respecting `Options.OpenContainersIgnore` and `Options.OpenContainersOnlyKnownContainers`.
-      No equivalent toolbar button or command in Avalonia.
-- [ ] **Combine Stacks** - `CombineStacksCommand` (line 236, handler `CombineStacks` at line 858)
-      merges same-name/same-properties item stacks together via queued drag-drops, skipping
-      anything matched by `Options.CombineStacksIgnore`. Not ported.
+      Not present. See "Organizer panel" section below. (Explicitly deferred again when this pass's
+      other items were scoped.)
+- [x] **Always-on-top toggle** - `Options.AlwaysOnTop`, `Window.Topmost` bound to it directly
+      (`Topmost="{Binding Options.AlwaysOnTop}"`), no separate toggle command - the `PinIcon`
+      `ToggleButton`'s `IsChecked` two-way binding is the only write path (see the Show Child Items
+      double-toggle bug this pattern was chosen specifically to avoid: a `ToggleButton` with both a
+      two-way `IsChecked` bind *and* a `Command` that also flips the same property fires the flip
+      twice per click). Persisted now via `EntityCollectionViewerOptions.json` - see Settings/Options
+      persistence, which supersedes this entry's earlier "session-only" state.
+- [x] **Sort-style submenu with icons, "None" style, and toggle-to-None** - the Avalonia
+      `EntityCollectionSortStyle` enum now has `None` and `Weight`
+      (`ClassicAssist.Shared/UI/Models/EntityCollectionSortStyle.cs`), matching old exactly. The
+      toolbar's plain `ComboBox` was replaced with an icon-triggered `Menu`/`MenuItem` (`SortIcon`
+      header, `ToggleType="CheckBox"` sub-items via a new `EnumMatchToBooleanConverter`), and
+      `ChangeSortStyleCommand` reproduces `SortStyle = SortStyle == val ? None : val`. `GetSorter()`
+      returns `null` for `None` (Rebuild/`ToEntityCollectionData` now skip `.OrderBy` when the
+      comparer is null) and a new `WeightThenSerialComparer`
+      (`ClassicAssist.Shared/Misc/EntityComparers.cs`) for `Weight`, ported line-for-line from old
+      including the `PaladinNecromancerClassTooltips` cliloc-weight branch.
+- [x] **Open All Containers** - ported as a deliberately simpler single pass: sends `UseObject` to
+      every currently-known container in `Collection` (one queued action, cancellable, status shows
+      progress), then refreshes. Old-side's version chases newly-discovered nested containers as they
+      stream in via a raw packet-wait per container (`PacketFilterInfo`/`Engine.PacketWaitEntries`,
+      version-dependent gump-packet offset) and iterates until nothing new turns up; that recursive
+      wait-and-discover loop was **not** ported - re-running the command (or turning on Show Child
+      Items first) covers most of the same ground manually. Also not ported: `Options
+      .OpenContainersIgnore`/`OpenContainersOnlyKnownContainers` (no ignore-list, no
+      known-gump-ID-only filtering - everything flagged `TileFlags.Container` is opened).
+- [x] **Combine Stacks** - ported faithfully (`CombineStacks()`, same destination/source stack
+      selection loop, same `StackNamesMatch`/`GetNameMinusAmount` tooltip-name-matching helpers,
+      same queued-and-cancellable shape). **Not ported**: `Options.CombineStacksIgnore` - there is no
+      exclusion list, so nothing is excluded from combining.
 - [ ] **Replace Name** - `ReplaceNameCommand` (line 318, handler `ReplaceName` at line 799) lets the
       user rename an item via a captured in-game "look" journal label (renames feed
       `_nameOverrides`, which the Avalonia `EntityCollectionData` extension already has the
@@ -53,18 +69,23 @@ things that comment doesn't call out (context menu, locking, clipboard, hotkey w
 - [ ] **Autoloot Container** - `AutolootContainerCommand` (line 220, handler `AutolootContainer` at
       line 446) runs the collection through the autoloot filter/predicate system and loots matches.
       Not ported.
-- [ ] **Hide Locked Items toggle** - `ToggleHideLockedItemsCommand` (line 369, handler at line 1750)
-      flips `Options.HideLockedItems`, persists it, and applies a `CollectionView` filter
-      (`ApplyHideLockedItemsFilter`, line 1803) that hides any `EntityCollectionData` with
-      `IsLocked == true`. Depends on the Locking feature below, none of which exists in Avalonia.
-- [ ] **Enable Hotkeys toggle** - `ToggleEnableHotkeysCommand` (line 372, handler at line 1764) and
-      `HotkeyActionCommand` (line 375, handler `HotkeyAction` at line 1776) let the *ECV window
-      itself* respond to single-key hotkeys (B/C/K/G/D per the context menu's `InputGestureText`)
-      while it has focus, gated on `Options.EnableHotkeys`. Not ported. (Distinct from the
-      already-ported global "Grid Container Viewer" hotkey command that *opens* an ECV window -
-      see Hotkeys section.)
-- [ ] **Configure button** - `ConfigureCommand` (line 237, handler `Configure` at line 752) opens
-      `EntityCollectionViewerSettingsWindow`. Not ported; see Settings/Options persistence.
+- [x] **Hide Locked Items toggle** - `Options.HideLockedItems` ported as a live predicate applied
+      inside `Rebuild()` (Avalonia has no `CollectionView`/`ICollectionView.Filter` to hook the way
+      WPF does, so it's a `.Where(!IsLocked)` over the freshly-built `Entities` list instead). This
+      surfaced a real gap while wiring it up: `Rebuild()` recreates every `EntityCollectionData` from
+      scratch on each call, so `IsLocked` - previously set directly on those doomed instances - was
+      silently lost on the next server update. First fixed with a session-only `HashSet<int>`, then
+      superseded by the real `Options.LockedItems` once Settings/Options persistence landed - see
+      Locking.
+- [x] **Enable Hotkeys toggle** - `Options.EnableHotkeys` + `HotkeyActionCommand` ported, reproducing
+      old's indirection: the B/C/K/G/D `KeyBinding`s in `EntityCollectionViewer.axaml` now go through
+      `HotkeyActionCommand` (gated on `Options.EnableHotkeys`) instead of straight to the context
+      commands, so turning hotkeys off doesn't also disable the same actions from the context menu.
+      Ctrl+C stays bound directly to `CopyToClipboardCommand`, ungated, matching old. Persisted - see
+      Settings/Options persistence. (Distinct from the already-ported global "Grid Container Viewer"
+      hotkey command that *opens* an ECV window - see Hotkeys section.)
+- [x] **Configure button** - `ConfigureCommand` opens `EntityCollectionViewerSettingsWindow` via
+      `Engine.UIInvoker.InvokeDialog`; see Settings/Options persistence.
 - [ ] **`CustomToolbarActions` ItemsControl** - renders one button per registered
       `IEntityCollectionViewerAction` (`CustomToolbarActions`, declared line 282, populated line
       196 from `EntityCollectionViewerExtensions.ToolbarActions`). Not ported; see Extensibility.
@@ -86,8 +107,9 @@ except where noted:
 - [x] **Move to bank** - `ContextMoveToBankCommand`.
 - [x] **Move to ground** - `ContextMoveToGroundCommand` - prompts for a drop location via
       `Commands.GetTargetInfoAsync`.
-- [ ] **Move to set** submenu - explicitly out of scope for this pass (depends on
-      `Options.ContainerSets`, which doesn't exist - see Settings/Options persistence). Not ported.
+- [ ] **Move to set** submenu - still explicitly out of scope. `Options.ContainerSets` exists and is
+      now editable (see Settings/Options persistence), but nothing reads it back out into a context
+      menu submenu yet - building and persisting the sets was the ask, not this consumer.
 - [x] **Open container** - `ContextOpenContainerCommand`.
 - [x] **Drop to ground** - `ContextDropToGroundCommand`, with one behavioral simplification: old
       probes the 8 tiles around the player for a free spot via `MapInfo.ItemCanFit`, which this port
@@ -95,9 +117,9 @@ except where noted:
       just drops at the player's own feet instead.
 - [x] **Lock item / Unlock item** - `ContextToggleLockCommand`, visibility toggled by
       `SelectedItemsAllLocked`, exactly as old. The lock flag itself
-      (`EntityCollectionData.IsLocked`) is now ported too, and move commands skip locked items - but
-      it's **session-only**: `Options.LockedItems` persistence and the padlock overlay icon are
-      still not ported (see Locking).
+      (`EntityCollectionData.IsLocked`) is now ported too, move commands skip locked items, and
+      `Options.LockedItems` persists lock state to disk - see Locking. The padlock overlay icon on
+      locked tiles is still not drawn (cosmetic only, doesn't affect behavior).
 - [x] **Context menu request** - `ContextContextMenuRequestCommand`.
 - [x] **Equip Item** - `EquipItemCommand`, via the already-existing `Commands.EquipItem`. Layer
       resolution needed a local `GetLayer(int id)` helper in the view model since this port's
@@ -127,35 +149,51 @@ underneath; what's missing is only the progress/cancel UI.
 
 ## Filter
 
+**Update:** the filter panel, the 5 ECV-only constraints, and profile persistence are all now
+ported (see Toolbar section for the panel itself). Key divergence from old, confirmed with the user
+rather than assumed: **no boolean-tree groups**. Old's `EntityCollectionFilterEntry` holds nested
+`EntityCollectionFilterGroup`s with their own `And`/`Or`/`Not` operators; this port instead gives
+each profile one flat, AND-only `ObservableCollection<AutolootConstraintEntry>`
+(`FilterProfile.Conditions`). There is also no per-condition `Enabled` toggle (old's
+`EntityCollectionFilterItem.Enabled`) - remove a row to disable it.
+
+The other structural simplification: rather than introducing old's parallel
+`EntityCollectionFilterItem`/`PropertyEntry` model, this port **extended the shared Autoloot types
+themselves** so `AutolootHelpers.ConstraintsToPredicates` could be reused as-is for filtering:
+`PropertyType` gained `Predicate`/`PredicateWithValue`, `PropertyEntry` gained a `Predicate` field
+(`Func<Entity, AutolootConstraintEntry, bool>`), and `AutolootConstraintEntry` gained `Additional`
+(string). This is additive - `AutolootViewModel` and everything else already using these types is
+unaffected, since the new members are only populated by what registers them.
+
 Old: `UI/Views/ECV/Filter/EntityCollectionFilterControl.xaml(.cs)`,
 `EntityCollectionFilterViewModel.cs`, `Filter/Models/{EntityCollectionFilterEntry,
-EntityCollectionFilterGroup, EntityCollectionFilterItem, GroupItem}.cs`. Entirely absent from
-Avalonia - confirmed by grep, no filter-related file or type exists anywhere in the tree.
+EntityCollectionFilterGroup, EntityCollectionFilterItem, GroupItem}.cs`.
 
-- [ ] **Boolean-tree filter groups** - a filter "profile" (`EntityCollectionFilterEntry`) holds a
-      collection of `EntityCollectionFilterGroup`s, each of which has its own `Items` (leaf
-      conditions) plus a nested `Children` collection of sub-groups and a `BooleanOperation`
-      (`And`/`Or`/`Not`) combining them (`Filter/Models/EntityCollectionFilterGroup.cs:22-62`).
-      Evaluation is `EvaluateGroup` in the main view model (line 1442), applied through
-      `ApplyFilters`/`ApplyFiltersCommand` (line 218, handler at line 1392).
-- [ ] **Filter conditions reuse the Autoloot constraint system** - each leaf
-      `EntityCollectionFilterItem` (`Filter/Models/EntityCollectionFilterItem.cs`) has a
-      `PropertyEntry` `Constraint`, an `AutolootOperator` (`Equal`/`NotEqual`/`GreaterThan`/
-      `LessThan`/`NotPresent`), a `Value`, `Additional` (string), and `Values` (int list).
-      `EntityCollectionFilterViewModel`'s constructor (`Filter/EntityCollectionFilterViewModel.cs:71-202`)
-      registers built-in constraints beyond what `AutolootManager.LoadProperties` already supplies:
-      **Name** (substring match over item properties or name), **TileFlags**, **Distance**,
-      **Organizer Match** (does the item match an entry in an existing Organizer profile), and
-      **Is Multi** (multi/house-addon check via `ArtDataID == 2`) - plus whatever
-      `AutolootManager.LoadAssemblies` contributes from loaded plugin assemblies. So "what can you
-      filter on" is effectively the entire autoloot property/predicate surface, not a fixed list.
-- [ ] **Filter profiles persist to `FilterProfiles.json`** (`LoadFilterProfiles`/
-      `SaveFilterProfiles`, lines 325-441) - add/remove/rename profiles, switch between them
-      (`AddProfileCommand`, `RemoveProfileCommand`, `ChangeProfileCommand`), each independently
-      re-applied live if a filter is currently active (`SetActiveProfile`, line 280).
-  This whole subsystem needs a from-scratch port: model classes, the constraint list, the
-  group/profile editor UI, and the JSON persistence. There is no partial Avalonia analog to build
-  on other than the pre-existing Autoloot `PropertyEntry`/`AutolootOperator` types it depends on.
+- [ ] **Boolean-tree filter groups** - deliberately not ported; see above. `GroupItem` and
+      `EntityCollectionFilterGroup` have no Avalonia equivalent at all.
+- [x] **Filter conditions reuse the Autoloot constraint system** - `EntityCollectionViewerViewModel
+      .RegisterFilterOnlyConstraints()` registers the same 5 built-ins old did: **Name** (substring
+      match over item properties or name), **TileFlags**, **Distance**, **Organizer Match** (matches
+      an entry in an existing Organizer profile via `OrganizerManager`), and **Is Multi**
+      (`ArtDataID == 2`) - ported line-for-line off old's `EntityCollectionFilterViewModel`
+      constructor, adapted to the extended `PropertyEntry`/`AutolootConstraintEntry` above. **Not
+      ported**: whatever `AutolootManager.LoadAssemblies` would have contributed from loaded plugin
+      assemblies - Avalonia's `AutolootManager` has no `LoadAssemblies`/`LoadProperties` methods at
+      all (see the Autoloot section of a prior audit); `Constraints` here is populated the same way
+      `AutolootViewModel` populates its own, straight from `Properties.json`/`Properties.Custom.json`.
+- [x] **Filter profiles persist to `FilterProfiles.json`** - `LoadFilterProfiles`/
+      `SaveFilterProfiles` on the view model, `AddProfileCommand`/`RemoveProfileCommand`, and
+      `SelectedProfile`'s setter (which swaps `FilterConditions`' contents and re-applies if a filter
+      is currently active - old's `SetActiveProfile`). Renaming is inline via an `EditTextBlock`
+      bound to `SelectedProfile.Name` rather than a separate rename command/dialog. Saved shape is a
+      flat `{ LastProfileID, Profiles: [{ ID, Name, Conditions: [...] }] }` - simpler than old's
+      nested-group JSON since there's nothing recursive to serialize. **Always written** in this flat
+      shape, but **read compatible** with an existing WPF-written `FilterProfiles.json`:
+      `GetConditionTokens` falls back to old's `Groups[].Items[]`/`Constraint.Name` shape when
+      `Conditions` isn't present, as long as the file doesn't use boolean-tree nesting (`Children` is
+      silently skipped, not flattened, since there's no sound way to fold Or/Not semantics into a
+      flat AND list). A WPF file's first save from this port permanently rewrites it to the flat
+      shape.
 
 ## Organizer panel
 
@@ -181,51 +219,58 @@ everything else (`EntityCollectionViewerOrganizerViewModel.cs:104-114`).
 
 ## Settings/Options persistence
 
-Old: `Data/Misc/EntityCollectionViewerOptions.cs` (persisted to `EntityCollectionViewerOptions.json`
-in the startup dir via `LoadOptions`/`SaveOptions`, VM lines 703-722), edited through
-`UI/Views/ECV/EntityCollectionViewerSettingsWindow.xaml` +
-`EntityCollectionViewerSettingsViewModel.cs`. Avalonia's view model has **no `Options` property and
-no persistence of any kind** - confirmed by grep, no `EntityCollectionViewerOptions` or
-`EntityCollectionViewerSettings*` type exists anywhere in the Avalonia tree. `ShowChildItems`,
-`ShowProperties` and `SortStyle` are plain in-memory properties that reset to their defaults every
-time a new ECV window opens.
+**Update: ported.** `ClassicAssist.Shared/Data/Misc/EntityCollectionViewerOptions.cs` mirrors old's
+`Serialize`/`Deserialize` field-for-field, so `EntityCollectionViewerOptions.json` written by either
+side loads in the other (see the Filter section's note on `FilterProfiles.json` for the equivalent
+claim there). `EntityCollectionViewerViewModel.Options` is loaded in the constructor
+(`LoadOptions()`) and XAML now binds straight to `Options.AlwaysOnTop`/`Options.ShowChildItems`/etc.
+rather than through VM-level mirror properties - `Options.PropertyChanged` (`OnOptionsChanged`)
+triggers `Rebuild()` for the display-affecting ones and always saves. Collection *mutations*
+(`LockedItems.Add`, `CombineStacksIgnore.Add`, etc.) don't raise `PropertyChanged` on `Options`
+itself, so `ContextToggleLock` and `Configure` (the Settings window handler) call `SaveOptions()`
+explicitly after touching those.
+
+Old: `Data/Misc/EntityCollectionViewerOptions.cs`, `UI/Views/ECV/EntityCollectionViewerSettingsWindow.xaml`
++ `EntityCollectionViewerSettingsViewModel.cs`.
 
 Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
 
-- [ ] `AlwaysOnTop` (bool) - toolbar toggle (see Toolbar section).
-- [ ] `ShowChildItems` (bool) - **is** ported as a live property/toggle, but not persisted across
-      window opens the way `Options.ShowChildItems` is old-side.
-- [ ] `HideLockedItems` (bool) - toolbar toggle; drives the CollectionView filter. Depends on
-      Locking.
-- [ ] `EnableHotkeys` (bool) - toolbar toggle; gates `HotkeyActionCommand`.
-- [ ] `SortStyle` (`EntityCollectionSortStyle`) - **is** ported as a live property, but old-side
-      persists the last-used sort style across window opens; Avalonia always starts at `ID`.
-- [ ] `LockedItems` (`ObservableCollection<int>`, serial numbers) - the actual lock-state store; see
-      Locking.
-- [ ] `ContainerSets` (`ObservableCollection<ContainerSet>`, each a `Name` + `ObservableCollection<int>`
-      of serials) - edited via the Settings window's "Container Sets" tab
-      (`EntityCollectionViewerSettingsWindow.xaml:56-64`,
-      `UI/Views/ECV/Settings/ContainerSetsSettingsControl.xaml`); consumed by the context menu's
-      "Move to set" submenu.
-- [ ] `CombineStacksIgnore` / `OpenContainersIgnore` (both
-      `ObservableCollection<CombineStacksOpenContainersIgnoreEntry>`, each an item `ID` + `Cliloc` +
-      `Hue` to exclude) - edited via the Settings window's "Combine stacks" and "Open All
-      Containers" group boxes
-      (`EntityCollectionViewerSettingsWindow.xaml:38-54`,
-      `Settings/CombineStacksSettingsControl.xaml`, `Settings/OpenContainersSettingsControl.xaml`).
-      Feed `CombineStacksCommand` and `OpenAllContainersCommand` respectively.
-- [ ] `OpenContainersOnlyKnownContainers` (bool) - checkbox in the Settings window's "Open All
-      Containers" group (`EntityCollectionViewerSettingsWindow.xaml:48-50`); only auto-opens
-      containers whose gump ID the client already knows about.
-- [ ] `Assemblies` (`ObservableCollection<Assembly>`) - loaded plugin assemblies contributing
-      custom filter constraints/actions; persisted as file paths, reloaded via `Assembly.LoadFile`
-      on deserialize (`EntityCollectionViewerOptions.cs:163-180`). Windows-assembly-loading concept
-      that likely needs rethinking for the cross-platform port rather than a direct copy.
-- [ ] **Settings window itself** - two-column dialog: left column has "Combine stacks" and "Open
-      All Containers" group boxes, right column has "Container Sets"
-      (`EntityCollectionViewerSettingsWindow.xaml:27-65`), OK/Cancel at the bottom (OK is a no-op
-      command - the bound `Options` object is mutated in place, so OK/Cancel really only differ by
-      whether the window closes; there's no save/rollback distinction to preserve).
+- [x] `AlwaysOnTop` (bool) - toolbar toggle (see Toolbar section).
+- [x] `ShowChildItems` (bool) - toolbar toggle, persisted.
+- [x] `HideLockedItems` (bool) - toolbar toggle, persisted; drives the `Rebuild()`-time filter (no
+      `CollectionView` equivalent needed - see Locking).
+- [x] `EnableHotkeys` (bool) - toolbar toggle, persisted; gates `HotkeyActionCommand`.
+- [x] `SortStyle` (`EntityCollectionSortStyle`) - persisted; a new ECV window now opens to whatever
+      sort was last chosen, matching old.
+- [x] `LockedItems` (`ObservableCollection<int>`, serial numbers) - the actual lock-state store now;
+      see Locking (the `HashSet<int>` workaround from the Hide Locked Items pass was replaced by
+      this).
+- [x] `ContainerSets` (`ObservableCollection<ContainerSet>`) - editable in the Settings window
+      (add/remove sets, target-add/remove serials per set). **Not consumed anywhere yet** - the
+      context menu's "Move to set" submenu that would read these back out is still explicitly out of
+      scope (see Context menu section); this only builds and persists the sets themselves.
+- [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (plain
+      `DataGridTextColumn`s for ID/Cliloc/Hue rather than old's graphic/cliloc/hue picker popups -
+      see below) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`, which
+      previously ignored them entirely.
+- [x] `OpenContainersOnlyKnownContainers` (bool) - checkbox in the Settings window; `ContainerGumpIDs.json`
+      was copied over from old-side (`ClassicAssist.Shared/Data/ContainerGumpIDs.json`, wasn't in the
+      Avalonia tree at all before this) since the feature is a no-op without it.
+- [ ] `Assemblies` (`ObservableCollection<Assembly>`) - **deliberately still not round-tripped.**
+      `EntityCollectionViewerOptions.Deserialize` skips this key entirely rather than
+      `Assembly.LoadFile`-ing whatever paths it finds; an old-side file's `Assemblies` array is
+      silently dropped on next save from this port. Nothing here consumes loaded assemblies anyway
+      (see the Filter section's note that `AutolootManager.LoadAssemblies` has no Avalonia
+      equivalent), so there was nothing to wire it to even if it were parsed.
+- [x] **Settings window** - `EntityCollectionViewerSettingsWindow.axaml` +
+      `EntityCollectionViewerSettingsViewModel`, opened via `ConfigureCommand` (new toolbar button,
+      `ConfigureIcon`). Structurally simpler than old on purpose: one view model instead of three
+      (`CombineStacksSettingsViewModel`/`OpenContainersSettingsViewModel`/
+      `ContainerSetsSettingsViewModel`), plain `DataGridTextColumn`s instead of the custom
+      `GraphicEditTextBlock`/`ClilocEditTextBlock`/`HueEditTextBlock` picker controls (which have no
+      Avalonia port and weren't worth building for three int columns), and a single "OK" button that
+      just closes (old's OK/Cancel pair was already documented as functionally identical - both just
+      close, since the bound `Options` is mutated in place either way).
 
 ## Extensibility (custom toolbar/context actions)
 
@@ -269,12 +314,16 @@ new entries into `ThreadQueue`, which serializes them through `ProcessQueue` (li
 live status text and a cancel button, and removes itself from `QueueActions` on completion (line
 796).
 
-- [ ] **None of this exists in Avalonia.** There's no bottom status-row list, no
-      `ThreadPriorityQueue` use in the ECV view model, and no `QueueAction` type. This is also *why*
-      none of the context-menu commands have anywhere meaningful to run through yet even once the
-      commands themselves are ported - most of them are written old-side assuming they can enqueue
-      onto this and return immediately, surfacing progress/cancellation through the status row
-      rather than blocking the UI thread.
+- [x] **Ported.** `QueueAction` (`ClassicAssist.Shared/UI/ViewModels/QueueAction.cs`), `QueueActions`,
+      `_threadQueue` (reusing the already-ported `ThreadPriorityQueue<T>`), `EnqueueAction`,
+      `QueueActions_CollectionChanged` and `ProcessQueue` all exist on
+      `EntityCollectionViewerViewModel` now, matching old's shape line-for-line. A status-row
+      `ItemsControl` with a per-row cancel button was added below the item list in
+      `EntityCollectionViewer.axaml`. The already-ported context commands (move-to-backpack/bank/
+      container/ground, drop-to-ground, use item, open container, context menu request, target,
+      target owner, equip item) were rewired through it. **Not rewired** because they're not ported
+      at all yet: combine stacks, open all containers, autoloot container, organizer's Play - those
+      still need this same treatment whenever they're built.
 
 ## Locking
 
@@ -294,12 +343,22 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       `SelectedItemsAllLocked`, and `ContextToggleLockCommand` all exist now (see Context menu), and
       the move-to-* / drop-to-ground context commands skip locked items exactly like old's
       `.Where(i => !i.IsLocked)` filters.
-- [ ] **Still missing: persistence and the padlock overlay.** `IsLocked` is a plain, session-only
-      property - nothing writes it to `Options.LockedItems` (which doesn't exist; see
-      Settings/Options persistence), so closing and reopening an ECV window forgets every lock. The
-      padlock overlay icon on locked tiles (`ListStyles.xaml:24-27`/`39-41` old-side) also isn't
-      drawn - `EntityCollectionViewer.axaml`'s item template has no equivalent `Image` bound to
-      `IsLocked`. Hide Locked Items (Toolbar section) still depends on both of these.
+- [x] **Hide Locked Items is now ported** - see Toolbar section. Getting it working first surfaced
+      (and fixed) a real bug: `IsLocked` lived only on `EntityCollectionData` instances that
+      `Rebuild()` discards and recreates on every collection change, so it silently reset on the next
+      server update. A session-only `HashSet<int> _lockedSerials` on the view model fixed that
+      initially.
+- [x] **On-disk persistence is now ported too.** `Options.LockedItems` (real, from Settings/Options
+      persistence) replaced that `HashSet<int>` outright - `ContextToggleLock` adds/removes serials
+      there directly and calls `SaveOptions()` explicitly (collection mutations don't raise
+      `Options.PropertyChanged`), and `Rebuild()` restores `IsLocked` from `Options.LockedItems` the
+      same way it used to from the `HashSet`. Locks now survive both a rebuild and closing/reopening
+      the window, matching old.
+- [ ] **Still missing: the padlock overlay icon.** Purely cosmetic - locked tiles don't render a
+      padlock (old: `ListStyles.xaml:24-27`/`39-41`, a `LockIcon` `Image` shown via a `DataTrigger` on
+      `IsLocked`). `EntityCollectionViewer.axaml`'s item template has no equivalent. Doesn't affect
+      behavior - locking, hiding, and skipping locked items in move commands all work without it, you
+      just can't see which tiles are locked at a glance.
 
 ## Sorting
 
@@ -308,12 +367,14 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       `NameThenSerialComparer`/`SerialComparer`/`HueThenAmountComparer`/`QuantityThenSerialComparer`
       types the old code uses, defaulting to `IDThenSerialComparer` - this matches old's
       `GetComparer` (line 1500) case-for-case for the styles that exist on both enums.
-- [ ] **Enum is missing two members**: `None` (turns sorting off entirely - old's comparer switch
-      returns `null` for it, line 1504-1506) and `Weight` (`WeightComparer`, referenced at old line
-      1516). See Toolbar section for the toggle-to-None UI behavior that depends on `None` existing.
-- [ ] **No persistence** - old persists the last-chosen `SortStyle` into `Options.SortStyle` inside
-      `ChangeSortStyle` (line 1489-1490); Avalonia's `SortStyle` always starts at `ID` (Avalonia VM
-      line 62) regardless of what was last selected.
+- [x] **Enum now has both members**: `None` (`GetSorter()` returns `null`, and both `Rebuild()`'s
+      child-flattening path and `EntityCollectionDataExtensions.ToEntityCollectionData` skip
+      `.OrderBy` when the comparer is null) and `Weight` (`WeightThenSerialComparer`, ported
+      line-for-line including the AOS-tooltip cliloc-weight branch). Default changed from `ID` to
+      `None` to match old.
+- [x] **Persistence is now ported** - `ChangeSortStyle` sets `Options.SortStyle`, persisted like
+      every other `Options` field; a new ECV window opens to the last-chosen sort, matching old. See
+      Settings/Options persistence.
 
 ## Hotkeys
 
@@ -328,17 +389,13 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       EntityCollectionViewer { DataContext = ... }; window.Show()`, which is correct for this
       repo's out-of-process architecture (see the `classicassist-linux-out-of-process-architecture`
       note) and not a gap.
-- [x]/[ ] **In-window hotkeys are partially ported.** Old gated B/C/K/G/D (plus Ctrl+C) behind
-      `Options.EnableHotkeys` and routed them through `HotkeyActionCommand`
-      (`ClassicAssist/UI/Views/EntityCollectionViewer.xaml:205-212`, `ListView.InputBindings`).
-      Avalonia now has the same five single-key gestures plus Ctrl+C wired directly as
-      `<ListBox.KeyBindings>` in `EntityCollectionViewer.axaml`, bound straight to the real context
-      commands (`ContextMoveToBackpackCommand`, etc.) rather than through an indirection layer -
-      there's no `Options.EnableHotkeys` to gate through since Settings/Options persistence isn't
-      ported (see that section). Practical effect: these hotkeys fire unconditionally whenever the
-      item list has focus, with no way to turn them off. The **toggle itself**
-      (`ToggleEnableHotkeysCommand`/`Options.EnableHotkeys`) is what's still not ported; this has
-      nothing to do with the global "Grid Container Viewer" hotkey system compared above.
+- [x] **In-window hotkeys are now fully ported.** B/C/K/G/D route through `HotkeyActionCommand`
+      (gated on the now-ported `EnableHotkeys`, matching old's `Options.EnableHotkeys` gate) instead
+      of straight to the context commands, reproducing old's indirection
+      (`ClassicAssist/UI/Views/EntityCollectionViewer.xaml:205-212`). Ctrl+C is bound directly to
+      `CopyToClipboardCommand` in both old and new, deliberately *not* gated by
+      `EnableHotkeys`/`HotkeyActionCommand` - it was never part of that indirection old-side either.
+      `Options.EnableHotkeys` is persisted across window opens - see Settings/Options persistence.
 
 ## Data model gaps
 
@@ -358,7 +415,7 @@ hidden entirely via Hide Locked Items (see Toolbar section).
 - [ ] **`EntityCollectionData.FullName`** - present on both sides with matching logic
       (join item `Properties` text with `\r\n`, fall back to `Name`); not a gap, listed only to
       confirm it was checked.
-- [ ] **`EntityCollectionSortStyle` enum missing `None` and `Weight`** - see Sorting.
+- [x] **`EntityCollectionSortStyle` enum now has `None` and `Weight`** - see Sorting.
 - [x] **`StaticTile` has no `Layer` field, unlike old's** (`ClassicAssist.Shared/UO/Data/StaticTile.cs`
       vs `ClassicAssist/ClassicAssist/UO/Data/StaticTile.cs`) - it's the same tiledata.mul byte at
       the same offset, just already exposed under the name `Quality` and already relied on that way
@@ -383,9 +440,10 @@ Not gaps - confirmed present and functioning in the Avalonia view model
   a non-container entity)
 - Live tracking of the source collection (`OnCollectionChanged` → `Rebuild()`), with `Cleanup()`
   correctly unsubscribing so a closed window doesn't keep rebuilding itself forever
-- `ShowChildItems` toggle (recursively flattens container contents) - not persisted, but the toggle
-  itself works
-- `ShowProperties` toggle (full property tooltip/label vs. just the name) - works, not persisted
+- `Options.ShowChildItems` toggle (recursively flattens container contents) - persisted now, see
+  Settings/Options persistence
+- `ShowProperties` toggle (full property tooltip/label vs. just the name) - works, not persisted -
+  matches old, which has no `ShowProperties` field on `EntityCollectionViewerOptions` either
 - Basic sort by enum value for the styles that exist on both sides (Name/Serial/Hue/ID/Quantity) -
   see Sorting for what's missing
 - Refresh (including the `_customRefresh` hook for a caller-supplied re-fetch)

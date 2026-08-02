@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
+        xmlns:models="clr-namespace:ClassicAssist.UI.Models;assembly=ClassicAssist.Shared"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="500"
+        x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewerSettingsWindow"
+        x:DataType="viewModels:EntityCollectionViewerSettingsViewModel"
+        Title="{x:Static resources:Strings.Entity_Collection_Viewer}"
+        Width="700" Height="500" SizeToContent="Manual">
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="*,*" Margin="10">
+      <StackPanel Grid.Column="0" Spacing="10">
+        <controls:GroupBox Header="{x:Static resources:Strings.Combine_stacks}">
+          <Grid RowDefinitions="Auto,Auto" Margin="6">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+              <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddCombineStacksEntryCommand}"/>
+              <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCombineStacksEntryCommand}"/>
+            </StackPanel>
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Options.CombineStacksIgnore}"
+                      SelectedItem="{Binding SelectedCombineStacksEntry}" MinHeight="150" MaxHeight="200"
+                      AutoGenerateColumns="False" GridLinesVisibility="All">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static resources:Strings.ID}" Binding="{Binding ID}" Width="1*"/>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Binding="{Binding Cliloc}" Width="1*"/>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Color}" Binding="{Binding Hue}" Width="1*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </controls:GroupBox>
+        <controls:GroupBox Header="{x:Static resources:Strings.Open_All_Containers}">
+          <Grid RowDefinitions="Auto,Auto,Auto" Margin="6">
+            <CheckBox Grid.Row="0" IsChecked="{Binding Options.OpenContainersOnlyKnownContainers}"
+                      Content="{x:Static resources:Strings.Only_known_containers}" Margin="0,0,0,4"/>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+              <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddOpenContainersEntryCommand}"/>
+              <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveOpenContainersEntryCommand}"/>
+            </StackPanel>
+            <DataGrid Grid.Row="2" ItemsSource="{Binding Options.OpenContainersIgnore}"
+                      SelectedItem="{Binding SelectedOpenContainersEntry}" MinHeight="150" MaxHeight="200"
+                      AutoGenerateColumns="False" GridLinesVisibility="All">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static resources:Strings.ID}" Binding="{Binding ID}" Width="1*"/>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Binding="{Binding Cliloc}" Width="1*"/>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Color}" Binding="{Binding Hue}" Width="1*"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Grid>
+        </controls:GroupBox>
+      </StackPanel>
+      <controls:GroupBox Grid.Column="1" Header="{x:Static resources:Strings.Container_Sets}" Margin="10,0,0,0">
+        <Grid ColumnDefinitions="*,*" Margin="6">
+          <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,5,0">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+              <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddContainerSetCommand}"/>
+              <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveContainerSetCommand}"/>
+            </StackPanel>
+            <ListBox Grid.Row="1" ItemsSource="{Binding Options.ContainerSets}"
+                      SelectedItem="{Binding SelectedContainerSet}" MinHeight="150">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="models:ContainerSet">
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+          <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="5,0,0,0">
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
+              <Button Content="{x:Static resources:Strings.Target}" Command="{Binding AddContainerSetItemCommand}"/>
+              <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveContainerSetItemCommand}"/>
+            </StackPanel>
+            <ListBox Grid.Row="1" ItemsSource="{Binding SelectedContainerSet.Items}"
+                      SelectedItem="{Binding SelectedContainerSetItem}" MinHeight="150">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding StringFormat={}0x{0:x8}}"/>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Grid>
+      </controls:GroupBox>
+    </Grid>
+    <StackPanel Grid.Row="1" HorizontalAlignment="Right" Margin="0,0,10,10" Orientation="Horizontal">
+      <Button Content="{x:Static resources:Strings.OK}" Click="OnCloseClick"/>
+    </StackPanel>
+  </Grid>
+</Window>
