@@ -146,30 +146,29 @@ namespace ClassicAssist.Data.Macros.Commands
         //    System.Windows.MessageBox.Show( body, title, MessageBoxButton.OK, MessageBoxImage.Information );
         //}
 
-        //[CommandsDisplay( Category = nameof( Strings.Main ) )]
-        //public static void PlaySound( object param )
-        //{
-        //    switch ( param )
-        //    {
-        //        case int id:
-        //            Engine.SendPacketToClient( new PlaySound( id ) );
-        //            break;
-        //        case string soundFile:
-        //        {
-        //            string fullPath = Path.Combine( Engine.StartupPath, "Sounds", soundFile );
+        [CommandsDisplay( Category = nameof( Strings.Main ) )]
+        public static void PlaySound( object param, bool playSync = true )
+        {
+            switch ( param )
+            {
+                case int id:
+                    Engine.SendPacketToClient( new PlaySound( id ) );
+                    break;
+                case string soundFile:
+                {
+                    string fullPath = Path.Combine( Engine.StartupPath, "Sounds", soundFile );
 
-        //            if ( !File.Exists( fullPath ) )
-        //            {
-        //                UOC.SystemMessage( Strings.Cannot_find_sound_file___ );
-        //                return;
-        //            }
+                    if ( !File.Exists( fullPath ) )
+                    {
+                        UOC.SystemMessage( Strings.Cannot_find_sound_file___ );
+                        return;
+                    }
 
-        //            SoundPlayer soundPlayer = new SoundPlayer( fullPath );
-        //            soundPlayer.PlaySync();
-        //            break;
-        //        }
-        //    }
-        //}
+                    AudioPlayback.Play( fullPath, playSync );
+                    break;
+                }
+            }
+        }
 
         [CommandsDisplay( Category = nameof( Strings.Main ) )]
         public static bool Playing()
