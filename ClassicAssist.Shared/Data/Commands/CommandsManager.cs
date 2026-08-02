@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ClassicAssist.Shared;
+using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
@@ -141,6 +142,27 @@ namespace ClassicAssist.Data.Commands
             else if ( data[0] == 0x03 )
             {
                 text = ParseAsciiSpeech( data, data.Length );
+            }
+
+            // A gump-side macro button plays back this text via GameActions.Say(">macro " + name) - see
+            // ClassicUO.Game.Managers.MacroManager's MacroType.RazorMacro handling. It's a local-only
+            // speech line, never sent to the server, so it's intercepted and consumed here.
+            if ( !string.IsNullOrEmpty( text ) && text.Length >= 7 && text.Substring( 0, 7 ).Equals( ">macro " ) )
+            {
+                string macroName = text.Substring( 7 );
+
+                MacroEntry macro = MacroManager.GetInstance().Items.FirstOrDefault( m => m.Name == macroName );
+
+                if ( macro == null )
+                {
+                    UOC.SystemMessage( Strings.Macro_not_found___, 35 );
+                }
+                else
+                {
+                    MacroManager.GetInstance().Execute( macro );
+                }
+
+                return true;
             }
 
             if ( string.IsNullOrEmpty( text ) || text[0] != Options.CurrentOptions.CommandPrefix )

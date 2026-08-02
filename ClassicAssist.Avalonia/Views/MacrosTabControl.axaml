@@ -124,6 +124,9 @@
       </WrapPanel>
       <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="0,5,0,0">
         <Button Content="{x:Static resources:Strings.Object_Inspector}" Command="{Binding InspectObjectCommand}"/>
+        <Button Content="{x:Static resources:Strings.Create_Macro_Button}" Margin="5,0,0,0"
+                Command="{Binding CreateMacroButtonCommand, Mode=OneWay}"
+                CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
       </StackPanel>
     </Grid>
   </Grid>

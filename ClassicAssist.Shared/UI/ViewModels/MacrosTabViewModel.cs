@@ -25,6 +25,7 @@ namespace ClassicAssist.UI.ViewModels
         private int _caretPosition;
 
         private ICommand _clearHotkeyCommand;
+        private ICommand _createMacroButtonCommand;
 
         //TODO
         //private TextDocument _document;
@@ -45,6 +46,7 @@ namespace ClassicAssist.UI.ViewModels
         public MacrosTabViewModel() : base( Strings.Macros )
         {
             Engine.DisconnectedEvent += OnDisconnectedEvent;
+            Engine.ConnectedEvent += OnConnectedEvent;
 
             _manager = MacroManager.GetInstance();
 
@@ -62,6 +64,10 @@ namespace ClassicAssist.UI.ViewModels
 
         public ICommand ClearHotkeyCommand =>
             _clearHotkeyCommand ?? ( _clearHotkeyCommand = new RelayCommand( ClearHotkey, o => SelectedItem != null ) );
+
+        public ICommand CreateMacroButtonCommand =>
+            _createMacroButtonCommand ?? ( _createMacroButtonCommand = new RelayCommand( CreateMacroButton,
+                o => Engine.Connected && Engine.ReflectionAvailable ) );
 
         //TODO
         //public TextDocument Document
@@ -403,6 +409,16 @@ namespace ClassicAssist.UI.ViewModels
             await Task.CompletedTask;
         }
 
+        private static void CreateMacroButton( object obj )
+        {
+            if ( !( obj is MacroEntry macro ) )
+            {
+                return;
+            }
+
+            ReflectionCommands.CreateMacroButton( macro.Name, macro.Name );
+        }
+
         private static void ShowActiveObjectsWindow( object obj )
         {
             //TODO UI
@@ -413,6 +429,12 @@ namespace ClassicAssist.UI.ViewModels
         private void OnDisconnectedEvent()
         {
             _manager.StopAll();
+            NotifyPropertyChanged( nameof( CreateMacroButtonCommand ) );
+        }
+
+        private void OnConnectedEvent()
+        {
+            NotifyPropertyChanged( nameof( CreateMacroButtonCommand ) );
         }
 
         /// <summary>
