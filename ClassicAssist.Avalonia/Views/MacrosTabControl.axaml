@@ -20,10 +20,15 @@
   </UserControl.DataContext>
   <UserControl.KeyBindings>
     <KeyBinding Gesture="F5" Command="{Binding ExecuteCommand}" CommandParameter="{Binding SelectedItem}"/>
+    <KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearchCommand}" />
   </UserControl.KeyBindings>
   <Grid ColumnDefinitions="155,5,*">
-    <Grid Grid.Column="0" RowDefinitions="*, Auto, Auto, Auto">
-      <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="0" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+    <Grid Grid.Column="0" RowDefinitions="Auto,*, Auto, Auto, Auto">
+      <controls:FilterControl Grid.Row="0" Margin="0,0,0,5"
+                              FilterText="{Binding FilterText}"
+                              IsFilterVisible="{Binding IsFilterOpen}"
+                              IsVisible="{Binding IsFilterOpen}" />
+      <ListBox x:Name="ListBox" ItemsSource="{Binding FilterItems}" Grid.Row="1" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="*, Auto" Background="{Binding $parent.Background}">
@@ -57,7 +62,7 @@
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
-      <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Margin="0,5,0,0">
+      <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Margin="0,5,0,0">
         <Grid.Styles>
           <!-- Three buttons across a 155px panel; matches the WPF build's local style for this row. -->
           <Style Selector="Button">
@@ -73,7 +78,7 @@
         <Button Content="{x:Static resources:Strings.Save}" Grid.Column="2" Margin="2.5,0,0,0"
                 Command="{Binding SaveMacroCommand, Mode=OneWay}" CommandParameter="{Binding SelectedItem}" />
       </Grid>
-      <Grid Grid.Row="2" ColumnDefinitions="*,*" Margin="0,5,0,0">
+      <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,5,0,0">
         <Button Content="{x:Static resources:Strings.Play}" Grid.Column="0" Margin="0,0,2.5,0"
                 Command="{Binding ExecuteCommand, Mode=OneWay}"
                 CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
@@ -82,7 +87,7 @@
                 Command="{Binding StopCommand, Mode=OneWay}" CommandParameter="{Binding SelectedItem}" />
         <!--IsEnabled="{Binding SelectedItem.IsRunning, ElementName=ListBox}"-->
       </Grid>
-      <controls:GroupBox Header="{x:Static resources:Strings.Hotkeys}" DockPanel.Dock="Top" Grid.Row="3" Margin="0,5,0,0">
+      <controls:GroupBox Header="{x:Static resources:Strings.Hotkeys}" DockPanel.Dock="Top" Grid.Row="4" Margin="0,5,0,0">
         <StackPanel>
           <controls:TextBoxKey Shortcut="{Binding DataContext.Hotkey, ElementName=UserControl}" />
           <CheckBox Content="{x:Static resources:Strings.Pass_to_UO}" Margin="0,5,0,0"

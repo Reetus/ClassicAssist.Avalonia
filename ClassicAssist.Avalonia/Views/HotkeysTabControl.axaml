@@ -18,8 +18,9 @@
 		<misc:StringToResourceConverter x:Key="StringToResourceConverter" />
 	</UserControl.Resources>
 	<Grid ColumnDefinitions="*, 150">
-		<Grid Grid.Column="0" RowDefinitions="*,Auto">
-			<TreeView x:Name="TreeView" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+		<Grid Grid.Column="0" RowDefinitions="Auto,*">
+			<controls:FilterControl Grid.Row="0" FilterText="{Binding FilterText}" Margin="0,0,0,5" />
+			<TreeView x:Name="TreeView" Grid.Row="1" ItemsSource="{Binding FilterItems}" SelectedItem="{Binding SelectedItem}">
 				<TreeView.ItemTemplate>
 					<TreeDataTemplate ItemsSource="{Binding Children}">
 						<StackPanel Orientation="Horizontal" Margin="0, 2, 0, 2">

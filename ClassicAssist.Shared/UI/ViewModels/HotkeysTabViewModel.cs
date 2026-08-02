@@ -22,14 +22,21 @@ namespace ClassicAssist.UI.ViewModels
         private readonly List<HotkeyCommand> _serializeCategories = new List<HotkeyCommand>();
         private ICommand _clearHotkeyCommand;
         private ICommand _executeCommand;
+        private ObservableCollectionEx<HotkeyCommand> _filterItems;
+        private string _filterText;
         private HotkeyCommand _masteriesCategory;
         private HotkeyEntry _selectedItem;
+        private bool _searching;
         private HotkeyCommand _spellsCategory;
 
         public HotkeysTabViewModel()
         {
             _hotkeyManager = HotkeyManager.GetInstance();
             _hotkeyManager.ClearAllHotkeys = ClearAllHotkeys;
+
+            _filterItems = Items;
+
+            Items.CollectionChanged += ( s, ea ) => UpdateFilteredItems();
         }
 
         public ICommand ClearHotkeyCommand =>
@@ -38,6 +45,22 @@ namespace ClassicAssist.UI.ViewModels
         public ICommand ExecuteCommand =>
             _executeCommand ?? ( _executeCommand =
                 new RelayCommand( ExecuteHotkey, o => SelectedItem != null && !SelectedItem.IsCategory ) );
+
+        public ObservableCollectionEx<HotkeyCommand> FilterItems
+        {
+            get => _filterItems;
+            set => SetProperty( ref _filterItems, value );
+        }
+
+        public string FilterText
+        {
+            get => _filterText;
+            set
+            {
+                SetProperty( ref _filterText, value );
+                UpdateFilteredItems();
+            }
+        }
 
         public ShortcutKeys Hotkey
         {
@@ -350,6 +373,46 @@ namespace ClassicAssist.UI.ViewModels
                     entry.IsGlobal = global;
                 }
             }
+        }
+
+        private void UpdateFilteredItems()
+        {
+            if ( _searching )
+            {
+                return;
+            }
+
+            _searching = true;
+
+            if ( string.IsNullOrEmpty( FilterText ) )
+            {
+                FilterItems = Items;
+            }
+            else
+            {
+                bool Predicate( HotkeyEntry hke ) =>
+                    hke.Name?.ToLower().Contains( FilterText.ToLower() ) ?? false;
+
+                // Reuse the real child entries (so selection/serialization still refer to them) inside
+                // lightweight category wrappers that only carry the matching children.
+                ObservableCollectionEx<HotkeyCommand> items = new ObservableCollectionEx<HotkeyCommand>();
+
+                foreach ( HotkeyCommand category in Items.Where( c => c.Children != null && c.Children.Any( Predicate ) ) )
+                {
+                    ObservableCollectionEx<HotkeyEntry> children = new ObservableCollectionEx<HotkeyEntry>();
+
+                    foreach ( HotkeyEntry child in category.Children.Where( Predicate ) )
+                    {
+                        children.Add( child );
+                    }
+
+                    items.Add( new HotkeyCommand { Name = category.Name, IsCategory = true, Children = children } );
+                }
+
+                FilterItems = items;
+            }
+
+            _searching = false;
         }
 
         private async void CheckOverwriteHotkey( HotkeyEntry selectedItem, ShortcutKeys hotkey )

@@ -14,6 +14,7 @@ using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO;
+using ClassicAssist.UI.Misc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -30,18 +31,23 @@ namespace ClassicAssist.UI.ViewModels
         //TODO
         //private TextDocument _document;
         private ICommand _executeCommand;
+        private ObservableCollectionEx<MacroEntry> _filterItems;
+        private string _filterText;
         private ICommand _inspectObjectCommand;
+        private bool _isFilterOpen;
         private bool _isRecording;
         private RelayCommand _newMacroCommand;
         private ICommand _recordCommand;
         private RelayCommand _removeMacroCommand;
         private ICommand _removeMacroConfirmCommand;
         private ICommand _saveMacroCommand;
+        private bool _searching;
         private MacroEntry _selectedItem;
         private ICommand _showActiveObjectsWindowCommand;
         private ICommand _showCommandsCommand;
         private ICommand _showMacrosWikiCommand;
         private ICommand _stopCommand;
+        private ICommand _toggleSearchCommand;
 
         public MacrosTabViewModel() : base( Strings.Macros )
         {
@@ -54,6 +60,10 @@ namespace ClassicAssist.UI.ViewModels
             _manager.InsertDocument = str => { _dispatcher.Invoke( () => { SelectedItem.Macro += str; } ); };
             _manager.NewMacro = NewMacro;
             _manager.Items = Items;
+
+            _filterItems = Items;
+
+            Items.CollectionChanged += ( s, ea ) => UpdateFilteredItems();
         }
 
         public int CaretPosition
@@ -80,6 +90,22 @@ namespace ClassicAssist.UI.ViewModels
             _executeCommand ?? ( _executeCommand = new RelayCommandAsync( obj => Execute( obj, null ),
                 o => !IsRecording && SelectedItem != null && !SelectedItem.IsRunning ) );
 
+        public ObservableCollectionEx<MacroEntry> FilterItems
+        {
+            get => _filterItems;
+            set => SetProperty( ref _filterItems, value );
+        }
+
+        public string FilterText
+        {
+            get => _filterText;
+            set
+            {
+                SetProperty( ref _filterText, value );
+                UpdateFilteredItems();
+            }
+        }
+
         public ShortcutKeys Hotkey
         {
             get => SelectedItem?.Hotkey;
@@ -89,6 +115,12 @@ namespace ClassicAssist.UI.ViewModels
         //TODO
         public ICommand InspectObjectCommand =>
             _inspectObjectCommand ?? ( _inspectObjectCommand = new RelayCommandAsync( InspectObject, o => true ) );
+
+        public bool IsFilterOpen
+        {
+            get => _isFilterOpen;
+            set => SetProperty( ref _isFilterOpen, value );
+        }
 
         public bool IsRecording
         {
@@ -153,6 +185,9 @@ namespace ClassicAssist.UI.ViewModels
         public ICommand StopCommand =>
             _stopCommand ?? ( _stopCommand =
                 new RelayCommandAsync( Stop, o => SelectedItem != null && SelectedItem.IsRunning ) );
+
+        public ICommand ToggleSearchCommand =>
+            _toggleSearchCommand ?? ( _toggleSearchCommand = new RelayCommand( ToggleSearch, o => true ) );
 
         public void Serialize( JObject json )
         {
@@ -583,6 +618,42 @@ namespace ClassicAssist.UI.ViewModels
 
             IsRecording = true;
             NotifyPropertyChanged( nameof( RecordLabel ) );
+        }
+
+        private void ToggleSearch( object obj )
+        {
+            IsFilterOpen = !IsFilterOpen;
+        }
+
+        private void UpdateFilteredItems()
+        {
+            if ( _searching )
+            {
+                return;
+            }
+
+            _searching = true;
+
+            if ( string.IsNullOrEmpty( FilterText ) )
+            {
+                FilterItems = Items;
+            }
+            else
+            {
+                // Reuse the real MacroEntry instances so selection and hotkeys keep working through
+                // the filtered view.
+                ObservableCollectionEx<MacroEntry> items = new ObservableCollectionEx<MacroEntry>();
+
+                foreach ( MacroEntry entry in Items.Where( e =>
+                    e.Name?.ToLower().Contains( FilterText.ToLower() ) ?? false ) )
+                {
+                    items.Add( entry );
+                }
+
+                FilterItems = items;
+            }
+
+            _searching = false;
         }
     }
 }
