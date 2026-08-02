@@ -48,6 +48,12 @@ namespace ClassicAssist.Plugin
         private static IPluginMethods _plugin;
         private static HostMethods _hostMethods;
 
+        // The UI process takes noticeably longer to spin up than the client's initial
+        // SDL_EVENT_WINDOW_FOCUS_GAINED, so by the time _plugin attaches that first event has already
+        // been dropped by the `_plugin?.` null-conditional below. Track it here so it can be replayed
+        // once the UI is actually listening.
+        private static bool _clientHasFocus;
+
         // Addresses out of the client's PluginHeader, invoked through calli. See InitializePlugin for
         // why these aren't delegates.
         private static IntPtr _sendToClientNewPtr;
@@ -550,6 +556,9 @@ namespace ClassicAssist.Plugin
                     rpc.Disconnected += ( _, _ ) => Detach();
 
                     _plugin = rpc.Attach<IPluginMethods>();
+
+                    // Replay whatever focus state was captured before the UI was ready to hear it.
+                    _plugin.OnFocusChanged( _clientHasFocus );
                 }
                 catch ( Exception e )
                 {
@@ -609,6 +618,9 @@ namespace ClassicAssist.Plugin
                     rpc.Disconnected += ( _, _ ) => Detach();
 
                     _plugin = rpc.Attach<IPluginMethods>();
+
+                    // Replay whatever focus state was captured before the UI was ready to hear it.
+                    _plugin.OnFocusChanged( _clientHasFocus );
                 }
                 catch ( Exception e )
                 {
@@ -707,6 +719,8 @@ namespace ClassicAssist.Plugin
 
         private static void OnFocusChanged( bool focus )
         {
+            _clientHasFocus = focus;
+
             _plugin?.OnFocusChanged( focus );
         }
 

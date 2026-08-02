@@ -243,6 +243,13 @@ public static partial class Engine
 
     public static bool OnHotkeyPressed( int key, int mod, bool pressed )
     {
+        // Key-up carries no action to run; only fire on key-down, otherwise every hotkey/macro
+        // toggle fires twice per press. Returning true lets the release reach the client normally.
+        if ( !pressed )
+        {
+            return true;
+        }
+
         if ( !IsClientFocused )
         {
             return false;
