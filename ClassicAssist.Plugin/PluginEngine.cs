@@ -77,6 +77,10 @@ namespace ClassicAssist.Plugin
 
         internal static unsafe void Install( IntPtr header )
         {
+            // Group the client window with the assistant UI window into one taskbar button on
+            // Windows. The plugin runs inside the game process, so its own PID is the game's.
+            NativeMethods.SetAppUserModelId( Process.GetCurrentProcess().Id );
+
             PluginHeader* plugin = (PluginHeader*) header;
 
             InitializePlugin( plugin );
@@ -1170,6 +1174,13 @@ namespace ClassicAssist.Plugin
             public void OnShutdown()
             {
                 ShutdownResetEvent.Set();
+            }
+
+            public Task<int> GetProcessId()
+            {
+                // The plugin runs inside the game process, so this is the client's PID. Process over
+                // Environment.ProcessId for the net472 build (plugin also targets .NET Framework).
+                return Task.FromResult( Process.GetCurrentProcess().Id );
             }
         }
 

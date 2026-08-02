@@ -59,6 +59,13 @@ namespace ClassicAssist.Avalonia
             Rpc = JsonRpc.Attach( stream, new Shared.Engine.PluginMethods() );
             Host = Rpc.Attach<IHostMethods>();
 
+            // Group the assistant window with the game window into one taskbar button on Windows.
+            // The id is keyed on the game run's process id (queried over RPC) so that each game
+            // instance + assistant pair stays its own group when multiboxing.
+            int gameProcessId = Host.GetProcessId().GetAwaiter().GetResult();
+
+            ClassicAssist.Shared.NativeMethods.SetAppUserModelId( gameProcessId );
+
             // If the game process goes away, so do we - there is nothing left to assist.
             Rpc.Disconnected += ( _, _ ) => Environment.Exit( 0 );
 

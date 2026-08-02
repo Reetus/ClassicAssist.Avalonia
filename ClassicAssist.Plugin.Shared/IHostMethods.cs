@@ -41,6 +41,7 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> Pathfinding();
         void CancelPathfinding();
         Task<IntPtr> GetWindowHandle();
+        Task<int> GetProcessId();
         void CreateMacroButton( string name, string value );
         Task<Point> GetGameWindowCenter();
         Task<Size> GetGameWindowSize();
