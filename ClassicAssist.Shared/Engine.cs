@@ -650,6 +650,25 @@ public static partial class Engine
         UpdateWindowTitleEvent?.Invoke();
     }
 
+    /// <summary>
+    ///     Sets the CUO client window title (via the plugin's native <c>SetTitle</c> hook) to
+    ///     "PlayerName (ShardName)" when <see cref="Options.SetUOTitle" /> is enabled, or clears it
+    ///     otherwise so the client falls back to its own title.
+    /// </summary>
+    public static void SetTitle( string title = null )
+    {
+        if ( Options.CurrentOptions.SetUOTitle )
+        {
+            Host?.SetTitle( string.IsNullOrEmpty( title )
+                ? Player == null ? string.Empty : $"{Player.Name} ({CurrentShard?.Name})"
+                : title );
+        }
+        else
+        {
+            Host?.SetTitle( string.Empty );
+        }
+    }
+
     public static void GetMapZ( int x, int y, out sbyte groundZ, out sbyte staticZ )
     {
         groundZ = staticZ = ( sbyte )( Player?.Z ?? 0 );

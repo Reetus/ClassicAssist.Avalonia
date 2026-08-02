@@ -292,6 +292,16 @@ namespace ClassicAssist.Data
             set => SetProperty( ref field, value );
         }
 
+        public bool SetUOTitle
+        {
+            get;
+            set
+            {
+                SetProperty( ref field, value );
+                Engine.SetTitle();
+            }
+        }
+
         public SmartTargetOption SmartTargetOption
         {
             get;

@@ -70,6 +70,7 @@ namespace ClassicAssist.UI.ViewModels
             options.Add( "AbilitiesGumpX", CurrentOptions.AbilitiesGumpX );
             options.Add( "AbilitiesGumpY", CurrentOptions.AbilitiesGumpY );
             options.Add( "ShowProfileNameWindowTitle", CurrentOptions.ShowProfileNameWindowTitle );
+            options.Add( "SetUOTitle", CurrentOptions.SetUOTitle );
             options.Add( "SortMacrosAlphabetical", CurrentOptions.SortMacrosAlphabetical );
             options.Add( "ShowResurrectionWaypoints", CurrentOptions.ShowResurrectionWaypoints );
             options.Add( "RehueFriends", CurrentOptions.RehueFriends );
@@ -140,6 +141,7 @@ namespace ClassicAssist.UI.ViewModels
             CurrentOptions.AbilitiesGumpY = config?["AbilitiesGumpY"]?.ToObject<int>() ?? 100;
             CurrentOptions.ShowProfileNameWindowTitle =
                 config?["ShowProfileNameWindowTitle"]?.ToObject<bool>() ?? false;
+            CurrentOptions.SetUOTitle = config?["SetUOTitle"]?.ToObject<bool>() ?? true;
             CurrentOptions.SortMacrosAlphabetical = config?["SortMacrosAlphabetical"]?.ToObject<bool>() ?? false;
             CurrentOptions.ShowResurrectionWaypoints = config?["ShowResurrectionWaypoints"]?.ToObject<bool>() ?? true;
             CurrentOptions.RehueFriends = config?["RehueFriends"]?.ToObject<bool>() ?? false;

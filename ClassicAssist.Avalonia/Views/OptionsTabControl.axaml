@@ -130,6 +130,8 @@
                       IsChecked="{Binding CurrentOptions.MacrosGump}" />
       <CheckBox Content="{x:Static resources:Strings.Show_Profile_Name_In_Title}"
                       IsChecked="{Binding CurrentOptions.ShowProfileNameWindowTitle}" />
+      <CheckBox Content="{x:Static resources:Strings.Show_player___shard_name_in_CUO_title}"
+                      IsChecked="{Binding CurrentOptions.SetUOTitle}" />
       <CheckBox Content="{x:Static resources:Strings.Queue_Last_Target___Target_Self}"
                       IsChecked="{Binding CurrentOptions.QueueLastTarget}" />
       <DockPanel IsEnabled="{Binding CurrentOptions.QueueLastTarget}">

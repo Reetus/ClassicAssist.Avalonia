@@ -99,13 +99,16 @@ From `HOTKEYS_TODO.md`:
 
 ## Missing Options
 
+- [x] ~~**Show player/shard name in CUO title** (`SetUOTitle`)~~ - `Options.SetUOTitle`,
+      `Engine.SetTitle()` (RPC `IHostMethods.SetTitle` -> plugin native `SetTitle` hook, set to
+      `"PlayerName (ShardName)"` when enabled, cleared otherwise), wired into the player-incoming
+      packet handler and the Options tab checkbox; serialized in `OptionsTabViewModel`.
 - [ ] `Options` class: `Autologin*`, `ChatWindow*`, `DisableHotkeysLoad`, `DragDelay/MS`,
       `HotkeysStatusGump*`, `LimitHotkeyTrigger/MS`, `LogoutDisconnectedPrompt`, `MacrosGump*`
       (text color/height/width/transparent), `DebugAdapterEnabled/Port`, `SelectedTabIndex*`,
-      `SetUOTitle`, `SlowHandlerThreshold`, `SysTray`
+      `SlowHandlerThreshold`, `SysTray`
 - [ ] Options tab UI: Debug Adapter toggle, "Disable hotkeys on profile load", "Hotkeys Status
-      Gump", "Limit Hotkey retrigger", "Show player/shard name in CUO title", "Use Cliloc
-      language from ClassicUO"
+      Gump", "Limit Hotkey retrigger", "Use Cliloc language from ClassicUO"
 - [ ] General tab UI: filter Configure buttons, Minimize to tray, Drag delay, Saved Passwords,
       Autologin section, Backup Settings button
 

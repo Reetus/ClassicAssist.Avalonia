@@ -1790,7 +1790,7 @@ public static class IncomingPacketHandlers
         }
 
         Engine.UpdateWindowTitle();
-        //Engine.SetTitle();
+        Engine.SetTitle();
     }
 
     private static void OnMobileIncoming( PacketReader reader )
