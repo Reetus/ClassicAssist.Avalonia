@@ -23,14 +23,23 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
 {
     public class MacroObjectString : LinkedObject<object, object>
     {
-        private const string MACRO_TYPE_TYPE = "ClassicUO.Game.Managers.MacroType";
-        private const string MACRO_SUB_TYPE_TYPE = "ClassicUO.Game.Managers.MacroSubType";
+        // TazUO-legacy declares these enums inline in Game.Managers, alongside MacroObjectString
+        // itself; modern TazUO split them out into their own files under Common.Enums, so both
+        // names have to be tried - getting this wrong throws inside the constructor (Enum.Parse on
+        // a null Type), which the caller (Macros.CreateMacroButton) swallows silently, leaving a
+        // macro registered with no Items and no button ever created.
+        private const string MACRO_TYPE_TYPE_LEGACY = "ClassicUO.Game.Managers.MacroType";
+        private const string MACRO_SUB_TYPE_TYPE_LEGACY = "ClassicUO.Game.Managers.MacroSubType";
+        private const string MACRO_TYPE_TYPE_MODERN = "ClassicUO.Common.Enums.MacroType";
+        private const string MACRO_SUB_TYPE_TYPE_MODERN = "ClassicUO.Common.Enums.MacroSubType";
         private const string MACRO_OBJ_STRING_TYPE = "ClassicUO.Game.Managers.MacroObjectString";
 
         public MacroObjectString( string text ) : base( null )
         {
-            Type macroTypeType = ReflectionImpl.DefaultAssembly.GetType( MACRO_TYPE_TYPE );
-            Type macroSubTypeType = ReflectionImpl.DefaultAssembly.GetType( MACRO_SUB_TYPE_TYPE );
+            Type macroTypeType = ReflectionImpl.DefaultAssembly.GetType( MACRO_TYPE_TYPE_LEGACY ) ??
+                ReflectionImpl.DefaultAssembly.GetType( MACRO_TYPE_TYPE_MODERN );
+            Type macroSubTypeType = ReflectionImpl.DefaultAssembly.GetType( MACRO_SUB_TYPE_TYPE_LEGACY ) ??
+                ReflectionImpl.DefaultAssembly.GetType( MACRO_SUB_TYPE_TYPE_MODERN );
 
             object macroType = Enum.Parse( macroTypeType, "RazorMacro" );
             object macroSubType = Enum.Parse( macroSubTypeType, "MSC_NONE" );
