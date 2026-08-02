@@ -17,6 +17,7 @@ using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Data.Targeting;
 using ClassicAssist.Misc;
 using ClassicAssist.Plugin.Shared;
+using ClassicAssist.Shared.UO;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
@@ -123,6 +124,14 @@ public static partial class Engine
     public static TargetFlags TargetFlags { get; set; }
     public static int TargetSerial { get; set; }
     public static TargetType TargetType { get; set; }
+
+    /// <summary>
+    ///     Work queued from off-tick contexts (macro commands, extensions) that needs to run on the next
+    ///     <c>OnTick</c> callback instead. Mirrors upstream ClassicAssist's <c>Engine.TickWorkQueue</c> -
+    ///     unlike <c>PluginEngine.TickWorkQueue</c>, which drains reflection calls on the client's own thread,
+    ///     this one drains on whatever thread the UI process's inbound RPC <c>OnTick</c> arrives on.
+    /// </summary>
+    public static Queue<Action> TickWorkQueue { get; set; } = new();
 
     public static bool TooltipsEnabled { get; set; }
 
@@ -681,6 +690,20 @@ public static partial class Engine
 
     private static void OnTick()
     {
+        try
+        {
+            while ( TickWorkQueue.Count > 0 )
+            {
+                Action action = TickWorkQueue.Dequeue();
+
+                action?.Invoke();
+            }
+        }
+        catch ( Exception e )
+        {
+            SentrySdk.CaptureException( e );
+            Commands.SystemMessage( e.Message );
+        }
     }
 
     public class PluginMethods : IPluginMethods
