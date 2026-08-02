@@ -36,8 +36,22 @@ namespace ClassicAssist.Data.Hotkeys
             }
 
             Key = token["Keys"]?.ToObject<Key>() ?? Key.None;
-            Modifier = token["Modifier"]?.ToObject<Key>() ?? Key.None;
+            Modifier = ReadModifier( token );
             Mouse = token["Mouse"]?.ToObject<MouseOptions>() ?? MouseOptions.None;
+        }
+
+        private static Key ReadModifier( JToken token )
+        {
+            JToken legacyModifier = token["Modifier"];
+
+            if ( legacyModifier != null )
+            {
+                return legacyModifier.ToObject<Key>();
+            }
+
+            int sdlModifier = token["SDLModifier"]?.ToObject<int>() ?? 0;
+
+            return SDLKeys.SDLKeymodToKey( sdlModifier );
         }
 
         public static ShortcutKeys Default => new ShortcutKeys( Key.None, Key.None ) { Mouse = MouseOptions.None };
@@ -86,9 +100,10 @@ namespace ClassicAssist.Data.Hotkeys
 
         public JObject ToJObject()
         {
+            // SDLModifier matches what the WPF tree writes, so profiles round-trip between the two.
             JObject keys = new JObject
             {
-                { "Keys", (int) Key }, { "Modifier", (int) Modifier }, { "Mouse", (int) Mouse }
+                { "Keys", (int) Key }, { "SDLModifier", SDLKeys.KeyToSDLKeymod( Modifier ) }, { "Mouse", (int) Mouse }
             };
 
             return keys;
