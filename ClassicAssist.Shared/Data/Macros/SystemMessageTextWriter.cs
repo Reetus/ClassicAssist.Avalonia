@@ -24,7 +24,9 @@ namespace ClassicAssist.Data.Macros
 {
     public class SystemMessageTextWriter : TextWriter
     {
-        public override Encoding Encoding { get; } = Encoding.UTF8;
+        // Kept in sync with the encoding MacroInvoker hands TextStream, so either construction path
+        // (explicit, or the new TextStream(writer) overload that pulls this) decodes output correctly.
+        public override Encoding Encoding => MacroOutputEncoding.Current;
 
         public override void Write( string value )
         {

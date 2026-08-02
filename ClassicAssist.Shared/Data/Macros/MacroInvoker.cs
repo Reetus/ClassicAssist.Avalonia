@@ -61,12 +61,12 @@ public class MacroInvoker
             _importCache = InitializeImports( _engine );
         }
 
-        // The DLR encodes script output as UTF-8 before handing bytes to the Stream, regardless of
-        // TextWriter.Encoding - passing anything else here (e.g. Unicode/UTF-16, which is what
-        // SystemMessageTextWriter.Encoding used to report) makes TextStream decode those UTF-8
-        // bytes as UTF-16 pairs, turning plain ASCII output into CJK-range garbage.
-        runtime.IO.SetOutput( new TextStream( _textWriter, Encoding.UTF8, true ), Encoding.UTF8 );
-        runtime.IO.SetErrorOutput( new TextStream( _textWriter, Encoding.UTF8, true ), Encoding.UTF8 );
+        // The DLR hands macro output to the stream in different encodings per platform - UTF-8 on
+        // non-Windows, UTF-16 on Windows. TextStream must decode with the matching encoding or plain
+        // ASCII print output comes back mis-decoded (CJK garbage on Linux, H\0e\0l\0l\0o\0 on Windows).
+        Encoding outputEncoding = MacroOutputEncoding.Current;
+        runtime.IO.SetOutput( new TextStream( _textWriter, outputEncoding, true ), outputEncoding );
+        runtime.IO.SetErrorOutput( new TextStream( _textWriter, outputEncoding, true ), outputEncoding );
 
         string modulePath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Modules" );
         ICollection<string> searchPaths = _engine.GetSearchPaths();
