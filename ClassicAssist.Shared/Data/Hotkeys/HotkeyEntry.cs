@@ -12,16 +12,26 @@ namespace ClassicAssist.Data.Hotkeys
 
         private readonly object _childrenLock = new object();
 
+        private bool _canGlobal = true;
+
         private ObservableCollectionEx<HotkeyEntry> _children = new ObservableCollectionEx<HotkeyEntry>();
 
         private ShortcutKeys _hotkey = new ShortcutKeys();
         private bool _isCategory;
+
+        private bool _isGlobal;
 
         private string _name;
         private bool _passToUo = true;
 
         [JsonIgnore]
         public Action<HotkeyEntry, object[]> Action { get; set; }
+
+        public bool CanGlobal
+        {
+            get => _canGlobal;
+            set => SetProperty( ref _canGlobal, value );
+        }
 
         [JsonIgnore]
         public ObservableCollectionEx<HotkeyEntry> Children
@@ -68,6 +78,12 @@ namespace ClassicAssist.Data.Hotkeys
         {
             get => _isCategory;
             set => SetProperty( ref _isCategory, value );
+        }
+
+        public bool IsGlobal
+        {
+            get => _isGlobal;
+            set => SetProperty( ref _isGlobal, value );
         }
 
         public virtual string Name

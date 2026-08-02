@@ -20,7 +20,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.UI.ViewModels
 {
-    public class SkillsTabViewModel : BaseViewModel, ISettingProvider
+    public class SkillsTabViewModel : BaseViewModel, IGlobalSettingProvider
     {
         private HotkeyCommand _hotkeyCategory;
         private ObservableCollectionEx<SkillEntry> _items = new ObservableCollectionEx<SkillEntry>();
@@ -80,6 +80,21 @@ namespace ClassicAssist.UI.ViewModels
 
         public void Serialize( JObject json )
         {
+            Serialize( json, false );
+        }
+
+        public void Deserialize( JObject json, Options options )
+        {
+            Deserialize( json, options, false );
+        }
+
+        public string GetGlobalFilename()
+        {
+            return "Skills.json";
+        }
+
+        public void Serialize( JObject json, bool global = false )
+        {
             JArray skills = new JArray();
 
             if ( _hotkeyCategory?.Children == null )
@@ -87,7 +102,7 @@ namespace ClassicAssist.UI.ViewModels
                 return;
             }
 
-            foreach ( HotkeyEntry hks in _hotkeyCategory.Children )
+            foreach ( HotkeyEntry hks in _hotkeyCategory.Children.Where( o => o.IsGlobal == global ) )
             {
                 if ( Equals( hks.Hotkey, ShortcutKeys.Default ) )
                 {
@@ -96,14 +111,17 @@ namespace ClassicAssist.UI.ViewModels
 
                 skills.Add( new JObject
                 {
-                    { "Name", hks.Name }, { "Keys", hks.Hotkey.ToJObject() }, { "PassToUO", hks.PassToUO }
+                    { "Name", hks.Name },
+                    { "Keys", hks.Hotkey.ToJObject() },
+                    { "PassToUO", hks.PassToUO },
+                    { "Disableable", hks.Disableable }
                 } );
             }
 
             json.Add( "Skills", skills );
         }
 
-        public void Deserialize( JObject json, Options options )
+        public void Deserialize( JObject json, Options options, bool global = false )
         {
             HotkeyManager hotkey = HotkeyManager.GetInstance();
 
@@ -137,14 +155,43 @@ namespace ClassicAssist.UI.ViewModels
                     }
 
                     hke.Hotkey = new ShortcutKeys( token["Keys"] );
-                    hke.PassToUO = token["PassToUO"].ToObject<bool>();
+                    hke.PassToUO = token["PassToUO"]?.ToObject<bool>() ?? true;
+                    hke.Disableable = token["Disableable"]?.ToObject<bool>() ?? true;
+                    hke.IsGlobal = global;
                 }
             }
 
             _hotkeyCategory = hotkey.Items.FirstOrDefault( hk => hk.IsCategory && hk.Name == Strings.Skills ) ??
                               new HotkeyCommand { Name = Strings.Skills, IsCategory = true };
 
-            _hotkeyCategory.Children = hotkeyEntries;
+            // Global pass runs after the profile pass and overlays onto the same entries
+            if ( !global )
+            {
+                _hotkeyCategory.Children = hotkeyEntries;
+            }
+            else
+            {
+                foreach ( HotkeyEntry hke in hotkeyEntries )
+                {
+                    HotkeyEntry hk = _hotkeyCategory.Children.FirstOrDefault( o => o.Name == hke.Name );
+
+                    if ( hk == null )
+                    {
+                        _hotkeyCategory.Children.Add( hke );
+                        continue;
+                    }
+
+                    if ( !hk.Hotkey.Equals( ShortcutKeys.Default ) && hke.Hotkey.Equals( ShortcutKeys.Default ) )
+                    {
+                        continue;
+                    }
+
+                    hk.Hotkey = hke.Hotkey;
+                    hk.PassToUO = hke.PassToUO;
+                    hk.Disableable = hke.Disableable;
+                    hk.IsGlobal = hke.IsGlobal;
+                }
+            }
 
             hotkey.AddCategory( _hotkeyCategory );
         }

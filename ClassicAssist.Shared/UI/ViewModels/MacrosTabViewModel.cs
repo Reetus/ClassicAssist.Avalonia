@@ -164,38 +164,20 @@ namespace ClassicAssist.UI.ViewModels
 
             if ( globalMacros.Any() )
             {
-                string globalJson = JsonConvert.SerializeObject( globalMacros, Formatting.Indented );
+                JArray globalArray = new JArray();
 
-                File.WriteAllText( Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Macros.json" ),
-                    globalJson );
+                foreach ( MacroEntry macroEntry in globalMacros )
+                {
+                    globalArray.Add( SerializeMacro( macroEntry ) );
+                }
+
+                File.WriteAllText( Path.Combine( AssistantOptions.GetGlobalPath(), "Macros.json" ),
+                    globalArray.ToString( Formatting.Indented ) );
             }
 
             foreach ( MacroEntry macroEntry in Items.Where( e => !e.Global ) )
             {
-                JObject entry = new JObject
-                {
-                    { "Name", macroEntry.Name },
-                    { "Loop", macroEntry.Loop },
-                    { "DoNotAutoInterrupt", macroEntry.DoNotAutoInterrupt },
-                    { "Macro", macroEntry.Macro },
-                    { "PassToUO", macroEntry.PassToUO },
-                    { "Keys", macroEntry.Hotkey.ToJObject() },
-                    { "IsBackground", macroEntry.IsBackground },
-                    { "IsAutostart", macroEntry.IsAutostart },
-                    { "Disableable", macroEntry.Disableable }
-                };
-
-                JArray aliasesArray = new JArray();
-
-                foreach ( JObject aliasObj in macroEntry.Aliases.Select( kvp =>
-                    new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } ) )
-                {
-                    aliasesArray.Add( aliasObj );
-                }
-
-                entry.Add( "Aliases", aliasesArray );
-
-                macroArray.Add( entry );
+                macroArray.Add( SerializeMacro( macroEntry ) );
             }
 
             macros.Add( "Macros", macroArray );
@@ -217,28 +199,30 @@ namespace ClassicAssist.UI.ViewModels
         {
             Items.Clear();
 
-            string globalPath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Macros.json" );
+            string globalPath = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros.json" );
 
             if ( File.Exists( globalPath ) )
             {
-                string globalJson = File.ReadAllText( globalPath );
+                JArray globalJson = JArray.Parse( File.ReadAllText( globalPath ) );
 
-                MacroEntry[] globalMacros = JsonConvert.DeserializeObject<MacroEntry[]>( globalJson );
-
-                if ( globalMacros != null )
+                foreach ( JToken token in globalJson )
                 {
-                    foreach ( MacroEntry entry in globalMacros )
-                    {
-                        entry.Action = async ( hks, parameters ) => await Execute( entry, parameters );
+                    MacroEntry entry = DeserializeMacro( token );
 
-                        if ( Options.CurrentOptions.SortMacrosAlphabetical )
-                        {
-                            Items.AddSorted( entry );
-                        }
-                        else
-                        {
-                            Items.Add( entry );
-                        }
+                    // Globals are stored in their own file and are global regardless of what the
+                    // persisted flag says - force it so a foreign/older file can't quietly demote a
+                    // global macro into a per-profile one on the next save.
+                    entry.Global = true;
+
+                    entry.Action = async ( hks, parameters ) => await Execute( entry, parameters );
+
+                    if ( Options.CurrentOptions.SortMacrosAlphabetical )
+                    {
+                        Items.AddSorted( entry );
+                    }
+                    else
+                    {
+                        Items.Add( entry );
                     }
                 }
             }
@@ -254,27 +238,8 @@ namespace ClassicAssist.UI.ViewModels
             {
                 foreach ( JToken token in config["Macros"] )
                 {
-                    MacroEntry entry = new MacroEntry
-                    {
-                        Name = GetJsonValue( token, "Name", string.Empty ),
-                        Loop = GetJsonValue( token, "Loop", false ),
-                        DoNotAutoInterrupt = GetJsonValue( token, "DoNotAutoInterrupt", false ),
-                        Macro = GetJsonValue( token, "Macro", string.Empty ),
-                        PassToUO = GetJsonValue( token, "PassToUO", true ),
-                        Hotkey = new ShortcutKeys( token["Keys"] ),
-                        IsBackground = GetJsonValue( token, "IsBackground", false ),
-                        IsAutostart = GetJsonValue( token, "IsAutostart", false ),
-                        Disableable = GetJsonValue( token, "Disableable", true )
-                    };
-
-                    if ( token["Aliases"] != null )
-                    {
-                        foreach ( JToken aliasToken in token["Aliases"] )
-                        {
-                            entry.Aliases.Add( aliasToken["Key"].ToObject<string>(),
-                                aliasToken["Value"].ToObject<int>() );
-                        }
-                    }
+                    MacroEntry entry = DeserializeMacro( token );
+                    entry.Global = false;
 
                     // Global macro takes precedence for hotkey
                     if ( Items.Any( e => Equals( e.Hotkey, entry.Hotkey ) && e.Global ) )
@@ -317,6 +282,94 @@ namespace ClassicAssist.UI.ViewModels
             {
                 File.WriteAllText( assistantModule, "from ClassicAssist.Shared import Engine as _Engine\nEngine = _Engine" );
             }
+        }
+
+        private static JObject SerializeMacro( MacroEntry macroEntry )
+        {
+            JObject entry = new JObject
+            {
+                { "Name", macroEntry.Name },
+                { "Loop", macroEntry.Loop },
+                { "DoNotAutoInterrupt", macroEntry.DoNotAutoInterrupt },
+                { "Macro", macroEntry.Macro },
+                { "PassToUO", macroEntry.PassToUO },
+                { "Keys", macroEntry.Hotkey.ToJObject() },
+                { "IsBackground", macroEntry.IsBackground },
+                { "IsAutostart", macroEntry.IsAutostart },
+                { "Disableable", macroEntry.Disableable },
+                { "Global", macroEntry.Global }
+            };
+
+            JArray aliasesArray = new JArray();
+
+            foreach ( JObject aliasObj in macroEntry.Aliases.Select( kvp =>
+                new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } ) )
+            {
+                aliasesArray.Add( aliasObj );
+            }
+
+            entry.Add( "Aliases", aliasesArray );
+
+            if ( macroEntry.Breakpoints != null )
+            {
+                JArray breakpointsArray = new JArray();
+
+                foreach ( int breakpoint in macroEntry.Breakpoints )
+                {
+                    breakpointsArray.Add( breakpoint );
+                }
+
+                entry.Add( "Breakpoints", breakpointsArray );
+            }
+
+            return entry;
+        }
+
+        private MacroEntry DeserializeMacro( JToken token )
+        {
+            MacroEntry entry = new MacroEntry
+            {
+                Name = GetJsonValue( token, "Name", string.Empty ),
+                Loop = GetJsonValue( token, "Loop", false ),
+                DoNotAutoInterrupt = GetJsonValue( token, "DoNotAutoInterrupt", false ),
+                Macro = GetJsonValue( token, "Macro", string.Empty ),
+                PassToUO = GetJsonValue( token, "PassToUO", true ),
+                Hotkey = new ShortcutKeys( token["Keys"] ),
+                IsBackground = GetJsonValue( token, "IsBackground", false ),
+                IsAutostart = GetJsonValue( token, "IsAutostart", false ),
+                Disableable = GetJsonValue( token, "Disableable", true )
+            };
+
+            if ( token["Aliases"] != null )
+            {
+                foreach ( JToken aliasToken in token["Aliases"] )
+                {
+                    // Globals were historically written as an object map for backwards compatibility
+                    if ( aliasToken.Type == JTokenType.Property )
+                    {
+                        JProperty jProperty = (JProperty) aliasToken;
+
+                        entry.Aliases.Add( jProperty.Name, jProperty.Value.ToObject<int>() );
+                    }
+                    else
+                    {
+                        entry.Aliases.Add( aliasToken["Key"].ToObject<string>(),
+                            aliasToken["Value"].ToObject<int>() );
+                    }
+                }
+            }
+
+            if ( token["Breakpoints"] != null )
+            {
+                entry.Breakpoints.Clear();
+
+                foreach ( JToken breakpointToken in token["Breakpoints"] )
+                {
+                    entry.Breakpoints.Add( breakpointToken.ToObject<int>() );
+                }
+            }
+
+            return entry;
         }
 
         private void RemoveMacroConfirm( object obj )

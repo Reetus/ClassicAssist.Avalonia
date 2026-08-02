@@ -14,6 +14,7 @@
 		<viewModels:HotkeysTabViewModel/>
 	</UserControl.DataContext>
     <UserControl.Resources>
+		<misc:InverseBooleanValueConverter x:Key="InverseBooleanConverter" />
 		<misc:StringToResourceConverter x:Key="StringToResourceConverter" />
 	</UserControl.Resources>
 	<Grid ColumnDefinitions="*, 150">
@@ -38,6 +39,11 @@
 							Command="{Binding ClearHotkeyCommand, Mode=OneWay}" CommandParameter="{Binding SelectedItem}" Margin="0,5,0,5"/>
 					<CheckBox Content="{x:Static resources:Strings.Pass_to_UO}"
 						IsChecked="{Binding SelectedItem.PassToUO}" />
+					<CheckBox Content="{x:Static resources:Strings.Undisableable}"
+						IsChecked="{Binding SelectedItem.Disableable, Converter={StaticResource InverseBooleanConverter}}" />
+					<CheckBox Content="{x:Static resources:Strings.Global}"
+						IsChecked="{Binding SelectedItem.IsGlobal}"
+						IsEnabled="{Binding SelectedItem.CanGlobal}" />
 					<Button Content="{x:Static resources:Strings.Execute}" Margin="0,5,0,0"
 									  Command="{Binding ExecuteCommand, Mode=OneWay}"
 									CommandParameter="{Binding SelectedItem, ElementName=TreeView}" />

@@ -107,6 +107,7 @@ namespace ClassicAssist.Data.Macros
             set => SetProperty( ref _isPaused, value );
         }
 
+        [JsonIgnore]
         public bool IsRunning
         {
             get => _isRunning;

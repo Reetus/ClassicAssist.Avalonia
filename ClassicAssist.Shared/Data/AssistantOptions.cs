@@ -25,6 +25,7 @@ namespace ClassicAssist.Data
         public static int AutoBackupProfilesDays { get; set; }
         public static string AutoBackupProfilesDirectory { get; set; }
         public static DateTime AutoBackupProfilesLast { get; set; }
+        public static string GlobalDirectory { get; set; } = ".";
         public static Language LanguageOverride { get; set; }
         public static string LastProfile { get; set; }
         public static string ProfileDirectory { get; set; } = "Profiles";
@@ -41,6 +42,20 @@ namespace ClassicAssist.Data
         public static event EventHandler SavedPasswordsChanged;
         public static event EventHandler OptionsLoaded;
 
+        public static string GetGlobalPath()
+        {
+            string path = Path.IsPathRooted( GlobalDirectory )
+                ? GlobalDirectory
+                : Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, GlobalDirectory );
+
+            if ( !Directory.Exists( path ) )
+            {
+                Directory.CreateDirectory( path );
+            }
+
+            return path;
+        }
+
         public static void Save()
         {
             JObject json = new JObject
@@ -53,6 +68,7 @@ namespace ClassicAssist.Data
                 { "AutoBackupProfilesDirectory", AutoBackupProfilesDirectory },
                 { "AutoBackupProfilesLast", AutoBackupProfilesLast },
                 { "ProfileDirectory", ProfileDirectory },
+                { "GlobalDirectory", GlobalDirectory },
                 { "SavePasswords", SavePasswords },
                 { "SavePasswordsOnlyBlank", SavePasswordsOnlyBlank },
                 { "UserId", UserId },
@@ -122,6 +138,7 @@ namespace ClassicAssist.Data
                 json?["AutoBackupProfilesDirectory"]?.ToObject<string>() ?? DEFAULT_BACKUP_PATH;
             AutoBackupProfilesLast = json?["AutoBackupProfilesLast"]?.ToObject<DateTime>() ?? default;
             ProfileDirectory = json?["ProfileDirectory"]?.ToObject<string>() ?? "Profiles";
+            GlobalDirectory = json?["GlobalDirectory"]?.ToObject<string>() ?? ".";
             SavePasswords = json?["SavePasswords"]?.ToObject<bool>() ?? false;
             SavePasswordsOnlyBlank = json?["SavePasswordsOnlyBlank"]?.ToObject<bool>() ?? false;
             UserId = json?["UserId"]?.ToObject<string>() ?? Guid.NewGuid().ToString();

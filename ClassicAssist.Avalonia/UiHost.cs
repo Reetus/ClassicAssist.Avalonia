@@ -12,6 +12,7 @@
 
 #endregion
 
+using System.IO;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
@@ -45,6 +46,17 @@ namespace ClassicAssist.Avalonia
                 {
                     settingProvider.Serialize( obj );
                 }
+
+                if ( instance is IGlobalSettingProvider globalSettingProvider )
+                {
+                    JObject global = new JObject();
+
+                    globalSettingProvider.Serialize( global, true );
+
+                    File.WriteAllText(
+                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() ),
+                        global.ToString() );
+                }
             }
         }
 
@@ -57,6 +69,21 @@ namespace ClassicAssist.Avalonia
                 if ( instance is ISettingProvider settingProvider )
                 {
                     settingProvider.Deserialize( json, options );
+                }
+
+                if ( instance is IGlobalSettingProvider globalSettingProvider )
+                {
+                    string filePath =
+                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() );
+
+                    if ( !File.Exists( filePath ) )
+                    {
+                        continue;
+                    }
+
+                    JObject global = JObject.Parse( File.ReadAllText( filePath ) );
+
+                    globalSettingProvider.Deserialize( global, options, true );
                 }
             }
         }
