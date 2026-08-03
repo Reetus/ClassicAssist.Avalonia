@@ -14,6 +14,7 @@
   </UserControl.DataContext>
   <UserControl.Resources>
     <!--<misc:StaticStringResourceConverter x:Key="StaticStringResourceConverter" />-->
+    <misc:InverseBooleanValueConverter x:Key="InverseBooleanConverter" />
   </UserControl.Resources>
   <!-- No margin of its own: the TabControl already pads its content by 10, and every other tab
        relies on just that. This one was doubling up to 20. -->
@@ -93,6 +94,16 @@
                       IsChecked="{Binding CurrentOptions.DefaultMacroQuietMode}" />
       <CheckBox Content="{x:Static resources:Strings.Check_hands_before_potions}"
                       IsChecked="{Binding CurrentOptions.CheckHandsPotions}" />
+      <CheckBox IsChecked="{Binding CurrentOptions.DebugAdapterEnabled}"
+                Command="{Binding ToggleDebugAdapterCommand}"
+                ToolTip.Tip="{x:Static resources:Strings.Debug_adapter_tooltip}" DataContext="{Binding}">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="{x:Static resources:Strings.Debug_adapter}" Margin="0" VerticalAlignment="Center" />
+          <TextBox Width="50" Margin="10,0,10,0"
+                   Text="{Binding CurrentOptions.DebugAdapterPort}"
+                   IsEnabled="{Binding CurrentOptions.DebugAdapterEnabled, Converter={StaticResource InverseBooleanConverter}}" />
+        </StackPanel>
+      </CheckBox>
     </StackPanel>
     <StackPanel Grid.Column="1">
       <CheckBox IsChecked="{Binding CurrentOptions.PreventTargetingInnocentsInGuardzone}"

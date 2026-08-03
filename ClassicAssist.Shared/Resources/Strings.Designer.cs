@@ -1659,6 +1659,24 @@ namespace ClassicAssist.Shared.Resources {
             }
         }
         
+        public static string Debug_adapter {
+            get {
+                return ResourceManager.GetString("Debug adapter", resourceCulture);
+            }
+        }
+        
+        public static string Debug_adapter_tooltip {
+            get {
+                return ResourceManager.GetString("Debug adapter tooltip", resourceCulture);
+            }
+        }
+        
+        public static string Debug_adapter_invalid_port {
+            get {
+                return ResourceManager.GetString("Debug adapter invalid port", resourceCulture);
+            }
+        }
+        
         public static string Use_Right_Hand {
             get {
                 return ResourceManager.GetString("Use Right Hand", resourceCulture);
@@ -3048,6 +3066,12 @@ namespace ClassicAssist.Shared.Resources {
         public static string Open_Modules_Folder {
             get {
                 return ResourceManager.GetString("Open Modules Folder", resourceCulture);
+            }
+        }
+        
+        public static string Open_Macros_Folder {
+            get {
+                return ResourceManager.GetString("Open Macros Folder", resourceCulture);
             }
         }
         

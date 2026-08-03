@@ -1,8 +1,11 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Macros.Commands;
+using ClassicAssist.DebugAdapter.Dap;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
@@ -16,6 +19,7 @@ namespace ClassicAssist.UI.ViewModels
     {
         private Options _currentOptions;
         private ICommand _setLanguageOverrideCommand;
+        private ICommand _toggleDebugAdapterCommand;
 
         public Options CurrentOptions
         {
@@ -25,6 +29,10 @@ namespace ClassicAssist.UI.ViewModels
 
         public ICommand SetLanguageOverrideCommand =>
             _setLanguageOverrideCommand ?? ( _setLanguageOverrideCommand = new RelayCommand( SetLanguageOverride ) );
+
+        public ICommand ToggleDebugAdapterCommand =>
+            _toggleDebugAdapterCommand ??
+            ( _toggleDebugAdapterCommand = new RelayCommand( ToggleDebugAdapter, o => true ) );
 
         public void Serialize( JObject json )
         {
@@ -88,6 +96,16 @@ namespace ClassicAssist.UI.ViewModels
             CurrentOptions = options;
 
             CurrentOptions.PropertyChanged += OnOptionsChanged;
+
+            // The debug adapter is a session-only, app-level toggle that isn't persisted per profile.
+            // A running server outlives profile switches, so reflect its actual state in the (fresh)
+            // options rather than letting the checkbox revert to off while the server is still bound.
+            CurrentOptions.DebugAdapterEnabled = DapServer.IsRunning;
+
+            if ( DapServer.IsRunning )
+            {
+                CurrentOptions.DebugAdapterPort = DapServer.Port;
+            }
 
             ActionCommands.UseOnceList.Clear();
 
@@ -204,6 +222,37 @@ namespace ClassicAssist.UI.ViewModels
 
             await Engine.MessageBoxProvider.Show( Strings.Restart_game_for_changes_to_take_effect___,
                 Strings.Restart_game_for_changes_to_take_effect___ );
+        }
+
+        private async void ToggleDebugAdapter( object obj )
+        {
+            try
+            {
+                if ( CurrentOptions.DebugAdapterEnabled )
+                {
+                    int port = CurrentOptions.DebugAdapterPort;
+
+                    if ( port < 1 || port > 65535 )
+                    {
+                        CurrentOptions.DebugAdapterEnabled = false;
+                        await Engine.MessageBoxProvider.Show( Strings.Debug_adapter_invalid_port, Strings.Error );
+                        return;
+                    }
+
+                    DapServer.Initialize( port );
+                }
+                else
+                {
+                    DapServer.Shutdown();
+                }
+            }
+            catch ( Exception e )
+            {
+                // Ensure any partially-initialised server is torn down before reverting the toggle.
+                DapServer.Shutdown();
+                CurrentOptions.DebugAdapterEnabled = false;
+                await Engine.MessageBoxProvider.Show( e.Message, Strings.Error );
+            }
         }
     }
 }

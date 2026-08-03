@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
@@ -22,6 +23,10 @@ namespace ClassicAssist.UI.ViewModels
 {
     public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProvider
     {
+        private const int FILE_SCAN_INTERVAL_SECONDS = 5;
+        private readonly Dictionary<string, DateTime> _fileSyncTimes =
+            new Dictionary<string, DateTime>( StringComparer.OrdinalIgnoreCase );
+        private readonly Timer _fileScanTimer;
         private readonly MacroManager _manager;
         private int _caretPosition;
 
@@ -37,10 +42,14 @@ namespace ClassicAssist.UI.ViewModels
         private bool _isFilterOpen;
         private bool _isRecording;
         private RelayCommand _newMacroCommand;
+        private ICommand _openExternalCommand;
+        private ICommand _openMacrosFolderCommand;
         private ICommand _recordCommand;
         private RelayCommand _removeMacroCommand;
         private ICommand _removeMacroConfirmCommand;
+        private ICommand _resetImportCacheCommand;
         private ICommand _saveMacroCommand;
+        private bool _scanning;
         private bool _searching;
         private MacroEntry _selectedItem;
         private ICommand _showActiveObjectsWindowCommand;
@@ -64,6 +73,8 @@ namespace ClassicAssist.UI.ViewModels
             _filterItems = Items;
 
             Items.CollectionChanged += ( s, ea ) => UpdateFilteredItems();
+
+            _fileScanTimer = new Timer( _ => FileScanTimerTick(), null, Timeout.Infinite, Timeout.Infinite );
         }
 
         public int CaretPosition
@@ -132,6 +143,14 @@ namespace ClassicAssist.UI.ViewModels
             _newMacroCommand ??
             ( _newMacroCommand = new RelayCommand( NewMacro, o => !SelectedItem?.IsRunning ?? true ) );
 
+        public ICommand OpenExternalCommand =>
+            _openExternalCommand ?? ( _openExternalCommand =
+                new RelayCommand( OpenExternal,
+                    o => o != null && ( !( o is MacroEntry macroEntry ) || !macroEntry.IsRunning ) ) );
+
+        public ICommand OpenMacrosFolderCommand =>
+            _openMacrosFolderCommand ?? ( _openMacrosFolderCommand = new RelayCommand( OpenMacrosFolder, o => true ) );
+
         public ICommand RecordCommand =>
             _recordCommand ?? ( _recordCommand = new RelayCommand( Record, o => SelectedItem != null ) );
 
@@ -144,6 +163,10 @@ namespace ClassicAssist.UI.ViewModels
         public ICommand RemoveMacroConfirmCommand =>
             _removeMacroConfirmCommand ?? ( _removeMacroConfirmCommand =
                 new RelayCommand( RemoveMacroConfirm, o => SelectedItem != null ) );
+
+        public ICommand ResetImportCacheCommand =>
+            _resetImportCacheCommand ?? ( _resetImportCacheCommand =
+                new RelayCommand( ResetImportCache, o => SelectedItem != null && !SelectedItem.IsRunning ) );
 
         public ICommand SaveMacroCommand =>
             _saveMacroCommand ?? ( _saveMacroCommand = new RelayCommand( SaveMacro, o => true ) );
@@ -195,6 +218,39 @@ namespace ClassicAssist.UI.ViewModels
 
             JArray macroArray = new JArray();
 
+            // Persist file-backed macro content to their .py files before serialising the entries
+            // so that a failed write can fall back to embedding the content in the profile.
+            foreach ( MacroEntry entry in Items.Where( e => e.IsFileBacked ).ToList() )
+            {
+                if ( entry.BackingFileReadFailed )
+                {
+                    // The file's content was never loaded - don't write over it with nothing.
+                    continue;
+                }
+
+                try
+                {
+                    string dir = Path.GetDirectoryName( entry.FilePath );
+
+                    if ( !string.IsNullOrEmpty( dir ) )
+                    {
+                        Directory.CreateDirectory( dir );
+                    }
+
+                    File.WriteAllText( entry.FilePath, entry.Macro );
+
+                    // Remember our own write so the folder scan doesn't treat it as an external edit.
+                    _fileSyncTimes[entry.FilePath] = File.GetLastWriteTimeUtc( entry.FilePath );
+                    entry.BackingFileWritePending = false;
+                }
+                catch
+                {
+                    // Couldn't write the file - embed the content in the profile instead so the
+                    // edit isn't lost, and retry the file write on the next save.
+                    entry.BackingFileWritePending = true;
+                }
+            }
+
             IEnumerable<MacroEntry> globalMacros = Items.Where( e => e.Global );
 
             if ( globalMacros.Any() )
@@ -203,7 +259,7 @@ namespace ClassicAssist.UI.ViewModels
 
                 foreach ( MacroEntry macroEntry in globalMacros )
                 {
-                    globalArray.Add( SerializeMacro( macroEntry ) );
+                    globalArray.Add( macroEntry.ToJObject() );
                 }
 
                 File.WriteAllText( Path.Combine( AssistantOptions.GetGlobalPath(), "Macros.json" ),
@@ -212,10 +268,11 @@ namespace ClassicAssist.UI.ViewModels
 
             foreach ( MacroEntry macroEntry in Items.Where( e => !e.Global ) )
             {
-                macroArray.Add( SerializeMacro( macroEntry ) );
+                macroArray.Add( macroEntry.ToJObject() );
             }
 
             macros.Add( "Macros", macroArray );
+            macros.Add( "Selected", SelectedItem?.Name );
 
             JArray aliasArray = new JArray();
 
@@ -232,6 +289,11 @@ namespace ClassicAssist.UI.ViewModels
 
         public void Deserialize( JObject json, Options options )
         {
+            _fileScanTimer.Change( Timeout.Infinite, Timeout.Infinite );
+            _fileSyncTimes.Clear();
+
+            SelectedItem = null;
+
             Items.Clear();
 
             string globalPath = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros.json" );
@@ -242,14 +304,22 @@ namespace ClassicAssist.UI.ViewModels
 
                 foreach ( JToken token in globalJson )
                 {
-                    MacroEntry entry = DeserializeMacro( token );
+                    MacroEntry entry = new MacroEntry( token );
 
                     // Globals are stored in their own file and are global regardless of what the
                     // persisted flag says - force it so a foreign/older file can't quietly demote a
                     // global macro into a per-profile one on the next save.
                     entry.Global = true;
 
+                    // File-backed macro whose file has been removed - drop the entry, unless its
+                    // content is still waiting to be written back to the file.
+                    if ( entry.IsFileBacked && !entry.BackingFileWritePending && !File.Exists( entry.FilePath ) )
+                    {
+                        continue;
+                    }
+
                     entry.Action = async ( hks, parameters ) => await Execute( entry, parameters );
+                    entry.Hotkey = new ShortcutKeys( token["Keys"] );
 
                     if ( Options.CurrentOptions.SortMacrosAlphabetical )
                     {
@@ -264,26 +334,29 @@ namespace ClassicAssist.UI.ViewModels
 
             JToken config = json?["Macros"];
 
-            if ( config == null )
-            {
-                return;
-            }
-
-            if ( config["Macros"] != null )
+            if ( config?["Macros"] != null )
             {
                 foreach ( JToken token in config["Macros"] )
                 {
-                    MacroEntry entry = DeserializeMacro( token );
+                    MacroEntry entry = new MacroEntry( token );
                     entry.Global = false;
 
-                    // Global macro takes precedence for hotkey
-                    if ( Items.Any( e => Equals( e.Hotkey, entry.Hotkey ) && e.Global ) )
+                    // File-backed macro whose file has been removed - drop the entry, unless its
+                    // content is still waiting to be written back to the file.
+                    if ( entry.IsFileBacked && !entry.BackingFileWritePending && !File.Exists( entry.FilePath ) )
                     {
-                        entry.Hotkey = ShortcutKeys.Default;
+                        continue;
                     }
 
-                    entry.Action = async ( hks, parameters ) =>
-                        await Engine.Dispatcher.InvokeAsync( async () => await Execute( entry, parameters ) );
+                    // Global macros take precedence for hotkey
+                    ShortcutKeys hotkey = new ShortcutKeys( token["Keys"] );
+
+                    if ( !Items.Any( e => e.Global && Equals( e.Hotkey, hotkey ) ) )
+                    {
+                        entry.Hotkey = hotkey;
+                    }
+
+                    entry.Action = async ( hks, parameters ) => await Execute( entry, parameters );
 
                     if ( Options.CurrentOptions.SortMacrosAlphabetical )
                     {
@@ -296,7 +369,7 @@ namespace ClassicAssist.UI.ViewModels
                 }
             }
 
-            if ( config["Alias"] != null )
+            if ( config?["Alias"] != null )
             {
                 foreach ( JToken token in config["Alias"] )
                 {
@@ -317,94 +390,44 @@ namespace ClassicAssist.UI.ViewModels
             {
                 File.WriteAllText( assistantModule, "from ClassicAssist.Shared import Engine as _Engine\nEngine = _Engine" );
             }
+
+            // Discover any new .py files in the Macros folder and record their sync times.
+            ScanMacrosFolder();
+
+            MacroEntry selected = Items.LastOrDefault();
+
+            if ( config?["Selected"] != null )
+            {
+                selected = Items.FirstOrDefault( e => e.Name == config["Selected"]?.ToObject<string>() );
+            }
+
+            SelectedItem = selected;
+
+            // Keep watching the Macros folder for new/changed/removed files while the tab is open.
+            _fileScanTimer.Change( TimeSpan.FromSeconds( FILE_SCAN_INTERVAL_SECONDS ),
+                TimeSpan.FromSeconds( FILE_SCAN_INTERVAL_SECONDS ) );
         }
 
-        private static JObject SerializeMacro( MacroEntry macroEntry )
+        private void FileScanTimerTick()
         {
-            JObject entry = new JObject
+            _dispatcher.Invoke( () =>
             {
-                { "Name", macroEntry.Name },
-                { "Loop", macroEntry.Loop },
-                { "DoNotAutoInterrupt", macroEntry.DoNotAutoInterrupt },
-                { "Macro", macroEntry.Macro },
-                { "PassToUO", macroEntry.PassToUO },
-                { "Keys", macroEntry.Hotkey.ToJObject() },
-                { "IsBackground", macroEntry.IsBackground },
-                { "IsAutostart", macroEntry.IsAutostart },
-                { "Disableable", macroEntry.Disableable },
-                { "Global", macroEntry.Global }
-            };
-
-            JArray aliasesArray = new JArray();
-
-            foreach ( JObject aliasObj in macroEntry.Aliases.Select( kvp =>
-                new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } ) )
-            {
-                aliasesArray.Add( aliasObj );
-            }
-
-            entry.Add( "Aliases", aliasesArray );
-
-            if ( macroEntry.Breakpoints != null )
-            {
-                JArray breakpointsArray = new JArray();
-
-                foreach ( int breakpoint in macroEntry.Breakpoints )
+                if ( _scanning )
                 {
-                    breakpointsArray.Add( breakpoint );
+                    return;
                 }
 
-                entry.Add( "Breakpoints", breakpointsArray );
-            }
+                _scanning = true;
 
-            return entry;
-        }
-
-        private MacroEntry DeserializeMacro( JToken token )
-        {
-            MacroEntry entry = new MacroEntry
-            {
-                Name = GetJsonValue( token, "Name", string.Empty ),
-                Loop = GetJsonValue( token, "Loop", false ),
-                DoNotAutoInterrupt = GetJsonValue( token, "DoNotAutoInterrupt", false ),
-                Macro = GetJsonValue( token, "Macro", string.Empty ),
-                PassToUO = GetJsonValue( token, "PassToUO", true ),
-                Hotkey = new ShortcutKeys( token["Keys"] ),
-                IsBackground = GetJsonValue( token, "IsBackground", false ),
-                IsAutostart = GetJsonValue( token, "IsAutostart", false ),
-                Disableable = GetJsonValue( token, "Disableable", true )
-            };
-
-            if ( token["Aliases"] != null )
-            {
-                foreach ( JToken aliasToken in token["Aliases"] )
+                try
                 {
-                    // Globals were historically written as an object map for backwards compatibility
-                    if ( aliasToken.Type == JTokenType.Property )
-                    {
-                        JProperty jProperty = (JProperty) aliasToken;
-
-                        entry.Aliases.Add( jProperty.Name, jProperty.Value.ToObject<int>() );
-                    }
-                    else
-                    {
-                        entry.Aliases.Add( aliasToken["Key"].ToObject<string>(),
-                            aliasToken["Value"].ToObject<int>() );
-                    }
+                    ScanMacrosFolder();
                 }
-            }
-
-            if ( token["Breakpoints"] != null )
-            {
-                entry.Breakpoints.Clear();
-
-                foreach ( JToken breakpointToken in token["Breakpoints"] )
+                finally
                 {
-                    entry.Breakpoints.Add( breakpointToken.ToObject<int>() );
+                    _scanning = false;
                 }
-            }
-
-            return entry;
+            } );
         }
 
         private void RemoveMacroConfirm( object obj )
@@ -429,21 +452,6 @@ namespace ClassicAssist.UI.ViewModels
         private static void ShowMacrosWiki( object obj )
         {
             Process.Start( Strings.MACRO_WIKI_URL );
-        }
-
-        private bool CanExecute( object arg )
-        {
-            if ( !( arg is MacroEntry entry ) )
-            {
-                return false;
-            }
-
-            if ( entry.IsRunning )
-            {
-                return false;
-            }
-
-            return true;
         }
 
         private void CheckOverwriteHotkey( HotkeyEntry selectedItem, ShortcutKeys hotkey )
@@ -567,6 +575,8 @@ namespace ClassicAssist.UI.ViewModels
             macro.Action = async ( hks, parameters ) => await Execute( macro, parameters );
 
             Items.Add( macro );
+
+            SelectedItem = macro;
         }
 
         private void NewMacro( string name, string macroText )
@@ -654,6 +664,165 @@ namespace ClassicAssist.UI.ViewModels
             }
 
             _searching = false;
+        }
+
+        private static void ResetImportCache( object obj )
+        {
+            MacroInvoker.ResetImportCache();
+        }
+
+        private static void OpenExternal( object obj )
+        {
+            if ( !( obj is MacroEntry macroEntry ) )
+            {
+                return;
+            }
+
+            if ( macroEntry.IsFileBacked )
+            {
+                // Open the real file - the folder scan picks up external edits, no --wait needed.
+                Process.Start( new ProcessStartInfo { FileName = macroEntry.FilePath, UseShellExecute = true } );
+
+                return;
+            }
+
+            // In-memory macro - write a temp file so it can be opened in an external editor. The
+            // temp file is left in place (rather than deleted on exit) because on Linux there is no
+            // reliable way to wait for the editor to finish reading it.
+            string tempPath = Path.Combine( Path.GetTempPath(), $"{macroEntry.Name}_{Guid.NewGuid()}.py" );
+
+            try
+            {
+                File.WriteAllText( tempPath, macroEntry.Macro );
+
+                Process.Start( new ProcessStartInfo { FileName = tempPath, UseShellExecute = true } );
+            }
+            catch
+            {
+                // ignored - opening the editor failed
+            }
+        }
+
+        private void OpenMacrosFolder( object obj )
+        {
+            string macrosFolder = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" );
+            Directory.CreateDirectory( macrosFolder );
+            Process.Start( new ProcessStartInfo { FileName = macrosFolder, UseShellExecute = true } );
+        }
+
+        private void ScanMacrosFolder()
+        {
+            string macrosFolder = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" );
+
+            string[] files;
+
+            try
+            {
+                Directory.CreateDirectory( macrosFolder );
+                files = Directory.GetFiles( macrosFolder, "*.py" );
+            }
+            catch
+            {
+                // Folder temporarily inaccessible - leave entries untouched.
+                return;
+            }
+
+            HashSet<string> seen = new HashSet<string>( files, StringComparer.OrdinalIgnoreCase );
+
+            foreach ( string filePath in files )
+            {
+                DateTime lastWrite;
+
+                try
+                {
+                    lastWrite = File.GetLastWriteTimeUtc( filePath );
+                }
+                catch
+                {
+                    continue;
+                }
+
+                MacroEntry entry = Items.FirstOrDefault( e => e.IsFileBacked &&
+                    e.FilePath.Equals( filePath, StringComparison.OrdinalIgnoreCase ) );
+
+                if ( entry == null )
+                {
+                    // New file on disk - add a file-backed macro for it.
+                    string content = TryReadAllText( filePath );
+
+                    if ( content == null )
+                    {
+                        continue;
+                    }
+
+                    MacroEntry newEntry = new MacroEntry
+                    {
+                        Name = Path.GetFileNameWithoutExtension( filePath ), FilePath = filePath, Macro = content
+                    };
+
+                    newEntry.Action = async ( hks, parameters ) => await Execute( newEntry, parameters );
+
+                    if ( Options.CurrentOptions.SortMacrosAlphabetical )
+                    {
+                        Items.AddSorted( newEntry );
+                    }
+                    else
+                    {
+                        Items.Add( newEntry );
+                    }
+
+                    _fileSyncTimes[filePath] = lastWrite;
+                }
+                else if ( entry.BackingFileWritePending )
+                {
+                    // The in-memory content is newer than the file (failed write) - don't reload over it.
+                }
+                else if ( !_fileSyncTimes.TryGetValue( filePath, out DateTime synced ) || lastWrite != synced )
+                {
+                    // File changed on disk since we last synced it (external edit) - reload content.
+                    string content = TryReadAllText( filePath );
+
+                    if ( content == null )
+                    {
+                        continue;
+                    }
+
+                    if ( content != entry.Macro )
+                    {
+                        entry.Macro = content;
+                    }
+
+                    entry.BackingFileReadFailed = false;
+                    _fileSyncTimes[filePath] = lastWrite;
+                }
+            }
+
+            // Remove file-backed entries whose file has been deleted (never while running, nor
+            // while their content is still waiting to be written back to the file).
+            foreach ( MacroEntry entry in Items.Where( e =>
+                         e.IsFileBacked && !e.IsRunning && !e.BackingFileWritePending && !seen.Contains( e.FilePath ) ).ToList() )
+            {
+                _fileSyncTimes.Remove( entry.FilePath );
+
+                if ( ReferenceEquals( SelectedItem, entry ) )
+                {
+                    SelectedItem = null;
+                }
+
+                Items.Remove( entry );
+            }
+        }
+
+        private static string TryReadAllText( string path )
+        {
+            try
+            {
+                return File.ReadAllText( path );
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

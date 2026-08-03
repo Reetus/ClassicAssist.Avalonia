@@ -47,8 +47,15 @@ nothing.
       client is a plugin-side capability this repo does not have.
 - [ ] **Public Macros browser** - the "Public Macros" tab (`MacroBrowserControl`,
       `MacroBrowserViewModel`, classicassistant.net API) is absent from the main window.
-- [ ] **Macro debugger (DAP)** - `DebugAdapter/*`, `MacrosDebuggerControl`, breakpoints,
-      variable inspector, and the Debug Adapter toggle in Options are all absent.
+- [x] ~~**Macro debugger (DAP)**~~ - `DebugAdapter/*` (Dap server/session/types, `DebugManager`,
+      `VariableInspector`, `GameStateInspector`, `MacroDebugState`) ported to
+      `ClassicAssist.Shared/DebugAdapter/`; the DAP hook is wired into `MacroInvoker.OnTrace`
+      (breakpoint/stepping/exception pauses) and `MacroManager.OnMacroStarted/OnMacroStopped`
+      (thread events); file-backed macros run with their `.py` path as the script filename so
+      breakpoints map to the file open in VSCode. The Debug Adapter toggle + port live in the
+      Options tab (`Options.DebugAdapterEnabled/Port`, session-only, `DapServer` loopback listener).
+      The in-app `MacrosDebuggerControl` overlay (F5/F8 in-app pause/step UI) is still absent -
+      the DAP server is the debugger now.
 
 ## Missing agent features (tab exists, feature dropped)
 
@@ -105,10 +112,11 @@ From `HOTKEYS_TODO.md`:
       packet handler and the Options tab checkbox; serialized in `OptionsTabViewModel`.
 - [ ] `Options` class: `Autologin*`, `ChatWindow*`, `DisableHotkeysLoad`, `DragDelay/MS`,
       `HotkeysStatusGump*`, `LimitHotkeyTrigger/MS`, `LogoutDisconnectedPrompt`, `MacrosGump*`
-      (text color/height/width/transparent), `DebugAdapterEnabled/Port`, `SelectedTabIndex*`,
-      `SlowHandlerThreshold`, `SysTray`
-- [ ] Options tab UI: Debug Adapter toggle, "Disable hotkeys on profile load", "Hotkeys Status
-      Gump", "Limit Hotkey retrigger", "Use Cliloc language from ClassicUO"
+      (text color/height/width/transparent), `SelectedTabIndex*`,
+      `SlowHandlerThreshold`, `SysTray` (~~`DebugAdapterEnabled/Port`~~ done - session-only, not
+      persisted, with the toggle in the Options tab)
+- [ ] Options tab UI: "Disable hotkeys on profile load", "Hotkeys Status Gump", "Limit Hotkey
+      retrigger", "Use Cliloc language from ClassicUO" (~~Debug Adapter toggle~~ done)
 - [ ] General tab UI: filter Configure buttons, Minimize to tray, Drag delay, Saved Passwords,
       Autologin section, Backup Settings button
 

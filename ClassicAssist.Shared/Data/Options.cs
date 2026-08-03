@@ -210,6 +210,20 @@ namespace ClassicAssist.Data
             set => SetProperty( ref field, value );
         } = 1;
 
+        // Session-only: intentionally not persisted to the profile so multiple ClassicAssist
+        // instances don't fight over the same port on load. Enabled/port reset each session.
+        public bool DebugAdapterEnabled
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
+        public int DebugAdapterPort
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 4712;
+
         public string Name
         {
             get;

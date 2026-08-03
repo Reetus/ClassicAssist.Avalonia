@@ -31,7 +31,7 @@
       <ListBox x:Name="ListBox" ItemsSource="{Binding FilterItems}" Grid.Row="1" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
         <ListBox.ItemTemplate>
           <DataTemplate>
-            <Grid ColumnDefinitions="*, Auto" Background="{Binding $parent.Background}">
+            <Grid ColumnDefinitions="*, Auto, Auto" Background="{Binding $parent.Background}">
               <controls:EditTextBlock Text="{Binding Name}" ShowIcon="False" Grid.Column="0" HorizontalContentAlignment="Stretch">
                 <controls:EditTextBlock.FontWeight>
                   <MultiBinding Converter="{StaticResource MacroRunningToFontWeightConverter}">
@@ -46,8 +46,12 @@
                   </MultiBinding>
                 </controls:EditTextBlock.FontStyle>
               </controls:EditTextBlock>
+              <Image Grid.Column="1" Height="12" Margin="2,0,0,0" VerticalAlignment="Center"
+                     Source="{StaticResource FileIcon}"
+                     ToolTip.Tip="{Binding FilePath}"
+                     IsVisible="{Binding IsFileBacked}" />
               <TextBlock x:Name="Hotkey" Text="{Binding Hotkey}" Margin="2,0,0,0"
-                         Grid.Column="1" FontSize="7" Foreground="SpringGreen" TextAlignment="Right"
+                         Grid.Column="2" FontSize="7" Foreground="SpringGreen" TextAlignment="Right"
                          VerticalAlignment="Center" HorizontalAlignment="Right">
                 <Interaction.Behaviors>
                   <DataTriggerBehavior Binding="{Binding #Hotkey.Text}" ComparisonCondition="Equal" Value="None">
@@ -132,6 +136,8 @@
         <Button Content="{x:Static resources:Strings.Create_Macro_Button}" Margin="5,0,0,0"
                 Command="{Binding CreateMacroButtonCommand, Mode=OneWay}"
                 CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
+        <Button Content="{x:Static resources:Strings.Open_Macros_Folder}" Margin="5,0,0,0"
+                Command="{Binding OpenMacrosFolderCommand, Mode=OneWay}" />
       </StackPanel>
     </Grid>
   </Grid>

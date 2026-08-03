@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Data.Macros.Commands;
+using ClassicAssist.DebugAdapter;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO.Objects;
@@ -206,7 +207,9 @@ public class MacroInvoker
             _importCache = InitializeImports( _engine );
         }
 
-        ScriptSource source = _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
+        ScriptSource source = _macro.IsFileBacked && !string.IsNullOrEmpty( _macro.FilePath )
+            ? _engine.CreateScriptSourceFromString( _macro.Macro, _macro.FilePath, SourceCodeKind.Statements )
+            : _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
 
         Dictionary<string, object> importCache = new(_importCache);
 
@@ -292,14 +295,14 @@ public class MacroInvoker
             finally
             {
                 StoppedEvent?.Invoke();
-                MacroManager.GetInstance().OnMacroStopped();
+                MacroManager.GetInstance().OnMacroStopped( _macro );
             }
         } ) { IsBackground = true };
 
         try
         {
             Thread.Start();
-            MacroManager.GetInstance().OnMacroStarted();
+            MacroManager.GetInstance().OnMacroStarted( _macro );
         }
         catch ( ThreadStateException )
         {
@@ -362,6 +365,28 @@ public class MacroInvoker
 
     private TracebackDelegate OnTrace( TraceBackFrame frame, string result, object payload )
     {
+        // DAP debugger — only engages while a VSCode client is attached (IsActive). When inactive
+        // this is a couple of cheap checks and the existing in-app debugger below is unaffected.
+        DebugManager debugMgr = DebugManager.Instance;
+
+        if ( debugMgr != null && debugMgr.IsActive )
+        {
+            int threadId = Thread.CurrentThread.ManagedThreadId;
+            CancellationToken debugToken = _cancellationToken?.Token ?? CancellationToken.None;
+
+            if ( result == "line" &&
+                 debugMgr.ShouldBreak( frame.f_code.co_filename, (int) frame.f_lineno, threadId, frame ) )
+            {
+                debugMgr.OnBreakpoint( threadId, frame );
+                debugMgr.WaitForResume( threadId, debugToken );
+            }
+            else if ( result == "exception" && debugMgr.ShouldBreakOnException( threadId, payload ) )
+            {
+                debugMgr.OnBreakpoint( threadId, frame, "exception" );
+                debugMgr.WaitForResume( threadId, debugToken );
+            }
+        }
+
         if ( ( result == "line" || result == "call" ) && _macro.Breakpoints != null && _macro.Breakpoints.Contains( (int) frame.f_lineno )
              || result == "line" && _macro.IsPaused )
         {
@@ -415,7 +440,7 @@ public class MacroInvoker
             Thread?.Join( 100 );
 
             MacroManager.GetInstance().Replay = false;
-            MacroManager.GetInstance().OnMacroStopped();
+            MacroManager.GetInstance().OnMacroStopped( _macro );
         }
         catch ( ThreadStateException e )
         {

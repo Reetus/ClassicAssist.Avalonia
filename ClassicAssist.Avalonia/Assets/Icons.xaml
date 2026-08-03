@@ -638,4 +638,11 @@
       </DrawingGroup>
     </DrawingImage.Drawing>
   </DrawingImage>
+  <DrawingImage x:Key="FileIcon">
+    <DrawingImage.Drawing>
+      <DrawingGroup ClipGeometry="M0,0 V512 H384 V0 H0 Z">
+        <GeometryDrawing Brush="{DynamicResource ThemeForegroundBrush}" Geometry="F1 M384,512z M0,0z M64,0C28.7,0,0,28.7,0,64L0,448C0,483.3,28.7,512,64,512L320,512C355.3,512,384,483.3,384,448L384,170.5C384,153.5,377.3,137.2,365.3,125.2L258.7,18.7C246.7,6.7,230.5,0,213.5,0L64,0z M325.5,176L232,176C218.7,176,208,165.3,208,152L208,58.5 325.5,176z" />
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
 </ResourceDictionary>

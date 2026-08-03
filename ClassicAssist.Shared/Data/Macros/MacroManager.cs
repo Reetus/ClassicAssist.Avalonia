@@ -12,7 +12,7 @@ namespace ClassicAssist.Data.Macros
 {
     public class MacroManager
     {
-        public delegate void dMacroStartStop();
+        public delegate void dMacroStartStop( MacroEntry macroEntry );
         private static readonly object _lock = new object();
         private static MacroManager _instance;
         private readonly List<IMacroCommandParser> _parsers = new List<IMacroCommandParser>();
@@ -165,14 +165,16 @@ namespace ClassicAssist.Data.Macros
             return Items?.FirstOrDefault( m => m.MacroInvoker.Thread?.Equals( currentThread ) ?? false );
         }
 
-        public void OnMacroStarted()
+        public void OnMacroStarted( MacroEntry macroEntry )
         {
-            MacroStartedEvent?.Invoke();
+            MacroStartedEvent?.Invoke( macroEntry );
+            ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStarted( macroEntry );
         }
 
-        public void OnMacroStopped()
+        public void OnMacroStopped( MacroEntry macroEntry )
         {
-            MacroStoppedEvent?.Invoke();
+            MacroStoppedEvent?.Invoke( macroEntry );
+            ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStopped( macroEntry );
         }
     }
 }

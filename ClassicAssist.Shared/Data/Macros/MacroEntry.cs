@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using ClassicAssist.Data.Hotkeys;
@@ -12,6 +13,7 @@ using IronPython.Runtime.Operations;
 using Microsoft.Scripting;
 using Microsoft.Scripting.Runtime;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Data.Macros
 {
@@ -22,8 +24,10 @@ namespace ClassicAssist.Data.Macros
         private AutoResetEvent _autoResetEvent;
         private ObservableCollection<int> _breakpoints = new ObservableCollection<int>();
         private bool _doNotAutoInterrupt;
+        private string _filePath;
         private Dictionary<string, object> _frameVariables;
         private bool _global;
+        private string _id;
         private bool _isAutostart;
         private bool _isBackground;
         private bool _isPaused;
@@ -34,13 +38,88 @@ namespace ClassicAssist.Data.Macros
         private string _name;
         private int _pausedLineNumber;
 
-        public MacroEntry()
+        public MacroEntry( JToken token = null )
         {
             //TODO
             //_dispatcher = Dispatcher.CurrentDispatcher;
             _macroInvoker.ExceptionEvent += OnExceptionEvent;
             _macroInvoker.StoppedEvent += OnStoppedEvent;
             _macroInvoker.PausedEvent += OnPausedEvent;
+
+            if ( token == null )
+            {
+                return;
+            }
+
+            Id = GetJsonValue<string>( token, "Id", null );
+            Name = GetJsonValue( token, "Name", string.Empty );
+            Loop = GetJsonValue( token, "Loop", false );
+            DoNotAutoInterrupt = GetJsonValue( token, "DoNotAutoInterrupt", false );
+            FilePath = GetJsonValue<string>( token, "FilePath", null );
+
+            string embeddedMacro = GetJsonValue( token, "Macro", string.Empty );
+
+            if ( IsFileBacked && !string.IsNullOrEmpty( embeddedMacro ) )
+            {
+                // The last save couldn't write the backing file and embedded the newer content in
+                // the profile instead - prefer it and re-attempt the file write on the next save.
+                Macro = embeddedMacro;
+                BackingFileWritePending = true;
+            }
+            else if ( IsFileBacked && File.Exists( FilePath ) )
+            {
+                try
+                {
+                    Macro = File.ReadAllText( FilePath );
+                }
+                catch
+                {
+                    // Unreadable backing file - load the entry without content rather than failing
+                    // the whole profile; the folder scan will reload it once readable.
+                    Macro = string.Empty;
+                    BackingFileReadFailed = true;
+                }
+            }
+            else
+            {
+                Macro = embeddedMacro;
+            }
+
+            PassToUO = GetJsonValue( token, "PassToUO", true );
+            IsBackground = GetJsonValue( token, "IsBackground", false );
+            IsAutostart = GetJsonValue( token, "IsAutostart", false );
+            Disableable = GetJsonValue( token, "Disableable", true );
+            Global = GetJsonValue( token, "Global", false );
+            Breakpoints = GetJsonValue( token, "Breakpoints", new ObservableCollection<int>() );
+
+            /* Keys aren't done here, because of logic global vs normal */
+
+            if ( token["Aliases"] == null )
+            {
+                return;
+            }
+
+            foreach ( JToken aliasToken in token["Aliases"] )
+            {
+                if ( aliasToken.Type == JTokenType.Property )
+                {
+                    JProperty jProperty = (JProperty) aliasToken;
+
+                    Aliases.Add( jProperty.Name, jProperty.Value.ToObject<int>() );
+                }
+                else
+                {
+                    string key = aliasToken["Key"]?.ToObject<string>() ?? string.Empty;
+                    int value = aliasToken["Value"]?.ToObject<int>() ?? 0;
+
+                    if ( string.IsNullOrEmpty( key ) )
+                    {
+                        continue;
+                    }
+
+                    Aliases.Add( key, value );
+                }
+            }
         }
 
         public Dictionary<string, int> Aliases
@@ -72,6 +151,31 @@ namespace ClassicAssist.Data.Macros
             set => SetProperty( ref _doNotAutoInterrupt, value );
         }
 
+        public string FilePath
+        {
+            get => _filePath;
+            set
+            {
+                SetProperty( ref _filePath, value );
+                OnPropertyChanged( nameof( IsFileBacked ) );
+            }
+        }
+
+        public bool IsFileBacked => !string.IsNullOrEmpty( FilePath );
+
+        /// <summary>
+        ///     The backing file couldn't be read when the profile loaded; saves must not write
+        ///     (empty) content over it until the folder scan has reloaded it.
+        /// </summary>
+        public bool BackingFileReadFailed { get; set; }
+
+        /// <summary>
+        ///     The in-memory content is newer than the backing file (the last file write failed and
+        ///     the content was embedded in the profile instead); the folder scan must not reload
+        ///     over it and the next save should retry the file write.
+        /// </summary>
+        public bool BackingFileWritePending { get; set; }
+
         [JsonIgnore]
         public Dictionary<string, object> FrameVariables
         {
@@ -87,6 +191,12 @@ namespace ClassicAssist.Data.Macros
 
         [JsonIgnore]
         public string Hash => _macro.SHA1();
+
+        public string Id
+        {
+            get => _id ?? ( _id = Guid.NewGuid().ToString() );
+            set => SetProperty( ref _id, value );
+        }
 
         public bool IsAutostart
         {
@@ -254,6 +364,83 @@ namespace ClassicAssist.Data.Macros
                     Shared.UO.Commands.SystemMessage( $"{Strings.Line_Number}: {sf.GetFileLineNumber()}" );
                 }
             }
+        }
+
+        private static T2 GetJsonValue<T2>( JToken json, string name, T2 defaultValue )
+        {
+            if ( json == null )
+            {
+                return defaultValue;
+            }
+
+            return json[name] == null ? defaultValue : json[name].ToObject<T2>();
+        }
+
+        public JObject ToJObject()
+        {
+            JObject entry = new JObject
+            {
+                { "Id", Id },
+                { "Name", Name },
+                { "Loop", Loop },
+                { "DoNotAutoInterrupt", DoNotAutoInterrupt },
+                // File-backed macros keep their content in the .py file, not the profile, unless
+                // the backing file couldn't be written - then embed the content so it isn't lost.
+                { "Macro", IsFileBacked && !BackingFileWritePending ? string.Empty : Macro },
+                { "PassToUO", PassToUO },
+                { "Keys", Hotkey.ToJObject() },
+                { "IsBackground", IsBackground },
+                { "IsAutostart", IsAutostart },
+                { "Disableable", Disableable },
+                { "Global", Global },
+                { "LastSavedHash", Hash }
+            };
+
+            if ( IsFileBacked )
+            {
+                entry.Add( "FilePath", FilePath );
+            }
+
+            if ( !Global )
+            {
+                JArray aliasesArray = new JArray();
+
+                foreach ( JObject aliasObj in Aliases.Select( kvp =>
+                    new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } ) )
+                {
+                    aliasesArray.Add( aliasObj );
+                }
+
+                entry.Add( "Aliases", aliasesArray );
+            }
+            else
+            {
+                /*
+                 * Write global macro aliases as properties for backwards compatibility (for now)
+                 */
+                JObject aliases = new JObject();
+
+                foreach ( KeyValuePair<string, int> keyValuePair in Aliases )
+                {
+                    aliases.Add( keyValuePair.Key, keyValuePair.Value );
+                }
+
+                entry.Add( "Aliases", aliases );
+            }
+
+            if ( Breakpoints != null )
+            {
+                JArray breakpointsArray = new JArray();
+
+                foreach ( int breakpoint in Breakpoints )
+                {
+                    breakpointsArray.Add( breakpoint );
+                }
+
+                entry.Add( "Breakpoints", breakpointsArray );
+            }
+
+            return entry;
         }
     }
 }
