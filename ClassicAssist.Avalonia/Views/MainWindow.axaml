@@ -20,7 +20,7 @@
     <viewModels:MainWindowViewModel />
   </Window.DataContext>
   <Grid RowDefinitions="*">
-    <TabControl Padding="10" Margin="5" Grid.Row="0">
+    <TabControl Padding="10" Margin="5" Grid.Row="0" SelectedIndex="{Binding CurrentOptions.SelectedTabIndex}">
       <TabItem Header="{x:Static resources:Strings.General}">
         <views:GeneralControl/>
       </TabItem>

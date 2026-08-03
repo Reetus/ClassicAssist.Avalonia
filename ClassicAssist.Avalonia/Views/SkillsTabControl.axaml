@@ -19,7 +19,7 @@
     <Border Grid.Column="0" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderMidBrush}" Padding="2">
       <DataGrid ItemsSource="{Binding Items}" Grid.Column="0" CanUserSortColumns="True" CanUserResizeColumns="True"
                 HorizontalScrollBarVisibility="Disabled" SelectedItem="{Binding SelectedItem, Mode=TwoWay}"
-                IsReadOnly="True">
+                IsReadOnly="True" Sorting="OnDataGridSorting" Loaded="OnDataGridLoaded">
         <DataGrid.ContextMenu>
           <ContextMenu>
             <MenuItem Header="{x:Static resources:Strings.Set_Up}" Command="{Binding SetSkillLocksCommand}"

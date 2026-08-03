@@ -34,6 +34,8 @@
         <CheckBox Content="{x:Static resources:Strings.Disable_inside_guardzone}"
                   IsChecked="{Binding DisableInGuardzone}" />
         <CheckBox Content="{x:Static resources:Strings.Loot_humanoids}" IsChecked="{Binding LootHumanoids}" />
+        <CheckBox Content="{x:Static resources:Strings.Match_text_value_of_property__UOAlive_}"
+                  IsChecked="{Binding MatchTextValue}" />
       </StackPanel>
       <TreeView x:Name="treeView" Grid.Row="1" Margin="0,10,0,10"
                 ItemsSource="{Binding Draggables}" SelectedItem="{Binding SelectedItem}">

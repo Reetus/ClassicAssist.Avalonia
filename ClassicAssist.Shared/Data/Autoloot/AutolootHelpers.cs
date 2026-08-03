@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
+using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
 namespace ClassicAssist.Data.Autoloot
@@ -9,6 +11,9 @@ namespace ClassicAssist.Data.Autoloot
     public static class AutolootHelpers
     {
         public static Action<int> SetAutolootContainer { get; set; }
+
+        private static readonly Regex _textValueRegex =
+            new Regex( "<BASEFONT[^>]*>(.*)(<\\/BASEFONT>)?", RegexOptions.Compiled | RegexOptions.IgnoreCase );
 
         public static IEnumerable<Item> AutolootFilter( IEnumerable<Item> items, AutolootEntry entry )
         {
@@ -120,9 +125,39 @@ namespace ClassicAssist.Data.Autoloot
         public static bool MatchProperty( Property property, int cliloc, PropertyEntry constraint,
             AutolootOperator @operator, int value )
         {
-            return property.Cliloc == cliloc && ( constraint.ClilocIndex == -1 || Operation( @operator,
-                                                      int.Parse( property.Arguments[constraint.ClilocIndex] ),
-                                                      value ) );
+            try
+            {
+                bool result = property.Cliloc == cliloc && ( constraint.ClilocIndex == -1 || Operation( @operator,
+                                                                int.Parse( property.Arguments[constraint.ClilocIndex] ),
+                                                                value ) );
+
+                if ( result )
+                {
+                    return true;
+                }
+
+                bool matchTextValue = AutolootManager.GetInstance().MatchTextValue?.Invoke() ?? false;
+
+                if ( !matchTextValue )
+                {
+                    return false;
+                }
+
+                string clilocString = Cliloc.GetProperty( cliloc );
+
+                if ( property.Text != null && property.Text.Equals( clilocString ) )
+                {
+                    return true;
+                }
+
+                Match matches = _textValueRegex.Match( property.Text ?? string.Empty );
+
+                return matches.Success && matches.Groups[1].Value.Equals( clilocString );
+            }
+            catch ( IndexOutOfRangeException )
+            {
+                return false;
+            }
         }
     }
 }

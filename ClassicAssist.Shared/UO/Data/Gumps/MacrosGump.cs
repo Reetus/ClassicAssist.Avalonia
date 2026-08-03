@@ -34,8 +34,12 @@ namespace ClassicAssist.UO.Gumps
         private static string _lastList;
         private static int _serial = 0x0fe00000;
 
-        public MacrosGump( string html ) : base( 190, 180, _serial++, (uint) _serial++ )
+        public MacrosGump( string html ) : base( Options.CurrentOptions.MacrosGumpWidth,
+            Options.CurrentOptions.MacrosGumpHeight, _serial++, (uint) _serial++ )
         {
+            int width = Options.CurrentOptions.MacrosGumpWidth;
+            int height = Options.CurrentOptions.MacrosGumpHeight;
+
             GumpX = Options.CurrentOptions.MacrosGumpX;
             GumpY = Options.CurrentOptions.MacrosGumpY;
 
@@ -44,8 +48,18 @@ namespace ClassicAssist.UO.Gumps
             Resizable = false;
             Disposable = false;
             AddPage( 0 );
-            AddBackground( 0, 0, 190, 180, 3500 );
-            AddHtml( 20, 20, 150, 140, html, false, true );
+
+            if ( Options.CurrentOptions.MacrosGumpTransparent )
+            {
+                AddHtml( 0, 0, width, height, string.Empty, false, false );
+                AddAlphaRegion( 0, 0, width, height );
+            }
+            else
+            {
+                AddBackground( 0, 0, width, height, 3500 );
+            }
+
+            AddHtml( 20, 20, width - 40, height - 40, html, false, true );
         }
 
         public static void ResendGump( bool force = false )
@@ -56,17 +70,19 @@ namespace ClassicAssist.UO.Gumps
 
                 IEnumerable<MacroEntry> macro = _macroManager.Items.Where( e => e.IsRunning );
 
+                string textColor = Options.CurrentOptions.MacrosGumpTextColor;
+
                 string html = string.Empty;
 
                 foreach ( MacroEntry entry in macro )
                 {
                     if ( entry.IsBackground )
                     {
-                        html += $"<BASEFONT COLOR=#000000><I>{entry.Name}</I></BASEFONT>\n";
+                        html += $"<BASEFONT COLOR={textColor}><I>{entry.Name}</I></BASEFONT>\n";
                     }
                     else
                     {
-                        html += $"<BASEFONT COLOR=#000000>{entry.Name}</BASEFONT>\n";
+                        html += $"<BASEFONT COLOR={textColor}>{entry.Name}</BASEFONT>\n";
                     }
                 }
 

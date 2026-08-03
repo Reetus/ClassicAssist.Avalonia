@@ -72,6 +72,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         manager.IsEnabled = () => Enabled;
         manager.SetEnabled = enabled => Enabled = enabled;
         manager.IsRunning = () => false;
+        manager.MatchTextValue = () => MatchTextValue;
 
         Items.CollectionChanged += UpdateDraggables;
     }
@@ -155,6 +156,12 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         set => SetProperty( ref _lootHumanoids, value );
     }
 
+    public bool MatchTextValue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
     public ICommand MoveToGroupCommand => field ??= new RelayCommand( MoveToGroup, o => SelectedItem != null );
 
     public ICommand NewGroupCommand => field ??= new RelayCommand( NewGroup, o => true );
@@ -229,6 +236,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             { "Container", ContainerSerial },
             { "RequeueFailedItems", RequeueFailedItems },
             { "LootHumanoids", LootHumanoids },
+            { "MatchTextValue", MatchTextValue },
             { "Groups", groupArray }
         };
 
@@ -254,7 +262,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
                 foreach ( AutolootConstraintEntry constraint in entry.Constraints )
                 {
-                    JObject constraintObj = new() { { "Name", constraint.Property.Name }, { "Operator", constraint.Operator.ToString() }, { "Value", constraint.Value } };
+                    JObject constraintObj = new() { { "Name", constraint.Property.Name }, { "Operator", constraint.Operator.ToString() }, { "Value", constraint.Value }, { "Additional", constraint.Additional } };
 
                     if ( constraint.Values != null && constraint.Values.Count > 0 )
                     {
@@ -292,6 +300,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         ContainerSerial = config["Container"]?.ToObject<int>() ?? 0;
         RequeueFailedItems = config["RequeueFailedItems"]?.ToObject<bool>() ?? false;
         LootHumanoids = config["LootHumanoids"]?.ToObject<bool>() ?? true;
+        MatchTextValue = config["MatchTextValue"]?.ToObject<bool>() ?? false;
 
         if ( config["Groups"] != null )
         {
@@ -362,7 +371,8 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                         {
                             Property = propertyEntry,
                             Operator = constraintToken["Operator"]?.ToObject<AutolootOperator>() ?? AutolootOperator.Equal,
-                            Value = constraintToken["Value"]?.ToObject<int>() ?? 0
+                            Value = constraintToken["Value"]?.ToObject<int>() ?? 0,
+                            Additional = constraintToken["Additional"]?.ToString()
                         };
 
                         if ( constraintToken["Values"] != null )

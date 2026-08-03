@@ -128,6 +128,12 @@ namespace ClassicAssist.Data
             set => SetProperty( ref field, value );
         }
 
+        public bool DisableHotkeysLoad
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
         public string EnemyTargetMessage
         {
             get;
@@ -145,6 +151,24 @@ namespace ClassicAssist.Data
             get;
             set => SetProperty( ref field, value );
         }
+
+        public bool HotkeysStatusGump
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
+        public int HotkeysStatusGumpX
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 10;
+
+        public int HotkeysStatusGumpY
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 30;
 
         public bool GetFriendEnemyUsesIgnoreList
         {
@@ -191,6 +215,30 @@ namespace ClassicAssist.Data
             get;
             set => SetProperty( ref field, value );
         }
+
+        public int MacrosGumpHeight
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 190;
+
+        public int MacrosGumpWidth
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 180;
+
+        public string MacrosGumpTextColor
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = "#FFFFFFFF";
+
+        public bool MacrosGumpTransparent
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = true;
 
         public int MacrosGumpX
         {
@@ -316,6 +364,18 @@ namespace ClassicAssist.Data
             }
         }
 
+        public int SelectedTabIndex
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
+        public int SelectedTabIndexAgents
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
         public SmartTargetOption SmartTargetOption
         {
             get;
@@ -360,7 +420,12 @@ namespace ClassicAssist.Data
 
         public static void Save( Options options )
         {
-            JObject obj = new JObject { { "Name", options.Name } };
+            JObject obj = new JObject
+            {
+                { "Name", options.Name },
+                { "SelectedTabIndex", options.SelectedTabIndex },
+                { "SelectedTabIndexAgents", options.SelectedTabIndexAgents }
+            };
 
             SaveEvent?.Invoke( obj );
 
@@ -407,6 +472,8 @@ namespace ClassicAssist.Data
             }
 
             options.Name = options.Name ?? json["Name"]?.ToObject<string>() ?? DEFAULT_SETTINGS_FILENAME;
+            options.SelectedTabIndex = json["SelectedTabIndex"]?.ToObject<int>() ?? 0;
+            options.SelectedTabIndexAgents = json["SelectedTabIndexAgents"]?.ToObject<int>() ?? 0;
 
             LoadEvent?.Invoke( json, options );
         }

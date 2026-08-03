@@ -8,6 +8,29 @@
 > [docs/MACRO_COMMANDS_TODO.md](docs/MACRO_COMMANDS_TODO.md) and [docs/HOTKEYS_TODO.md](docs/HOTKEYS_TODO.md)
 > for what is currently absent.
 
+## ⚠️ Profiles are not fully compatible yet
+
+> **Keep your ClassicAssist and ClassicAssist.Avalonia profiles separate.** Do not point both at the
+> same profile directory.
+
+The Avalonia port does not yet round-trip a ClassicAssist profile losslessly. A handful of options,
+agents and UI-only settings that ClassicAssist writes to its profile (for example `Screenshot`,
+`NameOverride`, `UseOnceAgent`, `OrganizerOptions`, `Skills`, `Macros.Groups`/`LeftColumnWidth`, and
+various `General`/`Options` fields) are either not persisted yet or are stored differently, so saving
+a profile from ClassicAssist.Avalonia will silently drop or rewrite those parts. If you load a
+ClassicAssist profile into ClassicAssist.Avalonia, edit something and save it back, the original
+profile on disk is overwritten with the reduced version — any data the port doesn't understand is
+lost.
+
+Until round-trip fidelity is complete:
+
+- Use a **separate profile directory** (or a copy) for each assistant.
+- Treat any profile edited and re-saved by ClassicAssist.Avalonia as no longer usable by ClassicAssist.
+- Keep backups of your ClassicAssist profiles if you experiment with loading them here.
+
+Progress on profile round-trip fidelity is tracked by the `ClassicAssist.Tests/ProfileRoundTripTests`
+suite, which loads a real profile and asserts that saving it back reproduces it.
+
 ## How it works
 
 Avalonia requires the UI to own the process **main** thread, which a plugin loaded into the game

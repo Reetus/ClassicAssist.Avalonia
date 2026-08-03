@@ -38,6 +38,12 @@ namespace ClassicAssist.Data.Autoloot
 
         public Func<bool> IsRunning { get; set; }
 
+        /// <summary>
+        ///     When true, cliloc constraints also match on the property's text value instead of only the
+        ///     cliloc number (UOAlive-style). Wired by the UI (AutolootViewModel).
+        /// </summary>
+        public Func<bool> MatchTextValue { get; set; }
+
         public Action<bool> SetEnabled { get; set; }
 
         public static AutolootManager GetInstance()

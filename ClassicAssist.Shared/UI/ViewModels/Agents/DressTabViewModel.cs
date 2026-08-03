@@ -7,6 +7,7 @@ using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Dress;
 using ClassicAssist.Data.Hotkeys;
+using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO;
@@ -51,6 +52,12 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
             _manager.Items = Items;
 
+            HotkeyCommand stopHotkey = new HotkeyCommand
+            {
+                Name = Strings.Stop_Dress, Action = ( entry, objects ) => _manager.Stop(), CanGlobal = false
+            };
+
+            _staticOptions.Add( stopHotkey );
         }
 
         public ICommand AddDressItemCommand =>
@@ -144,6 +151,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                 }
             };
 
+            SerializeStatic( dress );
+
             JArray dressEntries = new JArray();
 
             foreach ( DressAgentEntry dae in Items )
@@ -191,6 +200,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             }
 
             JToken dress = json["Dress"];
+
+            DeserializeStatic( dress as JObject );
 
             MoveConflictingItems = GetJsonValue( dress["Options"], "MoveConflictingItems", false );
             UseUO3DPackets = _manager.UseUO3DPackets = GetJsonValue( dress["Options"], "UseUO3DPackets", false );

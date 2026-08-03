@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Hotkeys;
@@ -16,6 +17,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
     public class OrganizerTabViewModel : HotkeyEntryViewModel<OrganizerEntry>, ISettingProvider
     {
         private readonly OrganizerManager _manager;
+        private ICommand _clearEntryDestinationContainerCommand;
+        private ICommand _clearEntrySourceContainerCommand;
         private ICommand _insertItemCommand;
         private bool _isOrganizing;
         private ICommand _newOrganizerEntryCommand;
@@ -25,6 +28,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         private OrganizerEntry _selectedItem;
         private OrganizerItem _selectedOrganizerItem;
         private ICommand _setContainersCommand;
+        private ICommand _setEntryDestinationContainerCommand;
+        private ICommand _setEntrySourceContainerCommand;
 
         public OrganizerTabViewModel() : base( Strings.Organizer )
         {
@@ -36,6 +41,14 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         public ICommand InsertItemCommand =>
             _insertItemCommand ?? ( _insertItemCommand =
                 new RelayCommandAsync( InsertItem, o => SelectedItem != null && !IsOrganizing ) );
+
+        public ICommand ClearEntryDestinationContainerCommand =>
+            _clearEntryDestinationContainerCommand ?? ( _clearEntryDestinationContainerCommand =
+                new RelayCommand( ClearEntryDestinationContainer, o => !IsOrganizing ) );
+
+        public ICommand ClearEntrySourceContainerCommand =>
+            _clearEntrySourceContainerCommand ?? ( _clearEntrySourceContainerCommand =
+                new RelayCommand( ClearEntrySourceContainer, o => !IsOrganizing ) );
 
         public bool IsOrganizing
         {
@@ -80,6 +93,14 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             _setContainersCommand ?? ( _setContainersCommand =
                 new RelayCommandAsync( _manager.SetContainers, o => SelectedItem != null && !IsOrganizing ) );
 
+        public ICommand SetEntryDestinationContainerCommand =>
+            _setEntryDestinationContainerCommand ?? ( _setEntryDestinationContainerCommand =
+                new RelayCommandAsync( SetEntryDestinationContainer, o => !IsOrganizing && Engine.Connected ) );
+
+        public ICommand SetEntrySourceContainerCommand =>
+            _setEntrySourceContainerCommand ?? ( _setEntrySourceContainerCommand =
+                new RelayCommandAsync( SetEntrySourceContainer, o => !IsOrganizing && Engine.Connected ) );
+
         public void Serialize( JObject json )
         {
             JArray organizer = new JArray();
@@ -94,6 +115,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                 SetJsonValue( entryObj, "DestinationContainer", organizerEntry.DestinationContainer );
                 SetJsonValue( entryObj, "Keys", organizerEntry.Hotkey.ToJObject() );
                 SetJsonValue( entryObj, "Complete", organizerEntry.Complete );
+                SetJsonValue( entryObj, "ReturnExcess", organizerEntry.ReturnExcess );
 
                 JArray itemsArray = new JArray();
 
@@ -105,6 +127,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                     SetJsonValue( itemsObj, "ID", organizerItem.ID );
                     SetJsonValue( itemsObj, "Hue", organizerItem.Hue );
                     SetJsonValue( itemsObj, "Amount", organizerItem.Amount );
+                    SetJsonValue( itemsObj, "SourceContainer", organizerItem.SourceContainer );
+                    SetJsonValue( itemsObj, "DestinationContainer", organizerItem.DestinationContainer );
 
                     itemsArray.Add( itemsObj );
                 }
@@ -135,7 +159,8 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                     SourceContainer = GetJsonValue( token, "SourceContainer", 0 ),
                     DestinationContainer = GetJsonValue( token, "DestinationContainer", 0 ),
                     Hotkey = new ShortcutKeys( token["Keys"] ),
-                    Complete = GetJsonValue( token, "Complete", false )
+                    Complete = GetJsonValue( token, "Complete", false ),
+                    ReturnExcess = GetJsonValue( token, "ReturnExcess", false )
                 };
 
                 entry.Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( entry ) );
@@ -148,7 +173,9 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                         Item = GetJsonValue( itemToken, "Item", string.Empty ),
                         ID = GetJsonValue( itemToken, "ID", 0 ),
                         Hue = GetJsonValue( itemToken, "Hue", -1 ),
-                        Amount = GetJsonValue( itemToken, "Amount", -1 )
+                        Amount = GetJsonValue( itemToken, "Amount", -1 ),
+                        SourceContainer = GetJsonValue<int?>( itemToken, "SourceContainer", null ),
+                        DestinationContainer = GetJsonValue<int?>( itemToken, "DestinationContainer", null )
                     };
 
                     entry.Items.Add( item );
@@ -235,6 +262,55 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             };
 
             entry.Items.Add( organizerItem );
+        }
+
+        private static void ClearEntryDestinationContainer( object obj )
+        {
+            if ( obj is OrganizerItem entry )
+            {
+                entry.DestinationContainer = null;
+            }
+        }
+
+        private static void ClearEntrySourceContainer( object obj )
+        {
+            if ( obj is OrganizerItem entry )
+            {
+                entry.SourceContainer = null;
+            }
+        }
+
+        private static async Task SetEntryContainer( Action<int> action )
+        {
+            int serial = await Commands.GetTargetSerialAsync( Strings.Target_container___ );
+
+            if ( serial <= 0 )
+            {
+                Commands.SystemMessage( Strings.Invalid_or_unknown_object_id );
+                return;
+            }
+
+            action( serial );
+        }
+
+        private static Task SetEntryDestinationContainer( object obj )
+        {
+            if ( !( obj is OrganizerItem entry ) )
+            {
+                return Task.CompletedTask;
+            }
+
+            return SetEntryContainer( serial => entry.DestinationContainer = serial );
+        }
+
+        private static Task SetEntrySourceContainer( object obj )
+        {
+            if ( !( obj is OrganizerItem entry ) )
+            {
+                return Task.CompletedTask;
+            }
+
+            return SetEntryContainer( serial => entry.SourceContainer = serial );
         }
     }
 }

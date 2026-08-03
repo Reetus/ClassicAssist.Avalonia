@@ -32,10 +32,20 @@ namespace ClassicAssist.Data.Hotkeys
 
         public Action ClearAllHotkeys { get; set; }
 
+        public delegate void dHotkeysStatus( bool enabled );
+
         public bool Enabled
         {
             get => _enabled;
-            set => SetProperty( ref _enabled, value );
+            set
+            {
+                if ( _enabled != value )
+                {
+                    HotkeysStatusChanged?.Invoke( value );
+                }
+
+                SetProperty( ref _enabled, value );
+            }
         }
 
         public ObservableCollectionEx<HotkeyCommand> Items
@@ -43,6 +53,8 @@ namespace ClassicAssist.Data.Hotkeys
             get => _items;
             set => SetProperty( ref _items, value );
         }
+
+        public static event dHotkeysStatus HotkeysStatusChanged;
 
         public event PropertyChangedEventHandler PropertyChanged;
 

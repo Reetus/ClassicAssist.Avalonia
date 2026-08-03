@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using ClassicAssist.Data;
+using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.DebugAdapter.Dap;
 using ClassicAssist.Misc;
@@ -18,6 +19,8 @@ namespace ClassicAssist.UI.ViewModels
     public class OptionsTabViewModel : BaseViewModel, ISettingProvider
     {
         private Options _currentOptions;
+        private ICommand _macrosGumpChangedCommand;
+        private ICommand _selectMacroTextColorCommand;
         private ICommand _setLanguageOverrideCommand;
         private ICommand _toggleDebugAdapterCommand;
 
@@ -26,6 +29,13 @@ namespace ClassicAssist.UI.ViewModels
             get => _currentOptions;
             set => SetProperty( ref _currentOptions, value );
         }
+
+        public ICommand MacrosGumpChangedCommand =>
+            _macrosGumpChangedCommand ?? ( _macrosGumpChangedCommand = new RelayCommand( MacrosGumpChanged ) );
+
+        public ICommand SelectMacroTextColorCommand =>
+            _selectMacroTextColorCommand ?? ( _selectMacroTextColorCommand =
+                new RelayCommand( SelectMacroTextColor, o => CurrentOptions != null ) );
 
         public ICommand SetLanguageOverrideCommand =>
             _setLanguageOverrideCommand ?? ( _setLanguageOverrideCommand = new RelayCommand( SetLanguageOverride ) );
@@ -87,6 +97,14 @@ namespace ClassicAssist.UI.ViewModels
             options.Add( "MacrosGump", CurrentOptions.MacrosGump );
             options.Add( "MacrosGumpX", CurrentOptions.MacrosGumpX );
             options.Add( "MacrosGumpY", CurrentOptions.MacrosGumpY );
+            options.Add( "MacrosGumpHeight", CurrentOptions.MacrosGumpHeight );
+            options.Add( "MacrosGumpWidth", CurrentOptions.MacrosGumpWidth );
+            options.Add( "MacrosGumpTextColor", CurrentOptions.MacrosGumpTextColor );
+            options.Add( "MacrosGumpTransparent", CurrentOptions.MacrosGumpTransparent );
+            options.Add( "DisableHotkeysLoad", CurrentOptions.DisableHotkeysLoad );
+            options.Add( "HotkeysStatusGump", CurrentOptions.HotkeysStatusGump );
+            options.Add( "HotkeysStatusGumpX", CurrentOptions.HotkeysStatusGumpX );
+            options.Add( "HotkeysStatusGumpY", CurrentOptions.HotkeysStatusGumpY );
 
             json?.Add( "Options", options );
         }
@@ -168,6 +186,16 @@ namespace ClassicAssist.UI.ViewModels
             CurrentOptions.MacrosGump = config?["MacrosGump"]?.ToObject<bool>() ?? true;
             CurrentOptions.MacrosGumpX = config?["MacrosGumpX"]?.ToObject<int>() ?? 100;
             CurrentOptions.MacrosGumpY = config?["MacrosGumpY"]?.ToObject<int>() ?? 100;
+            CurrentOptions.MacrosGumpHeight = config?["MacrosGumpHeight"]?.ToObject<int>() ?? 190;
+            CurrentOptions.MacrosGumpWidth = config?["MacrosGumpWidth"]?.ToObject<int>() ?? 180;
+            CurrentOptions.MacrosGumpTextColor = config?["MacrosGumpTextColor"]?.ToObject<string>() ?? "#FFFFFFFF";
+            CurrentOptions.MacrosGumpTransparent = config?["MacrosGumpTransparent"]?.ToObject<bool>() ?? true;
+            CurrentOptions.DisableHotkeysLoad = config?["DisableHotkeysLoad"]?.ToObject<bool>() ?? false;
+            CurrentOptions.HotkeysStatusGump = config?["HotkeysStatusGump"]?.ToObject<bool>() ?? false;
+            CurrentOptions.HotkeysStatusGumpX = config?["HotkeysStatusGumpX"]?.ToObject<int>() ?? 10;
+            CurrentOptions.HotkeysStatusGumpY = config?["HotkeysStatusGumpY"]?.ToObject<int>() ?? 30;
+
+            HotkeyManager.GetInstance().Enabled = !CurrentOptions.DisableHotkeysLoad;
 
             if ( CurrentOptions.AbilitiesGumpX < 0 )
             {
@@ -208,6 +236,32 @@ namespace ClassicAssist.UI.ViewModels
             {
                 Options.CurrentOptions.GetType().GetProperty( args.PropertyName )
                     ?.SetValue( Options.CurrentOptions, val );
+            }
+        }
+
+        private static void MacrosGumpChanged( object obj )
+        {
+            MacrosGump.ResendGump( true );
+        }
+
+        private async void SelectMacroTextColor( object obj )
+        {
+            if ( CurrentOptions == null )
+            {
+                return;
+            }
+
+            MacrosGumpTextColorSelectorViewModel vm = new MacrosGumpTextColorSelectorViewModel
+            {
+                SelectedColor = CurrentOptions.MacrosGumpTextColor
+            };
+
+            await Engine.UIInvoker.InvokeDialog( "MacrosGumpTextColorWindow", dataContext: vm );
+
+            if ( vm.Result )
+            {
+                CurrentOptions.MacrosGumpTextColor = vm.SelectedColor;
+                MacrosGump.ResendGump( true );
             }
         }
 

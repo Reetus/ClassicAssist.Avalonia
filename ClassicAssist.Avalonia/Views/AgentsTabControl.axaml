@@ -6,7 +6,7 @@
              xmlns:agents="clr-namespace:ClassicAssist.Avalonia.Views.Agents"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.AgentsTabControl">
-  <TabControl Margin="0">
+  <TabControl Margin="0" SelectedIndex="{Binding CurrentOptions.SelectedTabIndexAgents}">
     <TabItem Header="{x:Static resources:Strings.Organizer}">
       <agents:OrganizerTabControl/>
     </TabItem>

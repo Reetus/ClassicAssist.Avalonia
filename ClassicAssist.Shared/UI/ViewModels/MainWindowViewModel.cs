@@ -19,7 +19,10 @@ namespace ClassicAssist.UI.ViewModels
         public MainWindowViewModel()
         {
             Engine.UpdateWindowTitleEvent += OnUpdateWindowTitleEvent;
+            AssistantOptions.ProfileChangedEvent += _ => OnPropertyChanged( nameof( CurrentOptions ) );
         }
+
+        public Options CurrentOptions => Options.CurrentOptions;
 
         [OptionsBinding( Property = "AlwaysOnTop" )]
         public bool AlwaysOnTop

@@ -15,7 +15,15 @@ namespace ClassicAssist.Data.Organizer
         public bool Complete
         {
             get => _complete;
-            set => SetProperty( ref _complete, value );
+            set
+            {
+                SetProperty( ref _complete, value );
+
+                if ( !value )
+                {
+                    ReturnExcess = false;
+                }
+            }
         }
 
         public int DestinationContainer { get; set; }
@@ -32,6 +40,14 @@ namespace ClassicAssist.Data.Organizer
         {
             get => _stack;
             set => SetProperty( ref _stack, value );
+        }
+
+        private bool _returnExcess;
+
+        public bool ReturnExcess
+        {
+            get => _returnExcess;
+            set => SetProperty( ref _returnExcess, value );
         }
 
         public override string ToString()

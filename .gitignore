@@ -15,4 +15,5 @@ ClassicAssist.Tests/bin/
 ClassicAssist.UITest/bin/
 ClassicAssist.Avalonia/ClassicAssist.Avalonia.csproj.user
 ClassicAssist.Avalonia/Properties/launchSettings.json
+ClassicAssist.Tests/data/
 .idea/**

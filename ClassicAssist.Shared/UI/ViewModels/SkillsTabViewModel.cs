@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows.Input;
 using ClassicAssist.Shared;
@@ -28,6 +29,7 @@ namespace ClassicAssist.UI.ViewModels
         private SkillEntry _selectedItem;
         private ICommand _setAllSkillLocksCommand;
         private ICommand _setSkillLocksCommand;
+        private SkillSortInfo _sortInfo;
         private float _totalBase;
         private ICommand _useSkillCommand;
 
@@ -45,6 +47,12 @@ namespace ClassicAssist.UI.ViewModels
 
             SkillManager manager = SkillManager.GetInstance();
             manager.Items = Items;
+        }
+
+        public SkillSortInfo SortInfo
+        {
+            get => _sortInfo;
+            private set => SetProperty( ref _sortInfo, value );
         }
 
         public ObservableCollectionEx<SkillEntry> Items
@@ -97,32 +105,47 @@ namespace ClassicAssist.UI.ViewModels
         {
             JArray skills = new JArray();
 
-            if ( _hotkeyCategory?.Children == null )
+            if ( _hotkeyCategory?.Children != null )
             {
-                return;
-            }
-
-            foreach ( HotkeyEntry hks in _hotkeyCategory.Children.Where( o => o.IsGlobal == global ) )
-            {
-                if ( Equals( hks.Hotkey, ShortcutKeys.Default ) )
+                foreach ( HotkeyEntry hks in _hotkeyCategory.Children.Where( o => o.IsGlobal == global ) )
                 {
-                    continue;
+                    if ( Equals( hks.Hotkey, ShortcutKeys.Default ) )
+                    {
+                        continue;
+                    }
+
+                    skills.Add( new JObject
+                    {
+                        { "Name", hks.Name },
+                        { "Keys", hks.Hotkey.ToJObject() },
+                        { "PassToUO", hks.PassToUO },
+                        { "Disableable", hks.Disableable }
+                    } );
                 }
 
-                skills.Add( new JObject
-                {
-                    { "Name", hks.Name },
-                    { "Keys", hks.Hotkey.ToJObject() },
-                    { "PassToUO", hks.PassToUO },
-                    { "Disableable", hks.Disableable }
-                } );
+                json.Add( "Skills", skills );
             }
 
-            json.Add( "Skills", skills );
+            if ( _sortInfo != null && !global )
+            {
+                json.Add( "SkillsSort", new JObject
+                {
+                    { "SortField", _sortInfo.SortBy.ToString() },
+                    { "SortDirection", _sortInfo.Direction.ToString() }
+                } );
+            }
         }
 
         public void Deserialize( JObject json, Options options, bool global = false )
         {
+            if ( !global && json?["SkillsSort"] is JObject sortObj && sortObj["SortField"] != null &&
+                 sortObj["SortDirection"] != null &&
+                 Enum.TryParse( sortObj["SortField"].ToString(), out SkillSortBy sortBy ) &&
+                 Enum.TryParse( sortObj["SortDirection"].ToString(), out ListSortDirection direction ) )
+            {
+                SortInfo = new SkillSortInfo( sortBy, direction );
+            }
+
             HotkeyManager hotkey = HotkeyManager.GetInstance();
 
             if ( Skills.GetSkillsArray() == null )
@@ -291,5 +314,41 @@ namespace ClassicAssist.UI.ViewModels
                 entry.LockStatus = lockStatus;
             } );
         }
+
+        /// <summary>
+        ///     Called by the view when the user changes the skills sort, so the choice is persisted with
+        ///     the profile via <see cref="Serialize" />.
+        /// </summary>
+        public void SetSort( SkillSortBy sortBy, ListSortDirection direction )
+        {
+            SortInfo = new SkillSortInfo( sortBy, direction );
+        }
+
+        public void ClearSort()
+        {
+            SortInfo = null;
+        }
+    }
+
+    public enum SkillSortBy
+    {
+        Name,
+        Value,
+        Base,
+        Delta,
+        Cap,
+        LockStatus
+    }
+
+    public class SkillSortInfo
+    {
+        public SkillSortInfo( SkillSortBy sortBy, ListSortDirection direction )
+        {
+            SortBy = sortBy;
+            Direction = direction;
+        }
+
+        public ListSortDirection Direction { get; }
+        public SkillSortBy SortBy { get; }
     }
 }
