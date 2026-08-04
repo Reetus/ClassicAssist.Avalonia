@@ -21,6 +21,12 @@ namespace ClassicAssist.Data
 
         private static readonly Dictionary<int, string> _linkedProfiles = new Dictionary<int, string>();
         public static string[] Assemblies { get; set; }
+
+        /// <summary>
+        ///     Opaque per-tab settings for the debug window, written back to Assistant.json when the
+        ///     window closes. Kept as a JObject so each debug tab owns its own shape, matching WPF.
+        /// </summary>
+        public static JObject DebugWindowOptions { get; set; } = new JObject();
         public static bool AutoBackupProfiles { get; set; }
         public static int AutoBackupProfilesDays { get; set; }
         public static string AutoBackupProfilesDirectory { get; set; }
@@ -72,6 +78,7 @@ namespace ClassicAssist.Data
                 { "SavePasswords", SavePasswords },
                 { "SavePasswordsOnlyBlank", SavePasswordsOnlyBlank },
                 { "UserId", UserId },
+                { "DebugWindowOptions", DebugWindowOptions },
 #if !DEVELOP
                 { "WindowWidth", WindowWidth },
                 { "WindowHeight", WindowHeight },
@@ -145,6 +152,7 @@ namespace ClassicAssist.Data
             WindowWidth = json?["WindowWidth"]?.ToObject<int>() ?? 625;
             WindowHeight = json?["WindowHeight"]?.ToObject<int>() ?? 500;
             Assemblies = json?["Assemblies"]?.ToObject<string[]>() ?? new string[0];
+            DebugWindowOptions = json?["DebugWindowOptions"]?.ToObject<JObject>() ?? new JObject();
             SessionId = Guid.NewGuid().ToString();
 
             if ( json?["Profiles"] != null )

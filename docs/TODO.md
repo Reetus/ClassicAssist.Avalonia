@@ -194,7 +194,21 @@ From `HOTKEYS_TODO.md`:
 
 ## Debug window gaps
 
+- [x] ~~Settings persistence~~ - `AssistantOptions.DebugWindowOptions` (a JObject in Assistant.json,
+      same key and shape as WPF). `DebugWindow` deserializes every tab whose DataContext is an
+      `ISettingProvider` on open and serializes them back on close; `DebugViewModel.Serialize`/
+      `Deserialize` were empty stubs before (and `Serialize` had an inverted null guard that wrote an
+      empty object). Unlike WPF it also calls `AssistantOptions.Save()` on close, because the UI is a
+      child process that `Environment.Exit`s when the game goes away and so may never reach the
+      normal shutdown save.
+- [x] ~~Capture toggle~~ - the Main tab's `Running` was named inconsistently and defaulted to **on**,
+      so packets accumulated into an unbounded list from the moment the window's view model was
+      constructed. Renamed to `Enabled`, defaulted off (opt-in, as WPF), and joined by the
+      `IncludeInternal` and `Direction` filters WPF has. All four capture handlers now share one
+      `ShouldCapture` gate, which reads a `bool[256]` rather than doing a LINQ scan over 256 entries
+      per packet on the network hot path.
 - [ ] **Actions** tab (`DebugActionQueueControl`)
 - [ ] **Keyboard** tab (`DebugKeyboardControl`)
 - [ ] **Packets** tab (`DebugPacketsControl`) / packet queue debug (`DebugPacketQueueControl`)
-      (a new "Main" tab covers packets loosely)
+      (the "Main" tab covers packets loosely; it now has WPF's enable/internal/direction filters, but
+      not the separate export or queue views)
