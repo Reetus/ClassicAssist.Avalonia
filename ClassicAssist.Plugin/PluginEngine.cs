@@ -1078,7 +1078,7 @@ namespace ClassicAssist.Plugin
 
             public void SetTitle( string title )
             {
-                PluginEngine.SetTitle( title );
+                TickWorkQueue.Enqueue( () => PluginEngine.SetTitle( title ) );
             }
 
             public Task<(int x, int y)> GetGumpPosition( uint id )
