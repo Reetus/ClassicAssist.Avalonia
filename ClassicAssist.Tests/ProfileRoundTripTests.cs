@@ -102,13 +102,6 @@ namespace ClassicAssist.Tests
             // VendorSell: only written by WPF when non-zero.
             "VendorSell.ContainerSerial",
 
-            // Scavenger: WPF-only fields.
-            "Scavenger.CheckWeight",
-            "Scavenger.MinWeightAvailable",
-            "Scavenger.FilterEnabled",
-            "Scavenger.Items.*.Priority",
-            "Scavenger.Filters",
-
             // Autoloot: WPF UI state not ported.
             "Autoloot.LeftColumnWidth"
         };

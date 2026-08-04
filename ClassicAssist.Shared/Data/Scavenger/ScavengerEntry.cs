@@ -34,6 +34,14 @@ namespace ClassicAssist.Data.Scavenger
             set => SetProperty( ref _name, value );
         }
 
+        private ScavengerPriority _priority = ScavengerPriority.Normal;
+
+        public ScavengerPriority Priority
+        {
+            get => _priority;
+            set => SetProperty( ref _priority, value );
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
