@@ -49,6 +49,18 @@ nothing.
       client is a plugin-side capability this repo does not have.
 - [ ] **Public Macros browser** - the "Public Macros" tab (`MacroBrowserControl`,
       `MacroBrowserViewModel`, classicassistant.net API) is absent from the main window.
+- [ ] **Macro commands browser** - `MacrosCommandWindow`/`MacrosCommandViewModel` behind the Macros
+      tab's "Commands" button; `MacrosTabViewModel.ShowCommands` is still a stub, so no button is
+      surfaced for it.
+- [x] ~~**Active Objects window**~~ - `ActiveObjectsWindow` + `ActiveObjectsViewModel`: global /
+      instance / player aliases, lists, timers and the ignore list, each refreshable with
+      remove/clear-all, plus re-target buttons for aliases. Snapshots rather than live bindings, since
+      the underlying stores are plain dictionaries mutated from macro threads.
+- [x] ~~**Macro editor completion**~~ - `PythonCompletionData` + `AvalonEditCompletionBehaviour`
+      (AvaloniaEdit `CompletionWindow` on `TextArea.TextEntered`, hover docs via
+      `TextEditor.PointerHover`). Commands are reflected out of ClassicAssist.Shared rather than the
+      executing assembly, which upstream could assume were the same. WPF's `CompletionEntry`
+      expander (a read-only editor showing the example) is simplified to signature-over-example.
 - [x] ~~**Macro debugger (DAP)**~~ - `DebugAdapter/*` (Dap server/session/types, `DebugManager`,
       `VariableInspector`, `GameStateInspector`, `MacroDebugState`) ported to
       `ClassicAssist.Shared/DebugAdapter/`; the DAP hook is wired into `MacroInvoker.OnTrace`
@@ -161,6 +173,16 @@ From `HOTKEYS_TODO.md`:
 - [ ] Boolean-tree filter groups (flat AND-only profiles instead - deliberate)
 - [ ] `EntityCollectionData.NotifyPropertiesUpdated()` / live OPL update of rendered rows
 - [ ] `EntityCollectionViewerOptions.Assemblies` round-trip (deliberately skipped)
+
+## Cross-platform shelling out
+
+- [x] ~~URL / folder / editor launching~~ - `Misc/ShellLauncher.cs`. WPF shells out to `explorer.exe`
+      and `cmd /c code`, and calls `Process.Start( url )` directly, which throws on .NET Core
+      (`UseShellExecute` defaults to false, so the URL is treated as a filename - this was live in
+      `ShowMacrosWiki` and the About tab). `OpenInVSCode` tries `code`/`codium`/`code-insiders`,
+      wrapping in `cmd.exe` only on Windows where `code` is a `.cmd`, and falls back to the desktop's
+      default handler. Macros tab gained the missing Open Modules Folder / Macro Commands Wiki /
+      Open in external editor buttons.
 
 ## Missing extensions
 
