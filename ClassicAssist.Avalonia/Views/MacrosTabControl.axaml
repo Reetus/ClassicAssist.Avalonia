@@ -109,6 +109,7 @@
                                Background="{DynamicResource ThemeInnerControlBackgroundBrush}">
           <Interaction.Behaviors>
             <misc:AvalonEditBehaviour Text="{Binding SelectedItem.Macro}" />
+            <misc:AvalonEditCompletionBehaviour />
           </Interaction.Behaviors>
         </AvalonEdit:TextEditor>
       </Border>
@@ -131,14 +132,30 @@
         <CheckBox Content="{x:Static resources:Strings.Global}"
                   IsChecked="{Binding SelectedItem.Global}" />
       </WrapPanel>
-      <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="0,5,0,0">
+      <WrapPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,5,0,0">
+        <WrapPanel.Styles>
+          <Style Selector="Button">
+            <Setter Property="Margin" Value="0,0,5,5" />
+          </Style>
+        </WrapPanel.Styles>
         <Button Content="{x:Static resources:Strings.Object_Inspector}" Command="{Binding InspectObjectCommand}"/>
-        <Button Content="{x:Static resources:Strings.Create_Macro_Button}" Margin="5,0,0,0"
+        <Button Content="{x:Static resources:Strings.Active_Objects}"
+                Command="{Binding ShowActiveObjectsWindowCommand, Mode=OneWay}" />
+        <Button Content="{x:Static resources:Strings.Create_Macro_Button}"
                 Command="{Binding CreateMacroButtonCommand, Mode=OneWay}"
                 CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
-        <Button Content="{x:Static resources:Strings.Open_Macros_Folder}" Margin="5,0,0,0"
+        <Button Content="{x:Static resources:Strings.Open_in_external_editor}"
+                Command="{Binding OpenExternalCommand, Mode=OneWay}"
+                CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
+        <Button Content="{x:Static resources:Strings.Open_Macros_Folder}"
                 Command="{Binding OpenMacrosFolderCommand, Mode=OneWay}" />
-      </StackPanel>
+        <Button Content="{x:Static resources:Strings.Open_Modules_Folder}"
+                Command="{Binding OpenModulesFolderCommand, Mode=OneWay}" />
+        <Button Command="{Binding ShowMacrosWikiCommand, Mode=OneWay}" Padding="8,0"
+                ToolTip.Tip="{x:Static resources:Strings.Macro_Commands_Wiki__Launches_in_Browser_}">
+          <Image Source="{DynamicResource WebIcon}" Height="16" Width="16" />
+        </Button>
+      </WrapPanel>
     </Grid>
   </Grid>
 </UserControl>

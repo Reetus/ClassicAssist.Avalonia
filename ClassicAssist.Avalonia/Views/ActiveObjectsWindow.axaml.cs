@@ -1,4 +1,4 @@
-﻿#region License
+#region License
 
 // Copyright (C) 2026 Reetus
 //
@@ -17,29 +17,16 @@
 
 #endregion
 
-using System.Diagnostics;
 using Avalonia.Controls;
-using Avalonia.Input;
 using Avalonia.Markup.Xaml;
-using ClassicAssist.Misc;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
+namespace ClassicAssist.Avalonia.Views
 {
-    /// <summary>
-    ///     Interaction logic for CSVImportWindow.xaml
-    /// </summary>
-    public partial class CSVImportWindow : Window
+    public partial class ActiveObjectsWindow : Window
     {
-        private const string WIKI_URL = "https://github.com/Reetus/ClassicAssist/wiki/Importing-Autoloot-Items";
-
-        public CSVImportWindow()
+        public ActiveObjectsWindow()
         {
             InitializeComponent();
-        }
-
-        private void OnWikiLinkClick( object sender, PointerPressedEventArgs e )
-        {
-            ShellLauncher.OpenUrl( WIKI_URL );
         }
 
         private void InitializeComponent()

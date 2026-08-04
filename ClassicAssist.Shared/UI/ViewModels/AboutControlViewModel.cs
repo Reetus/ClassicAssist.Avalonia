@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Timers;
 using System.Windows.Input;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
@@ -141,7 +142,7 @@ namespace ClassicAssist.UI.ViewModels
 
         private static void OpenPayPal( object obj )
         {
-            Process.Start( "https://www.paypal.me/reeeetus" );
+            ShellLauncher.OpenUrl( "https://www.paypal.me/reeeetus" );
         }
 
         private void LastTargetChangedEvent( int serial )
@@ -159,7 +160,7 @@ namespace ClassicAssist.UI.ViewModels
 
         private static void LaunchHomepage( object obj )
         {
-            Process.Start( "https://github.com/Reetus/ClassicAssist" );
+            ShellLauncher.OpenUrl( "https://github.com/Reetus/ClassicAssist" );
         }
 
         private void MobilesOnCollectionChanged( int totalcount, bool added, Mobile[] mobiles )

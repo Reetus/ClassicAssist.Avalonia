@@ -1,0 +1,185 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="450"
+        x:Class="ClassicAssist.Avalonia.Views.ActiveObjectsWindow"
+        Title="{x:Static resources:Strings.Active_Objects}" Width="600" Height="450">
+  <Window.DataContext>
+    <viewModels:ActiveObjectsViewModel />
+  </Window.DataContext>
+  <Window.Styles>
+    <Style Selector="Button">
+      <Setter Property="Padding" Value="15,4" />
+      <Setter Property="Margin" Value="0,0,5,0" />
+    </Style>
+  </Window.Styles>
+  <TabControl Margin="5">
+
+    <TabItem Header="{x:Static resources:Strings.Aliases}">
+      <TabControl>
+        <TabItem Header="{x:Static resources:Strings.Global}">
+          <Grid RowDefinitions="*,Auto" Margin="5">
+            <DataGrid Grid.Row="0" ItemsSource="{Binding Aliases}" SelectedItem="{Binding SelectedAlias}"
+                      AutoGenerateColumns="False" GridLinesVisibility="All">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="{x:Static resources:Strings.Serial}" Binding="{Binding Serial}" Width="*" />
+                <DataGridTemplateColumn Header="" Width="Auto">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="viewModels:AliasEntry">
+                      <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0">
+                        <Button Content="{x:Static resources:Strings.Target}" Padding="8,2"
+                                Command="{Binding $parent[DataGrid].DataContext.SetAliasCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Content="{x:Static resources:Strings.Remove}" Padding="8,2"
+                                Command="{Binding $parent[DataGrid].DataContext.RemoveAliasCommand}"
+                                CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+              <Button Content="{x:Static resources:Strings.Refresh}" Command="{Binding RefreshAliasesCommand}" />
+              <Button Content="{x:Static resources:Strings.Clear_All_Objects}"
+                      Command="{Binding ClearAllAliasesCommand}" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="{x:Static resources:Strings.Instance}">
+          <Grid RowDefinitions="*,Auto" Margin="5">
+            <DataGrid Grid.Row="0" ItemsSource="{Binding InstanceAliases}"
+                      SelectedItem="{Binding SelectedInstanceAlias}"
+                      AutoGenerateColumns="False" GridLinesVisibility="All">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Macros}" Binding="{Binding Macro.Name}"
+                                    Width="*" />
+                <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="{x:Static resources:Strings.Serial}" Binding="{Binding Serial}" Width="*" />
+                <DataGridTemplateColumn Header="" Width="Auto">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="viewModels:InstanceAliasEntry">
+                      <Button Content="{x:Static resources:Strings.Remove}" Padding="8,2" Margin="4,0"
+                              Command="{Binding $parent[DataGrid].DataContext.RemoveInstanceAliasCommand}"
+                              CommandParameter="{Binding}" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+              <Button Content="{x:Static resources:Strings.Refresh}"
+                      Command="{Binding RefreshInstanceAliasesCommand}" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="{x:Static resources:Strings.Player}">
+          <Grid RowDefinitions="*,Auto" Margin="5">
+            <DataGrid Grid.Row="0" ItemsSource="{Binding PlayerAliases}"
+                      SelectedItem="{Binding SelectedPlayerAlias}"
+                      AutoGenerateColumns="False" GridLinesVisibility="All">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="*" />
+                <DataGridTextColumn Header="{x:Static resources:Strings.Serial}" Binding="{Binding Serial}" Width="*" />
+                <DataGridTemplateColumn Header="" Width="Auto">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="viewModels:AliasEntry">
+                      <StackPanel Orientation="Horizontal" Spacing="4" Margin="4,0">
+                        <Button Content="{x:Static resources:Strings.Target}" Padding="8,2"
+                                Command="{Binding $parent[DataGrid].DataContext.SetPlayerAliasCommand}"
+                                CommandParameter="{Binding}" />
+                        <Button Content="{x:Static resources:Strings.Remove}" Padding="8,2"
+                                Command="{Binding $parent[DataGrid].DataContext.RemovePlayerAliasCommand}"
+                                CommandParameter="{Binding}" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+              </DataGrid.Columns>
+            </DataGrid>
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+              <Button Content="{x:Static resources:Strings.Refresh}"
+                      Command="{Binding RefreshPlayerAliasesCommand}" />
+              <Button Content="{x:Static resources:Strings.Clear_All_Objects}"
+                      Command="{Binding ClearAllPlayerAliasesCommand}" />
+            </StackPanel>
+          </Grid>
+        </TabItem>
+      </TabControl>
+    </TabItem>
+
+    <TabItem Header="{x:Static resources:Strings.Lists}">
+      <Grid RowDefinitions="*,Auto" Margin="5">
+        <DataGrid Grid.Row="0" ItemsSource="{Binding Lists}" SelectedItem="{Binding SelectedList}"
+                  AutoGenerateColumns="False" GridLinesVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="Auto" />
+            <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Display}" Width="*" />
+            <DataGridTemplateColumn Header="" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="viewModels:ActiveObjectsViewModel+ListEntry">
+                  <Button Content="{x:Static resources:Strings.Remove}" Padding="8,2" Margin="4,0"
+                          Command="{Binding $parent[DataGrid].DataContext.RemoveListCommand}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+          <Button Content="{x:Static resources:Strings.Refresh}" Command="{Binding RefreshListsCommand}" />
+          <Button Content="{x:Static resources:Strings.Clear_All_Objects}" Command="{Binding ClearAllListsCommand}" />
+        </StackPanel>
+      </Grid>
+    </TabItem>
+
+    <TabItem Header="{x:Static resources:Strings.Timers}">
+      <Grid RowDefinitions="*,Auto" Margin="5">
+        <DataGrid Grid.Row="0" ItemsSource="{Binding Timers}" SelectedItem="{Binding SelectedTimer}"
+                  AutoGenerateColumns="False" GridLinesVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="*" />
+            <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Value.Elapsed}"
+                                Width="*" />
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+          <Button Content="{x:Static resources:Strings.Refresh}" Command="{Binding RefreshTimersCommand}" />
+        </StackPanel>
+      </Grid>
+    </TabItem>
+
+    <TabItem Header="{x:Static resources:Strings.Ignore_List}">
+      <Grid RowDefinitions="*,Auto" Margin="5">
+        <DataGrid Grid.Row="0" ItemsSource="{Binding IgnoreEntries}" AutoGenerateColumns="False"
+                  GridLinesVisibility="All">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="{x:Static resources:Strings.Serial}" Binding="{Binding}" Width="*" />
+            <DataGridTemplateColumn Header="" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate>
+                  <Button Content="{x:Static resources:Strings.Remove}" Padding="8,2" Margin="4,0"
+                          Command="{Binding $parent[DataGrid].DataContext.RemoveIgnoreEntryCommand}"
+                          CommandParameter="{Binding}" />
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
+          </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+          <Button Content="{x:Static resources:Strings.Refresh}" Command="{Binding RefreshIgnoreListCommand}" />
+          <Button Content="{x:Static resources:Strings.Clear_All}" Command="{Binding ClearIgnoreListCommand}" />
+        </StackPanel>
+      </Grid>
+    </TabItem>
+
+  </TabControl>
+</Window>

@@ -44,6 +44,7 @@ namespace ClassicAssist.UI.ViewModels
         private RelayCommand _newMacroCommand;
         private ICommand _openExternalCommand;
         private ICommand _openMacrosFolderCommand;
+        private ICommand _openModulesFolderCommand;
         private ICommand _recordCommand;
         private RelayCommand _removeMacroCommand;
         private ICommand _removeMacroConfirmCommand;
@@ -145,11 +146,15 @@ namespace ClassicAssist.UI.ViewModels
 
         public ICommand OpenExternalCommand =>
             _openExternalCommand ?? ( _openExternalCommand =
-                new RelayCommand( OpenExternal,
+                new RelayCommandAsync( OpenExternal,
                     o => o != null && ( !( o is MacroEntry macroEntry ) || !macroEntry.IsRunning ) ) );
 
         public ICommand OpenMacrosFolderCommand =>
             _openMacrosFolderCommand ?? ( _openMacrosFolderCommand = new RelayCommand( OpenMacrosFolder, o => true ) );
+
+        public ICommand OpenModulesFolderCommand =>
+            _openModulesFolderCommand ??
+            ( _openModulesFolderCommand = new RelayCommand( OpenModulesFolder, o => true ) );
 
         public ICommand RecordCommand =>
             _recordCommand ?? ( _recordCommand = new RelayCommand( Record, o => SelectedItem != null ) );
@@ -486,7 +491,7 @@ namespace ClassicAssist.UI.ViewModels
 
         private static void ShowMacrosWiki( object obj )
         {
-            Process.Start( Strings.MACRO_WIKI_URL );
+            ShellLauncher.OpenUrl( Strings.MACRO_WIKI_URL );
         }
 
         private void CheckOverwriteHotkey( HotkeyEntry selectedItem, ShortcutKeys hotkey )
@@ -552,9 +557,8 @@ namespace ClassicAssist.UI.ViewModels
 
         private static void ShowActiveObjectsWindow( object obj )
         {
-            //TODO UI
-            //ActiveObjectsWindow window = new ActiveObjectsWindow();
-            //window.Show();
+            // Non-modal: it's a live inspector meant to sit beside the editor while macros run.
+            Engine.UIInvoker.Invoke( "ActiveObjectsWindow" );
         }
 
         private void OnDisconnectedEvent()
@@ -706,7 +710,12 @@ namespace ClassicAssist.UI.ViewModels
             MacroInvoker.ResetImportCache();
         }
 
-        private static void OpenExternal( object obj )
+        /// <summary>
+        ///     Opens the macro in VS Code. A file-backed macro opens its real .py directly - the folder
+        ///     scan picks up external edits, so no wait is needed. An in-memory macro is written to a temp
+        ///     file opened with <c>--wait</c>, and the edited content is read back when the tab is closed.
+        /// </summary>
+        private static async Task OpenExternal( object obj )
         {
             if ( !( obj is MacroEntry macroEntry ) )
             {
@@ -715,34 +724,68 @@ namespace ClassicAssist.UI.ViewModels
 
             if ( macroEntry.IsFileBacked )
             {
-                // Open the real file - the folder scan picks up external edits, no --wait needed.
-                Process.Start( new ProcessStartInfo { FileName = macroEntry.FilePath, UseShellExecute = true } );
+                ShellLauncher.OpenInVSCode( macroEntry.FilePath );
 
                 return;
             }
 
-            // In-memory macro - write a temp file so it can be opened in an external editor. The
-            // temp file is left in place (rather than deleted on exit) because on Linux there is no
-            // reliable way to wait for the editor to finish reading it.
-            string tempPath = Path.Combine( Path.GetTempPath(), $"{macroEntry.Name}_{Guid.NewGuid()}.py" );
+            string tempPath = Path.Combine( Path.GetTempPath(),
+                $"{SanitizeFileName( macroEntry.Name )}_{Guid.NewGuid():N}.py" );
 
             try
             {
                 File.WriteAllText( tempPath, macroEntry.Macro );
 
-                Process.Start( new ProcessStartInfo { FileName = tempPath, UseShellExecute = true } );
+                Process process = ShellLauncher.OpenInVSCode( tempPath, true );
+
+                if ( process == null )
+                {
+                    // Opened with the desktop's default handler instead, which we can't wait on - leave
+                    // the temp file in place rather than deleting it out from under the editor.
+                    return;
+                }
+
+                await ShellLauncher.WaitForExitAsync( process );
+
+                if ( File.Exists( tempPath ) )
+                {
+                    macroEntry.Macro = File.ReadAllText( tempPath );
+                }
             }
-            catch
+            catch ( Exception )
             {
                 // ignored - opening the editor failed
             }
+            finally
+            {
+                try
+                {
+                    File.Delete( tempPath );
+                }
+                catch ( Exception )
+                {
+                    // we tried
+                }
+            }
+        }
+
+        /// <summary>Macro names are free text and end up in a temp filename.</summary>
+        private static string SanitizeFileName( string name )
+        {
+            return string.IsNullOrWhiteSpace( name )
+                ? "macro"
+                : string.Join( "_", name.Split( Path.GetInvalidFileNameChars() ) );
         }
 
         private void OpenMacrosFolder( object obj )
         {
-            string macrosFolder = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" );
-            Directory.CreateDirectory( macrosFolder );
-            Process.Start( new ProcessStartInfo { FileName = macrosFolder, UseShellExecute = true } );
+            ShellLauncher.OpenFolder( Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" ) );
+        }
+
+        private static void OpenModulesFolder( object obj )
+        {
+            ShellLauncher.OpenFolder( Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory,
+                "Modules" ) );
         }
 
         private void ScanMacrosFolder()
