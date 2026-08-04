@@ -41,6 +41,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
         private readonly string _propertiesFileCustom =
             Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
 
+        private ICommand _chooseFromClilocCommand;
         private ICommand _chooseFromItemCommand;
         private ObservableCollection<CustomProperty> _properties = new ObservableCollection<CustomProperty>();
         private ICommand _removeCommand;
@@ -59,7 +60,9 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
             LoadCustomProperties();
         }
 
-        public ICommand ChooseFromClilocCommand => new RelayCommand( ChooseFromCliloc, o => true );
+        public ICommand ChooseFromClilocCommand =>
+            _chooseFromClilocCommand ??
+            ( _chooseFromClilocCommand = new RelayCommandAsync( ChooseFromCliloc, o => true ) );
 
         public ICommand ChooseFromItemCommand =>
             _chooseFromItemCommand ?? ( _chooseFromItemCommand = new RelayCommandAsync( ChooseFromItem, o => true ) );
@@ -81,10 +84,14 @@ namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
             set => SetProperty( ref _selectedProperty, value );
         }
 
-        private void ChooseFromCliloc( object obj )
+        private async Task ChooseFromCliloc( object obj )
         {
             ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
-            Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+            // DialogResult check below runs before the user has even seen the window and always
+            // takes the early return.
+            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
 
             if ( vm.DialogResult != MessageBoxResult.OK )
             {

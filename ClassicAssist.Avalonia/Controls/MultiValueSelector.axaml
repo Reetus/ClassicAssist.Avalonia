@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="40"
+             x:Name="root"
              x:Class="ClassicAssist.Avalonia.Controls.MultiValueSelector">
   <Grid>
     <Grid ColumnDefinitions="*,Auto">
@@ -14,21 +15,27 @@
     <Popup x:Name="popup" IsLightDismissEnabled="True" Placement="Bottom"
            PlacementTarget="{Binding #ellipsisButton}">
       <Border Padding="6" Background="{DynamicResource ThemeBackgroundBrush}">
-        <StackPanel Width="260">
+        <StackPanel Width="{Binding #root.PopupWidth}">
           <Grid ColumnDefinitions="*,Auto">
             <TextBox x:Name="textBox" Grid.Column="0" Watermark="0x... or value" KeyDown="OnTextBoxKeyDown"/>
-            <ContentPresenter Grid.Column="1" Margin="6,0,0,0" Content="{Binding Buttons, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+            <!-- Everything below reaches the control by element name rather than by ancestor type.
+                 An ancestor-typed binding finds nothing from inside a Popup, whose child is hosted
+                 in its own PopupRoot, so the injected buttons and the item list came up silently
+                 empty; the XAML namescope does span the popup, so #root resolves. It is also
+                 unambiguous - this control is itself nested inside another UserControl
+                 (MultiClilocSelector / MultiItemIDSelector), which has none of these properties. -->
+            <ContentPresenter Grid.Column="1" Margin="6,0,0,0" Content="{Binding #root.Buttons}"/>
           </Grid>
           <Border MinHeight="60" MaxHeight="180" BorderThickness="1" BorderBrush="{DynamicResource ThemeBorderBrush}"
                   Margin="0,6,0,0">
             <ScrollViewer>
-              <ItemsControl ItemsSource="{Binding DisplayItems, RelativeSource={RelativeSource AncestorType=UserControl}}">
+              <ItemsControl ItemsSource="{Binding #root.DisplayItems}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="*,Auto" Margin="2">
                       <TextBlock Grid.Column="0" Text="{Binding Display}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                       <Button Grid.Column="1" Padding="4,0" Background="Transparent"
-                              Command="{Binding $parent[UserControl].RemoveItemCommand}" CommandParameter="{Binding}">
+                              Command="{Binding #root.RemoveItemCommand}" CommandParameter="{Binding}">
                         <Image Source="{StaticResource RemoveIcon}" Width="12" Height="12"/>
                       </Button>
                     </Grid>

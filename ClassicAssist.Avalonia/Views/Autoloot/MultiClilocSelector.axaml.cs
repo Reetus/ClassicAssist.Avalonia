@@ -97,10 +97,14 @@ namespace ClassicAssist.Avalonia.Views.Autoloot
             }
         }
 
-        private void OnChooseClilocClick( object sender, RoutedEventArgs e )
+        private async void OnChooseClilocClick( object sender, RoutedEventArgs e )
         {
             ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
-            Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+            // DialogResult check below runs before the user has even seen the window and always
+            // takes the early return.
+            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
 
             if ( vm.DialogResult != MessageBoxResult.OK )
             {

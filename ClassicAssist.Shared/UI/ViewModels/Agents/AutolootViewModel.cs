@@ -118,7 +118,8 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     public ICommand CSVImportCommand => field ??= new RelayCommandAsync( CSVImport, o => true );
 
-    public ICommand DefineCustomPropertiesCommand => field ??= new RelayCommand( DefineCustomProperties, o => true );
+    public ICommand DefineCustomPropertiesCommand =>
+        field ??= new RelayCommandAsync( DefineCustomProperties, o => true );
 
     public bool DisableInGuardzone
     {
@@ -627,9 +628,12 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         SelectedItem.Constraints = new ObservableCollection<AutolootConstraintEntry>( constraints );
     }
 
-    private void DefineCustomProperties( object obj )
+    private async Task DefineCustomProperties( object obj )
     {
-        Engine.UIInvoker.InvokeDialog<CustomPropertiesViewModel>( "CustomPropertiesWindow" );
+        // Awaited so the reload below sees the properties the user just defined - unawaited it ran
+        // against the list as it was before the window opened.
+        await Engine.UIInvoker.InvokeDialog<CustomPropertiesViewModel>( "CustomPropertiesWindow" );
+
         Constraints.Clear();
         LoadProperties();
         LoadCustomProperties();
