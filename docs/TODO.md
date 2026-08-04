@@ -107,14 +107,19 @@ Signature gaps still open:
 - [ ] `UseType` lacks `skipQueue`
 - [ ] `MessageBox` is commented out in `MainCommands.cs`
 
-## Missing hotkeys (8)
+## Missing hotkeys (5)
 
 From `HOTKEYS_TODO.md`:
 
 - [ ] `Take Snapshot` (`SnapshotCommand`)
-- [ ] `Greater Heal / Cure Self`, `Mini Heal / Cure Self` (need configurable-hotkey
-      infrastructure: `HotkeyConfigurationAttribute`, `HotkeyEntry.Configurable`, configure
-      command in `HotkeysTabViewModel`, `CureType` enum)
+- [x] ~~`Greater Heal / Cure Self`, `Mini Heal / Cure Self`~~ - with the configurable-hotkey
+      infrastructure behind them: `HotkeyConfigurationAttribute`, `HotkeyEntry.Configurable`,
+      `CureType`, `ConfigureHotkeyCommand` + the Options button on the Hotkeys tab, and the
+      `Hotkeys/Options` profile array (serialized/deserialized in `HotkeysTabViewModel`, so a
+      profile shared with WPF round-trips - covered by `ProfileRoundTripTests`, which no longer
+      defers that path). The Options dialog is `HotkeyOptionsWindow` bound to
+      `HotkeyOptionsViewModel`; WPF builds its equivalent Grid imperatively in code-behind,
+      whereas this binds an `ItemsControl` so the reflection stays in the view model.
 - [ ] `Use Trap Pouch`, `Clear Trap Pouches` (needs `TrapPouchManager`)
 - [ ] `Show Chat Window`, `Show GIF Capture` (need the windows above)
 

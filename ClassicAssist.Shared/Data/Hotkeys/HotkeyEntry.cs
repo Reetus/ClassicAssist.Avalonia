@@ -52,6 +52,12 @@ namespace ClassicAssist.Data.Hotkeys
             }
         }
 
+        /// <summary>
+        ///     Whether this entry has [HotkeyConfiguration] properties worth showing an Options dialog for.
+        ///     Overridden to true by the commands that have them; gates the Options button on the tab.
+        /// </summary>
+        public virtual bool Configurable { get; set; } = false;
+
         public virtual bool Disableable { get; set; } = true;
 
         public ShortcutKeys Hotkey

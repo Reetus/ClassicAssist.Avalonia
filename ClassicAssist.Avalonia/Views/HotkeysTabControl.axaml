@@ -48,6 +48,12 @@
 					<Button Content="{x:Static resources:Strings.Execute}" Margin="0,5,0,0"
 									  Command="{Binding ExecuteCommand, Mode=OneWay}"
 									CommandParameter="{Binding SelectedItem, ElementName=TreeView}" />
+					<!-- Only enabled for entries carrying [HotkeyConfiguration] properties; the command's
+					     CanExecute gates on the same flag. -->
+					<Button Content="{x:Static resources:Strings.Options}" Margin="0,5,0,0"
+									Command="{Binding ConfigureHotkeyCommand, Mode=OneWay}"
+									CommandParameter="{Binding SelectedItem}"
+									IsEnabled="{Binding SelectedItem.Configurable, FallbackValue=False}" />
 				</StackPanel>
 			</controls:GroupBox>
 		</Grid>

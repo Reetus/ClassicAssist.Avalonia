@@ -52,7 +52,6 @@ namespace ClassicAssist.Tests
             "NameOverride",
             "Screenshot",
             "UseOnceAgent",
-            "Hotkeys.Options",
 
             // General: WPF-only settings.
             "General.SysTray",

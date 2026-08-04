@@ -6,6 +6,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.UI.Misc;
+using ClassicAssist.UI.ViewModels.Hotkeys;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 using Key = ClassicAssist.Misc.Key;
@@ -29,6 +30,47 @@ namespace ClassicAssist.Tests
 
                 hotkeys.Add( hkc );
             }
+        }
+
+        [TestMethod]
+        public void WillBuildConfigurationEntryFromHotkeyConfigurationAttribute()
+        {
+            GreaterHealCureSelf command = new GreaterHealCureSelf { CureType = CureType.ArchCure };
+
+            HotkeyOptionsViewModel vm = new HotkeyOptionsViewModel( command );
+
+            Assert.IsTrue( command.Configurable );
+            Assert.AreEqual( 1, vm.Entries.Count );
+
+            HotkeyOptionEntry entry = vm.Entries[0];
+
+            Assert.AreEqual( "Cure Type", entry.Name );
+
+            // Both members of CureType, labelled from their [Description] via the resource manager.
+            CollectionAssert.AreEquivalent( new[] { "Cure", "Arch Cure" },
+                entry.Values.Select( v => v.DisplayName ).ToArray() );
+
+            // The dialog opens on whatever the command currently holds.
+            Assert.AreEqual( CureType.ArchCure, entry.SelectedValue.Value );
+        }
+
+        [TestMethod]
+        public void WillWriteConfigurationValueBackOnOk()
+        {
+            MiniHealCureSelf command = new MiniHealCureSelf { CureType = CureType.Cure };
+
+            HotkeyOptionsViewModel vm = new HotkeyOptionsViewModel( command );
+
+            HotkeyOptionEntry entry = vm.Entries[0];
+
+            entry.SelectedValue = entry.Values.First( v => Equals( v.Value, CureType.ArchCure ) );
+
+            // Nothing is written until OK - closing the dialog any other way leaves the command alone.
+            Assert.AreEqual( CureType.Cure, command.CureType );
+
+            vm.OkCommand.Execute( null );
+
+            Assert.AreEqual( CureType.ArchCure, command.CureType );
         }
     }
 }

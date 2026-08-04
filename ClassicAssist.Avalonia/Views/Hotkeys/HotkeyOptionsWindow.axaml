@@ -1,0 +1,50 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:hotkeys="clr-namespace:ClassicAssist.UI.ViewModels.Hotkeys;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="120"
+        x:Class="ClassicAssist.Avalonia.Views.Hotkeys.HotkeyOptionsWindow"
+        x:DataType="hotkeys:HotkeyOptionsViewModel"
+        Title="{x:Static resources:Strings.Options}" Width="300" SizeToContent="Height"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (HotkeyOptionsViewModel). -->
+  <Grid Margin="10" RowDefinitions="*,Auto">
+    <!-- One row per [HotkeyConfiguration] property. WPF assembles the equivalent Grid in code-behind;
+         binding an ItemsControl keeps the layout declarative and the reflection in the view model. -->
+    <ItemsControl Grid.Row="0" ItemsSource="{Binding Entries}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="hotkeys:HotkeyOptionEntry">
+          <Grid ColumnDefinitions="Auto,*" Margin="0,0,0,5">
+            <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
+            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                      ItemsSource="{Binding Values}" SelectedItem="{Binding SelectedValue}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate DataType="hotkeys:HotkeyOptionValue">
+                  <TextBlock Text="{Binding DisplayName}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5"
+                Margin="0,10,0,0">
+      <Button Content="{x:Static resources:Strings.OK}" IsDefault="True" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour Command="{Binding OkCommand}"/>
+        </Interaction.Behaviors>
+      </Button>
+      <Button Content="{x:Static resources:Strings.Cancel}" IsCancel="True" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

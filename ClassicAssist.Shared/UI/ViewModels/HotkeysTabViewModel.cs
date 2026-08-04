@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Reflection;
 using ClassicAssist.Data;
@@ -11,7 +12,9 @@ using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.Misc;
+using ClassicAssist.UI.ViewModels.Hotkeys;
 using Newtonsoft.Json.Linq;
+using Sentry;
 
 namespace ClassicAssist.UI.ViewModels
 {
@@ -21,6 +24,7 @@ namespace ClassicAssist.UI.ViewModels
         private readonly HotkeyManager _hotkeyManager;
         private readonly List<HotkeyCommand> _serializeCategories = new List<HotkeyCommand>();
         private ICommand _clearHotkeyCommand;
+        private ICommand _configureHotkeyCommand;
         private ICommand _executeCommand;
         private ObservableCollectionEx<HotkeyCommand> _filterItems;
         private string _filterText;
@@ -41,6 +45,10 @@ namespace ClassicAssist.UI.ViewModels
 
         public ICommand ClearHotkeyCommand =>
             _clearHotkeyCommand ?? ( _clearHotkeyCommand = new RelayCommand( ClearHotkey, o => SelectedItem != null ) );
+
+        public ICommand ConfigureHotkeyCommand =>
+            _configureHotkeyCommand ?? ( _configureHotkeyCommand = new RelayCommandAsync( ConfigureHotkey,
+                o => SelectedItem != null && SelectedItem.Configurable ) );
 
         public ICommand ExecuteCommand =>
             _executeCommand ?? ( _executeCommand =
@@ -127,6 +135,8 @@ namespace ClassicAssist.UI.ViewModels
             }
 
             hotkeys.Add( "Commands", commandsArray );
+
+            hotkeys.Add( "Options", SerializeOptions( e => e.IsGlobal == global ) );
 
             JArray spellsArray = new JArray();
 
@@ -265,6 +275,60 @@ namespace ClassicAssist.UI.ViewModels
                 }
             }
 
+            if ( hotkeys?["Options"] != null )
+            {
+                foreach ( JToken token in hotkeys["Options"] )
+                {
+                    string typeName = token["Type"]?.ToObject<string>();
+                    string propertyName = token["Property"]?.ToObject<string>();
+                    JToken value = token["Value"];
+
+                    if ( string.IsNullOrEmpty( typeName ) || string.IsNullOrEmpty( propertyName ) )
+                    {
+                        continue;
+                    }
+
+                    foreach ( HotkeyCommand category in _serializeCategories )
+                    {
+                        HotkeyEntry entry = category.Children.FirstOrDefault( o => o.GetType().FullName == typeName );
+
+                        if ( entry == null )
+                        {
+                            continue;
+                        }
+
+                        // Unlike upstream, the property lookup and its attribute are checked before the
+                        // try block rather than inside it: upstream dereferences a null PropertyInfo
+                        // outside its own catch, so a profile naming a property that has since been
+                        // renamed or removed takes the whole hotkey load down with it.
+                        PropertyInfo property = entry.GetType()
+                            .GetProperty( propertyName, BindingFlags.Instance | BindingFlags.Public );
+
+                        HotkeyConfigurationAttribute attribute =
+                            property?.GetCustomAttribute<HotkeyConfigurationAttribute>();
+
+                        if ( attribute == null )
+                        {
+                            continue;
+                        }
+
+                        try
+                        {
+                            property.SetValue( entry, value?.ToObject( attribute.Type ) );
+
+                            if ( global )
+                            {
+                                entry.IsGlobal = true;
+                            }
+                        }
+                        catch ( Exception ex )
+                        {
+                            SentrySdk.CaptureException( ex );
+                        }
+                    }
+                }
+            }
+
             if ( _spellsCategory != null && !global )
             {
                 _hotkeyManager.Items.Remove( _spellsCategory );
@@ -376,6 +440,34 @@ namespace ClassicAssist.UI.ViewModels
             }
         }
 
+        /// <summary>
+        ///     Writes every [HotkeyConfiguration] property of every configurable entry as a flat
+        ///     Type/Property/Value triple, matching the shape WPF writes so a shared profile round-trips
+        ///     either way. Values go out as ToString() - Deserialize reads them back through the
+        ///     attribute's Type.
+        /// </summary>
+        private JArray SerializeOptions( Func<HotkeyEntry, bool> predicate )
+        {
+            JArray optionsArray = new JArray();
+
+            foreach ( JObject jObject in from serializeCategory in _serializeCategories
+                     from hotkeyEntry in serializeCategory.Children.Where( e => e.Configurable && predicate( e ) )
+                     let properties = hotkeyEntry.GetType().GetProperties()
+                         .Where( prop => prop.IsDefined( typeof( HotkeyConfigurationAttribute ), false ) )
+                     from propertyInfo in properties
+                     select new JObject
+                     {
+                         { "Type", hotkeyEntry.GetType().FullName },
+                         { "Property", propertyInfo.Name },
+                         { "Value", propertyInfo.GetValue( hotkeyEntry ).ToString() }
+                     } )
+            {
+                optionsArray.Add( jObject );
+            }
+
+            return optionsArray;
+        }
+
         private void UpdateFilteredItems()
         {
             if ( _searching )
@@ -476,6 +568,23 @@ namespace ClassicAssist.UI.ViewModels
             {
                 cmd.Action( cmd, null );
             }
+        }
+
+        private static async Task ConfigureHotkey( object obj )
+        {
+            if ( !( obj is HotkeyEntry hotkeyEntry ) || !hotkeyEntry.Configurable )
+            {
+                return;
+            }
+
+            HotkeyOptionsViewModel vm = new HotkeyOptionsViewModel( hotkeyEntry );
+
+            if ( vm.Entries.Count == 0 )
+            {
+                return;
+            }
+
+            await Engine.UIInvoker.InvokeDialog( "HotkeyOptionsWindow", dataContext: vm );
         }
     }
 }
