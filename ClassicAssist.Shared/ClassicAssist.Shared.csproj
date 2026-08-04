@@ -115,6 +115,10 @@
         <None Update="Data\ContainerGumpIDs.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <!-- SoundFilter enumerates this directory at runtime, so every file has to reach the output. -->
+        <None Update="Data\Filters\Audio\*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
 
     <ItemGroup>

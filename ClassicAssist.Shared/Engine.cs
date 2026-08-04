@@ -56,6 +56,9 @@ public static partial class Engine
     private static readonly PacketFilter _incomingPacketFilter = new();
     private static readonly PacketFilter _outgoingPacketPreFilter = new();
     private static readonly PacketFilter _outgoingPacketPostFilter = new();
+
+    /// <summary>Last time each key actually ran its hotkey, for <see cref="Options.LimitHotkeyTrigger" />.</summary>
+    private static readonly Dictionary<Key, DateTime> _lastKeyAction = new();
     private static Move _requestMove;
 
     private static readonly int[] _sequenceList = new int[256];
@@ -267,7 +270,25 @@ public static partial class Engine
         Key keys = SDLKeys.SDLKeyToKeys( key );
         Key modifier = SDLKeys.SDLKeymodToKey( mod );
 
-        bool pass = HotkeyManager.GetInstance().OnHotkeyPressed( keys, modifier );
+        // Retrigger limit: a key held down (or mashed) repeats at the OS repeat rate, which fires the
+        // bound macro over and over. When throttled the action is skipped but the lookup still runs, so
+        // the key is still withheld from the client - otherwise a bound key would leak through to UO
+        // exactly while the user is leaning on it.
+        bool noexecute = false;
+
+        if ( Options.CurrentOptions.LimitHotkeyTrigger &&
+             _lastKeyAction.TryGetValue( keys, out DateTime lastAction ) )
+        {
+            noexecute = DateTime.Now - lastAction <
+                        TimeSpan.FromMilliseconds( Options.CurrentOptions.LimitHotkeyTriggerMS );
+        }
+
+        ( bool found, bool pass ) = HotkeyManager.GetInstance().OnHotkeyPressed( keys, modifier, noexecute );
+
+        if ( found && !noexecute )
+        {
+            _lastKeyAction[keys] = DateTime.Now;
+        }
 
         return !pass;
     }
@@ -636,6 +657,8 @@ public static partial class Engine
         {
             return;
         }
+
+        basePacket.ThrottleBeforeSend();
 
         SendPacketToServer( data, data.Length );
     }

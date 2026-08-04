@@ -21,6 +21,7 @@ namespace ClassicAssist.Data.Macros
     {
         //private readonly Dispatcher _dispatcher;
         private Dictionary<string, int> _aliases = new Dictionary<string, int>();
+        private Dictionary<string, string> _metadata = new Dictionary<string, string>();
         private AutoResetEvent _autoResetEvent;
         private ObservableCollection<int> _breakpoints = new ObservableCollection<int>();
         private bool _doNotAutoInterrupt;
@@ -94,6 +95,20 @@ namespace ClassicAssist.Data.Macros
 
             /* Keys aren't done here, because of logic global vs normal */
 
+            if ( token["Metadata"] != null )
+            {
+                foreach ( JToken metadataToken in token["Metadata"] )
+                {
+                    string metadataKey = metadataToken["Key"]?.ToObject<string>() ?? string.Empty;
+                    string metadataValue = metadataToken["Value"]?.ToObject<string>() ?? string.Empty;
+
+                    if ( !string.IsNullOrEmpty( metadataKey ) )
+                    {
+                        Metadata[metadataKey] = metadataValue;
+                    }
+                }
+            }
+
             if ( token["Aliases"] == null )
             {
                 return;
@@ -149,6 +164,18 @@ namespace ClassicAssist.Data.Macros
         {
             get => _doNotAutoInterrupt;
             set => SetProperty( ref _doNotAutoInterrupt, value );
+        }
+
+        /// <summary>
+        ///     Free-form key/value data carried with the macro. Upstream's Public Macros browser stamps
+        ///     <c>PublicId</c>/<c>PublicSHA1</c> here to track which published macro an entry came from and
+        ///     whether it has been edited since. That browser isn't ported, so nothing writes this yet -
+        ///     it round-trips so a profile shared with the WPF build doesn't lose the link.
+        /// </summary>
+        public Dictionary<string, string> Metadata
+        {
+            get => _metadata;
+            set => SetProperty( ref _metadata, value );
         }
 
         public string FilePath
@@ -399,6 +426,19 @@ namespace ClassicAssist.Data.Macros
             if ( IsFileBacked )
             {
                 entry.Add( "FilePath", FilePath );
+            }
+
+            if ( Metadata?.Count > 0 )
+            {
+                JArray metadataArray = new JArray();
+
+                foreach ( JObject metadataObj in Metadata.Select( kvp =>
+                    new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } ) )
+                {
+                    metadataArray.Add( metadataObj );
+                }
+
+                entry.Add( "Metadata", metadataArray );
             }
 
             if ( !Global )

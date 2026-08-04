@@ -21,12 +21,14 @@ nothing.
 - [x] ~~**PropertySelectionWindow**~~ - "Choose from Item" from the Custom Properties window
       (`CustomPropertiesViewModel.ChooseFromItem`). Added as
       `Views/Autoloot/PropertySelectionWindow.axaml`.
-- [ ] **Filter Configure windows** - `ClilocFilter.Configure()` and
-      `RepeatedMessagesFilter.Configure()` are commented out in
-      `ClassicAssist.Shared/Data/Filters/`; the General tab's filter rows therefore have no
-      configure button. WPF has `ClilocFilterConfigureWindow`,
-      `RepeatedMessagesFilterConfigureWindow`, `SeasonFilterConfigureWindow`,
-      `SoundFilterConfigureWindow`, `ItemIDFilterConfigureWindow` under `UI/Views/Filters/`.
+- [x] ~~**Filter Configure windows**~~ - all five added under `Views/Filters/`
+      (`ClilocFilterConfigureWindow`, `RepeatedMessagesFilterConfigureWindow`,
+      `SeasonFilterConfigureWindow`, `SoundFilterConfigureWindow`, `ItemIDFilterConfigureWindow`)
+      with view models in `ClassicAssist.Shared/UI/ViewModels/Filters/`. The General tab's filter
+      rows show a configure button whenever `FilterEntry.IsConfigurable` is set.
+      `IConfigurableFilter.Configure()` returns `Task` here rather than `void`: Avalonia has no
+      blocking `ShowDialog()`, so the dialogs go through `Engine.UIInvoker.InvokeDialog` and are
+      awaited.
 - [ ] **Autologin configure / status** - the General tab has no Autologin section at all
       (`AutologinConfigureCommand`, `AutologinStatusWindow` absent).
 - [ ] **Backup settings** - General tab "Backup Settings" button absent
@@ -61,6 +63,8 @@ nothing.
 
 - [ ] **Organizer** - per-entry Source/Destination container display and Set/Clear Source &
       Destination commands (only a combined target-based "Set Containers" exists); `Return_Excess`.
+      (~~"Stop Organizer" category hotkey~~ done - a `_staticOptions` entry persisted under the
+      top-level `OrganizerOptions` block, the same shape Dress already used.)
 - [ ] **Dress** - no "Stop" button (stop exists only via `DressManager.Stop()` macro/hotkey).
 - [ ] **Scavenger** - `CheckWeight`/`MinWeightAvailable`, per-entry `Priority`
       (no `ScavengerPriority` enum), Cliloc filter (`ScavengerClilocFilterEntry` +
@@ -74,12 +78,10 @@ nothing.
       `ActionPacketQueue`), CSV import (`CSVImportWindow` + `CSVImportViewModel` + minimal
       `CsvReader`; `PropertyEntry.ShortName` and WPF `Properties.json` synced for column matching).
 
-## Missing macro commands (15)
+## Missing macro commands (10)
 
 From `MACRO_COMMANDS_TODO.md` - everything not yet checked:
 
-- [ ] `GetPlayerAlias`, `PromptMacroAlias`, `PromptPlayerAlias`, `SetPlayerAlias`,
-      `UnsetPlayerAlias` (no player-alias store)
 - [ ] `BringClientWindowToFront` (needs a Linux X11/Wayland implementation - not a
       `ReflectionCommands` wrapper upstream)
 - [ ] `DisplayQuestPointer`
@@ -110,21 +112,44 @@ From `HOTKEYS_TODO.md`:
       `Engine.SetTitle()` (RPC `IHostMethods.SetTitle` -> plugin native `SetTitle` hook, set to
       `"PlayerName (ShardName)"` when enabled, cleared otherwise), wired into the player-incoming
       packet handler and the Options tab checkbox; serialized in `OptionsTabViewModel`.
-- [ ] `Options` class: `Autologin*`, `ChatWindow*`, `DisableHotkeysLoad`, `DragDelay/MS`,
-      `HotkeysStatusGump*`, `LimitHotkeyTrigger/MS`, `LogoutDisconnectedPrompt`, `MacrosGump*`
-      (text color/height/width/transparent), `SelectedTabIndex*`,
-      `SlowHandlerThreshold`, `SysTray` (~~`DebugAdapterEnabled/Port`~~ done - session-only, not
-      persisted, with the toggle in the Options tab)
-- [ ] Options tab UI: "Disable hotkeys on profile load", "Hotkeys Status Gump", "Limit Hotkey
-      retrigger", "Use Cliloc language from ClassicUO" (~~Debug Adapter toggle~~ done)
-- [ ] General tab UI: filter Configure buttons, Minimize to tray, Drag delay, Saved Passwords,
-      Autologin section, Backup Settings button
+- [ ] `Options` class: `Autologin*`, `ChatWindow*`, `LogoutDisconnectedPrompt`,
+      `SelectedTabIndex*`, `SlowHandlerThreshold`, `SysTray`
+      (~~`DebugAdapterEnabled/Port`~~ done - session-only, not persisted;
+      ~~`DisableHotkeysLoad`, `HotkeysStatusGump*`, `MacrosGump*`~~ done)
+- [x] ~~`DragDelay`/`DragDelayMS`~~ - `DragItem.ThrottleBeforeSend()` spaces 0x07 packets for
+      Sphere-X style shards, called from `Engine.SendPacketToServer(BasePacket)` via a new
+      `BasePacket.ThrottleBeforeSend` hook. Unlike WPF the delay is read from the options inside the
+      packet rather than passed to the constructor, so the eight call sites keep their shape.
+      Checkbox on the General tab.
+- [x] ~~`LimitHotkeyTrigger`/`LimitHotkeyTriggerMS`~~ - per-key throttle in
+      `Engine.OnHotkeyPressed`. `HotkeyManager.OnHotkeyPressed` now takes `noexecute` and returns
+      `(found, filter)`: a throttled press still matches so the key stays withheld from the client,
+      it just doesn't run the action.
+- [x] ~~`ExpireTargetsMS`~~ - `TargetQueue<T>` already honoured it; it was never serialized or
+      exposed. Now persisted and editable under Queue Last Target on the Options tab.
+- [x] ~~Options tab layout~~ - `ResponsiveGrid` ported to `Controls/ResponsiveGrid.cs`, along with
+      `OptionedCheckBox` and `HorizontalHeaderedContentControl`/`TextBox`/`ComboBox` (from the WPF
+      `ClassicAssist.Controls` assembly; templates in `Controls/OptionsControls.Theme.xaml`). The tab
+      now uses WPF's five groups - General / Target / Macros / Gumps / Other - in WPF's order, with
+      WPF's `MacrosGumpControl` and `QueueLastTargetControl` inlined. Two deliberate differences:
+      `MinColumnWidth` is a hard floor rather than WPF's widest-item rule (Avalonia measures wrapping
+      text unconstrained as one line, which would collapse the grid to one column), and the Debug
+      Adapter row stays a plain CheckBox because its port field is editable while *un*checked.
+- [ ] Options tab UI: "Use Cliloc language from ClassicUO", "Logout on disconnected prompt" - both
+      blocked on missing `Options`/`AssistantOptions` members (~~Debug Adapter toggle, "Disable
+      hotkeys on profile load", "Hotkeys Status Gump", "Limit Hotkey retrigger", "Expire
+      Targets"~~ done)
+- [ ] General tab UI: Minimize to tray, Saved Passwords, Autologin section, Backup Settings button
+      (~~filter Configure buttons, Drag delay~~ done)
 
 ## Missing filters
 
-- [ ] `SoundFilter`, `ItemIDFilter` (and their configure windows). Note: `BardsMusicFilter`
-      (from upstream `develop`) is present here instead - not a gap, just a different set.
-- [ ] `ClilocFilter`/`RepeatedMessagesFilter` Configure dialogs (stubbed out - see Dead buttons).
+- [x] ~~`SoundFilter`, `ItemIDFilter`~~ - both ported with their configure windows.
+      `Data/Filters/Audio/*.json` now ships with `ClassicAssist.Shared`. `BardsMusicFilter` (from
+      upstream `develop`) was **removed**: `Skills.json` already has a "Bards Music" sound entry
+      covering the same IDs, so it was pure duplication. `GeneralControlViewModel.Deserialize`
+      migrates old profiles that had it enabled onto that SoundFilter entry.
+- [x] ~~`ClilocFilter`/`RepeatedMessagesFilter` Configure dialogs~~ - see Dead buttons.
 
 ## ECV still missing (details in ECV_TODO.md)
 

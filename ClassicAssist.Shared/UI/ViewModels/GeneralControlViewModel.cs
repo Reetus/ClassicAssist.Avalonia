@@ -37,7 +37,8 @@ namespace ClassicAssist.UI.ViewModels
             Type[] filterTypes =
             {
                 typeof( WeatherFilter ), typeof( SeasonFilter ), typeof( LightLevelFilter ),
-                typeof( RepeatedMessagesFilter ), typeof( ClilocFilter ), typeof( BardsMusicFilter )
+                typeof( RepeatedMessagesFilter ), typeof( ClilocFilter ), typeof( SoundFilter ),
+                typeof( ItemIDFilter )
             };
 
             foreach ( Type type in filterTypes )
@@ -58,7 +59,8 @@ namespace ClassicAssist.UI.ViewModels
             _changeProfileCommand ?? ( _changeProfileCommand = new RelayCommand( ChangeProfile, o => true ) );
 
         public ICommand ConfigureFilterCommand =>
-            _configureFilterCommand ?? ( _configureFilterCommand = new RelayCommand( ConfigureFilter ) );
+            _configureFilterCommand ?? ( _configureFilterCommand =
+                new RelayCommandAsync( ConfigureFilter, o => o is IConfigurableFilter ) );
 
         public ObservableCollectionEx<FilterEntry> Filters { get; set; } = new ObservableCollectionEx<FilterEntry>();
 
@@ -66,25 +68,6 @@ namespace ClassicAssist.UI.ViewModels
         {
             get => _isLinkedProfile;
             set => SetProperty( ref _isLinkedProfile, value );
-        }
-
-        [OptionsBinding( Property = "LightLevel" )]
-        public int LightLevelListen
-        {
-            get => throw new NotImplementedException();
-            set
-            {
-                FilterEntry filter = Filters.FirstOrDefault( f => f is LightLevelFilter );
-
-                if ( filter == null || !filter.Enabled )
-                {
-                    return;
-                }
-
-                byte[] packet = { 0x4F, (byte) value };
-
-                Engine.SendPacketToClient( packet, packet.Length );
-            }
         }
 
         public ICommand LinkUnlinkProfileCommand =>
@@ -144,6 +127,8 @@ namespace ClassicAssist.UI.ViewModels
                 ["LightLevel"] = Options.CurrentOptions.LightLevel,
                 ["ActionDelay"] = Options.CurrentOptions.ActionDelay,
                 ["ActionDelayMS"] = Options.CurrentOptions.ActionDelayMS,
+                ["DragDelay"] = Options.CurrentOptions.DragDelay,
+                ["DragDelayMS"] = Options.CurrentOptions.DragDelayMS,
                 ["Debug"] = Options.CurrentOptions.Debug
             };
 
@@ -204,6 +189,8 @@ namespace ClassicAssist.UI.ViewModels
             Options.LightLevel = general["LightLevel"]?.ToObject<int>() ?? 100;
             Options.ActionDelay = general["ActionDelay"]?.ToObject<bool>() ?? false;
             Options.ActionDelayMS = general["ActionDelayMS"]?.ToObject<int>() ?? 900;
+            Options.DragDelay = general["DragDelay"]?.ToObject<bool>() ?? false;
+            Options.DragDelayMS = general["DragDelayMS"]?.ToObject<int>() ?? 450;
             Options.AlwaysOnTop = general["AlwaysOnTop"]?.ToObject<bool>() ?? false;
             Options.Debug = general["Debug"]?.ToObject<bool>() ?? false;
 
@@ -228,7 +215,37 @@ namespace ClassicAssist.UI.ViewModels
                 {
                     configurableFilter.Deserialize( token["Options"] );
                 }
+
+                MigrateBardsMusicFilter( filterName, enabled );
             }
+        }
+
+        /// <summary>
+        ///     BardsMusicFilter was removed once SoundFilter landed - the shipped
+        ///     <c>Data/Filters/Audio/Skills.json</c> already carries a "Bards Music" entry covering the same
+        ///     sound IDs (and one more). It defaulted to enabled, so a profile written by an older build
+        ///     that still has it on gets the equivalent SoundFilter entry switched on instead; without this
+        ///     those users would silently start hearing bard music again. The key disappears from the
+        ///     profile on the next save, so this only ever runs once.
+        /// </summary>
+        private void MigrateBardsMusicFilter( string filterName, bool enabled )
+        {
+            if ( !enabled || filterName != "ClassicAssist.Data.Filters.BardsMusicFilter" )
+            {
+                return;
+            }
+
+            SoundFilter soundFilter = Filters.OfType<SoundFilter>().FirstOrDefault();
+
+            SoundFilterEntry entry = soundFilter?.Items.FirstOrDefault( i => i.Name == "Bards Music" );
+
+            if ( entry == null )
+            {
+                return;
+            }
+
+            entry.Enabled = true;
+            soundFilter.Enabled = true;
         }
 
         private void OnSavedPasswordsChangedEvent( object sender, EventArgs e )
@@ -251,14 +268,14 @@ namespace ClassicAssist.UI.ViewModels
             AssistantOptions.OnPasswordsChanged();
         }
 
-        private static void ConfigureFilter( object obj )
+        private static async Task ConfigureFilter( object obj )
         {
             if ( !( obj is IConfigurableFilter configurableFilter ) )
             {
                 return;
             }
 
-            configurableFilter.Configure();
+            await configurableFilter.Configure();
         }
 
         private void OnProfileChangedEvent( string profile )

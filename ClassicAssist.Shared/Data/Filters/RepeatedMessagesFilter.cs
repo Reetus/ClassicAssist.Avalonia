@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
+using ClassicAssist.Shared;
+using ClassicAssist.Shared.UI;
+using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using Newtonsoft.Json.Linq;
@@ -15,11 +18,11 @@ namespace ClassicAssist.Data.Filters
         public static bool IsEnabled { get; set; }
         private static List<RepeatedMessageEntry> RepeatedMessageEntries { get; } = new List<RepeatedMessageEntry>();
 
-        public void Configure()
+        public async Task Configure()
         {
-            //TODO
-            //RepeatedMessagesFilterConfigureWindow window = new RepeatedMessagesFilterConfigureWindow( FilterOptions );
-            //window.ShowDialog();
+            RepeatedMessagesFilterConfigureViewModel vm = new RepeatedMessagesFilterConfigureViewModel( FilterOptions );
+
+            await Engine.UIInvoker.InvokeDialog( "RepeatedMessagesFilterConfigureWindow", dataContext: vm );
         }
 
         public void Deserialize( JToken token )
@@ -84,39 +87,45 @@ namespace ClassicAssist.Data.Filters
                 return true;
             }
 
-            RepeatedMessageEntry entry = RepeatedMessageEntries.FirstOrDefault( e => e.Message == journalEntry.Text );
+            DateTime now = DateTime.Now;
+            string text = journalEntry.Text;
 
-            if ( entry != null && entry.Blocked && entry.Expires < DateTime.Now )
+            RepeatedMessageEntry entry = null;
+
+            for ( int i = RepeatedMessageEntries.Count - 1; i >= 0; i-- )
             {
-                RepeatedMessageEntries.Remove( entry );
+                if ( RepeatedMessageEntries[i].Message == text )
+                {
+                    entry = RepeatedMessageEntries[i];
+                    break;
+                }
             }
 
-            if ( entry != null && entry.Blocked && entry.Expires > DateTime.Now )
+            if ( entry != null && entry.Blocked && entry.Expires < now )
+            {
+                RepeatedMessageEntries.Remove( entry );
+                entry = null;
+            }
+
+            if ( entry != null && entry.Blocked && entry.Expires > now )
             {
                 return true;
             }
 
-            if ( RepeatedMessageEntries.All( e => e.Message != journalEntry.Text ) )
+            if ( entry == null )
             {
                 RepeatedMessageEntries.Add( new RepeatedMessageEntry
                 {
-                    FirstReceived = DateTime.Now,
-                    LastReceived = DateTime.Now,
+                    FirstReceived = now,
+                    LastReceived = now,
                     Count = 1,
-                    Message = journalEntry.Text
+                    Message = text
                 } );
 
                 return false;
             }
 
-            entry = RepeatedMessageEntries.FirstOrDefault( e => e.Message == journalEntry.Text );
-
-            if ( entry == null )
-            {
-                return false;
-            }
-
-            if ( entry.LastReceived < DateTime.Now - TimeSpan.FromSeconds( FilterOptions.TimeLimit ) )
+            if ( entry.LastReceived < now - TimeSpan.FromSeconds( FilterOptions.TimeLimit ) )
             {
                 RepeatedMessageEntries.Remove( entry );
                 return false;
@@ -125,18 +134,18 @@ namespace ClassicAssist.Data.Filters
             if ( entry.Count < FilterOptions.MessageLimit )
             {
                 entry.Count++;
-                entry.LastReceived = DateTime.Now;
+                entry.LastReceived = now;
 
                 return false;
             }
 
             if ( Options.CurrentOptions.Debug )
             {
-                Shared.UO.Commands.SystemMessage( $"Filtering message: {journalEntry.Text}" );
+                Shared.UO.Commands.SystemMessage( $"Filtering message: {text}" );
             }
 
             entry.Blocked = true;
-            entry.Expires = DateTime.Now + TimeSpan.FromSeconds( FilterOptions.BlockedTime );
+            entry.Expires = now + TimeSpan.FromSeconds( FilterOptions.BlockedTime );
 
             return true;
         }
@@ -151,12 +160,40 @@ namespace ClassicAssist.Data.Filters
             public string Message { get; set; }
         }
 
-        public class MessageFilterOptions
+        /// <summary>
+        ///     Notifies unlike WPF's plain POCO: the configure dialog binds these two-way, and Avalonia's
+        ///     NumericUpDown needs the change notification to show a corrected/clamped value back.
+        /// </summary>
+        public class MessageFilterOptions : SetPropertyNotifyChanged
         {
-            public int BlockedTime { get; set; } = 5;
-            public int MessageLimit { get; set; } = 5;
-            public bool SendToJournal { get; set; }
-            public int TimeLimit { get; set; } = 5;
+            private int _blockedTime = 5;
+            private int _messageLimit = 5;
+            private bool _sendToJournal;
+            private int _timeLimit = 5;
+
+            public int BlockedTime
+            {
+                get => _blockedTime;
+                set => SetProperty( ref _blockedTime, value );
+            }
+
+            public int MessageLimit
+            {
+                get => _messageLimit;
+                set => SetProperty( ref _messageLimit, value );
+            }
+
+            public bool SendToJournal
+            {
+                get => _sendToJournal;
+                set => SetProperty( ref _sendToJournal, value );
+            }
+
+            public int TimeLimit
+            {
+                get => _timeLimit;
+                set => SetProperty( ref _timeLimit, value );
+            }
         }
     }
 }

@@ -18,15 +18,42 @@ namespace ClassicAssist.Data
     {
         public delegate void dLoad( JObject json, Options options );
 
+        public delegate void dLightLevelChanged( int level );
+
+        /// <summary>
+        ///     Raised when <see cref="LightLevel" /> changes. <see cref="ClassicAssist.Data.Filters.LightLevelFilter" />
+        ///     listens and pushes the level to the client only while it is enabled - sending it from the
+        ///     setter unconditionally overrode the server's light level even with the filter switched off.
+        /// </summary>
+        public static event dLightLevelChanged LightLevelChanged;
+
         public const string DEFAULT_SETTINGS_FILENAME = "settings.json";
         private static string _profilePath;
         private char _commandPrefix = '+';
 
+        /// <summary>Milliseconds a queued target survives before <see cref="Targeting.TargetQueue{T}" /> drops it; -1 never expires.</summary>
         public int ExpireTargetsMS
         {
             get;
             set => SetProperty( ref field, value );
+        } = -1;
+
+        /// <summary>
+        ///     Throttles 0x07 drag packets. Sphere-X style shards rate-limit drags server-side and
+        ///     disconnect clients that outrun them, so <see cref="DragDelayMS" /> is enforced by
+        ///     <see cref="UO.Network.Packets.DragItem.ThrottleBeforeSend" /> across every drag.
+        /// </summary>
+        public bool DragDelay
+        {
+            get;
+            set => SetProperty( ref field, value );
         }
+
+        public int DragDelayMS
+        {
+            get;
+            set => SetProperty( ref field, value );
+        } = 450;
 
         public bool AbilitiesGump
         {
@@ -193,9 +220,25 @@ namespace ClassicAssist.Data
             get;
             set
             {
+                if ( field != value )
+                {
+                    LightLevelChanged?.Invoke( value );
+                }
+
                 SetProperty( ref field, value );
-                Engine.SendPacketToClient( new byte[] { 0x4F, ( byte )CurrentOptions.LightLevel }, 2 );
             }
+        }
+
+        public bool LimitHotkeyTrigger
+        {
+            get;
+            set => SetProperty( ref field, value );
+        }
+
+        public int LimitHotkeyTriggerMS
+        {
+            get;
+            set => SetProperty( ref field, value );
         }
 
         public bool LimitMouseWheelTrigger

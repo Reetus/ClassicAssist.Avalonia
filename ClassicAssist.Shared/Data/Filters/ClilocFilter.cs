@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
@@ -12,17 +14,16 @@ namespace ClassicAssist.Data.Filters
     [FilterOptions( Name = "Cliloc Filter", DefaultEnabled = false )]
     public class ClilocFilter : FilterEntry, IConfigurableFilter
     {
-        public static Dictionary<int, string> Filters { get; set; } = new Dictionary<int, string>();
+        public static ObservableCollection<FilterClilocEntry> Filters { get; set; } =
+            new ObservableCollection<FilterClilocEntry>();
 
         public static bool IsEnabled { get; set; }
 
-        public void Configure()
+        public async Task Configure()
         {
-            //TODO
-            //ClilocFilterConfigureWindow window =
-            //    new ClilocFilterConfigureWindow { Topmost = Options.CurrentOptions.AlwaysOnTop };
+            ClilocFilterConfigureViewModel vm = new ClilocFilterConfigureViewModel();
 
-            //window.ShowDialog();
+            await Engine.UIInvoker.InvokeDialog( "ClilocFilterConfigureWindow", dataContext: vm );
         }
 
         public void Deserialize( JToken token )
@@ -34,12 +35,17 @@ namespace ClassicAssist.Data.Filters
 
             foreach ( JToken filterToken in token["Filters"] )
             {
-                int key = filterToken["Key"].ToObject<int>();
-                string val = filterToken["Value"]?.ToObject<string>();
-
-                if ( !Filters.ContainsKey( key ) )
+                FilterClilocEntry entry = new FilterClilocEntry
                 {
-                    Filters.Add( key, val );
+                    Cliloc = filterToken["Key"]?.ToObject<int>() ?? -1,
+                    Replacement = filterToken["Value"]?.ToObject<string>(),
+                    Hue = filterToken["Hue"]?.ToObject<int>() ?? -1,
+                    ShowOverhead = filterToken["ShowOverhead"]?.ToObject<bool>() ?? false
+                };
+
+                if ( Filters.All( e => e.Cliloc != entry.Cliloc ) )
+                {
+                    Filters.Add( entry );
                 }
             }
         }
@@ -48,9 +54,15 @@ namespace ClassicAssist.Data.Filters
         {
             JArray itemsArray = new JArray();
 
-            foreach ( KeyValuePair<int, string> kvp in Filters )
+            foreach ( FilterClilocEntry filter in Filters )
             {
-                itemsArray.Add( new JObject { { "Key", kvp.Key }, { "Value", kvp.Value } } );
+                itemsArray.Add( new JObject
+                {
+                    { "Key", filter.Cliloc },
+                    { "Value", filter.Replacement },
+                    { "Hue", filter.Hue },
+                    { "ShowOverhead", filter.ShowOverhead }
+                } );
             }
 
             return new JObject { { "Filters", itemsArray } };
@@ -73,15 +85,27 @@ namespace ClassicAssist.Data.Filters
                 return false;
             }
 
-            if ( Filters.All( f => f.Key != journalEntry.Cliloc ) )
+            FilterClilocEntry match = FindByCliloc( journalEntry.Cliloc );
+
+            if ( match == null )
             {
                 return false;
             }
 
-            KeyValuePair<int, string> match = Filters.FirstOrDefault( f => f.Key == journalEntry.Cliloc );
+            int serial = journalEntry.Serial;
+            int id = journalEntry.ID;
 
-            Engine.SendPacketToClient( new UnicodeText( journalEntry.Serial, journalEntry.ID, journalEntry.SpeechType,
-                journalEntry.SpeechHue, journalEntry.SpeechFont, Strings.UO_LOCALE, journalEntry.Name, match.Value ) );
+            // A system message has no source mobile; to show it overhead it has to be re-attributed to
+            // the player, otherwise the client has nothing to draw it above.
+            if ( serial == -1 && match.ShowOverhead )
+            {
+                serial = Engine.Player.Serial;
+                id = Engine.Player.ID;
+            }
+
+            Engine.SendPacketToClient( new UnicodeText( serial, id, journalEntry.SpeechType,
+                match.Hue == -1 ? journalEntry.SpeechHue : match.Hue, journalEntry.SpeechFont, Strings.UO_LOCALE,
+                journalEntry.Name, match.Replacement ) );
 
             return true;
         }
@@ -93,21 +117,35 @@ namespace ClassicAssist.Data.Filters
                 return false;
             }
 
-            if ( Filters.All( f => f.Key != journalEntry.Cliloc ) )
+            FilterClilocEntry match = FindByCliloc( journalEntry.Cliloc );
+
+            if ( match == null )
             {
                 return false;
             }
 
-            KeyValuePair<int, string> match = Filters.FirstOrDefault( f => f.Key == journalEntry.Cliloc );
-
             string text = affixType.HasFlag( MessageAffixType.Prepend )
-                ? $"{affix}{match.Value}"
-                : $"{match.Value}{affix}";
+                ? $"{affix}{match.Replacement}"
+                : $"{match.Replacement}{affix}";
 
             Engine.SendPacketToClient( new UnicodeText( journalEntry.Serial, journalEntry.ID, JournalSpeech.Say,
-                journalEntry.SpeechHue, journalEntry.SpeechFont, Strings.UO_LOCALE, journalEntry.Name, text ) );
+                match.Hue == -1 ? journalEntry.SpeechHue : match.Hue, journalEntry.SpeechFont, Strings.UO_LOCALE,
+                journalEntry.Name, text ) );
 
             return true;
+        }
+
+        private static FilterClilocEntry FindByCliloc( int cliloc )
+        {
+            for ( int i = 0; i < Filters.Count; i++ )
+            {
+                if ( Filters[i].Cliloc == cliloc )
+                {
+                    return Filters[i];
+                }
+            }
+
+            return null;
         }
     }
 }

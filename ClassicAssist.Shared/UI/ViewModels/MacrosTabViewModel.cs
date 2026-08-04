@@ -284,6 +284,22 @@ namespace ClassicAssist.UI.ViewModels
 
             macros.Add( "Alias", aliasArray );
 
+            JArray playerAliasArray = new JArray();
+
+            foreach ( KeyValuePair<int, Dictionary<string, int>> kvp in AliasCommands.GetAllPlayerAliases() )
+            {
+                JArray playerAliasEntries = new JArray();
+
+                foreach ( KeyValuePair<string, int> alias in kvp.Value )
+                {
+                    playerAliasEntries.Add( new JObject { { "Name", alias.Key }, { "Value", alias.Value } } );
+                }
+
+                playerAliasArray.Add( new JObject { { "Serial", kvp.Key }, { "Aliases", playerAliasEntries } } );
+            }
+
+            macros.Add( "PlayerAliases", playerAliasArray );
+
             json?.Add( "Macros", macros );
         }
 
@@ -374,6 +390,25 @@ namespace ClassicAssist.UI.ViewModels
                 foreach ( JToken token in config["Alias"] )
                 {
                     AliasCommands.SetAlias( token["Name"].ToObject<string>(), token["Value"].ToObject<int>() );
+                }
+            }
+
+            if ( config?["PlayerAliases"] != null )
+            {
+                foreach ( JToken token in config["PlayerAliases"] )
+                {
+                    if ( token["Serial"] == null || token["Aliases"] == null )
+                    {
+                        continue;
+                    }
+
+                    int serial = token["Serial"].ToObject<int>();
+
+                    foreach ( JToken aliasToken in token["Aliases"] )
+                    {
+                        AliasCommands.SetPlayerSerialAlias( serial, aliasToken["Name"].ToObject<string>(),
+                            aliasToken["Value"].ToObject<int>() );
+                    }
                 }
             }
 

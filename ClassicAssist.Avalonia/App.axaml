@@ -18,6 +18,7 @@
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/ClassicAssistDark.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/Compact.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/GroupBox.Theme.xaml"/>
+    <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/OptionsControls.Theme.xaml"/>
     <StyleInclude Source="avares://ClassicAssist.Avalonia/Controls/TabControl.Theme.xaml"/>
     <!-- Windows shows the ApplicationIcon baked into the apphost's PE resources (see the csproj) as the
          taskbar icon automatically, with no Window.Icon needed. X11 has no such fallback - it only reads

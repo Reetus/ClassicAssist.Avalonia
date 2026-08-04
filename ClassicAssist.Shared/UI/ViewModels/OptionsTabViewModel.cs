@@ -72,7 +72,10 @@ namespace ClassicAssist.UI.ViewModels
             options.Add( "UseObjectQueueAmount", CurrentOptions.UseObjectQueueAmount );
             options.Add( "QueueLastTarget", CurrentOptions.QueueLastTarget );
             options.Add( "MaxTargetQueueLength", CurrentOptions.MaxTargetQueueLength );
+            options.Add( "ExpireTargetsMS", CurrentOptions.ExpireTargetsMS );
             options.Add( "SmartTargetOption", CurrentOptions.SmartTargetOption.ToString() );
+            options.Add( "LimitHotkeyTrigger", CurrentOptions.LimitHotkeyTrigger );
+            options.Add( "LimitHotkeyTriggerMS", CurrentOptions.LimitHotkeyTriggerMS );
             options.Add( "LimitMouseWheelTrigger", CurrentOptions.LimitMouseWheelTrigger );
             options.Add( "LimitMouseWheelTriggerMS", CurrentOptions.LimitMouseWheelTriggerMS );
             options.Add( "AutoAcceptPartyInvite", CurrentOptions.AutoAcceptPartyInvite );
@@ -155,8 +158,11 @@ namespace ClassicAssist.UI.ViewModels
             CurrentOptions.UseObjectQueueAmount = config?["UseObjectQueueAmount"]?.ToObject<int>() ?? 5;
             CurrentOptions.QueueLastTarget = config?["QueueLastTarget"]?.ToObject<bool>() ?? false;
             CurrentOptions.MaxTargetQueueLength = config?["MaxTargetQueueLength"]?.ToObject<int>() ?? 1;
+            CurrentOptions.ExpireTargetsMS = config?["ExpireTargetsMS"]?.ToObject<int>() ?? -1;
             CurrentOptions.SmartTargetOption =
                 config?["SmartTargetOption"]?.ToObject<SmartTargetOption>() ?? SmartTargetOption.None;
+            CurrentOptions.LimitHotkeyTrigger = config?["LimitHotkeyTrigger"]?.ToObject<bool>() ?? false;
+            CurrentOptions.LimitHotkeyTriggerMS = config?["LimitHotkeyTriggerMS"]?.ToObject<int>() ?? 0;
             CurrentOptions.LimitMouseWheelTrigger = config?["LimitMouseWheelTrigger"]?.ToObject<bool>() ?? false;
             CurrentOptions.LimitMouseWheelTriggerMS = config?["LimitMouseWheelTriggerMS"]?.ToObject<int>() ?? 25;
             CurrentOptions.AutoAcceptPartyInvite = config?["AutoAcceptPartyInvite"]?.ToObject<bool>() ?? false;

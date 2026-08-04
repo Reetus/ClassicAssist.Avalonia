@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Hotkeys;
+using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.Data.Organizer;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
@@ -36,6 +37,13 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
             _manager = OrganizerManager.GetInstance();
 
             _manager.Items = Items;
+
+            // A category-level hotkey rather than a per-entry one: it stops whichever organizer is
+            // running. Persisted separately from the entries, under the top-level "OrganizerOptions".
+            _staticOptions.Add( new HotkeyCommand
+            {
+                Name = Strings.Stop_Organizer, Action = ( entry, objects ) => _manager.Stop(), CanGlobal = false
+            } );
         }
 
         public ICommand InsertItemCommand =>
@@ -103,6 +111,12 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
         public void Serialize( JObject json )
         {
+            JObject options = new JObject();
+
+            SerializeStatic( options );
+
+            json?.Add( "OrganizerOptions", options );
+
             JArray organizer = new JArray();
 
             foreach ( OrganizerEntry organizerEntry in Items )
@@ -144,6 +158,11 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         public void Deserialize( JObject json, Options options )
         {
             Items.Clear();
+
+            if ( json?["OrganizerOptions"] is JObject organizerOptions )
+            {
+                DeserializeStatic( organizerOptions );
+            }
 
             if ( json?["Organizer"] == null )
             {

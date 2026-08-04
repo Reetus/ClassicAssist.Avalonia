@@ -1,0 +1,47 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:filters="clr-namespace:ClassicAssist.Data.Filters;assembly=ClassicAssist.Shared"
+        xmlns:viewModels="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Filters;assembly=ClassicAssist.Shared"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="500"
+        x:Class="ClassicAssist.Avalonia.Views.Filters.SoundFilterConfigureWindow"
+        Title="{x:Static resources:Strings.Configure_Sound_Filters}" Width="400" Height="500"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (SoundFilterConfigureViewModel). Categories are
+       pre-grouped by the view model - Avalonia has no CollectionViewSource to group in XAML. -->
+  <Grid Margin="10" RowDefinitions="*,Auto">
+    <ScrollViewer Grid.Row="0">
+      <ItemsControl ItemsSource="{Binding Categories}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="viewModels:SoundFilterCategory">
+            <Expander Header="{Binding Name}" IsExpanded="True" Margin="0,0,0,5"
+                      HorizontalAlignment="Stretch">
+              <ItemsControl ItemsSource="{Binding Entries}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="filters:SoundFilterEntry">
+                    <Grid ColumnDefinitions="*,Auto" Margin="5,2.5">
+                      <TextBlock Grid.Column="0" Text="{Binding LocalizedName}" VerticalAlignment="Center"
+                                 TextWrapping="Wrap"/>
+                      <CheckBox Grid.Column="1" IsChecked="{Binding Enabled}" Margin="10,0,0,0"/>
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Expander>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button Content="{x:Static resources:Strings.Close}" IsDefault="True" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>
