@@ -137,12 +137,13 @@ namespace ClassicAssist.UI.ViewModels
                     continue;
                 }
 
+                // No Disableable: spell hotkeys are always disableable and upstream doesn't write it.
+                // It is still read below, so a profile that has the key keeps working.
                 JObject entry = new JObject
                 {
                     { "Name", spellsCategoryChild.Name },
                     { "Keys", spellsCategoryChild.Hotkey.ToJObject() },
-                    { "PassToUO", spellsCategoryChild.PassToUO },
-                    { "Disableable", spellsCategoryChild.Disableable }
+                    { "PassToUO", spellsCategoryChild.PassToUO }
                 };
 
                 spellsArray.Add( entry );

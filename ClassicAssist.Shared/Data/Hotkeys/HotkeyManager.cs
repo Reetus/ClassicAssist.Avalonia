@@ -128,16 +128,28 @@ namespace ClassicAssist.Data.Hotkeys
             OnPropertyChanged( propertyName );
         }
 
-        public bool OnHotkeyPressed( Key keys, Key modifier )
+        /// <summary>
+        ///     Looks up and runs the hotkey bound to <paramref name="keys" />/<paramref name="modifier" />.
+        /// </summary>
+        /// <param name="noexecute">
+        ///     Match the hotkey and report it, but don't run its action - used by the
+        ///     <see cref="Options.LimitHotkeyTrigger" /> throttle, which still has to swallow the key from
+        ///     the client (a bound key must not leak through to UO just because it retriggered too fast).
+        /// </param>
+        /// <returns>
+        ///     <c>found</c>: a hotkey matched. <c>filter</c>: the key should be withheld from the client.
+        /// </returns>
+        public (bool found, bool filter) OnHotkeyPressed( Key keys, Key modifier, bool noexecute = false )
         {
             lock ( _lock )
             {
                 bool filter = false;
+                bool found = false;
 
                 // Sanity check / modifier-only press, nothing to look up
                 if ( keys == Key.None || _modifierKeys.Contains( keys ) )
                 {
-                    return false;
+                    return ( false, false );
                 }
 
                 foreach ( HotkeyCommand hke in Items )
@@ -161,10 +173,14 @@ namespace ClassicAssist.Data.Hotkeys
                             }
 
                             filter = !hks.PassToUO;
+                            found = true;
 
-                            AliasCommands.SetDefaultAliases();
+                            if ( !noexecute )
+                            {
+                                AliasCommands.SetDefaultAliases();
 
-                            Task.Run( () => hks.Action.Invoke( hks, null ) );
+                                Task.Run( () => hks.Action.Invoke( hks, null ) );
+                            }
 
                             break;
                         }
@@ -175,7 +191,7 @@ namespace ClassicAssist.Data.Hotkeys
                     }
                 }
 
-                return filter;
+                return ( found, filter );
             }
         }
 

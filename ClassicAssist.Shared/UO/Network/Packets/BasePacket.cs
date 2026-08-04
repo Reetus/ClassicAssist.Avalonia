@@ -27,5 +27,14 @@ namespace ClassicAssist.UO.Network.Packets
         {
             return _writer?.ToArray();
         }
+
+        /// <summary>
+        ///     Called by <see cref="ClassicAssist.Shared.Engine.SendPacketToServer(BasePacket)" /> before the
+        ///     bytes go out, for packet types the server rate-limits independently of the global send delay.
+        /// </summary>
+        public virtual void ThrottleBeforeSend()
+        {
+            // No throttling by default
+        }
     }
 }

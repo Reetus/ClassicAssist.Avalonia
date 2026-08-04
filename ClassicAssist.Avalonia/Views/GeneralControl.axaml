@@ -18,10 +18,18 @@
       <ListBox ItemsSource="{Binding Filters}" Grid.Row="0">
         <ListBox.ItemTemplate>
           <DataTemplate>
-            <StackPanel Orientation="Horizontal">
-              <CheckBox IsChecked="{Binding Enabled}" Margin="0,0,10,0" />
-              <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" Margin="0,0,10,0" />
+              <TextBlock Grid.Column="1" Text="{Binding Name}" VerticalAlignment="Center" />
+              <!-- IsConfigurable is set by the FilterEntry ctor for anything implementing
+                   IConfigurableFilter, so the button only appears on filters that have a dialog. -->
+              <Button Grid.Column="2" IsVisible="{Binding IsConfigurable}" Background="Transparent"
+                      BorderThickness="0" Padding="2" ToolTip.Tip="{x:Static resources:Strings.Options}"
+                      Command="{Binding $parent[ListBox].DataContext.ConfigureFilterCommand}"
+                      CommandParameter="{Binding}">
+                <Image Source="{DynamicResource ConfigureIcon}" Width="14" Height="14" />
+              </Button>
+            </Grid>
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
@@ -44,6 +52,16 @@
             <TextBlock Text="{x:Static resources:Strings.Action_Delay_}" VerticalAlignment="Center"/>
             <TextBox Width="40" Margin="10,0,10,0"
                      Text="{Binding Options.ActionDelayMS}"/>
+            <TextBlock Text="ms" Margin="0" VerticalAlignment="Center" />
+          </StackPanel>
+        </CheckBox>
+        <!-- Separate from Action Delay: Sphere-X style shards rate-limit drag (0x07) packets on their
+             own and disconnect clients that outrun them. -->
+        <CheckBox Margin="0,0,0,10" IsChecked="{Binding Options.DragDelay}">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{x:Static resources:Strings.Action_Delay_Dragging__Sphere_X__}" VerticalAlignment="Center"/>
+            <TextBox Width="40" Margin="10,0,10,0"
+                     Text="{Binding Options.DragDelayMS}"/>
             <TextBlock Text="ms" Margin="0" VerticalAlignment="Center" />
           </StackPanel>
         </CheckBox>

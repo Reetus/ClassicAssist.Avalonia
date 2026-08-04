@@ -1,46 +1,94 @@
-﻿using ClassicAssist.Shared;
-using ClassicAssist.UO.Data;
+using System;
+using System.Threading.Tasks;
+using ClassicAssist.Shared;
+using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.UO.Network.PacketFilter;
+using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Data.Filters
 {
     [FilterOptions( Name = "Seasons", DefaultEnabled = false )]
-    public class SeasonFilter : FilterEntry
+    public class SeasonFilter : DynamicFilterEntry, IConfigurableFilter
     {
-        private readonly byte[] _desolationSeason = { 0xBC, 0x04, 0x00 };
-        private readonly byte[] _standardSeason = { 0xBC, 0x00, 0x00 };
+        public static bool IsEnabled { get; set; }
+        public Season SelectedSeason { get; set; } = Season.Spring;
 
-        protected override void OnChanged( bool enabled )
+        public async Task Configure()
         {
-            PacketFilterInfo pfi = new PacketFilterInfo( 0xBC, OnSeasonChange );
+            SeasonFilterConfigureViewModel vm = new SeasonFilterConfigureViewModel( SelectedSeason );
 
-            if ( enabled )
-            {
-                Engine.AddReceiveFilter( pfi );
+            await Engine.UIInvoker.InvokeDialog( "SeasonFilterConfigureWindow", dataContext: vm );
 
-                if ( Engine.Player != null && Engine.Player.Map == Map.Felucca )
-                {
-                    Engine.SendPacketToClient( _desolationSeason, _desolationSeason.Length );
-                    return;
-                }
+            SelectedSeason = vm.SelectedSeason;
 
-                Engine.SendPacketToClient( _standardSeason, _standardSeason.Length );
-            }
-            else
-            {
-                Engine.RemoveReceiveFilter( pfi );
-            }
+            SendSeason();
         }
 
-        private void OnSeasonChange( byte[] arg1, PacketFilterInfo arg2 )
+        public void Deserialize( JToken token )
         {
-            if ( Engine.Player != null && Engine.Player.Map == Map.Felucca )
+            if ( token == null )
             {
-                Engine.SendPacketToClient( _desolationSeason, _desolationSeason.Length );
                 return;
             }
 
-            Engine.SendPacketToClient( _standardSeason, _standardSeason.Length );
+            JObject config = (JObject) token;
+
+            if ( Enum.TryParse( config["Season"]?.ToString(), out Season season ) )
+            {
+                SelectedSeason = season;
+            }
         }
+
+        public JObject Serialize()
+        {
+            JObject config = new JObject { { "Season", SelectedSeason.ToString() } };
+
+            return config;
+        }
+
+        public void ResetOptions()
+        {
+            SelectedSeason = Season.Spring;
+        }
+
+        protected override void OnChanged( bool enabled )
+        {
+            IsEnabled = enabled;
+        }
+
+        public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+        {
+            if ( packet == null || !IsEnabled )
+            {
+                return false;
+            }
+
+            // Not the "map change" subcommand: block the server's own season packets (0xBC) so the
+            // selected season sticks.
+            if ( packet[0] != 0xBF || packet[4] != 0x08 || direction != PacketDirection.Incoming )
+            {
+                return packet[0] == 0xBC && direction == PacketDirection.Incoming;
+            }
+
+            SendSeason();
+
+            return false;
+        }
+
+        private void SendSeason()
+        {
+            byte[] season = { 0xBC, (byte) SelectedSeason, 0x00 };
+
+            Engine.SendPacketToClient( season, season.Length, false );
+        }
+    }
+
+    public enum Season : byte
+    {
+        Spring,
+        Summer,
+        Fall,
+        Winter,
+        Desolation
     }
 }

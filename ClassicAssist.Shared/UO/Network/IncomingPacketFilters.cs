@@ -291,22 +291,33 @@ namespace ClassicAssist.UO.Network
 
         public static bool CheckPacket( ref byte[] data, ref int length )
         {
+            bool filtered = false;
+
             if ( _filters.ContainsKey( data[0] ) && _filters.TryGetValue( data[0], out OnReceive onReceive ) )
             {
-                return onReceive.Invoke( ref data, ref length );
+                filtered = onReceive.Invoke( ref data, ref length );
             }
 
-            foreach ( DynamicFilterEntry dynamicFilterEntry in DynamicFilterEntry.Filters.Where( e => e.Enabled ) )
+            // Dynamic filters run even when a registered handler claimed the packet - returning early
+            // meant ItemIDFilter never saw 0xF3 (registered as OnSAWorldItem), so world items were the
+            // one case it silently couldn't rewrite.
+            for ( int i = 0; i < DynamicFilterEntry.Filters.Count; i++ )
             {
-                bool result = dynamicFilterEntry.CheckPacket( ref data, ref length, PacketDirection.Incoming );
+                DynamicFilterEntry dynamicFilterEntry = DynamicFilterEntry.Filters[i];
 
-                if ( result )
+                if ( !dynamicFilterEntry.Enabled )
                 {
-                    return true;
+                    continue;
+                }
+
+                if ( dynamicFilterEntry.CheckPacket( ref data, ref length, PacketDirection.Incoming ) )
+                {
+                    filtered = true;
+                    break;
                 }
             }
 
-            return false;
+            return filtered;
         }
     }
 }

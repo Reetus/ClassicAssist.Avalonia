@@ -61,7 +61,7 @@ namespace ClassicAssist.Tests.Filters
             Engine.InternalPacketReceivedEvent += OnReceivedEvent;
 
             ClilocFilter.IsEnabled = true;
-            ClilocFilter.Filters.Add( cliloc, replaceText );
+            ClilocFilter.Filters.Add( new FilterClilocEntry { Cliloc = cliloc, Replacement = replaceText } );
 
             IncomingPacketFilters.Initialize();
             IncomingPacketFilters.CheckPacket( ref packet, ref length );
@@ -121,7 +121,7 @@ namespace ClassicAssist.Tests.Filters
             Engine.InternalPacketReceivedEvent += OnReceivedEvent;
 
             ClilocFilter.IsEnabled = true;
-            ClilocFilter.Filters.Add( cliloc, replaceText );
+            ClilocFilter.Filters.Add( new FilterClilocEntry { Cliloc = cliloc, Replacement = replaceText } );
 
             IncomingPacketFilters.Initialize();
             IncomingPacketFilters.CheckPacket( ref packet, ref length );

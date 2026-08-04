@@ -157,6 +157,121 @@ namespace ClassicAssist.Data.Macros.Commands
             return _aliases;
         }
 
+        #region Player aliases
+
+        /// <summary>
+        ///     Aliases scoped to a character, keyed by player serial, so one profile shared across several
+        ///     characters can give each its own "dropchest" and so on. Persisted by
+        ///     <c>MacrosTabViewModel</c> under <c>Macros.PlayerAliases</c>.
+        ///     <para>
+        ///         A separate namespace from <see cref="_aliases" />: <see cref="GetAlias" /> does not fall
+        ///         back to it, matching upstream - player aliases are read with <see cref="GetPlayerAlias" />.
+        ///     </para>
+        /// </summary>
+        public static Dictionary<int, Dictionary<string, int>> _playerAliases =
+            new Dictionary<int, Dictionary<string, int>>();
+
+        /// <summary>Sets an alias against an explicit player serial; used when loading a profile.</summary>
+        internal static void SetPlayerSerialAlias( int serial, string aliasName, object obj )
+        {
+            aliasName = aliasName.ToLower();
+
+            if ( !_playerAliases.TryGetValue( serial, out Dictionary<string, int> aliases ) )
+            {
+                aliases = new Dictionary<string, int>();
+                _playerAliases.Add( serial, aliases );
+            }
+
+            aliases[aliasName] = ResolveSerial( obj );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Aliases ),
+            Parameters = new[] { nameof( ParameterType.AliasName ), nameof( ParameterType.SerialOrAlias ) } )]
+        public static void SetPlayerAlias( string aliasName, object obj )
+        {
+            if ( Engine.Player == null )
+            {
+                return;
+            }
+
+            SetPlayerSerialAlias( Engine.Player.Serial, aliasName, obj );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Aliases ),
+            Parameters = new[] { nameof( ParameterType.AliasName ) } )]
+        public static void UnsetPlayerAlias( string aliasName )
+        {
+            aliasName = aliasName.ToLower();
+
+            if ( Engine.Player == null ||
+                 !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+            {
+                return;
+            }
+
+            aliases.Remove( aliasName );
+        }
+
+        /// <summary>
+        ///     Returns -1 when unset, matching this tree's <see cref="GetAlias" /> convention (upstream
+        ///     returns 0 here, but the Avalonia port uses -1 for "no alias" throughout).
+        /// </summary>
+        [CommandsDisplay( Category = nameof( Strings.Aliases ),
+            Parameters = new[] { nameof( ParameterType.AliasName ) } )]
+        public static int GetPlayerAlias( string aliasName )
+        {
+            aliasName = aliasName.ToLower();
+
+            if ( Engine.Player == null ||
+                 !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+            {
+                return -1;
+            }
+
+            return aliases.TryGetValue( aliasName, out int alias ) ? alias : -1;
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Aliases ),
+            Parameters = new[] { nameof( ParameterType.AliasName ) } )]
+        public static int PromptPlayerAlias( string aliasName )
+        {
+            int serial = UOC.GetTargetSerialAsync( string.Format( Strings.Target_object___0_____, aliasName ) ).Result;
+
+            SetPlayerAlias( aliasName, serial );
+
+            return serial;
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Aliases ),
+            Parameters = new[] { nameof( ParameterType.AliasName ) } )]
+        public static int PromptMacroAlias( string aliasName )
+        {
+            int serial = UOC.GetTargetSerialAsync( string.Format( Strings.Target_object___0_____, aliasName ) ).Result;
+
+            SetMacroAlias( aliasName, serial );
+
+            return serial;
+        }
+
+        public static Dictionary<int, Dictionary<string, int>> GetAllPlayerAliases()
+        {
+            return _playerAliases;
+        }
+
+        /// <summary>The current character's aliases, or an empty set when not logged in.</summary>
+        public static Dictionary<string, int> GetPlayerAliases()
+        {
+            if ( Engine.Player == null ||
+                 !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+            {
+                return new Dictionary<string, int>();
+            }
+
+            return aliases;
+        }
+
+        #endregion
+
         [CommandsDisplay( Category = nameof( Strings.Aliases ),
             Parameters = new[] { nameof( ParameterType.AliasName ) } )]
         public static int PromptAlias( string aliasName )

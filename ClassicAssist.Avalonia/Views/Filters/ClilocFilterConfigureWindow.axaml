@@ -1,0 +1,92 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:filters="clr-namespace:ClassicAssist.Data.Filters;assembly=ClassicAssist.Shared"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="625" d:DesignHeight="450"
+        x:Class="ClassicAssist.Avalonia.Views.Filters.ClilocFilterConfigureWindow"
+        Title="{x:Static resources:Strings.Cliloc_Filter}" Width="625" Height="450"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (ClilocFilterConfigureViewModel). -->
+  <Grid Margin="10" RowDefinitions="Auto,*,Auto">
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="5">
+      <Button Command="{Binding AddItemCommand}" ToolTip.Tip="{x:Static resources:Strings.Add}"
+              Background="Transparent" Padding="4">
+        <Image Source="{DynamicResource AddIcon}" Width="16" Height="16"/>
+      </Button>
+      <Button Command="{Binding RemoveItemCommand}" CommandParameter="{Binding SelectedItem}"
+              ToolTip.Tip="{x:Static resources:Strings.Remove}" Background="Transparent" Padding="4">
+        <Image Source="{DynamicResource RemoveIcon}" Width="16" Height="16"/>
+      </Button>
+    </StackPanel>
+    <DataGrid Grid.Row="1" Margin="0,10" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}"
+              AutoGenerateColumns="False" GridLinesVisibility="All" CanUserReorderColumns="False">
+      <DataGrid.Columns>
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.ID}" Width="110">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate DataType="filters:FilterClilocEntry">
+              <Grid ColumnDefinitions="*,Auto">
+                <controls:EditTextBlock Grid.Column="0" Text="{Binding Cliloc}" ShowIcon="True"
+                                        VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Background="Transparent" Padding="2"
+                        ToolTip.Tip="{x:Static resources:Strings.Choose_by_Cliloc}"
+                        Command="{Binding $parent[DataGrid].DataContext.ChooseClilocCommand}"
+                        CommandParameter="{Binding}">
+                  <Image Source="{DynamicResource ExportIcon}" Width="12" Height="12"/>
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTextColumn Header="{x:Static resources:Strings.Original}" Binding="{Binding Original}"
+                            Width="*" IsReadOnly="True"/>
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Replacement}" Width="*">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate DataType="filters:FilterClilocEntry">
+              <controls:EditTextBlock Text="{Binding Replacement, Mode=TwoWay}" ShowIcon="True"
+                                      VerticalAlignment="Center"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Hue_Override}" Width="90">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate DataType="filters:FilterClilocEntry">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Text="{Binding Hue}" VerticalAlignment="Center"/>
+                <Button Grid.Column="1" Background="Transparent" Padding="2"
+                        Command="{Binding $parent[DataGrid].DataContext.SelectHueCommand}"
+                        CommandParameter="{Binding}">
+                  <Image Source="{DynamicResource ColorWheelIcon}" Width="12" Height="12"/>
+                </Button>
+              </Grid>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Show_Overhead}" Width="100">
+          <DataGridTemplateColumn.CellTemplate>
+            <DataTemplate DataType="filters:FilterClilocEntry">
+              <CheckBox IsChecked="{Binding ShowOverhead}" HorizontalAlignment="Center"
+                        ToolTip.Tip="{x:Static resources:Strings.Display_system_message_as_overhead_message}"/>
+            </DataTemplate>
+          </DataGridTemplateColumn.CellTemplate>
+        </DataGridTemplateColumn>
+      </DataGrid.Columns>
+    </DataGrid>
+    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="5">
+      <Button Content="{x:Static resources:Strings.OK}" IsDefault="True" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour Command="{Binding OKCommand}"/>
+        </Interaction.Behaviors>
+      </Button>
+      <Button Content="{x:Static resources:Strings.Cancel}" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

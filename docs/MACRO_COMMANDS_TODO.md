@@ -118,11 +118,17 @@ Grouped by the file they live in upstream. `->` marks a dependency worth knowing
 
 ### Alias (5)
 
-- [ ] `int GetPlayerAlias( string aliasName )`
-- [ ] `int PromptMacroAlias( string aliasName )`
-- [ ] `int PromptPlayerAlias( string aliasName )`
-- [ ] `void SetPlayerAlias( string aliasName, object obj )`
-- [ ] `void UnsetPlayerAlias( string aliasName )`
+All five done - `AliasCommands._playerAliases` is a per-character alias store keyed by player serial,
+persisted by `MacrosTabViewModel` under `Macros.PlayerAliases`. Like upstream it is a separate
+namespace: `GetAlias` does not fall back to it.
+
+- [x] ~~`int GetPlayerAlias( string aliasName )`~~ Returns -1 when unset, not upstream's 0 - this tree
+      uses -1 for "no alias" throughout (see `GetAlias`).
+- [x] ~~`int PromptMacroAlias( string aliasName )`~~
+- [x] ~~`int PromptPlayerAlias( string aliasName )`~~
+- [x] ~~`void SetPlayerAlias( string aliasName, object obj )`~~ Guards a null `Engine.Player`, which
+      upstream dereferences unconditionally.
+- [x] ~~`void UnsetPlayerAlias( string aliasName )`~~
 
 ### Entity (2)
 

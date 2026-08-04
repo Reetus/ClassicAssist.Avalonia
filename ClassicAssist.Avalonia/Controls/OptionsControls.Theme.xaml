@@ -1,0 +1,43 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls">
+
+  <!-- Templates for the Options tab's building blocks, ported from the WPF ClassicAssist.Controls
+       assembly (OptionedCheckBoxControl and Headered/HorizontalHeaderedContentControl). -->
+
+  <Style Selector="controls|OptionedCheckBox">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Orientation="Horizontal">
+          <CheckBox IsChecked="{TemplateBinding IsChecked, Mode=TwoWay}"
+                    Content="{TemplateBinding Content}"
+                    Command="{TemplateBinding Command}"
+                    CommandParameter="{TemplateBinding CommandParameter}"
+                    VerticalAlignment="Center" />
+          <!-- Disabled rather than hidden while unchecked, so the row doesn't reflow as it's toggled. -->
+          <ContentPresenter Content="{TemplateBinding ChildContent}"
+                            IsEnabled="{TemplateBinding IsChecked}"
+                            VerticalAlignment="Center" Margin="5,0,0,0" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector=":is(controls|HorizontalHeaderedContentControl)">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <DockPanel LastChildFill="True">
+          <TextBlock DockPanel.Dock="Left" Text="{TemplateBinding Header}"
+                     Foreground="{TemplateBinding Foreground}"
+                     VerticalAlignment="Center"
+                     Margin="{TemplateBinding HeaderMargin}"
+                     Width="{TemplateBinding HeaderWidth}"
+                     MinWidth="{TemplateBinding HeaderMinWidth}" />
+          <ContentPresenter x:Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            VerticalAlignment="Center" />
+        </DockPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+</Styles>

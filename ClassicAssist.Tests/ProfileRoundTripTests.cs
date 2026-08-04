@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,15 +49,12 @@ namespace ClassicAssist.Tests
             "Skills",
 
             // Agents/blocks not yet ported to Avalonia.
-            "OrganizerOptions",
             "NameOverride",
             "Screenshot",
             "UseOnceAgent",
             "Hotkeys.Options",
 
             // General: WPF-only settings.
-            "General.DragDelay",
-            "General.DragDelayMS",
             "General.SysTray",
             "General.SlowHandlerThreshold",
             "General.Autologin",
@@ -68,36 +65,19 @@ namespace ClassicAssist.Tests
             "General.AutologinConnectDelay",
             "General.AutologinReconnectDelay",
 
-            // Filters: SoundFilter/ItemIDFilter not ported; BardsMusicFilter is Avalonia-only.
-            "General.Filters.[Name=ClassicAssist.Data.Filters.SoundFilter]",
-            "General.Filters.[Name=ClassicAssist.Data.Filters.ItemIDFilter]",
-            "General.Filters.[Name=ClassicAssist.Data.Filters.BardsMusicFilter]",
-
-            // Filters: SeasonFilter isn't IConfigurableFilter in Avalonia yet, and ClilocFilter only
-            // persists Key/Value (WPF also writes Hue and ShowOverhead).
-            "General.Filters.[Name=ClassicAssist.Data.Filters.SeasonFilter].Options",
-            "General.Filters.[Name=ClassicAssist.Data.Filters.ClilocFilter].Options.Filters.*.Hue",
-            "General.Filters.[Name=ClassicAssist.Data.Filters.ClilocFilter].Options.Filters.*.ShowOverhead",
-
             // Options: WPF-only settings.
-            "Options.LimitHotkeyTrigger",
-            "Options.LimitHotkeyTriggerMS",
             "Options.ChatWindowHeight",
             "Options.ChatWindowWidth",
             "Options.ChatWindowRightColumn",
-            "Options.ExpireTargetsMS",
             "Options.LogoutDisconnectedPrompt",
 
-            // Hotkeys: ShowChatWindowCommand not ported; Avalonia writes Disableable for spells.
+            // Hotkeys: ShowChatWindowCommand not ported.
             "Hotkeys.Commands.[Type=ClassicAssist.Data.Hotkeys.Commands.ShowChatWindowCommand]",
-            "Hotkeys.Spells.*.Disableable",
 
             // Macros: WPF UI state.
             "Macros.LeftColumnWidth",
             "Macros.Groups",
-            "Macros.PlayerAliases",
             "Macros.Macros.*.Group",
-            "Macros.Macros.*.Metadata",
 
             // VendorSell: only written by WPF when non-zero.
             "VendorSell.ContainerSerial",
@@ -173,6 +153,7 @@ namespace ClassicAssist.Tests
             SkillManager.GetInstance().Items.Clear();
 
             AliasCommands._aliases.Clear();
+            AliasCommands._playerAliases.Clear();
             ActionCommands.UseOnceList.Clear();
         }
 
