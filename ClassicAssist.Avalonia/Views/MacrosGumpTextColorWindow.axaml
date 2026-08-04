@@ -2,6 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
         xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
         mc:Ignorable="d" d:DesignWidth="320" d:DesignHeight="220"
         x:Class="ClassicAssist.Avalonia.Views.MacrosGumpTextColorWindow"
@@ -15,8 +17,16 @@
       <TextBox x:Name="hexTextBox" Text="{Binding SelectedColor, Mode=TwoWay}" VerticalAlignment="Center" />
     </DockPanel>
     <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="0,10,0,0">
-      <Button Content="{x:Static resources:Strings.OK}" Command="{Binding OKCommand}" Padding="20,4" Margin="0,0,10,0" />
-      <Button Content="{x:Static resources:Strings.Cancel}" Padding="20,4" />
+      <Button Content="{x:Static resources:Strings.OK}" IsDefault="True" Padding="20,4" Margin="0,0,10,0">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour Command="{Binding OKCommand}" />
+        </Interaction.Behaviors>
+      </Button>
+      <Button Content="{x:Static resources:Strings.Cancel}" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour />
+        </Interaction.Behaviors>
+      </Button>
     </StackPanel>
   </Grid>
 </Window>
