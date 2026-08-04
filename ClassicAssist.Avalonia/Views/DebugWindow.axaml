@@ -8,6 +8,7 @@
         xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
         xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
         xmlns:debug="clr-namespace:ClassicAssist.Avalonia.Views.Debug"
+        xmlns:packetFilter="clr-namespace:ClassicAssist.UO.Network.PacketFilter;assembly=ClassicAssist.Shared"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ClassicAssist.Avalonia.Views.DebugWindow" x:Name="Window"
         Title="Debug Window" Height="450" Width="600" Topmost="{Binding Topmost}">
@@ -56,13 +57,19 @@
             <misc:ListBoxAutoScrollBehaviour/>
           </Interaction.Behaviors>
         </ListBox>
-        <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10,0,0">
+        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
           <CheckBox Content="{x:Static resources:Strings.Capture_Packets}" VerticalAlignment="Center"
-                    Margin="0,0,10,0" IsChecked="{Binding Running}" />
+                    Margin="0,0,10,0" IsChecked="{Binding Enabled}" />
+          <CheckBox Content="{x:Static resources:Strings.Include_Internal}" VerticalAlignment="Center"
+                    Margin="0,0,10,0" IsChecked="{Binding IncludeInternal}" />
+          <TextBlock Text="{x:Static resources:Strings.Direction}" VerticalAlignment="Center"
+                     Margin="0,0,5,0" />
+          <ComboBox Margin="0,0,10,0" MinWidth="100" SelectedItem="{Binding Direction}"
+                    ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type packetFilter:PacketDirection}}}" />
           <CheckBox Content="{x:Static resources:Strings.Topmost}" VerticalAlignment="Center"
                     Margin="0,0,10,0"
                     IsChecked="{Binding Topmost}" />
-        </StackPanel>
+        </WrapPanel>
       </Grid>
     </TabItem>
     <TabItem Header="{x:Static resources:Strings.Gumps}">
