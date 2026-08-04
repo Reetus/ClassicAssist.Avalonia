@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        mc:Ignorable="d" d:DesignWidth="300" d:DesignHeight="298"
+        x:Class="ClassicAssist.Avalonia.Views.SplashWindow"
+        Title="{x:Static resources:Strings.ProductName}"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+  <!-- Shown while the assistant loads, so it is obvious the client is not ready to log into yet.
+       The border is invisible while the compositor gives us a transparent window; it only becomes
+       the logo's backdrop when the code-behind falls back to opaque (see SplashWindow.axaml.cs). -->
+  <Border x:Name="backdrop" Background="Transparent">
+    <Image Source="avares://ClassicAssist.Avalonia/Assets/splash_logo.png" Opacity="0.9" Stretch="None"/>
+  </Border>
+</Window>
