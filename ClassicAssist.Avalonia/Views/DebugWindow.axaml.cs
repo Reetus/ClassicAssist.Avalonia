@@ -17,6 +17,7 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using Avalonia.Controls;
@@ -50,27 +51,46 @@ namespace ClassicAssist.Avalonia.Views
         {
             Closing -= OnClosing;
 
-            JObject options = new JObject();
-
-            foreach ( ISettingProvider provider in GetSettingProviders() )
+            // Anything thrown from a Closing handler is unhandled and takes the process with it, so a
+            // debug tab that can't save its settings must not be fatal.
+            try
             {
-                provider.Serialize( options );
+                JObject options = new JObject();
+
+                foreach ( ISettingProvider provider in GetSettingProviders() )
+                {
+                    provider.Serialize( options );
+                }
+
+                AssistantOptions.DebugWindowOptions = options;
+
+                // WPF leaves the write to its own shutdown path; do it here too, so the settings
+                // survive the UI process being killed alongside the game rather than closed cleanly.
+                AssistantOptions.Save();
             }
-
-            AssistantOptions.DebugWindowOptions = options;
-
-            // WPF leaves the write to its own shutdown path; do it here too, so the settings survive
-            // the UI process being killed alongside the game rather than closed cleanly.
-            AssistantOptions.Save();
+            catch ( Exception ex )
+            {
+                Console.WriteLine( $"Failed to save debug window settings: {ex}" );
+            }
         }
 
         /// <summary>
         ///     Every tab whose content carries an <see cref="ISettingProvider" /> DataContext, plus the
         ///     window's own view model, which owns the Main tab.
+        ///     <para>
+        ///         De-duplicated by reference: the Main tab is declared inline in the window, so its Grid
+        ///         has no DataContext of its own and inherits the window's <c>DebugViewModel</c> - which
+        ///         means it would otherwise be yielded twice and <c>Serialize</c> would be called twice
+        ///         against the same JObject, throwing on the duplicate key and killing the app as the
+        ///         window closed. WPF doesn't hit this because each of its tabs hosts its own view model.
+        ///     </para>
         /// </summary>
         private IEnumerable<ISettingProvider> GetSettingProviders()
         {
-            if ( DataContext is ISettingProvider windowProvider )
+            HashSet<ISettingProvider> seen =
+                new HashSet<ISettingProvider>( ReferenceEqualityComparer.Instance );
+
+            if ( DataContext is ISettingProvider windowProvider && seen.Add( windowProvider ) )
             {
                 yield return windowProvider;
             }
@@ -83,7 +103,7 @@ namespace ClassicAssist.Avalonia.Views
             foreach ( object item in tabControl.Items )
             {
                 if ( item is TabItem tabItem && tabItem.Content is Control control &&
-                     control.DataContext is ISettingProvider provider )
+                     control.DataContext is ISettingProvider provider && seen.Add( provider ) )
                 {
                     yield return provider;
                 }
