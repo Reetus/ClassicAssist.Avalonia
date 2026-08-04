@@ -23,7 +23,7 @@ namespace ClassicAssist.Avalonia.Misc
             {
                 case LockStatus.Up:
 
-                    return AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/arrow_up.png" ) );
+                    return new Bitmap( AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/arrow_up.png" ) ) );
                 case LockStatus.Down:
 
                     return new Bitmap( AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/arrow_down.png" ) ) );

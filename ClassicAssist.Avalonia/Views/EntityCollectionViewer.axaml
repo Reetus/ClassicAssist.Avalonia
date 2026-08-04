@@ -18,6 +18,7 @@
     <misc:PixmapValueConverter x:Key="PixmapValueConverter"/>
     <misc:EnumMatchToBooleanConverter x:Key="EnumMatchToBooleanConverter"/>
     <misc:AutolootOperatorFilterValueConverter x:Key="AutolootOperatorFilterValueConverter"/>
+    <misc:EnumDescriptionValueConverter x:Key="EnumDescriptionValueConverter"/>
   </Window.Resources>
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="3" Spacing="3">
@@ -96,18 +97,43 @@
             BorderBrush="{DynamicResource ThemeBorderBrush}" Padding="4">
       <Grid RowDefinitions="Auto,Auto,Auto">
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="4" Margin="0,0,0,4">
-          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" MinWidth="140">
+          <!-- Icon buttons to the left of the ComboBox, matching the WPF filter's profile selector layout. -->
+          <Button Height="24" Padding="4,2" Command="{Binding AddProfileCommand}"
+                  ToolTip.Tip="{x:Static resources:Strings.Add}">
+            <Image Source="{StaticResource AddIcon}" Height="16"/>
+          </Button>
+          <Button Height="24" Padding="4,2" Command="{Binding RemoveProfileCommand}"
+                  ToolTip.Tip="{x:Static resources:Strings.Remove}">
+            <Image Source="{StaticResource RemoveIcon}" Height="16"/>
+          </Button>
+          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" MinWidth="140"
+                    HorizontalContentAlignment="Stretch">
+            <!-- Closed-box display: inline rename via EditTextBlock, same as WPF's PART_EditableTextBox -
+                 no delete affordance here, that only belongs to rows in the open dropdown below. -->
+            <ComboBox.SelectionBoxItemTemplate>
+              <DataTemplate DataType="models:FilterProfile">
+                <controls:EditTextBlock Text="{Binding Name, Mode=TwoWay}" ShowIcon="True" VerticalAlignment="Center"
+                                         ToolTip.Tip="{x:Static resources:Strings.Rename}"/>
+              </DataTemplate>
+            </ComboBox.SelectionBoxItemTemplate>
             <ComboBox.ItemTemplate>
               <DataTemplate DataType="models:FilterProfile">
-                <TextBlock Text="{Binding Name}"/>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Grid.Column="0"/>
+                  <Button Grid.Column="1" Background="Transparent" BorderThickness="0" Padding="2"
+                          Margin="4,0,0,0" HorizontalAlignment="Right"
+                          Command="{Binding $parent[Window].DataContext.RemoveProfileCommand}"
+                          CommandParameter="{Binding}"
+                          ToolTip.Tip="{x:Static resources:Strings.Remove}">
+                    <Interaction.Behaviors>
+                      <misc:ConfirmDeleteBehaviour PendingIcon="{StaticResource ClearIconRed}"/>
+                    </Interaction.Behaviors>
+                    <Image Source="{StaticResource ClearIcon}" Width="10" Height="10"/>
+                  </Button>
+                </Grid>
               </DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <controls:EditTextBlock Text="{Binding SelectedProfile.Name}" ShowIcon="True" VerticalAlignment="Center"
-                                   ToolTip.Tip="{x:Static resources:Strings.Rename}"/>
-          <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddProfileCommand}"/>
-          <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveProfileCommand}"/>
-          <Button Content="{x:Static resources:Strings.Save}" Command="{Binding SaveProfilesCommand}"/>
         </StackPanel>
         <DataGrid Grid.Row="1" ItemsSource="{Binding FilterConditions}" MaxHeight="150"
                   AutoGenerateColumns="False" CanUserResizeColumns="True" GridLinesVisibility="All">
@@ -116,7 +142,7 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
                   <ComboBox ItemsSource="{Binding $parent[Window].DataContext.Constraints}" SelectedItem="{Binding Property}"
-                            HorizontalAlignment="Stretch">
+                            HorizontalAlignment="Stretch" VerticalAlignment="Center">
                     <ComboBox.ItemTemplate>
                       <DataTemplate DataType="autoloot:PropertyEntry">
                         <TextBlock Text="{Binding Name}"/>
@@ -130,14 +156,20 @@
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
                   <ComboBox ItemsSource="{Binding Property, Converter={StaticResource AutolootOperatorFilterValueConverter}}"
-                            SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch"/>
+                            SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate DataType="autoloot:AutolootOperator">
+                        <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionValueConverter}}"/>
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
             <DataGridTemplateColumn Header="{x:Static resources:Strings.Value}" Width="1*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
-                  <autolootViews:AutolootValueControl/>
+                  <autolootViews:AutolootValueControl VerticalAlignment="Center" Margin="4,0,0,0"/>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
@@ -157,7 +189,7 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,0" Spacing="4">
           <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddFilterConditionCommand}"/>
           <Button Content="{x:Static resources:Strings.Apply}" Command="{Binding ApplyFiltersCommand}"/>
-          <Button Content="{x:Static resources:Strings.Clear}" Command="{Binding ClearFiltersCommand}"/>
+          <Button Content="{x:Static resources:Strings.Reset}" Command="{Binding ResetFiltersCommand}"/>
           <TextBlock Text="{x:Static resources:Strings.Filter_active}" VerticalAlignment="Center"
                      IsVisible="{Binding IsFilterApplied}" FontWeight="Bold" Margin="8,0,0,0"/>
         </StackPanel>

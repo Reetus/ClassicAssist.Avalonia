@@ -38,6 +38,10 @@ namespace ClassicAssist.Avalonia.Views
 
         protected override void OnClosed( EventArgs e )
         {
+            // Filter profiles have no explicit Save button - edits (renames, added/removed conditions)
+            // are only persisted here, on close.
+            ViewModel?.SaveFilterProfiles();
+
             // The view model listens to a collection that outlives the window, so it has to let go here or
             // every item the server sends keeps rebuilding a list nobody is looking at.
             ViewModel?.Cleanup();

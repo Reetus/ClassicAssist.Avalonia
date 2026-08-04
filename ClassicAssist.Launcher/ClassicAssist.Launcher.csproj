@@ -6,7 +6,8 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <!-- No <ApplicationIcon>: that property needs a real file at a project-relative path, but
              logo.ico here is a linked AvaloniaResource (see below), not a physical file on disk.
-             The runtime window icon still comes from ClassicAssistDark.xaml's Window style. -->
+             The runtime window icon comes from the Window style in App.axaml (X11 needs Window.Icon
+             set explicitly - see the comment there). -->
         <!-- Lands beside the plugin build output, so the three ClassicAssist plugin variants
              (ClassicAssist.dll, ClassicAssistNE.*, framework\ClassicAssist.dll) are siblings the
              launcher can resolve with no path guessing - see Client/PluginPathResolver.cs. -->

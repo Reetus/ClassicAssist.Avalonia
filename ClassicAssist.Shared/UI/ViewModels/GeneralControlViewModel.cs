@@ -310,9 +310,9 @@ namespace ClassicAssist.UI.ViewModels
 
             Profiles.Clear();
 
-            foreach ( string profile in profiles )
+            foreach ( string profile in profiles.Select( Path.GetFileName ).OrderBy( o => o, StringComparer.OrdinalIgnoreCase ) )
             {
-                Profiles.Add( Path.GetFileName( profile ) );
+                Profiles.Add( profile );
             }
         }
 

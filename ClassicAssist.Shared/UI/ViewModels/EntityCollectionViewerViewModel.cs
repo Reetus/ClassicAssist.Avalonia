@@ -100,7 +100,7 @@ namespace ClassicAssist.UI.ViewModels
         private ICommand _addProfileCommand;
         private ICommand _applyFiltersCommand;
         private ICommand _changeSortStyleCommand;
-        private ICommand _clearFiltersCommand;
+        private ICommand _resetFiltersCommand;
         private ICommand _combineStacksCommand;
         private ICommand _configureCommand;
         private ICommand _contextContextMenuRequestCommand;
@@ -125,7 +125,6 @@ namespace ClassicAssist.UI.ViewModels
         private ICommand _refreshCommand;
         private ICommand _removeFilterConditionCommand;
         private ICommand _removeProfileCommand;
-        private ICommand _saveProfilesCommand;
 
         private ObservableCollection<EntityCollectionData> _selectedItems =
             new ObservableCollection<EntityCollectionData>();
@@ -197,10 +196,9 @@ namespace ClassicAssist.UI.ViewModels
         public ICommand ChangeSortStyleCommand =>
             _changeSortStyleCommand ?? ( _changeSortStyleCommand = new RelayCommand( ChangeSortStyle, o => true ) );
 
-        public ICommand ClearFiltersCommand =>
-            _clearFiltersCommand ?? ( _clearFiltersCommand = new RelayCommand( o =>
+        public ICommand ResetFiltersCommand =>
+            _resetFiltersCommand ?? ( _resetFiltersCommand = new RelayCommand( o =>
             {
-                FilterConditions.Clear();
                 IsFilterApplied = false;
                 Rebuild();
             }, o => true ) );
@@ -358,9 +356,6 @@ namespace ClassicAssist.UI.ViewModels
 
         public ICommand RemoveProfileCommand =>
             _removeProfileCommand ?? ( _removeProfileCommand = new RelayCommand( RemoveProfile, o => true ) );
-
-        public ICommand SaveProfilesCommand =>
-            _saveProfilesCommand ?? ( _saveProfilesCommand = new RelayCommand( o => SaveFilterProfiles(), o => true ) );
 
         public bool SelectedItemsAllLocked => SelectedItems.Count > 0 && SelectedItems.All( e => e.IsLocked );
 

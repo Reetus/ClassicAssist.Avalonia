@@ -52,7 +52,7 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
-        <DataGridTemplateColumn Header="{x:Static resources:Strings.Hue_Override}" Width="90">
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Hue_Override}" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate DataType="filters:FilterClilocEntry">
               <Grid ColumnDefinitions="*,Auto">
@@ -66,7 +66,7 @@
             </DataTemplate>
           </DataGridTemplateColumn.CellTemplate>
         </DataGridTemplateColumn>
-        <DataGridTemplateColumn Header="{x:Static resources:Strings.Show_Overhead}" Width="100">
+        <DataGridTemplateColumn Header="{x:Static resources:Strings.Show_Overhead}" Width="Auto">
           <DataGridTemplateColumn.CellTemplate>
             <DataTemplate DataType="filters:FilterClilocEntry">
               <CheckBox IsChecked="{Binding ShowOverhead}" HorizontalAlignment="Center"

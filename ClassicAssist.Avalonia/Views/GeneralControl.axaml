@@ -74,7 +74,7 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <Grid Grid.Column="0">
-              <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}">
                 <Interaction.Behaviors>
                   <misc:ComboBoxBehavior CommandBinding="{Binding ChangeProfileCommand}" CommandParameter="{Binding SelectedProfile}" OnlyUserTriggered="True" />
                 </Interaction.Behaviors>

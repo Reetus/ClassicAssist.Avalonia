@@ -16,6 +16,7 @@
   </UserControl.DataContext>
   <UserControl.Resources>
     <misc:AutolootOperatorFilterValueConverter x:Key="AutolootOperatorFilterValueConverter"/>
+    <misc:EnumDescriptionValueConverter x:Key="EnumDescriptionValueConverter"/>
   </UserControl.Resources>
   <UserControl.Styles>
     <Style Selector="controls|EditTextBlock">
@@ -43,11 +44,18 @@
           <TreeDataTemplate DataType="autoloot:AutolootGroup" ItemsSource="{Binding Children}">
             <Grid ColumnDefinitions="Auto,*">
               <CheckBox Grid.Column="0" IsChecked="{Binding Enabled}" VerticalAlignment="Center" Margin="0,0,5,0"/>
-              <controls:EditTextBlock Grid.Column="1" Text="{Binding Name}" ShowIcon="True"/>
+              <!-- Right margin clears the overlay scrollbar, which expands over the row's edge on
+                   hover and would otherwise cover the rename pencil. -->
+              <controls:EditTextBlock Grid.Column="1" Text="{Binding Name}" ShowIcon="True" Margin="0,0,14,0"/>
             </Grid>
           </TreeDataTemplate>
           <TreeDataTemplate DataType="autoloot:AutolootEntry">
-            <controls:EditTextBlock Text="{Binding Name}" Label="{Binding DisplayName}" ShowIcon="True"/>
+            <!-- Entries are one tree level deeper than groups, so Fluent's TreeViewItem auto-indents
+                 them 16px past the group's own expand chevron on top of the chevron's own reserved
+                 width - pulled back to line up with that chevron instead. Right margin, same as the
+                 group template above, clears the overlay scrollbar. -->
+            <controls:EditTextBlock Text="{Binding Name}" Label="{Binding DisplayName}" ShowIcon="True"
+                                     Margin="-20,0,14,0"/>
           </TreeDataTemplate>
         </TreeView.DataTemplates>
         <TreeView.ContextMenu>
@@ -131,14 +139,20 @@
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <ComboBox ItemsSource="{Binding Property, Converter={StaticResource AutolootOperatorFilterValueConverter}}"
-                          SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch"/>
+                          SelectedItem="{Binding Operator}" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate DataType="autoloot:AutolootOperator">
+                      <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionValueConverter}}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Value}" Width="1*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <autolootViews:AutolootValueControl/>
+                <autolootViews:AutolootValueControl VerticalAlignment="Center" Margin="4,0,0,0"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>

@@ -9,6 +9,9 @@
         mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="350"
         x:Class="ClassicAssist.Avalonia.Views.Autoloot.CSVImportWindow"
         Title="{x:Static resources:Strings.CSV_Import}" Width="700" Height="350">
+  <Window.Resources>
+    <misc:EnumDescriptionValueConverter x:Key="EnumDescriptionValueConverter"/>
+  </Window.Resources>
   <!-- DataContext is supplied by the UI invoker (CSVImportViewModel). -->
   <Grid Margin="10" ColumnDefinitions="*,120">
     <Grid Grid.Column="0" RowDefinitions="*,Auto,Auto" ColumnDefinitions="100,*">
@@ -24,7 +27,7 @@
           <DataTemplate>
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="{Binding Property.Name}" Width="150" TextTrimming="CharacterEllipsis"/>
-              <TextBlock Text="{Binding Operator}" Width="75"/>
+              <TextBlock Text="{Binding Operator, Converter={StaticResource EnumDescriptionValueConverter}}" Width="75"/>
               <TextBlock Text="{Binding Value}" Width="150"/>
             </StackPanel>
           </DataTemplate>
