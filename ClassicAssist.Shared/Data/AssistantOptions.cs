@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Reflection;
+using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UO.Objects;
@@ -181,28 +181,7 @@ namespace ClassicAssist.Data
                 BackupProfiles();
             }
 
-            foreach ( string assembly in Assemblies )
-            {
-                try
-                {
-                    Assembly asm = Assembly.LoadFile( assembly );
-
-                    IEnumerable<MethodInfo> initializeMethods = asm.GetTypes()
-                        .Where( e => e.IsClass && e.IsPublic && e.GetMethod( "Initialize",
-                                         BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null ) !=
-                                     null ).Select( e => e.GetMethod( "Initialize",
-                            BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null ) );
-
-                    foreach ( MethodInfo initializeMethod in initializeMethods )
-                    {
-                        initializeMethod?.Invoke( null, null );
-                    }
-                }
-                catch ( Exception )
-                {
-                    // ignored
-                }
-            }
+            PluginAssemblies.InvokeInitialize( Type.EmptyTypes, null );
 
             OptionsLoaded?.Invoke( null, EventArgs.Empty );
         }
