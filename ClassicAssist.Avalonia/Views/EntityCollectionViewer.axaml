@@ -141,14 +141,19 @@
             <DataGridTemplateColumn Header="{x:Static resources:Strings.Property}" Width="2*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">
-                  <ComboBox ItemsSource="{Binding $parent[Window].DataContext.Constraints}" SelectedItem="{Binding Property}"
-                            HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                    <ComboBox.ItemTemplate>
-                      <DataTemplate DataType="autoloot:PropertyEntry">
-                        <TextBlock Text="{Binding Name}"/>
-                      </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                  </ComboBox>
+                  <StackPanel VerticalAlignment="Center">
+                    <ComboBox ItemsSource="{Binding $parent[Window].DataContext.Constraints}" SelectedItem="{Binding Property}"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="autoloot:PropertyEntry">
+                          <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <!-- Collapses itself unless the constraint is a skill bonus, which needs a skill
+                         (Additional) as well as the amount the Value column edits. -->
+                    <autolootViews:SkillBonusSelector Margin="0,5,0,0"/>
+                  </StackPanel>
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>

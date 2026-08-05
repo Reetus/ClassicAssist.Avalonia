@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -15,6 +16,7 @@ namespace ClassicAssist.Data.Autoloot
         private int[] _clilocs;
         private PropertyType _constraintType;
         private string _name;
+        private ObservableCollection<string> _options;
         private Func<Entity, AutolootConstraintEntry, bool> _predicate;
         private string _shortName;
         private bool _useMultipleValues;
@@ -26,8 +28,10 @@ namespace ClassicAssist.Data.Autoloot
         }
 
         /// <summary>
-        ///     When set, the Value editor is an enum ComboBox (e.g. <see cref="Layer" /> or
-        ///     <see cref="SkillBonusSkills" />).
+        ///     When set to an enum whose values are stored in <see cref="AutolootConstraintEntry.Value" />
+        ///     (<see cref="Layer" />, <see cref="TileFlags" />), the Value editor is a ComboBox over it.
+        ///     <see cref="SkillBonusSkills" /> is the exception: it names the skill, which lives in
+        ///     Additional, so Value stays the numeric bonus and the skill gets its own selector.
         /// </summary>
         [JsonIgnore]
         public Type AllowedValuesEnum
@@ -58,6 +62,17 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _name;
             set => SetProperty( ref _name, value );
+        }
+
+        /// <summary>
+        ///     Fixed set of values the <see cref="AutolootConstraintEntry.Additional" /> editor offers as a
+        ///     ComboBox (e.g. organizer profile names). Null means Additional is edited as free text, and a
+        ///     constraint that ignores Additional entirely shows the numeric Value editor instead.
+        /// </summary>
+        public ObservableCollection<string> Options
+        {
+            get => _options;
+            set => SetProperty( ref _options, value );
         }
 
         /// <summary>

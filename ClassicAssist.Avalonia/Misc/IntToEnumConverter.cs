@@ -45,7 +45,10 @@ namespace ClassicAssist.Avalonia.Misc
         {
             if ( value != null && value.GetType().IsEnum )
             {
-                return (int) value;
+                // Not (int) value: unboxing an object holding an enum straight to int throws, and Avalonia
+                // swallows converter exceptions as a failed binding - so the selection silently never
+                // reached the constraint.
+                return System.Convert.ToInt32( value );
             }
 
             return BindingNotification.UnsetValue;

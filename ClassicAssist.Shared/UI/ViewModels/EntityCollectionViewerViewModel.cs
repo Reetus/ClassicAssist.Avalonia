@@ -759,7 +759,12 @@ namespace ClassicAssist.UI.ViewModels
                     bool match = organizer.Items.Any( e => e.ID == item.ID && ( e.Hue == -1 || e.Hue == item.Hue ) );
 
                     return entry.Operator == AutolootOperator.NotEqual ? !match : match;
-                }
+                },
+                // Picks the organizer profile the predicate looks up by name. Old sets the same list on
+                // "Is Multi" too, which only reads the operator - copied there by accident, and following
+                // it would put an organizer dropdown on a yes/no constraint, so it stops here.
+                Options = new ObservableCollection<string>(
+                    OrganizerManager.GetInstance().Items?.Select( o => o.Name ) ?? Enumerable.Empty<string>() )
             } );
 
             Constraints.AddSorted( new PropertyEntry
@@ -885,14 +890,24 @@ namespace ClassicAssist.UI.ViewModels
                             continue;
                         }
 
-                        profile.Conditions.Add( new AutolootConstraintEntry
+                        AutolootConstraintEntry condition = new AutolootConstraintEntry
                         {
                             Property = property,
                             Operator = conditionToken["Operator"]?.ToObject<AutolootOperator>() ??
                                        AutolootOperator.Equal,
                             Value = conditionToken["Value"]?.ToObject<int>() ?? 0,
                             Additional = conditionToken["Additional"]?.ToObject<string>()
-                        } );
+                        };
+
+                        // Absent for every condition written before this was persisted, and for the
+                        // majority that don't use it - left at its default rather than an empty set.
+                        if ( conditionToken["Values"] != null )
+                        {
+                            condition.Values = conditionToken["Values"].ToObject<ObservableCollection<int>>() ??
+                                               new ObservableCollection<int>();
+                        }
+
+                        profile.Conditions.Add( condition );
                     }
 
                     Profiles.Add( profile );
@@ -984,13 +999,23 @@ namespace ClassicAssist.UI.ViewModels
                             continue;
                         }
 
-                        conditions.Add( new JObject
+                        JObject conditionObj = new JObject
                         {
                             { "Property", condition.Property.Name },
                             { "Operator", (int) condition.Operator },
                             { "Value", condition.Value },
                             { "Additional", condition.Additional }
-                        } );
+                        };
+
+                        // Only written when there's something in it, matching old. This is the multi-value
+                        // set behind ID (Multiple) / Cliloc (Multiple) - without it those conditions came
+                        // back empty after a restart and matched nothing.
+                        if ( condition.Values != null && condition.Values.Count > 0 )
+                        {
+                            conditionObj.Add( "Values", JArray.FromObject( condition.Values ) );
+                        }
+
+                        conditions.Add( conditionObj );
                     }
 
                     profileObj.Add( "Conditions", conditions );

@@ -91,7 +91,10 @@ namespace ClassicAssist.Avalonia.Views.Autoloot
 
             PropertyEntry property = _entry.Property;
 
-            if ( property.AllowedValuesEnum == typeof( Layer ) || property.AllowedValuesEnum == typeof( SkillBonusSkills ) )
+            // SkillBonusSkills is deliberately absent: it names the skill, which the predicate reads from
+            // Additional, while Value carries the numeric bonus. Binding it here wrote the skill's enum
+            // ordinal over the bonus amount and never set the skill at all.
+            if ( property.AllowedValuesEnum == typeof( Layer ) || property.AllowedValuesEnum == typeof( TileFlags ) )
             {
                 ComboBox comboBox = new ComboBox { ItemsSource = Enum.GetValues( property.AllowedValuesEnum ), HorizontalAlignment = HorizontalAlignment.Stretch };
 
@@ -161,12 +164,34 @@ namespace ClassicAssist.Avalonia.Views.Autoloot
                 return;
             }
 
+            if ( property.Options != null )
+            {
+                ComboBox comboBox = new ComboBox { ItemsSource = property.Options, HorizontalAlignment = HorizontalAlignment.Stretch };
+
+                comboBox.Bind( ComboBox.SelectedItemProperty, new Binding
+                {
+                    Source = _entry,
+                    Path = nameof( AutolootConstraintEntry.Additional ),
+                    Mode = BindingMode.TwoWay
+                } );
+
+                _grid.Children.Add( comboBox );
+
+                return;
+            }
+
+            // Everything left edits a single field as text. Constraints whose input is a string keep it in
+            // Additional - Value is an int and silently discards anything typed into it.
+            bool editsAdditional = property.Name == Strings.Name;
+
             EditTextBlock editTextBlock = new EditTextBlock { ShowIcon = true, HorizontalAlignment = HorizontalAlignment.Stretch };
 
             editTextBlock.Bind( EditTextBlock.TextProperty, new Binding
             {
                 Source = _entry,
-                Path = nameof( AutolootConstraintEntry.Value ),
+                Path = editsAdditional
+                    ? nameof( AutolootConstraintEntry.Additional )
+                    : nameof( AutolootConstraintEntry.Value ),
                 Mode = BindingMode.TwoWay
             } );
 
