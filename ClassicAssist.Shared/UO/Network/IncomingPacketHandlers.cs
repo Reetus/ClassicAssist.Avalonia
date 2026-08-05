@@ -1461,8 +1461,7 @@ public static class IncomingPacketHandlers
             Engine.Player.Map = map;
         }
 
-        //TODO
-        //Engine.Items.ClearMultis();
+        Engine.Items.ClearMultis();
 
         MapChangedEvent?.Invoke( map );
     }
