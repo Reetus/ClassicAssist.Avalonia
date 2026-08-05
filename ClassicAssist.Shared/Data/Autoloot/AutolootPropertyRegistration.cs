@@ -190,6 +190,18 @@ namespace ClassicAssist.Data.Autoloot
             } );
         }
 
+        /// <summary>
+        ///     Lets the additional assemblies contribute their own constraints, by invoking any
+        ///     <c>public static void Initialize( ObservableCollection&lt;PropertyEntry&gt; )</c> they expose.
+        ///     Call this last, after the built-in properties, so a plugin can inspect - or replace - what is
+        ///     already registered.
+        /// </summary>
+        public static void LoadPluginProperties( ObservableCollection<PropertyEntry> constraints )
+        {
+            PluginAssemblies.InvokeInitialize( new[] { typeof( ObservableCollection<PropertyEntry> ) },
+                new object[] { constraints } );
+        }
+
         private static bool MatchSkillBonus( AutolootConstraintEntry entry, List<Property> properties )
         {
             if ( entry.Operator != AutolootOperator.NotPresent )

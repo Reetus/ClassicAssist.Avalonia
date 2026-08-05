@@ -63,6 +63,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         LoadProperties();
         LoadCustomProperties();
         AutolootPropertyRegistration.LoadSpecialProperties( Constraints );
+        AutolootPropertyRegistration.LoadPluginProperties( Constraints );
 
         AutolootHelpers.SetAutolootContainer = serial => ContainerSerial = serial;
         IncomingPacketHandlers.CorpseContainerDisplayEvent += OnCorpseEvent;
@@ -638,6 +639,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         LoadProperties();
         LoadCustomProperties();
         AutolootPropertyRegistration.LoadSpecialProperties( Constraints );
+        AutolootPropertyRegistration.LoadPluginProperties( Constraints );
     }
 
     private void ResetContainer( object obj )

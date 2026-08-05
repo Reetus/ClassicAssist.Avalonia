@@ -176,11 +176,11 @@ EntityCollectionFilterGroup, EntityCollectionFilterItem, GroupItem}.cs`.
       match over item properties or name), **TileFlags**, **Distance**, **Organizer Match** (matches
       an entry in an existing Organizer profile via `OrganizerManager`), and **Is Multi**
       (`ArtDataID == 2`) - ported line-for-line off old's `EntityCollectionFilterViewModel`
-      constructor, adapted to the extended `PropertyEntry`/`AutolootConstraintEntry` above. **Not
-      ported**: whatever `AutolootManager.LoadAssemblies` would have contributed from loaded plugin
-      assemblies - Avalonia's `AutolootManager` has no `LoadAssemblies`/`LoadProperties` methods at
-      all (see the Autoloot section of a prior audit); `Constraints` here is populated the same way
-      `AutolootViewModel` populates its own, straight from `Properties.json`/`Properties.Custom.json`.
+      constructor, adapted to the extended `PropertyEntry`/`AutolootConstraintEntry` above.
+      Plugin-contributed constraints (old's `AutolootManager.LoadAssemblies`) now arrive through
+      `AutolootPropertyRegistration.LoadPluginProperties`, called last so a plugin can inspect or
+      replace what is already registered; `AutolootViewModel` calls it at both its constraint-building
+      sites, so the two lists stay identical.
 - [x] **Filter profiles persist to `FilterProfiles.json`** - `LoadFilterProfiles`/
       `SaveFilterProfiles` on the view model, `AddProfileCommand`/`RemoveProfileCommand`, and
       `SelectedProfile`'s setter (which swaps `FilterConditions`' contents and re-applies if a filter
@@ -259,9 +259,9 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
 - [ ] `Assemblies` (`ObservableCollection<Assembly>`) - **deliberately still not round-tripped.**
       `EntityCollectionViewerOptions.Deserialize` skips this key entirely rather than
       `Assembly.LoadFile`-ing whatever paths it finds; an old-side file's `Assemblies` array is
-      silently dropped on next save from this port. Nothing here consumes loaded assemblies anyway
-      (see the Filter section's note that `AutolootManager.LoadAssemblies` has no Avalonia
-      equivalent), so there was nothing to wire it to even if it were parsed.
+      silently dropped on next save from this port. This is the ECV-local list, distinct from the
+      global `AssistantOptions.Assemblies` that `PluginAssemblies` loads - plugin constraints do now
+      reach the filter list (see the Filter section), they just come from the global list only.
 - [x] **Settings window** - `EntityCollectionViewerSettingsWindow.axaml` +
       `EntityCollectionViewerSettingsViewModel`, opened via `ConfigureCommand` (new toolbar button,
       `ConfigureIcon`). Structurally simpler than old on purpose: one view model instead of three
