@@ -968,8 +968,15 @@ public class Commands
         {
             Entity entity = UOMath.IsMobile( serial ) ? Engine.Mobiles.GetMobile( serial ) : Engine.Items.GetItem( serial );
 
+            if ( UOMath.IsMobile( serial ) && entity == null )
+            {
+                entity = Engine.Items.SelectEntity( i => i.Serial == serial && i.ArtDataID == 3 ); // Damageable items??
+            }
+
             if ( entity == null )
             {
+                SystemMessage( Strings.Cannot_find_item___ );
+
                 return;
             }
 

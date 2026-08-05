@@ -11,6 +11,7 @@ namespace ClassicAssist.UO.Objects
         public delegate void dContainerContentsChanged( bool added, IEnumerable<Item> items );
 
         private const int DefaultCapacity = 125;
+        private const int MULTI_ART_DATA_ID = 2;
         public readonly int Serial;
 
         public ItemCollection( int serial ) : base( DefaultCapacity )
@@ -289,6 +290,52 @@ namespace ClassicAssist.UO.Objects
                 return;
             }
 
+            Remove( items );
+        }
+
+        /// <summary>
+        ///     Exempts multis from the distance sweep.
+        ///     <para>
+        ///         Distance is measured to a multi's origin tile, not its footprint, so a castle you are
+        ///         standing inside can sit well over <paramref name="maxDistance" /> away and get swept out
+        ///         from under you. Multis leave the collection via <see cref="ClearMultis" /> instead.
+        ///     </para>
+        /// </summary>
+        public override void RemoveByDistance( int maxDistance, int x, int y )
+        {
+            Item[] items = SelectEntities( i =>
+                i.Owner == 0 && UOMath.Distance( x, y, i.X, i.Y ) > maxDistance && i.ArtDataID != MULTI_ART_DATA_ID );
+
+            if ( items == null )
+            {
+                return;
+            }
+
+            // Remove( Item[] ) already notifies - see ClearMultis.
+            Remove( items );
+        }
+
+        /// <summary>
+        ///     Drops every multi (house, boat) from the collection.
+        ///     <para>
+        ///         Called on a facet change, the only thing that clears them: multis are exempt from
+        ///         <see cref="RemoveByDistance" />, and Trammel and Felucca share coordinates, so crossing
+        ///         between them doesn't move the player either. The previous facet's houses would otherwise
+        ///         sit in the collection indefinitely, matching different geometry at the same x/y.
+        ///     </para>
+        /// </summary>
+        public void ClearMultis()
+        {
+            Item[] items = SelectEntities( i => i.ArtDataID == MULTI_ART_DATA_ID );
+
+            if ( items == null )
+            {
+                return;
+            }
+
+            // No explicit OnCollectionChanged: unlike the WPF original, which raises one here as well,
+            // Remove( Item[] ) already notifies and ripples up through ancestor containers - firing
+            // again just costs every ECV watching the collection a second redundant refresh.
             Remove( items );
         }
 
