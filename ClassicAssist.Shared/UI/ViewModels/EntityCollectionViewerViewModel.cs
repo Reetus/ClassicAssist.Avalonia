@@ -874,8 +874,11 @@ namespace ClassicAssist.UI.ViewModels
                         string propertyName = conditionToken["Property"]?.ToObject<string>() ??
                                                conditionToken["Constraint"]?["Name"]?.ToObject<string>();
 
-                        PropertyEntry property = Constraints.FirstOrDefault( c => c.Name == propertyName ) ??
-                                                  Constraints.FirstOrDefault();
+                        // Deliberately no fall back to the first constraint: a name that doesn't resolve
+                        // means the constraint isn't registered this session - a plugin that failed to
+                        // load, or an old-side property this port doesn't have - and silently adopting an
+                        // unrelated property would change what the filter matches with nothing to show it.
+                        PropertyEntry property = Constraints.FirstOrDefault( c => c.Name == propertyName );
 
                         if ( property == null )
                         {
@@ -973,9 +976,17 @@ namespace ClassicAssist.UI.ViewModels
 
                     foreach ( AutolootConstraintEntry condition in profile.Conditions )
                     {
+                        // A condition with no property can't be evaluated, and writing "Property": null
+                        // is worse than dropping it - on load an unnamed condition can't be matched, so it
+                        // would come back as some unrelated property carrying this one's operator/value.
+                        if ( condition.Property == null )
+                        {
+                            continue;
+                        }
+
                         conditions.Add( new JObject
                         {
-                            { "Property", condition.Property?.Name },
+                            { "Property", condition.Property.Name },
                             { "Operator", (int) condition.Operator },
                             { "Value", condition.Value },
                             { "Additional", condition.Additional }

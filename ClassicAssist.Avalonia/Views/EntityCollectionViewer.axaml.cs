@@ -36,12 +36,28 @@ namespace ClassicAssist.Avalonia.Views
 
         private EntityCollectionViewerViewModel ViewModel => DataContext as EntityCollectionViewerViewModel;
 
-        protected override void OnClosed( EventArgs e )
+        /// <summary>
+        ///     Filter profiles have no explicit Save button - edits (renames, added/removed conditions) are
+        ///     only persisted on close.
+        ///     <para>
+        ///         This has to happen here rather than in <see cref="OnClosed" />: closing detaches the
+        ///         filter DataGrid, at which point each Property cell's ComboBox loses the
+        ///         <c>$parent[Window]</c> ancestor binding feeding its ItemsSource. An empty ComboBox drops
+        ///         its selection, and SelectedItem is bound two-way, so every condition's Property is
+        ///         nulled - saving afterwards wrote "Property": null for the lot, and the next load
+        ///         silently rebound them all to whichever constraint sorted first. Closing still sees the
+        ///         real values.
+        ///     </para>
+        /// </summary>
+        protected override void OnClosing( WindowClosingEventArgs e )
         {
-            // Filter profiles have no explicit Save button - edits (renames, added/removed conditions)
-            // are only persisted here, on close.
             ViewModel?.SaveFilterProfiles();
 
+            base.OnClosing( e );
+        }
+
+        protected override void OnClosed( EventArgs e )
+        {
             // The view model listens to a collection that outlives the window, so it has to let go here or
             // every item the server sends keeps rebuilding a list nobody is looking at.
             ViewModel?.Cleanup();
