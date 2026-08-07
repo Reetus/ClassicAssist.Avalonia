@@ -381,7 +381,10 @@ public class Commands
 
     public static void CloseClientGump( Type gumpType )
     {
-        Engine.Gumps.GetGumps( out Gump[] gumps );
+        if ( !Engine.Gumps.GetGumps( out Gump[] gumps ) )
+        {
+            return;
+        }
 
         IEnumerable<Gump> closeGumps = gumps.Where( t => t.GetType() == gumpType );
 

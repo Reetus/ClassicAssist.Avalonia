@@ -31,19 +31,21 @@ namespace ClassicAssist.UO.Gumps
     public class MacrosGump : ReflectionRepositionableGump
     {
         private static Timer _timer;
-        private static string _lastList;
         private static int _serial = 0x0fe00000;
+        private static IEnumerable<MacroEntry> _lastMacros;
+        private readonly MacroEntry[] _macros;
 
-        public MacrosGump( string html ) : base( Options.CurrentOptions.MacrosGumpWidth,
+        public MacrosGump( IEnumerable<MacroEntry> macros ) : base( Options.CurrentOptions.MacrosGumpWidth,
             Options.CurrentOptions.MacrosGumpHeight, _serial++, (uint) _serial++ )
         {
+            _macros = macros.ToArray();
+
             int width = Options.CurrentOptions.MacrosGumpWidth;
             int height = Options.CurrentOptions.MacrosGumpHeight;
 
             GumpX = Options.CurrentOptions.MacrosGumpX;
             GumpY = Options.CurrentOptions.MacrosGumpY;
 
-            Movable = false;
             Closable = false;
             Resizable = false;
             Disposable = false;
@@ -59,50 +61,67 @@ namespace ClassicAssist.UO.Gumps
                 AddBackground( 0, 0, width, height, 3500 );
             }
 
-            AddHtml( 20, 20, width - 40, height - 40, html, false, true );
-        }
+            int y = 20;
+            int i = 10;
 
-        public static void ResendGump( bool force = false )
-        {
-            try
+            string textColor = Options.CurrentOptions.MacrosGumpTextColor;
+
+            foreach ( MacroEntry macro in _macros )
             {
-                MacroManager _macroManager = MacroManager.GetInstance();
-
-                IEnumerable<MacroEntry> macro = _macroManager.Items.Where( e => e.IsRunning );
-
-                string textColor = Options.CurrentOptions.MacrosGumpTextColor;
-
-                string html = string.Empty;
-
-                foreach ( MacroEntry entry in macro )
-                {
-                    if ( entry.IsBackground )
-                    {
-                        html += $"<BASEFONT COLOR={textColor}><I>{entry.Name}</I></BASEFONT>\n";
-                    }
-                    else
-                    {
-                        html += $"<BASEFONT COLOR={textColor}>{entry.Name}</BASEFONT>\n";
-                    }
-                }
-
-                if ( html.Equals( _lastList ) && !force )
+                if ( i > 17 )
                 {
                     return;
                 }
 
-                if ( Engine.Gumps.GetGumps( out Gump[] gumps ) )
+                string html = $"<BASEFONT face=Arial color={textColor}>{macro.Name}</BASEFONT>\n";
+
+                if ( macro.IsBackground )
                 {
-                    foreach ( Gump macrosGump in gumps.Where( g => g is MacrosGump ) )
-                    {
-                        Shared.UO.Commands.CloseClientGump( macrosGump.ID );
-                    }
+                    html = $"<BASEFONT face=Arial color={textColor}><I>{macro.Name}</I></BASEFONT>\n";
                 }
 
-                MacrosGump gump = new MacrosGump( html );
+                AddHtml( 20, y, width - 40, height - 40, html, false, false );
+                AddButton( width - 30, y + 3, 2104, 2103, i++, GumpButtonType.Reply, 0 );
+
+                y += 20;
+            }
+        }
+
+        public static void ResendGump( bool force = false )
+        {
+            if ( !Engine.Connected || Engine.Player == null )
+            {
+                return;
+            }
+
+            try
+            {
+                if ( !Options.CurrentOptions.MacrosGump )
+                {
+                    Shared.UO.Commands.CloseClientGump( typeof( MacrosGump ) );
+
+                    return;
+                }
+
+                MacroManager _macroManager = MacroManager.GetInstance();
+
+                IEnumerable<MacroEntry> macros = _macroManager?.Items.Where( e => e.IsRunning )
+                    .OrderByDescending( e => e.StartedOn ).ToArray();
+
+                if ( _lastMacros != null && macros != null && macros.SequenceEqual( _lastMacros ) && !force )
+                {
+                    return;
+                }
+
+                Shared.UO.Commands.CloseClientGump( typeof( MacrosGump ) );
+
+                MacrosGump gump = new MacrosGump( macros );
                 gump.SendGump();
 
-                _lastList = html;
+                if ( macros != null )
+                {
+                    _lastMacros = macros.ToArray();
+                }
             }
             catch ( InvalidOperationException e )
             {
@@ -112,6 +131,9 @@ namespace ClassicAssist.UO.Gumps
 
         public static void Initialize()
         {
+            Shared.UO.Commands.CloseClientGump( typeof( MacrosGump ) );
+
+            _timer?.Dispose();
             _timer = new Timer( o => ResendGump(), null, 1000, 250 );
         }
 
@@ -123,6 +145,20 @@ namespace ClassicAssist.UO.Gumps
             Options.CurrentOptions.MacrosGumpY = y;
 
             ResendGump( true );
+        }
+
+        public override void OnResponse( int buttonID, int[] switches,
+            List<(int Key, string Value)> textEntries = null )
+        {
+            if ( buttonID >= 10 && buttonID < 10 + _macros?.Length )
+            {
+                MacroEntry macro = _macros[buttonID - 10];
+                macro?.Stop();
+            }
+            else
+            {
+                base.OnResponse( buttonID, switches, textEntries );
+            }
         }
 
         public override void OnClosing()

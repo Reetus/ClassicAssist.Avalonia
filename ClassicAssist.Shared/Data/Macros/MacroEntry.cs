@@ -257,6 +257,8 @@ namespace ClassicAssist.Data.Macros
             set => SetProperty( ref _loop, value );
         }
 
+        public DateTime StartedOn { get; set; }
+
         public string Macro
         {
             get => _macro;
@@ -362,6 +364,7 @@ namespace ClassicAssist.Data.Macros
                 Shared.UO.Commands.SystemMessage( string.Format( Strings.Background_macro___0___started___, Name ) );
             }
 
+            StartedOn = DateTime.Now;
             _macroInvoker.Execute( this, parameters );
         }
 

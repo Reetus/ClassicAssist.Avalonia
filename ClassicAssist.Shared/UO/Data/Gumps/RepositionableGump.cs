@@ -26,7 +26,7 @@ namespace ClassicAssist.UO.Gumps
 {
     public abstract class RepositionableGump : Gump
     {
-        private const int REPOSITION_BUTTON_ID = 10;
+        private const int REPOSITION_BUTTON_ID = 100;
         private readonly int _height;
         private readonly int _width;
 
