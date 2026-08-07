@@ -1,4 +1,5 @@
-﻿using Avalonia;
+﻿using System;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
@@ -67,7 +68,16 @@ namespace ClassicAssist.Avalonia.Controls
             {
                 if ( args.Key == Key.Enter || args.Key == Key.Escape )
                 {
+                    args.Handled = true;
                     HideTextBox();
+                }
+                else if ( args.Key == Key.Space )
+                {
+                    // A ComboBox hosting this control handles Key.Space to toggle its dropdown before
+                    // the TextBox can consume the key, so the space never reaches the text and the edit
+                    // loses focus - insert the character here and stop it from bubbling up.
+                    InsertText( " " );
+                    args.Handled = true;
                 }
             };
 
@@ -159,6 +169,20 @@ namespace ClassicAssist.Avalonia.Controls
             _pencilButton.IsVisible = ShowIcon;
             _textBox.IsVisible = false;
             _textBox.SelectionStart = _textBox.SelectionEnd = 0;
+        }
+
+        private void InsertText( string text )
+        {
+            int start = Math.Min( _textBox.SelectionStart, _textBox.SelectionEnd );
+            int end = Math.Max( _textBox.SelectionStart, _textBox.SelectionEnd );
+            string current = _textBox.Text ?? string.Empty;
+
+            _textBox.Text = current.Remove( start, end - start ).Insert( start, text );
+
+            int caret = start + text.Length;
+            _textBox.CaretIndex = caret;
+            _textBox.SelectionStart = caret;
+            _textBox.SelectionEnd = caret;
         }
 
         private void InitializeComponent()
