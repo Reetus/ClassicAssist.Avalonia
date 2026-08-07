@@ -53,8 +53,7 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
                 {
                     Type type = parameterInfo.ParameterType;
 
-                    if ( button.AssociatedObject.GetType() == type ||
-                         button.AssociatedObject.GetType().IsSubclassOf( type ) )
+                    if ( type.IsInstanceOfType( button.AssociatedObject ) )
                     {
                         param.Add( button.AssociatedObject );
                     }
