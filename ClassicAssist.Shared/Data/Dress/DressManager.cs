@@ -206,6 +206,28 @@ namespace ClassicAssist.Data.Dress
             }
         }
 
+        public async Task Undress( DressAgentEntry dae )
+        {
+            try
+            {
+                if ( IsDressing )
+                {
+                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                        (int) SystemMessageHues.Red );
+                    return;
+                }
+
+                IsDressing = true;
+                _cancellationTokenSource = new CancellationTokenSource();
+
+                await dae.Undress( _cancellationTokenSource.Token );
+            }
+            finally
+            {
+                IsDressing = false;
+            }
+        }
+
         public void Stop()
         {
             if ( IsDressing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )

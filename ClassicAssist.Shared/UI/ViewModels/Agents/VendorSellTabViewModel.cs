@@ -18,20 +18,38 @@ using UOC = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents
 {
-    public class VendorSellTabViewModel : BaseViewModel, ISettingProvider
+    public class VendorSellTabViewModel : BaseViewModel, ISettingProvider, IDisposable
     {
+        private int _containerSerial;
         private ICommand _insertCommand;
+        private ICommand _insertMatchAnyCommand;
         private ObservableCollection<VendorSellAgentEntry> _items = new ObservableCollection<VendorSellAgentEntry>();
         private ICommand _removeCommand;
+        private ICommand _resetContainerCommand;
         private VendorSellAgentEntry _selectedItem;
+        private ICommand _setContainerCommand;
 
         public VendorSellTabViewModel()
         {
             IncomingPacketHandlers.VendorSellDisplayEvent += OnVendorSellDisplayEvent;
         }
 
+        public void Dispose()
+        {
+            IncomingPacketHandlers.VendorSellDisplayEvent -= OnVendorSellDisplayEvent;
+        }
+
+        public int ContainerSerial
+        {
+            get => _containerSerial;
+            set => SetProperty( ref _containerSerial, value );
+        }
+
         public ICommand InsertCommand =>
             _insertCommand ?? ( _insertCommand = new RelayCommandAsync( Insert, o => true ) );
+
+        public ICommand InsertMatchAnyCommand =>
+            _insertMatchAnyCommand ?? ( _insertMatchAnyCommand = new RelayCommand( InsertMatchAny, o => true ) );
 
         public ObservableCollection<VendorSellAgentEntry> Items
         {
@@ -42,11 +60,18 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         public ICommand RemoveCommand =>
             _removeCommand ?? ( _removeCommand = new RelayCommand( Remove, o => SelectedItem != null ) );
 
+        public ICommand ResetContainerCommand =>
+            _resetContainerCommand ??
+            ( _resetContainerCommand = new RelayCommand( ResetContainer, o => ContainerSerial != 0 ) );
+
         public VendorSellAgentEntry SelectedItem
         {
             get => _selectedItem;
             set => SetProperty( ref _selectedItem, value );
         }
+
+        public ICommand SetContainerCommand =>
+            _setContainerCommand ?? ( _setContainerCommand = new RelayCommandAsync( SetContainer, o => true ) );
 
         public void Serialize( JObject json )
         {
@@ -72,7 +97,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                 itemsObj.Add( itemObj );
             }
 
-            JObject config = new JObject { { "Items", itemsObj } };
+            JObject config = new JObject { { "Items", itemsObj }, { "ContainerSerial", ContainerSerial } };
 
             json.Add( "VendorSell", config );
         }
@@ -102,6 +127,39 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
 
                 Items.Add( vsae );
             }
+
+            ContainerSerial = config["ContainerSerial"]?.ToObject<int>() ?? 0;
+        }
+
+        private void InsertMatchAny( object arg )
+        {
+            Items.Add( new VendorSellAgentEntry
+            {
+                Enabled = true,
+                Name = Strings.Any,
+                Graphic = -1,
+                Hue = -1,
+                Amount = -1,
+                MinPrice = 0
+            } );
+        }
+
+        private void ResetContainer( object obj )
+        {
+            ContainerSerial = 0;
+        }
+
+        private async Task SetContainer( object arg )
+        {
+            int serial = await UOC.GetTargetSerialAsync( Strings.Target_container___ );
+
+            if ( serial == 0 )
+            {
+                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id, true );
+                return;
+            }
+
+            ContainerSerial = serial;
         }
 
         private void Remove( object arg )
@@ -118,21 +176,65 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
         {
             List<SellListEntry> sellList = new List<SellListEntry>();
 
+            // Track the remaining sell budget per matched agent entry so the Amount limit is a total
+            // across all matching stacks, rather than being applied to each stack separately.
+            Dictionary<VendorSellAgentEntry, int> remaining = new Dictionary<VendorSellAgentEntry, int>();
+
             foreach ( SellListEntry entry in entries )
             {
                 VendorSellAgentEntry match = Items.FirstOrDefault( i =>
-                    i.Graphic == entry.ID && ( i.Hue == -1 || i.Hue == entry.Hue ) && entry.Price >= i.MinPrice &&
-                    i.Enabled );
+                    ( i.Graphic == -1 || i.Graphic == entry.ID ) && ( i.Hue == -1 || i.Hue == entry.Hue ) &&
+                    entry.Price >= i.MinPrice && i.Enabled );
 
-                if ( match != null && match.Amount != -1 )
+                if ( match == null )
                 {
-                    entry.Amount = Math.Min( match.Amount, entry.Amount );
+                    continue;
                 }
 
-                if ( match != null )
+                if ( match.Amount != -1 )
                 {
-                    sellList.Add( entry );
+                    if ( !remaining.TryGetValue( match, out int budget ) )
+                    {
+                        budget = match.Amount;
+                    }
+
+                    entry.Amount = Math.Min( budget, entry.Amount );
+                    remaining[match] = budget - entry.Amount;
+
+                    if ( entry.Amount <= 0 )
+                    {
+                        continue;
+                    }
                 }
+
+                sellList.Add( entry );
+            }
+
+            if ( ContainerSerial != 0 )
+            {
+                if ( Engine.Player?.Backpack?.Container == null ||
+                     !Engine.Player.Backpack.Container.GetItem( ContainerSerial, out Item container ) )
+                {
+                    UOC.SystemMessage( Strings.Invalid_container___ );
+
+                    return;
+                }
+
+                int[] containerIds =
+                    container.Container?.GetItems().Select( i => i.ID ).ToArray() ?? Array.Empty<int>();
+
+                UOC.WaitForContainerContents( ContainerSerial, 1000 );
+
+                List<SellListEntry> filteredList = sellList.Where( e => containerIds.Contains( e.ID ) ).ToList();
+
+                foreach ( SellListEntry entry in filteredList )
+                {
+                    int totalAmount = container.Container?.Where( e => e.ID == entry.ID ).Sum( e => e.Count ) ?? 0;
+
+                    entry.Amount = Math.Min( entry.Amount, totalAmount );
+                }
+
+                sellList = filteredList;
             }
 
             if ( sellList.Count > 0 )

@@ -10,7 +10,7 @@
   <UserControl.DataContext>
     <agents:VendorSellTabViewModel />
   </UserControl.DataContext>
-  <Grid RowDefinitions="*, Auto">
+  <Grid RowDefinitions="*, Auto, Auto">
     <DataGrid Grid.Row="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>
         <DataGridTemplateColumn Header="✓">
@@ -45,14 +45,29 @@
         </DataGridTemplateColumn>
       </DataGrid.Columns>
     </DataGrid>
-    <StackPanel Orientation="Horizontal" Grid.Row="1" Margin="0,10,0,0">
+    <Grid Grid.Row="1" ColumnDefinitions="*, Auto" Margin="0,10,0,0">
+      <Button Content="{x:Static resources:Strings.Set_Container}" Grid.Column="0"
+              Command="{Binding SetContainerCommand}" />
+      <Image Source="{DynamicResource ConfigureIcon}" Height="16" Grid.Column="1" Margin="5,0,0,0">
+        <Image.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="{x:Static resources:Strings.Reset_Container}"
+                      Command="{Binding ResetContainerCommand}" />
+          </ContextMenu>
+        </Image.ContextMenu>
+      </Image>
+    </Grid>
+    <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10,0,0">
       <StackPanel.Styles>
         <Style Selector="Button">
           <Setter Property="Padding" Value="10,5,10,5" />
           <Setter Property="MinWidth" Value="80" />
         </Style>
       </StackPanel.Styles>
-      <Button Content="{x:Static resources:Strings.Insert}" Command="{Binding InsertCommand}" Margin="0,0,10,0"/>
+      <Button Content="{x:Static resources:Strings.Insert}" ToolTip.Tip="{x:Static resources:Strings.ID_from_target}"
+              Command="{Binding InsertCommand}" Margin="0,0,5,0"/>
+      <Button Content="{x:Static resources:Strings.Match_Any_ID}" Command="{Binding InsertMatchAnyCommand}"
+              Margin="0,0,10,0"/>
       <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCommand}" CommandParameter="{Binding SelectedItem}" />
     </StackPanel>
   </Grid>

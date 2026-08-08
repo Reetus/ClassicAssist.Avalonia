@@ -6,12 +6,16 @@
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
-             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"             
+             xmlns:ia="clr-namespace:Avalonia.Xaml.Interactions.Core;assembly=Avalonia.Xaml.Interactions"
+             xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.DressTabControl">
   <UserControl.DataContext>
     <agents:DressTabViewModel/>
   </UserControl.DataContext>
+  <UserControl.Resources>
+    <misc:BooleanToggleLabelConverter x:Key="BooleanToggleLabelConverter" />
+  </UserControl.Resources>
   <Grid ColumnDefinitions="150, *, 120">
     <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto">
       <StackPanel Grid.Column="0">
@@ -57,9 +61,27 @@
           <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
       </StackPanel.Styles>
-      <Button Content="{x:Static resources:Strings.Dress}" Command="{Binding DressAllItemsCommand}" CommandParameter="{Binding SelectedItem}" />
-      <Button Content="{x:Static resources:Strings.Undress}" Command="{Binding UndressItemsCommand}" CommandParameter="{Binding SelectedItem}" />
-      <Button Content="{x:Static resources:Strings.Undress_All}" Command="{Binding UndressAllItemsCommand}" />
+      <Button Command="{Binding DressAllItemsCommand}" CommandParameter="{Binding SelectedItem}">
+        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+          <Binding Path="IsDressing" />
+          <Binding Source="{x:Static resources:Strings.Stop}" />
+          <Binding Source="{x:Static resources:Strings.Dress}" />
+        </MultiBinding>
+      </Button>
+      <Button Command="{Binding UndressItemsCommand}" CommandParameter="{Binding SelectedItem}">
+        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+          <Binding Path="IsUndressing" />
+          <Binding Source="{x:Static resources:Strings.Stop}" />
+          <Binding Source="{x:Static resources:Strings.Undress}" />
+        </MultiBinding>
+      </Button>
+      <Button Command="{Binding UndressAllItemsCommand}">
+        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+          <Binding Path="IsUndressingAll" />
+          <Binding Source="{x:Static resources:Strings.Stop}" />
+          <Binding Source="{x:Static resources:Strings.Undress_All}" />
+        </MultiBinding>
+      </Button>
       <Button Content="{x:Static resources:Strings.Import}" Command="{Binding ImportItemsCommand}" CommandParameter="{Binding SelectedItem}" />
       <Button Content="{x:Static resources:Strings.New_Item}" Command="{Binding AddDressItemCommand}" CommandParameter="{Binding SelectedItem}" />
       <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveDressItemCommand}" CommandParameter="{Binding SelectedDressItem}" />

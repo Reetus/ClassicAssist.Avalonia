@@ -96,16 +96,40 @@ nothing.
 
 ## Missing agent features (tab exists, feature dropped)
 
-- [ ] **Organizer** - per-entry Source/Destination container display and Set/Clear Source &
-      Destination commands (only a combined target-based "Set Containers" exists); `Return_Excess`.
+- [x] ~~**Organizer**~~ - stale entry, already fully implemented: per-entry `SourceContainer`/
+      `DestinationContainer` (`OrganizerEntry.cs`), the granular `SetEntrySourceContainerCommand`/
+      `ClearEntrySourceContainerCommand`/`SetEntryDestinationContainerCommand`/
+      `ClearEntryDestinationContainerCommand` wired per-row in `OrganizerTabControl.axaml`
+      (alongside, not replaced by, the combined target-based `SetContainersCommand` - both exist in
+      WPF too), and `ReturnExcess` (property + checkbox + `OrganizerManager.ReturnExcess()`).
       (~~"Stop Organizer" category hotkey~~ done - a `_staticOptions` entry persisted under the
       top-level `OrganizerOptions` block, the same shape Dress already used.)
-- [ ] **Dress** - no "Stop" button (stop exists only via `DressManager.Stop()` macro/hotkey).
-- [ ] **Scavenger** - `CheckWeight`/`MinWeightAvailable`, per-entry `Priority`
-      (no `ScavengerPriority` enum), Cliloc filter (`ScavengerClilocFilterEntry` +
-      `ScavengerClilocFilterWindow`).
-- [ ] **Vendor Sell** - `ContainerSerial`, `SetContainer`/`ResetContainer`, `ID from target`,
-      `Match Any ID`.
+- [x] ~~**Dress**~~ - WPF relabels the Dress/Undress/Undress All buttons to "Stop" while running
+      (click again to cancel); Avalonia's `IsDressingOrUndressing` combined flag disabled all three
+      buttons while any one ran, so there was no way to click the running button a second time to
+      stop it. Split back into `IsDressing`/`IsUndressing`/`IsUndressingAll` (matching WPF), each
+      command's handler now calls `DressManager.Stop()` when its own flag is already set instead of
+      restarting, and each button's `Content` is a `MultiBinding`/`BooleanToggleLabelConverter`
+      swapping between `Strings.Stop` and its idle label. Also added `DressManager.Undress(
+      DressAgentEntry)` - `UndressItems` was calling `dae.Undress()` directly, bypassing the
+      manager's own `IsDressing`/cancellation-token tracking entirely, so `Stop()` could never have
+      cancelled a single-item undress even with a working button.
+- [x] ~~**Scavenger**~~ - stale entry, already fully implemented: `ScavengerPriority` enum +
+      `ScavengerEntry.Priority` (ordering honored in `ScavengerTabViewModel`'s scavenge loop),
+      `CheckWeight`/`MinWeightAvailable` (bound + enforced), and the Cliloc filter
+      (`ScavengerClilocFilterEntry`/`ScavengerClilocFilterWindow`, opened via
+      `Engine.UIInvoker.InvokeDialog` and applied in the match predicate).
+- [x] ~~**Vendor Sell**~~ - added `ContainerSerial` + `SetContainerCommand`/`ResetContainerCommand`
+      (`VendorSellTabControl.axaml`'s gear-icon-context-menu pattern, matching Autoloot's), the
+      container-filtered sell path in `OnVendorSellDisplayEvent` (only sells items also present in
+      the chosen container, capped to its stock), and `InsertMatchAnyCommand` (`Graphic=-1` wildcard
+      entry) with the match predicate now honoring `Graphic == -1`. Also ported WPF's per-entry
+      `Amount` budget tracking (a `Dictionary<VendorSellAgentEntry, int>` of remaining stock) since
+      it lives in the same method - previously each matching stack was capped at `Amount`
+      independently, so e.g. two stacks matching one `Amount = 5` rule could sell 10 total instead
+      of 5. `ID from target` already existed. `IDisposable` added so the
+      `VendorSellDisplayEvent` subscription matches WPF's cleanup (not otherwise invoked yet, since
+      nothing currently disposes agent tab view models on tab teardown here).
 - [x] ~~**Autoloot**~~ - groups/folders (`AutolootGroup`, `IDraggable` tree infra, New/Remove/
       Move-to-group commands), per-entry `Priority` (`AutolootPriority` enum + `Group`/`Priority` on
       `AutolootEntry`, serialized and honored in `OnCorpseEvent`/debug ordering), `LootHumanoids`
