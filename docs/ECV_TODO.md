@@ -249,9 +249,9 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
       (add/remove sets, target-add/remove serials per set). **Not consumed anywhere yet** - the
       context menu's "Move to set" submenu that would read these back out is still explicitly out of
       scope (see Context menu section); this only builds and persists the sets themselves.
-- [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (ID/Hue as
-      plain `DataGridTextColumn`s; Cliloc gets a search-by-name picker and a target-to-fill button,
-      same as old - see below) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`,
+- [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (ID and Cliloc
+      use the reusable `GraphicEditTextBlock`/`ClilocEditTextBlock` controls - see below; Hue stays a
+      plain `DataGridTextColumn`) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`,
       which previously ignored them entirely.
 - [x] `OpenContainersOnlyKnownContainers` (bool) - checkbox in the Settings window; `ContainerGumpIDs.json`
       was copied over from old-side (`ClassicAssist.Shared/Data/ContainerGumpIDs.json`, wasn't in the
@@ -268,14 +268,16 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
       (`CombineStacksSettingsViewModel`/`OpenContainersSettingsViewModel`/
       `ContainerSetsSettingsViewModel`), and a single "OK" button that just closes (old's OK/Cancel
       pair was already documented as functionally identical - both just close, since the bound
-      `Options` is mutated in place either way). ID and Hue are plain `DataGridTextColumn`s rather
-      than old's `GraphicEditTextBlock`/`HueEditTextBlock` picker controls (not worth building two
-      full custom controls for two int columns that are directly editable as-is). Cliloc got its own
-      `ChooseClilocCommand`/`TargetClilocCommand` on the view model instead though - without a way to
-      search by name, setting a Cliloc constraint meant already knowing its numeric ID, which wasn't
-      viable - wired into the DataGrid via a `DataGridTemplateColumn` rather than porting
-      `ClilocEditTextBlock` itself (its old-side implementation leans on WPF `DependencyProperty`
-      cross-wiring between sibling columns that doesn't map cleanly to Avalonia).
+      `Options` is mutated in place either way). ID and Cliloc use `Controls/GraphicEditTextBlock` and
+      `Controls/ClilocEditTextBlock` - reusable controls (not scoped to this window), each wrapping
+      the base `EditTextBlock` and owning their own picker/target logic rather than routing through
+      view model commands, so any caller can just drop one in and bind `ID`/`Cliloc`. `EditTextBlock`
+      itself gained a `Buttons` content property to host them (ported from old's base `EditTextBlock`,
+      which already had one). Unlike old's `GraphicEditTextBlock`/`ClilocEditTextBlock`, these don't
+      cross-wire sibling ID/Cliloc/Hue columns on target (old's `RelativeSource`+`BindingProxy` trick
+      for reaching a sibling `DataGridTemplateColumn`'s control doesn't map cleanly to Avalonia) - each
+      field is targeted independently. Hue stays a plain `DataGridTextColumn`, same as old's
+      `HueEditTextBlock` (no picker button there either).
 
 ## Extensibility (custom toolbar/context actions)
 

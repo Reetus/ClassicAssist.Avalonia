@@ -28,9 +28,14 @@
                FontWeight="{Binding FontWeight, ElementName=root}" FontStyle="{Binding FontStyle, ElementName=root}"
                HorizontalAlignment="Stretch" VerticalAlignment="Stretch" TextTrimming="CharacterEllipsis"/>
     <TextBox x:Name="textBox" IsVisible="False" Text="{Binding Text, ElementName=root}"/>
-    <Button Width="12" Height="12" BorderThickness="0" Background="Transparent" Margin="0" Padding="0"
-            HorizontalAlignment="Right" x:Name="pencilButton" IsVisible="{Binding ShowIcon, ElementName=root}">
-      <Image Source="{StaticResource PencilIcon}" Width="16" HorizontalAlignment="Center" />
-    </Button>
+    <!-- Pencil-edit icon plus caller-supplied Buttons (e.g. ClilocEditTextBlock's picker/target
+         buttons) - both hidden together while textBox is showing, same as WPF's base EditTextBlock. -->
+    <StackPanel x:Name="buttonsPanel" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button Width="12" Height="12" BorderThickness="0" Background="Transparent" Margin="0" Padding="0"
+              HorizontalAlignment="Right" x:Name="pencilButton" IsVisible="{Binding ShowIcon, ElementName=root}">
+        <Image Source="{StaticResource PencilIcon}" Width="16" HorizontalAlignment="Center" />
+      </Button>
+      <ContentPresenter Content="{Binding Buttons, ElementName=root}"/>
+    </StackPanel>
   </Grid>
 </UserControl>

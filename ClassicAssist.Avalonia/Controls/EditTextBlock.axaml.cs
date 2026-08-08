@@ -43,7 +43,18 @@ namespace ClassicAssist.Avalonia.Controls
             AvaloniaProperty.RegisterDirect<EditTextBlock, FontStyle>( nameof( FontStyle ), o => o.FontStyle,
                 ( o, v ) => o.FontStyle = v );
 
+        /// <summary>
+        ///     Extra controls (e.g. a "choose" or "target" button) shown next to the pencil icon and
+        ///     hidden together with it while editing. Ported from WPF's base EditTextBlock, which
+        ///     ClilocEditTextBlock/GraphicEditTextBlock rely on for their picker/target buttons.
+        /// </summary>
+        public static readonly DirectProperty<EditTextBlock, object> ButtonsProperty =
+            AvaloniaProperty.RegisterDirect<EditTextBlock, object>( nameof( Buttons ), o => o.Buttons,
+                ( o, v ) => o.Buttons = v );
+
         private readonly Button _pencilButton;
+        private readonly StackPanel _buttonsPanel;
+        private object _buttons;
         private string _label;
         private bool _showIcon;
 
@@ -61,6 +72,7 @@ namespace ClassicAssist.Avalonia.Controls
             _textBox = this.FindControl<TextBox>( "textBox" );
             _textBlock = this.FindControl<TextBlock>( "textBlock" );
             _pencilButton = this.FindControl<Button>( "pencilButton" );
+            _buttonsPanel = this.FindControl<StackPanel>( "buttonsPanel" );
 
             DoubleTapped += ( sender, args ) => HideTextBlock();
 
@@ -118,6 +130,12 @@ namespace ClassicAssist.Avalonia.Controls
             set => SetAndRaise( ShowIconProperty, ref _showIcon, value );
         }
 
+        public object Buttons
+        {
+            get => _buttons;
+            set => SetAndRaise( ButtonsProperty, ref _buttons, value );
+        }
+
         public string Label
         {
             get => _label;
@@ -155,7 +173,7 @@ namespace ClassicAssist.Avalonia.Controls
 
         private void HideTextBlock()
         {
-            _pencilButton.IsVisible = false;
+            _buttonsPanel.IsVisible = false;
             _textBlock.IsVisible = false;
 
             _textBox.IsVisible = true;
@@ -166,7 +184,7 @@ namespace ClassicAssist.Avalonia.Controls
         private void HideTextBox()
         {
             _textBlock.IsVisible = true;
-            _pencilButton.IsVisible = ShowIcon;
+            _buttonsPanel.IsVisible = true;
             _textBox.IsVisible = false;
             _textBox.SelectionStart = _textBox.SelectionEnd = 0;
         }

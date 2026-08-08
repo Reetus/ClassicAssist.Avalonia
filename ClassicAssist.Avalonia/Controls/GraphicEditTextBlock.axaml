@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+             xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+             xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+             mc:Ignorable="d" d:DesignWidth="300"
+             x:Name="root"
+             x:Class="ClassicAssist.Avalonia.Controls.GraphicEditTextBlock">
+  <UserControl.Resources>
+    <misc:IntToHexStringValueConverter x:Key="IntToHexStringValueConverter"/>
+  </UserControl.Resources>
+  <controls:EditTextBlock x:Name="editTextBlock" ShowIcon="True"
+                           Text="{Binding ID, ElementName=root, Mode=TwoWay, Converter={StaticResource IntToHexStringValueConverter}}"
+                           Label="{Binding Label, ElementName=root}"
+                           ToolTip.Tip="{Binding Label, ElementName=root}">
+    <controls:EditTextBlock.Buttons>
+      <Button Width="16" Height="16" BorderThickness="0" Background="Transparent" Padding="0"
+              Margin="2,0,0,0" Click="OnTargetClick"
+              ToolTip.Tip="{x:Static resources:Strings.Target_object___}">
+        <Image Source="{StaticResource CrosshairIcon}" Height="12"/>
+      </Button>
+    </controls:EditTextBlock.Buttons>
+  </controls:EditTextBlock>
+</UserControl>
