@@ -138,6 +138,15 @@
         <DataGrid Grid.Row="1" ItemsSource="{Binding FilterConditions}" MaxHeight="150"
                   AutoGenerateColumns="False" CanUserResizeColumns="True" GridLinesVisibility="All">
           <DataGrid.Columns>
+            <!-- Lets a condition be excluded from the active filter without removing the row - matches
+                 WPF's checkbox column ahead of Property. -->
+            <DataGridTemplateColumn Header="✓" Width="Auto">
+              <DataGridTemplateColumn.CellTemplate>
+                <DataTemplate DataType="autoloot:AutolootConstraintEntry">
+                  <CheckBox IsChecked="{Binding Enabled}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </DataTemplate>
+              </DataGridTemplateColumn.CellTemplate>
+            </DataGridTemplateColumn>
             <DataGridTemplateColumn Header="{x:Static resources:Strings.Property}" Width="2*">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate DataType="autoloot:AutolootConstraintEntry">

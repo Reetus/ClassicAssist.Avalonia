@@ -543,7 +543,7 @@ namespace ClassicAssist.UI.ViewModels
                 if ( newEntities.Count > 0 )
                 {
                     List<Predicate<Item>> predicates = IsFilterApplied && FilterConditions.Count > 0
-                        ? AutolootHelpers.ConstraintsToPredicates( FilterConditions ).ToList()
+                        ? AutolootHelpers.ConstraintsToPredicates( FilterConditions.Where( c => c.Enabled ) ).ToList()
                         : null;
 
                     IComparer<Entity> sorter = GetSorter();
@@ -639,7 +639,8 @@ namespace ClassicAssist.UI.ViewModels
                 return source;
             }
 
-            List<Predicate<Item>> predicates = AutolootHelpers.ConstraintsToPredicates( FilterConditions ).ToList();
+            List<Predicate<Item>> predicates =
+                AutolootHelpers.ConstraintsToPredicates( FilterConditions.Where( c => c.Enabled ) ).ToList();
 
             if ( predicates.Count == 0 )
             {
@@ -981,7 +982,10 @@ namespace ClassicAssist.UI.ViewModels
                             Operator = conditionToken["Operator"]?.ToObject<AutolootOperator>() ??
                                        AutolootOperator.Equal,
                             Value = conditionToken["Value"]?.ToObject<int>() ?? 0,
-                            Additional = conditionToken["Additional"]?.ToObject<string>()
+                            Additional = conditionToken["Additional"]?.ToObject<string>(),
+                            // Absent for every condition written before this was persisted - defaults to
+                            // enabled, matching AutolootConstraintEntry's own default.
+                            Enabled = conditionToken["Enabled"]?.ToObject<bool>() ?? true
                         };
 
                         // Absent for every condition written before this was persisted, and for the
@@ -1089,7 +1093,8 @@ namespace ClassicAssist.UI.ViewModels
                             { "Property", condition.Property.Name },
                             { "Operator", (int) condition.Operator },
                             { "Value", condition.Value },
-                            { "Additional", condition.Additional }
+                            { "Additional", condition.Additional },
+                            { "Enabled", condition.Enabled }
                         };
 
                         // Only written when there's something in it, matching old. This is the multi-value

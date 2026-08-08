@@ -8,6 +8,7 @@ namespace ClassicAssist.Data.Autoloot
     public class AutolootConstraintEntry : INotifyPropertyChanged
     {
         private string _additional;
+        private bool _enabled = true;
         private AutolootOperator _operator = AutolootOperator.Equal;
         private PropertyEntry _property;
         private int _value;
@@ -19,6 +20,18 @@ namespace ClassicAssist.Data.Autoloot
         {
             get => _additional;
             set => SetProperty( ref _additional, value );
+        }
+
+        /// <summary>
+        ///     Lets a row be excluded from evaluation without removing it - only meaningful where a caller
+        ///     checks it (currently just the ECV filter's <c>ApplyFilter</c>/<c>ApplyCollectionChange</c>).
+        ///     Autoloot's own conditions don't currently expose a way to toggle this, so it has no effect
+        ///     there. Ported from WPF's ECV-only <c>EntityCollectionFilterItem.Enabled</c>.
+        /// </summary>
+        public bool Enabled
+        {
+            get => _enabled;
+            set => SetProperty( ref _enabled, value );
         }
 
         public AutolootOperator Operator
