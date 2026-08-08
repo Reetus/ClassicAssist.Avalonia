@@ -113,21 +113,36 @@ namespace ClassicAssist.UO.Network
             }
         }
 
+        /// <summary>
+        ///     Sends the drag and drop packets as one queue item with a fixed gap between them, rather than
+        ///     two independently-throttled ones.
+        ///     <para>
+        ///         Queuing them separately (as this used to) meant the drop packet re-entered the
+        ///         <see cref="Options.ActionDelayMS" /> gate on its own, right after the drag packet had
+        ///         just reset it - so the drop routinely landed several hundred ms after the pickup instead
+        ///         of the ~50ms below. Long enough for the player to have moved in between, which
+        ///         invalidates the ground coordinates computed against their old position and gets the
+        ///         drop rejected - the item bounces back. Matches <see cref="EnqueueDragDrop(int,int,int,QueuePriority,bool,bool,bool,int,int,DragDropOptions,int)" />,
+        ///         which already did this correctly.
+        ///     </para>
+        /// </summary>
         public static Task EnqueueDragDropGround( int serial, int amount, int x, int y, int z,
             QueuePriority priority = QueuePriority.Low, bool delaySend = true )
         {
             lock ( _actionPacketQueueLock )
             {
-                byte[] dragPacket = new DragItem( serial, amount ).ToArray();
-                byte[] dropItem = new DropItem( serial, -1, x, y, z ).ToArray();
+                ActionQueueItem actionQueueItem = new ActionQueueItem( _ =>
+                {
+                    Engine.SendPacketToServer( new DragItem( serial, amount ) );
+                    Thread.Sleep( 50 );
+                    Engine.SendPacketToServer( new DropItem( serial, -1, x, y, z ) );
 
-                PacketQueueItem dragPacketQueueItem = new PacketQueueItem( dragPacket, dragPacket.Length, delaySend );
-                _actionPacketQueue.Enqueue( dragPacketQueueItem, priority );
+                    return true;
+                } ) { DelaySend = delaySend, Serial = serial };
 
-                PacketQueueItem dropPacketQueueItem = new PacketQueueItem( dropItem, dropItem.Length, delaySend );
-                _actionPacketQueue.Enqueue( dropPacketQueueItem, priority );
+                _actionPacketQueue.Enqueue( actionQueueItem, priority );
 
-                return new[] { dragPacketQueueItem.WaitHandle, dropPacketQueueItem.WaitHandle }.ToTask();
+                return actionQueueItem.WaitHandle.ToTask();
             }
         }
 
