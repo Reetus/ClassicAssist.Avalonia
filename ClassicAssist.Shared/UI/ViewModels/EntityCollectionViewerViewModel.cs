@@ -510,7 +510,91 @@ namespace ClassicAssist.UI.ViewModels
 
         private void OnCollectionChanged( int totalCount, bool added, Item[] entities )
         {
-            Rebuild();
+            IDispatcher dispatcher = _dispatcher ?? Engine.Dispatcher;
+
+            if ( dispatcher != null && !dispatcher.CheckAccess() )
+            {
+                dispatcher.Invoke( () => ApplyCollectionChange( added, entities ) );
+            }
+            else
+            {
+                ApplyCollectionChange( added, entities );
+            }
+        }
+
+        /// <summary>
+        ///     Patches <see cref="Entities" /> in place for a live add/remove instead of routing through
+        ///     <see cref="Rebuild" />, which swaps in a whole new <see cref="ObservableCollection{T}" /> of
+        ///     brand new <see cref="EntityCollectionData" /> rows. <see cref="EntityCollectionData" /> has no
+        ///     <c>Equals</c> override, so that wholesale replacement made every row a different reference
+        ///     than whatever was in <see cref="SelectedItems" />, deselecting the entire grid on every
+        ///     server update - including mid drag-and-drop, where the point is to keep selecting/dropping the
+        ///     remaining items. Rows untouched by this particular add/remove keep their identity here, so
+        ///     they stay selected. Mirrors the WPF build's <c>OnCollectionChanged</c>.
+        /// </summary>
+        private void ApplyCollectionChange( bool added, Item[] entities )
+        {
+            if ( added )
+            {
+                List<Item> newEntities = entities
+                    .Where( e => Options.ShowChildItems || e.Owner == Collection.Serial )
+                    .Where( e => Entities.All( ecd => !ecd.Entity.Equals( e ) ) ).ToList();
+
+                if ( newEntities.Count > 0 )
+                {
+                    List<Predicate<Item>> predicates = IsFilterApplied && FilterConditions.Count > 0
+                        ? AutolootHelpers.ConstraintsToPredicates( FilterConditions ).ToList()
+                        : null;
+
+                    IComparer<Entity> sorter = GetSorter();
+
+                    foreach ( Item entity in newEntities )
+                    {
+                        if ( predicates != null && !predicates.All( p => p( entity ) ) )
+                        {
+                            continue;
+                        }
+
+                        bool isLocked = Options.LockedItems.Contains( entity.Serial );
+
+                        if ( Options.HideLockedItems && isLocked )
+                        {
+                            continue;
+                        }
+
+                        EntityCollectionData data = entity.ToEntityCollectionData( _nameOverrides );
+                        data.IsLocked = isLocked;
+
+                        if ( sorter == null )
+                        {
+                            Entities.Add( data );
+                        }
+                        else
+                        {
+                            int index = 0;
+
+                            while ( index < Entities.Count &&
+                                    sorter.Compare( Entities[index].Entity, entity ) <= 0 )
+                            {
+                                index++;
+                            }
+
+                            Entities.Insert( index, data );
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach ( EntityCollectionData ecd in entities
+                             .Select( entity => Entities.FirstOrDefault( e => e.Entity.Equals( entity ) ) )
+                             .Where( ecd => ecd != null ).ToList() )
+                {
+                    Entities.Remove( ecd );
+                }
+            }
+
+            UpdateStatusLabel();
         }
 
         private void OnSelectedItemsChanged( object sender, NotifyCollectionChangedEventArgs e )
@@ -710,7 +794,8 @@ namespace ClassicAssist.UI.ViewModels
                         default:
                             return false;
                     }
-                }
+                },
+                AllowedValuesEnum = typeof( TileFlags )
             } );
 
             Constraints.AddSorted( new PropertyEntry
