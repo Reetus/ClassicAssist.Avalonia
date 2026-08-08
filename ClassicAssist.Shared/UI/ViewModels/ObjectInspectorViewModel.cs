@@ -7,6 +7,7 @@ using System.Windows.Input;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UI.ViewModels.Debug;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UI.Models;
 using ClassicAssist.UO;
@@ -427,7 +428,17 @@ namespace ClassicAssist.UI.ViewModels
                 return o => InspectObject( item.Serial );
             }
 
+            if ( value is Property[] properties )
+            {
+                return o => ShowProperties( properties );
+            }
+
             return null;
+        }
+
+        private static void ShowProperties( IEnumerable<Property> properties )
+        {
+            Engine.UIInvoker?.Invoke( "DebugWindow", new object[] { typeof( DebugPropertiesViewModel ), properties } );
         }
 
         private static void InspectObject( int serial )

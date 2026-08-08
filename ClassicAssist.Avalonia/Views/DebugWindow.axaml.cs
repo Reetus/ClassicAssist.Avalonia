@@ -24,6 +24,7 @@ using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
+using ClassicAssist.Shared.UI.ViewModels.Debug;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Avalonia.Views
@@ -45,6 +46,38 @@ namespace ClassicAssist.Avalonia.Views
             }
 
             Closing += OnClosing;
+        }
+
+        /// <summary>
+        ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
+        ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
+        ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
+        ///     pre-populated with that entity's properties. Mirrors the WPF build's matching constructor.
+        /// </summary>
+        public DebugWindow( Type viewModelType, object value ) : this()
+        {
+            if ( !( Content is TabControl tabControl ) )
+            {
+                return;
+            }
+
+            foreach ( object item in tabControl.Items )
+            {
+                if ( !( item is TabItem tabItem ) || !( tabItem.Content is Control control ) ||
+                     control.DataContext?.GetType() != viewModelType )
+                {
+                    continue;
+                }
+
+                tabControl.SelectedItem = tabItem;
+
+                if ( control.DataContext is DebugBaseViewModel viewModel )
+                {
+                    viewModel.Object = value;
+                }
+
+                break;
+            }
         }
 
         private void OnClosing( object sender, CancelEventArgs e )

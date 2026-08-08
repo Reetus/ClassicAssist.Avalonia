@@ -6,6 +6,7 @@
         xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
         xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         xmlns:models="clr-namespace:ClassicAssist.UI.Models;assembly=ClassicAssist.Shared"
+        xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ClassicAssist.Avalonia.Views.ObjectInspectorWindow"
         Title="{x:Static r:Strings.Object_Inspector}" Height="396.8" Width="450" Topmost="True">
@@ -33,8 +34,14 @@
               <ListBox.ItemTemplate>
                 <DataTemplate DataType="models:ObjectInspectorData">
                   <Grid ColumnDefinitions="150,*">
-                    <TextBlock Grid.Column="0" Text="{Binding Name}" TextWrapping="Wrap"
-                               VerticalAlignment="Center"/>
+                    <Grid Grid.Column="0" ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}" TextWrapping="Wrap"
+                                 VerticalAlignment="Center"/>
+                      <!-- Marks a row whose value can be double-clicked (e.g. opens the properties
+                           window for an item's tooltip). Matches WPF's PointerIcon column. -->
+                      <Image Grid.Column="1" MaxHeight="12" Margin="4,0,0,0" Source="{StaticResource PointerIcon}"
+                             IsVisible="{Binding OnDoubleClick, Converter={x:Static conv:ObjectConverters.IsNotNull}}"/>
+                    </Grid>
                     <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
                                VerticalAlignment="Center"/>
                   </Grid>

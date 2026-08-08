@@ -34,10 +34,33 @@ using Microsoft.Scripting.Utils;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug
 {
-    public class DebugPropertiesViewModel : BaseViewModel
+    public class DebugPropertiesViewModel : DebugBaseViewModel
     {
         private ObservableCollection<Property> _items = new ObservableCollection<Property>();
         private ICommand _targetCommand;
+
+        /// <summary>
+        ///     Lets a caller outside this tab (Object Inspector's "double-click a Properties row") feed it
+        ///     a property list directly, rather than only through <see cref="TargetCommand" />'s manual
+        ///     target-and-wait flow.
+        /// </summary>
+        public DebugPropertiesViewModel()
+        {
+            PropertyChanged += ( sender, args ) =>
+            {
+                if ( args.PropertyName != nameof( Object ) || !( Object is IEnumerable<Property> properties ) )
+                {
+                    return;
+                }
+
+                Items.Clear();
+                Items.AddRange( properties.Select( entityProperty => new Property
+                {
+                    Cliloc = entityProperty.Cliloc, Text = Cliloc.GetProperty( entityProperty.Cliloc ),
+                    Arguments = entityProperty.Arguments
+                } ).ToList() );
+            };
+        }
 
         public ObservableCollection<Property> Items
         {
