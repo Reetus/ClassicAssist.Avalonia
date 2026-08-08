@@ -249,10 +249,10 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
       (add/remove sets, target-add/remove serials per set). **Not consumed anywhere yet** - the
       context menu's "Move to set" submenu that would read these back out is still explicitly out of
       scope (see Context menu section); this only builds and persists the sets themselves.
-- [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (plain
-      `DataGridTextColumn`s for ID/Cliloc/Hue rather than old's graphic/cliloc/hue picker popups -
-      see below) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`, which
-      previously ignored them entirely.
+- [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (ID/Hue as
+      plain `DataGridTextColumn`s; Cliloc gets a search-by-name picker and a target-to-fill button,
+      same as old - see below) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`,
+      which previously ignored them entirely.
 - [x] `OpenContainersOnlyKnownContainers` (bool) - checkbox in the Settings window; `ContainerGumpIDs.json`
       was copied over from old-side (`ClassicAssist.Shared/Data/ContainerGumpIDs.json`, wasn't in the
       Avalonia tree at all before this) since the feature is a no-op without it.
@@ -266,11 +266,16 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
       `EntityCollectionViewerSettingsViewModel`, opened via `ConfigureCommand` (new toolbar button,
       `ConfigureIcon`). Structurally simpler than old on purpose: one view model instead of three
       (`CombineStacksSettingsViewModel`/`OpenContainersSettingsViewModel`/
-      `ContainerSetsSettingsViewModel`), plain `DataGridTextColumn`s instead of the custom
-      `GraphicEditTextBlock`/`ClilocEditTextBlock`/`HueEditTextBlock` picker controls (which have no
-      Avalonia port and weren't worth building for three int columns), and a single "OK" button that
-      just closes (old's OK/Cancel pair was already documented as functionally identical - both just
-      close, since the bound `Options` is mutated in place either way).
+      `ContainerSetsSettingsViewModel`), and a single "OK" button that just closes (old's OK/Cancel
+      pair was already documented as functionally identical - both just close, since the bound
+      `Options` is mutated in place either way). ID and Hue are plain `DataGridTextColumn`s rather
+      than old's `GraphicEditTextBlock`/`HueEditTextBlock` picker controls (not worth building two
+      full custom controls for two int columns that are directly editable as-is). Cliloc got its own
+      `ChooseClilocCommand`/`TargetClilocCommand` on the view model instead though - without a way to
+      search by name, setting a Cliloc constraint meant already knowing its numeric ID, which wasn't
+      viable - wired into the DataGrid via a `DataGridTemplateColumn` rather than porting
+      `ClilocEditTextBlock` itself (its old-side implementation leans on WPF `DependencyProperty`
+      cross-wiring between sibling columns that doesn't map cleanly to Avalonia).
 
 ## Extensibility (custom toolbar/context actions)
 

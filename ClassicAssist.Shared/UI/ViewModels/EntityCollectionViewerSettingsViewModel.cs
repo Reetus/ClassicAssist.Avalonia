@@ -1,9 +1,13 @@
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data.Misc;
 using ClassicAssist.Misc;
+using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UI.ViewModels.Autoloot;
 using ClassicAssist.UI.Models;
+using ClassicAssist.UO.Objects;
 using Commands = ClassicAssist.Shared.UO.Commands;
 
 namespace ClassicAssist.UI.ViewModels
@@ -21,6 +25,7 @@ namespace ClassicAssist.UI.ViewModels
         private ICommand _addContainerSetCommand;
         private ICommand _addContainerSetItemCommand;
         private ICommand _addOpenContainersEntryCommand;
+        private ICommand _chooseClilocCommand;
         private EntityCollectionViewerOptions _options;
         private ICommand _removeCombineStacksEntryCommand;
         private ICommand _removeContainerSetCommand;
@@ -30,6 +35,7 @@ namespace ClassicAssist.UI.ViewModels
         private ContainerSet _selectedContainerSet;
         private int _selectedContainerSetItem;
         private CombineStacksOpenContainersIgnoreEntry _selectedOpenContainersEntry;
+        private ICommand _targetClilocCommand;
 
         public ICommand AddCombineStacksEntryCommand =>
             _addCombineStacksEntryCommand ?? ( _addCombineStacksEntryCommand = new RelayCommand( o =>
@@ -52,6 +58,14 @@ namespace ClassicAssist.UI.ViewModels
         public ICommand AddOpenContainersEntryCommand =>
             _addOpenContainersEntryCommand ?? ( _addOpenContainersEntryCommand = new RelayCommand( o =>
                 Options.OpenContainersIgnore.Add( new CombineStacksOpenContainersIgnoreEntry() ), o => true ) );
+
+        /// <summary>
+        ///     Opens a searchable cliloc picker for a Combine Stacks / Open Containers ignore row, same as
+        ///     old's <c>ClilocEditTextBlock</c> "Choose by Cliloc" button - without it, setting a Cliloc
+        ///     constraint meant already knowing its numeric ID.
+        /// </summary>
+        public ICommand ChooseClilocCommand =>
+            _chooseClilocCommand ?? ( _chooseClilocCommand = new RelayCommandAsync( ChooseCliloc, o => true ) );
 
         public EntityCollectionViewerOptions Options
         {
@@ -105,6 +119,13 @@ namespace ClassicAssist.UI.ViewModels
             set => SetProperty( ref _selectedOpenContainersEntry, value );
         }
 
+        /// <summary>
+        ///     Fills a Combine Stacks / Open Containers ignore row's Cliloc from a targeted item's first
+        ///     property, same as old's <c>ClilocEditTextBlock</c> crosshair button.
+        /// </summary>
+        public ICommand TargetClilocCommand =>
+            _targetClilocCommand ?? ( _targetClilocCommand = new RelayCommandAsync( TargetCliloc, o => true ) );
+
         private async Task AddContainerSetItem( object arg )
         {
             int serial = await Commands.GetTargetSerialAsync( Strings.Target_container___ );
@@ -115,6 +136,47 @@ namespace ClassicAssist.UI.ViewModels
             }
 
             SelectedContainerSet.Items.Add( serial );
+        }
+
+        private async Task ChooseCliloc( object arg )
+        {
+            if ( !( arg is CombineStacksOpenContainersIgnoreEntry entry ) )
+            {
+                return;
+            }
+
+            ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
+
+            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+            // DialogResult check below runs before the user has even seen the window and always takes
+            // the early return.
+            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+            if ( vm.DialogResult != MessageBoxResult.OK )
+            {
+                return;
+            }
+
+            entry.Cliloc = vm.SelectedCliloc.Key;
+        }
+
+        private async Task TargetCliloc( object arg )
+        {
+            if ( !( arg is CombineStacksOpenContainersIgnoreEntry entry ) )
+            {
+                return;
+            }
+
+            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
+
+            if ( serial == 0 )
+            {
+                return;
+            }
+
+            Item item = Engine.Items.GetItem( serial );
+
+            entry.Cliloc = item?.Properties?.Select( p => p.Cliloc ).FirstOrDefault() ?? -1;
         }
     }
 }
