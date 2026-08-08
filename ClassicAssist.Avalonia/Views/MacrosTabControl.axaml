@@ -23,7 +23,6 @@
     <KeyBinding Gesture="F5" Command="{Binding ExecuteCommand}" CommandParameter="{Binding SelectedItem}"/>
     <KeyBinding Gesture="F8" Command="{Binding StepCommand}" CommandParameter="{Binding SelectedItem}"/>
     <KeyBinding Gesture="F12" Command="{Binding StopCommand}" CommandParameter="{Binding SelectedItem}"/>
-    <KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearchCommand}" />
   </UserControl.KeyBindings>
   <Grid ColumnDefinitions="155,5,*">
     <Grid Grid.Column="0" RowDefinitions="Auto,*, Auto, Auto, Auto">
@@ -32,6 +31,12 @@
                               IsFilterVisible="{Binding IsFilterOpen}"
                               IsVisible="{Binding IsFilterOpen}" />
       <ListBox x:Name="ListBox" ItemsSource="{Binding FilterItems}" Grid.Row="1" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.KeyBindings>
+          <!-- Scoped to the macro list itself, not the whole tab (UserControl.KeyBindings above) - a
+               tab-wide binding would shadow Ctrl+F in the code editor, whose own find panel needs the
+               same gesture. Mirrors the WPF build, which scopes this to its DraggableTreeView. -->
+          <KeyBinding Gesture="Ctrl+F" Command="{Binding ToggleSearchCommand}" />
+        </ListBox.KeyBindings>
         <ListBox.ItemTemplate>
           <DataTemplate>
             <Grid ColumnDefinitions="*, Auto, Auto" Background="{Binding $parent.Background}">

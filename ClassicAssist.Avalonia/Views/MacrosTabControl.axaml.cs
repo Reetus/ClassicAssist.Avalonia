@@ -9,6 +9,7 @@ using Avalonia.Platform;
 using AvaloniaEdit;
 using AvaloniaEdit.Highlighting;
 using AvaloniaEdit.Highlighting.Xshd;
+using AvaloniaEdit.Search;
 
 namespace ClassicAssist.Avalonia.Views
 {
@@ -27,6 +28,9 @@ namespace ClassicAssist.Avalonia.Views
 
             textEditor.SyntaxHighlighting = HighlightingLoader.Load(
                 new XmlTextReader( stream ), HighlightingManager.Instance );
+
+            // Wires up Ctrl+F (and Ctrl+H for replace) the same as the WPF build's AvalonEdit editor.
+            SearchPanel.Install( textEditor );
         }
 
         private void InitializeComponent()
