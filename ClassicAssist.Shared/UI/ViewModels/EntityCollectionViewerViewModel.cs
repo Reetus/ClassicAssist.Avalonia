@@ -1447,8 +1447,6 @@ namespace ClassicAssist.UI.ViewModels
 
         private Task ContextDropToGround( object arg )
         {
-            // Old-side probes the 8 tiles around the player for a free spot via MapInfo.ItemCanFit, which
-            // this port doesn't have yet. Dropping at the player's own feet is a plain stand-in until it does.
             if ( Engine.Player == null )
             {
                 return Task.CompletedTask;
@@ -1456,7 +1454,16 @@ namespace ClassicAssist.UI.ViewModels
 
             Item[] items = SelectedItems.Where( i => !i.IsLocked ).Select( i => i.Entity ).OfType<Item>().ToArray();
 
-            int x = Engine.Player.X, y = Engine.Player.Y, z = Engine.Player.Z;
+            int map = (int) Engine.Player.Map;
+
+            // 8 adjacent tiles, clockwise from north: N, NE, E, SE, S, SW, W, NW. The player's own tile is
+            // deliberately not among them - a mobile occupies it, so a drop there gets rejected and bounces
+            // the item back.
+            int[][] offsets =
+            {
+                new[] { 0, -1 }, new[] { 1, -1 }, new[] { 1, 0 }, new[] { 1, 1 }, new[] { 0, 1 }, new[] { -1, 1 },
+                new[] { -1, 0 }, new[] { -1, -1 }
+            };
 
             EnqueueAction( async queueAction =>
             {
@@ -1472,7 +1479,19 @@ namespace ClassicAssist.UI.ViewModels
                     _dispatcher.Invoke( () => queueAction.Status =
                         string.Format( Strings.Moving_item__0_____1_, item.i, items.Length ) );
 
-                    await ActionPacketQueue.EnqueueDragDropGround( item.value.Serial, item.value.Count, x, y, z );
+                    foreach ( int[] offset in offsets )
+                    {
+                        int tx = Engine.Player.X + offset[0];
+                        int ty = Engine.Player.Y + offset[1];
+
+                        if ( MapInfo.ItemCanFit( map, tx, ty, item.value.ID, out int dropZ ) )
+                        {
+                            await ActionPacketQueue.EnqueueDragDropGround( item.value.Serial, item.value.Count, tx,
+                                ty, dropZ );
+
+                            break;
+                        }
+                    }
                 }
 
                 return true;

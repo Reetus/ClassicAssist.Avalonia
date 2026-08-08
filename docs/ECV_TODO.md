@@ -111,10 +111,10 @@ except where noted:
       now editable (see Settings/Options persistence), but nothing reads it back out into a context
       menu submenu yet - building and persisting the sets was the ask, not this consumer.
 - [x] **Open container** - `ContextOpenContainerCommand`.
-- [x] **Drop to ground** - `ContextDropToGroundCommand`, with one behavioral simplification: old
-      probes the 8 tiles around the player for a free spot via `MapInfo.ItemCanFit`, which this port
-      doesn't have (`ClassicAssist.Shared/UO/Data/Map.cs`'s `MapInfo` has no such method). Avalonia
-      just drops at the player's own feet instead.
+- [x] **Drop to ground** - `ContextDropToGroundCommand`, probes the 8 tiles around the player for a
+      free spot via `MapInfo.ItemCanFit` (`ClassicAssist.Shared/UO/Data/Map.cs`), same as old. Used to
+      just drop at the player's own feet instead, which a mobile occupies and gets rejected server-side
+      - fixed.
 - [x] **Lock item / Unlock item** - `ContextToggleLockCommand`, visibility toggled by
       `SelectedItemsAllLocked`, exactly as old. The lock flag itself
       (`EntityCollectionData.IsLocked`) is now ported too, move commands skip locked items, and
