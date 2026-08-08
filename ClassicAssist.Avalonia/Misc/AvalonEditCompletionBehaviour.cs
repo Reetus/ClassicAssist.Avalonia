@@ -48,10 +48,34 @@ namespace ClassicAssist.Avalonia.Misc
     {
         private const int MIN_CHARS = 3;
 
+        public static readonly StyledProperty<bool> IsPausedProperty =
+            AvaloniaProperty.Register<AvalonEditCompletionBehaviour, bool>( nameof( IsPaused ) );
+
+        public static readonly StyledProperty<Dictionary<string, object>> FrameVariablesProperty =
+            AvaloniaProperty.Register<AvalonEditCompletionBehaviour, Dictionary<string, object>>(
+                nameof( FrameVariables ) );
+
         private static List<PythonCompletionData> _completionData;
 
         private CompletionWindow _completionWindow;
         private TextEditor _textEditor;
+
+        /// <summary>
+        ///     Whether the macro currently bound to this editor is paused at a breakpoint - while true,
+        ///     hovering an identifier that isn't a known command looks it up in
+        ///     <see cref="FrameVariables" /> instead.
+        /// </summary>
+        public bool IsPaused
+        {
+            get => GetValue( IsPausedProperty );
+            set => SetValue( IsPausedProperty, value );
+        }
+
+        public Dictionary<string, object> FrameVariables
+        {
+            get => GetValue( FrameVariablesProperty );
+            set => SetValue( FrameVariablesProperty, value );
+        }
 
         protected override void OnAttached()
         {
@@ -244,27 +268,42 @@ namespace ClassicAssist.Avalonia.Misc
             PythonCompletionData[] matches =
                 _completionData.Where( i => i.MethodName.Equals( word ) ).ToArray();
 
-            if ( matches.Length == 0 )
+            Control panel;
+
+            if ( matches.Length > 0 )
+            {
+                StackPanel stack = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness( 5 ) };
+
+                foreach ( PythonCompletionData match in matches )
+                {
+                    stack.Children.Add( new TextBlock
+                    {
+                        Text = match.Description?.ToString(),
+                        TextWrapping = TextWrapping.Wrap,
+                        MaxWidth = 400,
+                        Margin = new Thickness( 0, 2, 0, 5 )
+                    } );
+
+                    stack.Children.Add( new TextBlock
+                    {
+                        Text = match.Name, FontWeight = FontWeight.Bold, Margin = new Thickness( 0, 5, 0, 0 )
+                    } );
+                }
+
+                panel = stack;
+            }
+            else if ( IsPaused && FrameVariables != null )
+            {
+                panel = BuildFrameVariablePanel( word );
+
+                if ( panel == null )
+                {
+                    return;
+                }
+            }
+            else
             {
                 return;
-            }
-
-            StackPanel panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness( 5 ) };
-
-            foreach ( PythonCompletionData match in matches )
-            {
-                panel.Children.Add( new TextBlock
-                {
-                    Text = match.Description?.ToString(),
-                    TextWrapping = TextWrapping.Wrap,
-                    MaxWidth = 400,
-                    Margin = new Thickness( 0, 2, 0, 5 )
-                } );
-
-                panel.Children.Add( new TextBlock
-                {
-                    Text = match.Name, FontWeight = FontWeight.Bold, Margin = new Thickness( 0, 5, 0, 0 )
-                } );
             }
 
             // IsOpen is an attached property in Avalonia - there is no instance ToolTip.IsOpen as in
@@ -274,6 +313,43 @@ namespace ClassicAssist.Avalonia.Misc
             ToolTip.SetIsOpen( _textEditor, true );
 
             e.Handled = true;
+        }
+
+        /// <summary>
+        ///     Local-variable hover while paused at a breakpoint - the frame-variable half of WPF's
+        ///     <c>AvalonEditShowCompletionTooltipBehaviour</c>.
+        /// </summary>
+        private Control BuildFrameVariablePanel( string word )
+        {
+            KeyValuePair<string, object>[] frameVariables =
+                FrameVariables.Where( kvp => kvp.Key.Equals( word ) ).ToArray();
+
+            if ( frameVariables.Length == 0 )
+            {
+                return null;
+            }
+
+            StackPanel panel = new StackPanel { Orientation = Orientation.Vertical, Margin = new Thickness( 5 ) };
+
+            foreach ( KeyValuePair<string, object> variable in frameVariables )
+            {
+                panel.Children.Add( new TextBlock
+                {
+                    Text = $"{variable.Key} : {variable.Value?.GetType().Name ?? "null"}",
+                    FontWeight = FontWeight.Bold,
+                    Margin = new Thickness( 0, 5, 0, 0 )
+                } );
+
+                panel.Children.Add( new TextBlock
+                {
+                    Text = MacroInvoker.GetDisplayValue( variable.Value ),
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxWidth = 400,
+                    Margin = new Thickness( 0, 2, 0, 5 )
+                } );
+            }
+
+            return panel;
         }
 
         private string GetWordAt( TextViewPosition position )

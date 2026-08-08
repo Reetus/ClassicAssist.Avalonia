@@ -68,8 +68,31 @@ nothing.
       (thread events); file-backed macros run with their `.py` path as the script filename so
       breakpoints map to the file open in VSCode. The Debug Adapter toggle + port live in the
       Options tab (`Options.DebugAdapterEnabled/Port`, session-only, `DapServer` loopback listener).
-      The in-app `MacrosDebuggerControl` overlay (F5/F8 in-app pause/step UI) is still absent -
-      the DAP server is the debugger now.
+- [x] ~~**Macro debugger (in-app)**~~ - `BreakpointMargin` + `AvalonEditBreakpointMarginBehaviour`
+      (AvaloniaEdit gutter margin, click to toggle breakpoints, line numbers shifted on edits),
+      `AvalonEditPausedLineBehaviour` (translucent-yellow current-line highlight + auto-scroll),
+      `MacrosDebuggerControl` (floating Resume/Step/Stop overlay + resizable frame-variable panel,
+      double-click an `Item` variable into the Object Inspector), all under
+      `ClassicAssist.Avalonia/Misc` and `Views/Macros/`. `MacroEntry.Resume()/Step()` added
+      (the pause/breakpoint/frame-variable plumbing itself - `Breakpoints`, `IsPaused`,
+      `PausedLineNumber`, `FrameVariables` - was already ported). `AvalonEditCompletionBehaviour`
+      gained the frame-variable hover branch (WPF's `AvalonEditShowCompletionTooltipBehaviour`
+      folded command-hover and paused-variable-hover together; this repo keeps them in the same
+      behaviour for the same reason). `F8`/`F12` bound on the Macros tab alongside the existing
+      `F5`. One real bug fixed en route: `AvalonEditBehaviour.SetText` unconditionally replaced
+      `Document.Text` on every keystroke (WPF swaps the whole `TextDocument` per macro instead, so
+      it never hit this) - full-document `Document.Changed` events on every keystroke would have
+      made the breakpoint line-shift logic misfire. Now guarded to a real no-op when the text
+      already matches, and the remaining programmatic (macro-switch) replace is flagged via
+      `IsProgrammaticTextChange` so the breakpoint margin can tell it apart from a real edit. A
+      second bug found post-port (via an ad-hoc `Avalonia.Headless` harness driving the real
+      `MacrosTabControl`, since the app needs a live plugin RPC connection to launch normally):
+      Avalonia's hit-testing is content-based like WPF's, so a margin only receives pointer events
+      where something was actually painted - a fresh `BreakpointMargin` with zero breakpoints
+      painted nothing at all and so was **completely unclickable** (confirmed 0/510 sample points
+      hit across its bounds). WPF avoided this with a `HitTestCore` override; the Avalonia fix is
+      `Render` painting a transparent rect across the full bounds first, which brought it to
+      510/510.
 
 ## Missing agent features (tab exists, feature dropped)
 

@@ -56,6 +56,7 @@ namespace ClassicAssist.UI.ViewModels
         private ICommand _showActiveObjectsWindowCommand;
         private ICommand _showCommandsCommand;
         private ICommand _showMacrosWikiCommand;
+        private ICommand _stepCommand;
         private ICommand _stopCommand;
         private ICommand _toggleSearchCommand;
 
@@ -209,6 +210,9 @@ namespace ClassicAssist.UI.ViewModels
 
         //public ICommand StopCommand =>
         //    _stopCommand ?? ( _stopCommand = new RelayCommandAsync( Stop, o => SelectedItem?.IsRunning ?? false ) );
+
+        public ICommand StepCommand =>
+            _stepCommand ?? ( _stepCommand = new RelayCommand( Step, o => o is MacroEntry entry && entry.IsPaused ) );
 
         public ICommand StopCommand =>
             _stopCommand ?? ( _stopCommand =
@@ -647,6 +651,16 @@ namespace ClassicAssist.UI.ViewModels
             entry.Stop();
 
             await Task.CompletedTask;
+        }
+
+        private static void Step( object obj )
+        {
+            if ( !( obj is MacroEntry entry ) )
+            {
+                return;
+            }
+
+            entry.Step();
         }
 
         private void ShowCommands( object obj )

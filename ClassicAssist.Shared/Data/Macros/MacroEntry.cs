@@ -485,5 +485,17 @@ namespace ClassicAssist.Data.Macros
 
             return entry;
         }
+
+        public void Resume()
+        {
+            AutoResetEvent?.Set();
+
+            Engine.Dispatcher.Invoke( () => IsPaused = false );
+        }
+
+        public void Step()
+        {
+            AutoResetEvent?.Set();
+        }
     }
 }

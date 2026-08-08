@@ -47,11 +47,40 @@ namespace ClassicAssist.Avalonia.Misc
             }
         }
 
+        /// <summary>
+        ///     True for the duration of a <see cref="SetText" /> full-document replace (i.e. a macro
+        ///     switch pushing new content in) so other behaviours - notably the breakpoint margin, which
+        ///     shifts breakpoint line numbers off <see cref="AvaloniaEdit.Document.TextDocument.Changed" />
+        ///     - can tell that apart from a real, incremental user edit.
+        /// </summary>
+        public static bool IsProgrammaticTextChange { get; private set; }
+
         private void SetText(string value)
         {
-            if (AssociatedObject != null)
+            if (AssociatedObject?.Document == null)
             {
-                AssociatedObject.Document.Text = value ?? string.Empty;
+                return;
+            }
+
+            string newValue = value ?? string.Empty;
+
+            // AssociatedObjectOnTextChanged below round-trips typed text back through this setter to
+            // keep Text in sync; without this guard that would replace the whole document with content
+            // it already holds on every keystroke.
+            if (AssociatedObject.Document.Text.Equals(newValue))
+            {
+                return;
+            }
+
+            IsProgrammaticTextChange = true;
+
+            try
+            {
+                AssociatedObject.Document.Text = newValue;
+            }
+            finally
+            {
+                IsProgrammaticTextChange = false;
             }
         }
 

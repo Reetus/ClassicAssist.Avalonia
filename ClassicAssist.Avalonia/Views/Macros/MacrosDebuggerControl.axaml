@@ -1,0 +1,67 @@
+<UserControl x:Name="userControl" x:Class="ClassicAssist.Avalonia.Views.Macros.MacrosDebuggerControl"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="500">
+  <UserControl.Resources>
+    <misc:VariableDisplayValueConverter x:Key="VariableDisplayValueConverter" />
+    <misc:ObjectInspectableVisiblyValueConverter x:Key="ObjectInspectableVisiblyValueConverter" />
+  </UserControl.Resources>
+  <Grid>
+    <Grid Background="{DynamicResource ThemeBackgroundBrush}" HorizontalAlignment="Right"
+          VerticalAlignment="Stretch" Width="{Binding OverlayWidth, ElementName=userControl}">
+      <DataGrid x:Name="VariablesGrid" Margin="5"
+                ItemsSource="{Binding MacroEntry.FrameVariables, ElementName=userControl}"
+                IsReadOnly="True" AutoGenerateColumns="False" GridLinesVisibility="None"
+                DoubleTapped="OnVariablesGridDoubleTapped" KeyDown="OnVariablesGridKeyDown">
+        <DataGrid.Columns>
+          <DataGridTemplateColumn Header="" Width="20">
+            <DataGridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Image MaxHeight="12"
+                       Source="{DynamicResource DebuggerPointerIcon}"
+                       IsVisible="{Binding Value, Converter={StaticResource ObjectInspectableVisiblyValueConverter}}" />
+              </DataTemplate>
+            </DataGridTemplateColumn.CellTemplate>
+          </DataGridTemplateColumn>
+          <DataGridTextColumn Header="Name" Width="150" Binding="{Binding Key}" />
+          <DataGridTextColumn Header="Value" Width="*"
+                               Binding="{Binding Value, Converter={StaticResource VariableDisplayValueConverter}}" />
+        </DataGrid.Columns>
+      </DataGrid>
+      <Thumb x:Name="ResizeThumb" HorizontalAlignment="Left" Width="6" Cursor="SizeWestEast"
+             Background="Transparent" DragStarted="ResizeThumb_DragStarted" DragDelta="ResizeThumb_DragDelta">
+        <Thumb.Template>
+          <ControlTemplate>
+            <Border Background="Transparent">
+              <Rectangle Width="2" HorizontalAlignment="Center" VerticalAlignment="Stretch"
+                         RadiusX="1" RadiusY="1" Fill="{DynamicResource ThemeBorderBrush}" />
+            </Border>
+          </ControlTemplate>
+        </Thumb.Template>
+      </Thumb>
+    </Grid>
+    <Border BorderThickness="1,0,1,1" Padding="10,5" CornerRadius="0,0,10,10"
+            BorderBrush="{DynamicResource ThemeBorderBrush}" Background="{DynamicResource ThemeBackgroundBrush}"
+            HorizontalAlignment="Center" VerticalAlignment="Top">
+      <StackPanel Orientation="Horizontal">
+        <StackPanel.Styles>
+          <Style Selector="Button">
+            <Setter Property="Padding" Value="5" />
+          </Style>
+        </StackPanel.Styles>
+        <Button Command="{Binding ResumeCommand, ElementName=userControl}" ToolTip.Tip="Resume">
+          <Image Source="{DynamicResource DebuggerPlayIcon}" Width="16" Height="16" />
+        </Button>
+        <Button Command="{Binding StepCommand, ElementName=userControl}" Margin="5,0,0,0" ToolTip.Tip="Step">
+          <Image Source="{DynamicResource DebuggerStepIcon}" Width="16" Height="16" />
+        </Button>
+        <Button Command="{Binding StopCommand, ElementName=userControl}" Margin="5,0,0,0" ToolTip.Tip="Stop">
+          <Image Source="{DynamicResource DebuggerStopIcon}" Width="16" Height="16" />
+        </Button>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>
