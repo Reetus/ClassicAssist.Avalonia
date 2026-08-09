@@ -39,7 +39,10 @@
           <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Skill.Name}" Width="4*" SortMemberPath="Skill.Name"/>
           <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Value}" Width="2*" SortMemberPath="Value" />
           <DataGridTextColumn Header="{x:Static resources:Strings.Base}" Binding="{Binding Base}" Width="2*" SortMemberPath="Base" />
-          <DataGridTextColumn Header="+/-" Binding="{Binding Delta}" Width="2*" SortMemberPath="Delta" />
+          <!-- Skill values arrive as integer tenths and are stored as (float)value / 10, so a delta is a
+               difference of two inexact floats: 0.6 -> 0.9 accumulates as 0.2999999523162842. Format to
+               one decimal, which is all the precision the wire format carries. -->
+          <DataGridTextColumn Header="+/-" Binding="{Binding Delta, StringFormat={}{0:0.#}}" Width="2*" SortMemberPath="Delta" />
           <DataGridTextColumn Header="{x:Static resources:Strings.Cap}" Binding="{Binding Cap}" Width="2*" SortMemberPath="Cap" />
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Status}" Width="40" SortMemberPath="LockStatus">
             <DataGridTemplateColumn.CellTemplate>
