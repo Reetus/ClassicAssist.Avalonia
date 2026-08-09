@@ -1383,19 +1383,11 @@ public static class IncomingPacketHandlers
         byte type = reader.ReadByte();
         bool haveCap = ( type != 0u && type <= 0x03 ) || type == 0xDF;
 
-        // ############################## DO NOT COMMIT ##############################
-        // LOCAL ONLY — personal 1.25.x shard hack. That server sends each skill entry as
-        // { u16 id, u16 value } only: no base value, no lock, no cap. The old client never
-        // reports its version, so what we see is TazUO's real version (5.0.9.1) — gate the
-        // legacy layout on <= 5.0.9.1. Do not merge; strip this block before committing.
-        bool modern = Engine.ClientVersion == null || Engine.ClientVersion > new Version( 5, 0, 9, 1 );
-        // ############################ END DO NOT COMMIT ############################
-
         int id = reader.ReadInt16();
         int value = reader.ReadInt16();
-        int baseValue = modern ? reader.ReadInt16() : value; // DO NOT COMMIT
-        LockStatus lockStatus = modern ? ( LockStatus )reader.ReadByte() : LockStatus.Up; // DO NOT COMMIT
-        int skillCap = modern && haveCap ? reader.ReadInt16() : 1000; // DO NOT COMMIT
+        int baseValue = reader.ReadInt16();
+        LockStatus lockStatus = ( LockStatus )reader.ReadByte();
+        int skillCap = haveCap ? reader.ReadInt16() : 1000;
 
         if ( reader.Size <= 13 )
         {
@@ -1424,9 +1416,9 @@ public static class IncomingPacketHandlers
                 }
 
                 value = reader.ReadInt16();
-                baseValue = modern ? reader.ReadInt16() : value; // DO NOT COMMIT
-                lockStatus = modern ? ( LockStatus )reader.ReadByte() : LockStatus.Up; // DO NOT COMMIT
-                skillCap = modern && haveCap ? reader.ReadInt16() : 1000; // DO NOT COMMIT
+                baseValue = reader.ReadInt16();
+                lockStatus = ( LockStatus )reader.ReadByte();
+                skillCap = haveCap ? reader.ReadInt16() : 1000;
 
                 si = new SkillInfo
                 {
