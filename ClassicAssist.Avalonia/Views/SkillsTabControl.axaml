@@ -33,12 +33,15 @@
           </ContextMenu>
         </DataGrid.ContextMenu>
         <DataGrid.Columns>
-          <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Skill.Name}" Width="4*" SortMemberPath="Skill"/>
-          <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Value}" Width="2*" />
-          <DataGridTextColumn Header="{x:Static resources:Strings.Base}" Binding="{Binding Base}" Width="2*" />
-          <DataGridTextColumn Header="+/-" Binding="{Binding Delta}" Width="2*" />
-          <DataGridTextColumn Header="{x:Static resources:Strings.Cap}" Binding="{Binding Cap}" Width="2*" />
-          <DataGridTemplateColumn Header="{x:Static resources:Strings.Status}" Width="40">
+          <!-- SortMemberPath is required on every column, not just for sorting: the grid only falls back
+               to the binding path internally, so the public property stays null unless set here and
+               SkillsTabControl cannot match a column to a persisted SkillSortBy. -->
+          <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Skill.Name}" Width="4*" SortMemberPath="Skill.Name"/>
+          <DataGridTextColumn Header="{x:Static resources:Strings.Value}" Binding="{Binding Value}" Width="2*" SortMemberPath="Value" />
+          <DataGridTextColumn Header="{x:Static resources:Strings.Base}" Binding="{Binding Base}" Width="2*" SortMemberPath="Base" />
+          <DataGridTextColumn Header="+/-" Binding="{Binding Delta}" Width="2*" SortMemberPath="Delta" />
+          <DataGridTextColumn Header="{x:Static resources:Strings.Cap}" Binding="{Binding Cap}" Width="2*" SortMemberPath="Cap" />
+          <DataGridTemplateColumn Header="{x:Static resources:Strings.Status}" Width="40" SortMemberPath="LockStatus">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
                 <Image Source="{Binding LockStatus, Converter={StaticResource LockStatusValueConverter}}"

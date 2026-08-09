@@ -103,8 +103,10 @@ namespace ClassicAssist.Avalonia.Views
         {
             switch ( sortBy )
             {
+                // Skill.Name rather than Skill: SkillEntry.Skill is a struct with no IComparable, so
+                // sorting on it resolves Comparer<Skill>.Default and throws on the first comparison.
                 case SkillSortBy.Name:
-                    return "Skill";
+                    return "Skill.Name";
                 case SkillSortBy.Value:
                     return "Value";
                 case SkillSortBy.Base:
@@ -124,7 +126,7 @@ namespace ClassicAssist.Avalonia.Views
         {
             switch ( member )
             {
-                case "Skill":
+                case "Skill.Name":
                     return SkillSortBy.Name;
                 case "Value":
                     return SkillSortBy.Value;
