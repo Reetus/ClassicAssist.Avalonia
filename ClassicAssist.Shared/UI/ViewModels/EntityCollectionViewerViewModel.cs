@@ -1205,7 +1205,7 @@ namespace ClassicAssist.UI.ViewModels
 
                         await ActionPacketQueue.EnqueueDragDrop( sourceStack.Serial,
                             needed > sourceStack.Count ? sourceStack.Count : needed, destStack.Serial,
-                            checkExisting: true, delaySend: false );
+                            options: new DragDropOptions { CheckExisting = true, DelaySend = false } );
 
                         await Task.Delay( TimeSpan.FromMilliseconds( ClassicAssist.Data.Options.CurrentOptions.ActionDelayMS ),
                             queueAction.CancellationTokenSource.Token );
@@ -1625,7 +1625,7 @@ namespace ClassicAssist.UI.ViewModels
                     return false;
                 }
 
-                await ActionPacketQueue.EnqueueActionPackets(
+                await ActionPacketQueue.EnqueuePackets(
                     containerSerials.Select( s => (BasePacket) new UseObject( s ) ) );
 
                 return true;
@@ -1733,7 +1733,7 @@ namespace ClassicAssist.UI.ViewModels
                     return false;
                 }
 
-                await ActionPacketQueue.EnqueueActionPackets( items.Select( s => (BasePacket) new UseObject( s ) ) );
+                await ActionPacketQueue.EnqueuePackets( items.Select( s => (BasePacket) new UseObject( s ) ) );
 
                 return true;
             }, Strings.Use_item );

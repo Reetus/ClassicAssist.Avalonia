@@ -74,6 +74,7 @@ public static partial class Engine
     private static DateTime _nextPacketSendTime;
     public static int LastSpellID;
     public static int LastSkillID;
+    public static DateTime LastSkillTime { get; set; }
     public static CharacterListFlags CharacterListFlags { get; set; }
 
     public static Assembly ClassicAssembly { get; set; }

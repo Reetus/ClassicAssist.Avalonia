@@ -1,4 +1,10 @@
-﻿using ClassicAssist.Shared;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using ClassicAssist.Misc;
+using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
@@ -110,34 +116,96 @@ namespace ClassicAssist.Data.Macros.Commands
             Parameters = new[] { nameof( ParameterType.String ) } )]
         public static void PromptMsg( string message )
         {
-            Engine.SendPacketToServer( new UnicodePromptResponse( Engine.LastPromptSerial, Engine.LastPromptID,
-                message ) );
+            BasePacket packet = Engine.LastPromptType == 0
+                ? (BasePacket) new AsciiPromptResponse( Engine.LastPromptSerial, Engine.LastPromptID, message )
+                : new UnicodePromptResponse( Engine.LastPromptSerial, Engine.LastPromptID, message );
+
+            Engine.SendPacketToServer( packet );
+        }
+
+        [CommandsDisplay( Category = nameof( Strings.Messages ),
+            Parameters = new[] { nameof( ParameterType.String ), nameof( ParameterType.Timeout ) } )]
+        public static (bool Result, string Message) GetText( string prompt, int timeout = 30000 )
+        {
+            int id = new Random().Next();
+
+            UOC.SystemMessage( prompt );
+            Engine.SendPacketToClient( new UnicodePromptRequest( id ) );
+
+            AutoResetEvent are = new AutoResetEvent( false );
+
+            string message = string.Empty;
+
+            PacketFilterInfo pfi = new PacketFilterInfo( 0xC2,
+                new[]
+                {
+                    PacketFilterConditions.IntAtPositionCondition( id, 3 ),
+                    PacketFilterConditions.IntAtPositionCondition( id, 7 )
+                }, ( bytes, info ) =>
+                {
+                    PacketReader pr = new PacketReader( bytes, bytes.Length, false );
+                    pr.Seek( 16, SeekOrigin.Current );
+                    message = pr.ReadUnicodeStringLE();
+                    are.Set();
+                } );
+
+            Engine.AddSendPreFilter( pfi );
+
+            try
+            {
+                bool result = are.WaitOne( timeout );
+
+                if ( !result )
+                {
+                    Engine.SendPacketToClient( new UnicodePromptCancel( id, id ) );
+                }
+
+                return ( result, message );
+            }
+            finally
+            {
+                Engine.RemoveSendPreFilter( pfi );
+            }
         }
 
         [CommandsDisplay( Category = nameof( Strings.Messages ),
             Parameters = new[] { nameof( ParameterType.Timeout ) } )]
         public static bool WaitForPrompt( int timeout )
         {
-            PacketFilterInfo pfi = new PacketFilterInfo( 0xC2 );
+            // The server picks the prompt encoding, so wait on both the Unicode (0xC2) and ASCII
+            // (0x9A) requests rather than assuming Unicode.
+            PacketFilterInfo[] pfis = { new PacketFilterInfo( 0xC2 ), new PacketFilterInfo( 0x9A ) };
 
-            PacketWaitEntry packetWaitEntry = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+            PacketWaitEntry[] packetWaitEntries =
+                pfis.Select( pfi => Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true ) ).ToArray();
+
+            Task timeoutTask = Task.Delay( timeout );
+
+            Task[] tasks = packetWaitEntries.Select( pwe => (Task) pwe.Lock.ToTask() ).Append( timeoutTask ).ToArray();
 
             try
             {
-                bool result = packetWaitEntry.Lock.WaitOne( timeout );
+                int index = Task.WaitAny( tasks );
 
-                return result;
+                return index != tasks.Length - 1;
             }
             finally
             {
-                Engine.PacketWaitEntries.Remove( packetWaitEntry );
+                foreach ( PacketWaitEntry pwe in packetWaitEntries )
+                {
+                    Engine.PacketWaitEntries.Remove( pwe );
+                }
             }
         }
 
         [CommandsDisplay( Category = nameof( Strings.Messages ) )]
         public static void CancelPrompt()
         {
-            Engine.SendPacketToServer( new UnicodePromptCancel( Engine.LastPromptSerial, Engine.LastPromptID ) );
+            BasePacket packet = Engine.LastPromptType == 0
+                ? (BasePacket) new AsciiPromptCancel( Engine.LastPromptSerial, Engine.LastPromptID )
+                : new UnicodePromptCancel( Engine.LastPromptSerial, Engine.LastPromptID );
+
+            Engine.SendPacketToServer( packet );
         }
 
         [CommandsDisplay( Category = nameof( Strings.Messages ),

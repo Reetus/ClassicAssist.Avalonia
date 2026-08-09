@@ -37,7 +37,7 @@ namespace ClassicAssist.Data.Hotkeys.Commands
                     // ask the server for its contents first.
                     if ( item.Container == null )
                     {
-                        UOC.WaitForContainerContents( item.Serial, 1000 );
+                        UOC.WaitForContainerContentsUse( item.Serial, 1000 );
                     }
 
                     collection = item.Container ?? new ItemCollection( item.Serial );
