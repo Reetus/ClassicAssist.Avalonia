@@ -84,7 +84,7 @@ namespace ClassicAssist.Data.Abilities
 
                 if ( wd != null )
                 {
-                    UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? wd.Primary : wd.Secondary );
+                    UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? wd.Primary : wd.Secondary, abilityType );
                     ResendGump( wd.Primary, wd.Secondary, abilityType );
                     return;
                 }
@@ -102,7 +102,7 @@ namespace ClassicAssist.Data.Abilities
 
                 if ( wd != null )
                 {
-                    UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? wd.Primary : wd.Secondary );
+                    UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? wd.Primary : wd.Secondary, abilityType );
                     ResendGump( wd.Primary, wd.Secondary, abilityType );
                     return;
                 }
@@ -110,7 +110,7 @@ namespace ClassicAssist.Data.Abilities
 
             // Fists etc
             ResendGump( 5, 11, abilityType );
-            UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? 5 : 11 );
+            UOC.SetWeaponAbility( abilityType == AbilityType.Primary ? 5 : 11, abilityType );
         }
 
         public void ResendGump( AbilityType abilityType )
@@ -326,8 +326,8 @@ namespace ClassicAssist.Data.Abilities
 
             ActionPacketQueue.EnqueueDragDrop( leftHand.Serial, 1, Engine.Player.GetLayer( Layer.Backpack ),
                 QueuePriority.High );
-            ActionPacketQueue.EnqueueActionPacket( new UseObject( serial ), QueuePriority.High );
-            ActionPacketQueue.EnqueueActionPackets(
+            ActionPacketQueue.EnqueuePacket( new UseObject( serial ), QueuePriority.High );
+            ActionPacketQueue.EnqueuePackets(
                 new BasePacket[]
                 {
                     new DragItem( leftHand.Serial, 1 ),

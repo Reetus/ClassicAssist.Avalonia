@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Data;
+using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Skills;
 using ClassicAssist.Data.Vendors;
@@ -94,11 +95,27 @@ public class Commands
             throw new ArgumentException( "EquipItem: Layer is invalid" );
         }
 
-        return ActionPacketQueue.EnqueueActionPackets( new BasePacket[] { new DragItem( item.Serial, 1 ), new EquipRequest( item.Serial, layer, containerSerial ) },
-            QueuePriority.Medium );
+        return ActionPacketQueue.EnqueueAction( item.Serial, i =>
+        {
+            Engine.SendPacketToServer( new DragItem( i, 1 ) );
+            Thread.Sleep( 50 );
+            Engine.SendPacketToServer( new EquipRequest( i, layer, containerSerial ) );
+            return true;
+        }, QueuePriority.Medium );
     }
 
-    public static Task EquipItem( Item item, Layer layer )
+    public static Task EquipItem( Item item, Layer layer, QueuePriority queuePriority = QueuePriority.Medium )
+    {
+        if ( layer == Layer.Invalid )
+        {
+            StaticTile tileData = TileData.GetStaticTile( item.ID );
+            layer = ( Layer )tileData.Quality;
+        }
+
+        return EquipItem( item.Serial, layer, queuePriority );
+    }
+
+    public static Task EquipItem( int serial, Layer layer, QueuePriority queuePriority = QueuePriority.Medium )
     {
         int containerSerial = Engine.Player?.Serial ?? 0;
 
@@ -109,17 +126,17 @@ public class Commands
 
         if ( layer == Layer.Invalid )
         {
-            StaticTile tileData = TileData.GetStaticTile( item.ID );
-            layer = ( Layer )tileData.Quality;
+            SystemMessage( Strings.Invalid_layer_value___, ( int )SystemMessageHues.Red );
+            return Task.CompletedTask;
         }
 
-        if ( layer == Layer.Invalid )
+        return ActionPacketQueue.EnqueueAction( serial, i =>
         {
-            throw new ArgumentException( "EquipItem: Layer is invalid" );
-        }
-
-        return ActionPacketQueue.EnqueueActionPackets( new BasePacket[] { new DragItem( item.Serial, 1 ), new EquipRequest( item.Serial, layer, containerSerial ) },
-            QueuePriority.Medium );
+            Engine.SendPacketToServer( new DragItem( i, 1 ) );
+            Thread.Sleep( 50 );
+            Engine.SendPacketToServer( new EquipRequest( i, layer, containerSerial ) );
+            return true;
+        }, queuePriority );
     }
 
     public static void SystemMessage( string text, bool suppressInQuietMode )
@@ -284,85 +301,6 @@ public class Commands
         } );
     }
 
-    public static async Task<(TargetType, TargetFlags, int, int, int, int, int)> GetTargeInfoAsync( string message = "", int timeout = 30000 )
-    {
-        if ( string.IsNullOrEmpty( message ) )
-        {
-            message = Strings.Target_object___;
-        }
-
-        SystemMessage( message );
-
-        Random random = new();
-
-        return await Task.Run( () =>
-        {
-            bool wasTargetting = Engine.TargetExists;
-
-            uint value = ( uint )random.Next( 1, int.MaxValue );
-
-            //TODO
-            PacketWriter pw = new( 19 );
-            pw.Write( ( byte )0x6C );
-            pw.Write( ( byte )1 );
-            pw.Write( value );
-            pw.Write( ( byte )0 );
-            pw.Fill();
-
-            AutoResetEvent are = new( false );
-
-            TargetType targetType = TargetType.Object;
-            TargetFlags targetFlags = TargetFlags.None;
-            int serial = 0;
-            int x = 0;
-            int y = 0;
-            int z = 0;
-            int itemID = 0;
-
-            PacketFilterInfo pfi = new( 0x6C, new[] { PacketFilterConditions.UIntAtPositionCondition( value, 2 ) }, ( packet, info ) =>
-            {
-                targetType = ( TargetType )packet[1];
-                targetFlags = ( TargetFlags )packet[6];
-                serial = ( packet[7] << 24 ) | ( packet[8] << 16 ) | ( packet[9] << 8 ) | packet[10];
-                x = ( packet[11] << 8 ) | packet[12];
-                y = ( packet[13] << 8 ) | packet[14];
-                z = ( packet[15] << 8 ) | packet[16];
-                itemID = ( packet[17] << 8 ) | packet[18];
-
-                are.Set();
-            } );
-
-            try
-            {
-                Engine.AddSendPreFilter( pfi );
-
-                Engine.SendPacketToClient( pw );
-
-                bool result = are.WaitOne( timeout );
-
-                if ( result )
-                {
-                    return ( targetType, targetFlags, serial, x, y, z, itemID );
-                }
-
-                Engine.SendPacketToClient( new CancelTargetCursor( value ) );
-
-                SystemMessage( Strings.Timeout___ );
-
-                return ( targetType, targetFlags, serial, x, y, z, itemID );
-            }
-            finally
-            {
-                Engine.RemoveSendPreFilter( pfi );
-
-                if ( wasTargetting )
-                {
-                    ResendTargetToClient();
-                }
-            }
-        } );
-    }
-
     public static bool GumpButtonClick( uint gumpID, int buttonID, int[] switches = null,
         Dictionary<int, string> textEntries = null )
     {
@@ -386,7 +324,12 @@ public class Commands
             return;
         }
 
-        IEnumerable<Gump> closeGumps = gumps.Where( t => t.GetType() == gumpType );
+        IEnumerable<Gump> closeGumps = gumps?.Where( t => t.GetType() == gumpType );
+
+        if ( closeGumps == null )
+        {
+            return;
+        }
 
         foreach ( Gump closeGump in closeGumps )
         {
@@ -425,24 +368,31 @@ public class Commands
 
     public static bool WaitForGump( uint gumpId, int timeout = 30000 )
     {
+        // 0xDD is the compressed gump; 0xB0 is the old uncompressed one. Shards send either, so wait on both.
         PacketFilterInfo pfi = new( 0xDD );
+        PacketFilterInfo pfi2 = new( 0xB0 );
 
         if ( gumpId != 0 )
         {
             pfi = new PacketFilterInfo( 0xDD, new[] { PacketFilterConditions.UIntAtPositionCondition( gumpId, 7 ) } );
+
+            pfi2 = new PacketFilterInfo( 0xB0, new[] { PacketFilterConditions.UIntAtPositionCondition( gumpId, 7 ) } );
         }
 
         PacketWaitEntry packetWaitEntry = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+        PacketWaitEntry packetWaitEntry2 = Engine.PacketWaitEntries.Add( pfi2, PacketDirection.Incoming, true );
 
         try
         {
-            bool result = packetWaitEntry.Lock.WaitOne( timeout );
+            bool result = Task.WaitAny( new Task[] { packetWaitEntry.Lock.ToTask(), packetWaitEntry2.Lock.ToTask() },
+                timeout ) != -1;
 
             return result;
         }
         finally
         {
             Engine.PacketWaitEntries.Remove( packetWaitEntry );
+            Engine.PacketWaitEntries.Remove( packetWaitEntry2 );
         }
     }
 
@@ -461,9 +411,10 @@ public class Commands
         Engine.SendPacketToServer( new ChangeStatLock( stat, lockStatus ) );
     }
 
-    public static (int, bool) WaitForTargetOrFizzle( int timeout )
+    public static PacketWaitEntry[] GetFizzleWaitEntries()
     {
-        PacketWaitEntry targetWe = CreateWaitEntry( new PacketFilterInfo( 0x6C ) );
+        PacketWaitEntry targetWe = CreateWaitEntry( new PacketFilterInfo( 0x6C,
+            new[] { PacketFilterConditions.ByteAtPositionCondition( 3, 6, true ) } ) );
 
         PacketWaitEntry fizzWe = CreateWaitEntry( new PacketFilterInfo( 0xC0,
             new[] { PacketFilterConditions.IntAtPositionCondition( Engine.Player.Serial, 2 ), PacketFilterConditions.ShortAtPositionCondition( 0x3735, 10 ) } ) );
@@ -493,59 +444,39 @@ public class Commands
                 PacketFilterConditions.ShortAtPositionCondition( Engine.Player.Y, 8 ), PacketFilterConditions.ShortAtPositionCondition( Engine.Player.Z, 10 )
             } ) );
 
+        return new[]
+        {
+            targetWe, fizzWe, fizzMessageWe, recoveredMessageWe, alreadyCastingWe, alreadyCasting2We, concentrationWe,
+            noManaWe, fizzChivWe
+        };
+    }
+
+    public static (int, bool) WaitForTargetOrFizzle( int timeout, out int senderSerial )
+    {
+        senderSerial = -1;
+
+        PacketWaitEntry[] entries = GetFizzleWaitEntries();
+
         Engine.WaitingForTarget = true;
 
-        List<Task> tasks = new();
+        List<Task<bool>> tasks = entries.Select( t => t.Lock.ToTask() ).ToList();
 
         try
         {
-            Task<bool> targetTask = Task.Run( () =>
+            Task<bool> timeoutTask = Task.Run( async () =>
             {
-                do
-                {
-                    bool result = targetWe.Lock.WaitOne( timeout );
+                await Task.Delay( timeout );
 
-                    if ( !result )
-                    {
-                        return false;
-                    }
-
-                    if ( targetWe.Packet[6] == 0x03 )
-                    {
-                        continue;
-                    }
-
-                    return true;
-                }
-                while ( true );
+                return true;
             } );
 
-            Task fizzTask = Task.Factory.StartNew( () => fizzWe.Lock.WaitOne( timeout ), TaskCreationOptions.LongRunning );
-
-            Task fizzMessageTask = Task.Factory.StartNew( () => fizzMessageWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task recoveredMessageTask = Task.Factory.StartNew( () => recoveredMessageWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task alreadyCastingTask = Task.Factory.StartNew( () => alreadyCastingWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task alreadyCasting2Task = Task.Factory.StartNew( () => alreadyCasting2We.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task concentrationTask = Task.Factory.StartNew( () => concentrationWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task noManaTask = Task.Factory.StartNew( () => noManaWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
-
-            Task fizzChivTask = Task.Factory.StartNew( () => fizzChivWe.Lock.WaitOne( timeout + 100 ), TaskCreationOptions.LongRunning );
+            tasks.Add( timeoutTask );
 
             int index;
 
-            tasks.AddRange( new[]
-            {
-                targetTask, fizzTask, fizzMessageTask, recoveredMessageTask, alreadyCastingTask, alreadyCasting2Task, concentrationTask, noManaTask, fizzChivTask
-            } );
-
             try
             {
-                index = Task.WaitAny( tasks.ToArray() );
+                index = Task.WaitAny( tasks.Cast<Task>().ToArray() );
             }
             catch ( OperationCanceledException )
             {
@@ -556,20 +487,17 @@ public class Commands
                 return ( -1, false );
             }
 
-            return ( index, index == 0 && targetTask.Result );
+            if ( index == 0 )
+            {
+                byte[] packet = entries[0].Packet;
+                senderSerial = ( packet[2] << 24 ) | ( packet[3] << 16 ) | ( packet[4] << 8 ) | packet[5];
+            }
+
+            return ( index, index == 0 && tasks[0].Result );
         }
         finally
         {
-            Engine.PacketWaitEntries.Remove( targetWe );
-            Engine.PacketWaitEntries.Remove( fizzWe );
-            Engine.PacketWaitEntries.Remove( fizzMessageWe );
-            Engine.PacketWaitEntries.Remove( recoveredMessageWe );
-            Engine.PacketWaitEntries.Remove( alreadyCastingWe );
-            Engine.PacketWaitEntries.Remove( alreadyCasting2We );
-            Engine.PacketWaitEntries.Remove( concentrationWe );
-            Engine.PacketWaitEntries.Remove( noManaWe );
-            Engine.PacketWaitEntries.Remove( fizzChivWe );
-
+            Engine.PacketWaitEntries.RemoveRange( entries );
             Engine.WaitingForTarget = false;
         }
     }
@@ -581,24 +509,34 @@ public class Commands
 
     public static bool WaitForTarget( int timeout )
     {
-        PacketFilterInfo pfi = new( 0x6C );
+        // 0x6C is the plain target cursor, 0x99 the target-with-graphic (multi placement) cursor.
+        PacketFilterInfo pfi = new( 0x6C, new[] { PacketFilterConditions.ByteAtPositionCondition( 3, 6, true ) } );
+        PacketFilterInfo pfi2 = new( 0x99, new[] { PacketFilterConditions.ByteAtPositionCondition( 3, 6, true ) } );
 
         Engine.WaitingForTarget = true;
 
-        PacketWaitEntry we = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming );
+        PacketWaitEntry[] entries =
+        {
+            Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming ),
+            Engine.PacketWaitEntries.Add( pfi2, PacketDirection.Incoming )
+        };
+
+        Task[] tasks = entries.Select( t => t.Lock.ToTask() ).Cast<Task>().ToArray();
 
         try
         {
             do
             {
-                bool result = we.Lock.WaitOne( timeout );
+                int completedTask = Task.WaitAny( tasks, timeout );
 
-                if ( !result )
+                if ( completedTask == -1 )
                 {
                     return false;
                 }
 
-                if ( we.Packet[6] == 0x03 )
+                byte[] packet = entries[completedTask].Packet;
+
+                if ( packet[6] == 0x03 )
                 {
                     continue;
                 }
@@ -609,7 +547,7 @@ public class Commands
         }
         finally
         {
-            Engine.PacketWaitEntries.Remove( we );
+            Engine.PacketWaitEntries.RemoveRange( entries );
 
             Engine.WaitingForTarget = false;
         }
@@ -673,9 +611,25 @@ public class Commands
         return result;
     }
 
-    public static void SetWeaponAbility( int abilityIndex )
+    public static void SetWeaponAbility( int abilityIndex, AbilityType abilityType )
     {
-        Engine.SendPacketToServer( new SetWeaponAbility( abilityIndex ) );
+        bool result = false;
+
+        // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
+        switch ( abilityType )
+        {
+            case AbilityType.Primary:
+                result = ReflectionCommands.UsePrimaryAbility();
+                break;
+            case AbilityType.Secondary:
+                result = ReflectionCommands.UseSecondaryAbility();
+                break;
+        }
+
+        if ( !result )
+        {
+            Engine.SendPacketToServer( new SetWeaponAbility( abilityIndex ) );
+        }
     }
 
     public static void ClearWeaponAbility()
@@ -690,7 +644,39 @@ public class Commands
 
     public static bool WaitForContainerContents( int serial, int timeout )
     {
-        PacketFilterInfo pfi = new( 0x3C, new[] { PacketFilterConditions.IntAtPositionCondition( serial, 19 ) } );
+        int pos = 19;
+
+        if ( Engine.ClientVersion < new Version( 6, 0, 1, 7 ) )
+        {
+            pos = 18;
+        }
+
+        PacketFilterInfo pfi = new( 0x3C, new[] { PacketFilterConditions.IntAtPositionCondition( serial, pos ) } );
+
+        PacketWaitEntry we = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+
+        try
+        {
+            bool result = we.Lock.WaitOne( timeout );
+
+            return result;
+        }
+        finally
+        {
+            Engine.PacketWaitEntries.Remove( we );
+        }
+    }
+
+    public static bool WaitForContainerContentsUse( int serial, int timeout )
+    {
+        int pos = 19;
+
+        if ( Engine.ClientVersion < new Version( 6, 0, 1, 7 ) )
+        {
+            pos = 18;
+        }
+
+        PacketFilterInfo pfi = new( 0x3C, new[] { PacketFilterConditions.IntAtPositionCondition( serial, pos ) } );
 
         PacketWaitEntry we = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
 
@@ -827,7 +813,7 @@ public class Commands
     {
         PacketWriter pw = new( 19 );
         pw.Write( ( byte )0x6C );
-        pw.Write( ( byte )TargetType.Object );
+        pw.Write( ( byte )Engine.TargetType );
         pw.Write( Engine.TargetSerial );
         pw.Write( ( byte )Engine.TargetFlags );
         pw.Write( 0 );
@@ -837,6 +823,7 @@ public class Commands
         pw.Write( ( short )0 );
 
         Engine.TargetExists = true;
+        Engine.InternalTarget = false;
         Engine.SendPacketToClient( pw );
     }
 
@@ -871,7 +858,7 @@ public class Commands
         pw.Write( ( byte )0xBF );
         pw.Write( ( short )0x06 );
         pw.Write( ( short )0x26 );
-        pw.Write( ( byte )( force ? 2 : 0 ) );
+        pw.Write( ( byte )( force ? 2 : Engine.Player?.MovementSpeed ?? 0 ) );
 
         Engine.SendPacketToClient( pw );
     }
@@ -965,7 +952,7 @@ public class Commands
 
     public static async Task InspectObjectAsync()
     {
-        ( TargetType targetType, TargetFlags _, int serial, int x, int y, int z, int itemID ) = await GetTargeInfoAsync( Strings.Target_object___ );
+        ( TargetType targetType, TargetFlags _, int serial, int x, int y, int z, int itemID ) = await GetTargetInfoAsync( Strings.Target_object___ );
 
         if ( targetType == TargetType.Object && serial != 0 )
         {
@@ -1001,12 +988,7 @@ public class Commands
             {
                 StaticTile[] statics = Statics.GetStatics( ( int )Engine.Player.Map, x, y );
 
-                if ( statics == null )
-                {
-                    return;
-                }
-
-                StaticTile selectedStatic = statics.FirstOrDefault( i => i.ID == itemID );
+                StaticTile selectedStatic = statics?.FirstOrDefault( i => i.ID == itemID ) ?? new StaticTile();
 
                 if ( selectedStatic.ID == 0 )
                 {

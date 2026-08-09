@@ -253,7 +253,7 @@ namespace ClassicAssist.Data.Organizer
 
                 if ( container == null )
                 {
-                    UOC.WaitForContainerContents( itemDestinationContainer, 5000 );
+                    UOC.WaitForContainerContentsUse( itemDestinationContainer, 5000 );
                     container = itemDestinationContainerItem?.Container;
                 }
 

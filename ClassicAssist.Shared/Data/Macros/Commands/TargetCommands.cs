@@ -565,7 +565,7 @@ public static class TargetCommands
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.Timeout ) } )]
     public static bool WaitForTargetOrFizzle( int timeout )
     {
-        ( _, bool result ) = UOC.WaitForTargetOrFizzle( timeout );
+        ( _, bool result ) = UOC.WaitForTargetOrFizzle( timeout, out int senderSerial );
 
         return result;
     }

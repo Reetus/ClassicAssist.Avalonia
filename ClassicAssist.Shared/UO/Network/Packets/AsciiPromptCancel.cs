@@ -1,6 +1,6 @@
 ﻿#region License
 
-// Copyright (C) 2020 Reetus
+// Copyright (C) 2026 Reetus
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -17,28 +17,36 @@
 
 #endregion
 
-using System;
-using ClassicAssist.Shared;
 using ClassicAssist.UO.Data;
+using ClassicAssist.UO.Network.PacketFilter;
 
 namespace ClassicAssist.UO.Network.Packets
 {
-    public class DisplayQuestPointer : BasePacket
+    public class AsciiPromptCancel : BasePacket, IMacroCommandParser
     {
-        public DisplayQuestPointer( bool active, int x, int y, int serial = 0 )
+        public AsciiPromptCancel()
         {
-            bool isNew = Engine.ClientVersion >= new Version( 7, 0, 9, 0 );
+        }
 
-            _writer = new PacketWriter( isNew ? 10 : 6 );
-            _writer.Write( (byte) 0xBA );
-            _writer.Write( (byte) ( active ? 1 : 0 ) );
-            _writer.Write( (short) x );
-            _writer.Write( (short) y );
+        public AsciiPromptCancel( int senderSerial, int promptId )
+        {
+            _writer = new PacketWriter( 15 );
+            _writer.Write( (byte) 0x9A );
+            _writer.Write( (short) 15 );
+            _writer.Write( senderSerial );
+            _writer.Write( promptId );
+            _writer.Write( 0 );
+            _writer.Fill();
+        }
 
-            if ( isNew )
+        public string Parse( byte[] packet, int length, PacketDirection direction )
+        {
+            if ( packet[0] != 0x9A || direction != PacketDirection.Outgoing )
             {
-                _writer.Write( serial );
+                return null;
             }
+
+            return packet[14] != 0x00 ? null : "CancelPrompt()\r\n";
         }
     }
 }

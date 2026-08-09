@@ -223,7 +223,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                 int[] containerIds =
                     container.Container?.GetItems().Select( i => i.ID ).ToArray() ?? Array.Empty<int>();
 
-                UOC.WaitForContainerContents( ContainerSerial, 1000 );
+                UOC.WaitForContainerContentsUse( ContainerSerial, 1000 );
 
                 List<SellListEntry> filteredList = sellList.Where( e => containerIds.Contains( e.ID ) ).ToList();
 

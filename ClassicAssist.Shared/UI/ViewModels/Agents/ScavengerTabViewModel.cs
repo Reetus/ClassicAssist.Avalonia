@@ -299,7 +299,7 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents
                     _ignoreList.Add( scavengerItem.Serial );
                     UOC.SystemMessage( string.Format( Strings.Scavenging___0__, scavengerItem.Name ?? "Unknown" ), 61 );
                     ActionPacketQueue.EnqueueDragDrop( scavengerItem.Serial, scavengerItem.Count, container.Serial,
-                        QueuePriority.Low, true ).Wait();
+                        QueuePriority.Low, options: new DragDropOptions { CheckRange = true } ).Wait();
                 }
             }
         }
