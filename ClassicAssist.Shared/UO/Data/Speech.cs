@@ -15,10 +15,26 @@ public static class Speech
 
     public static int[] GetKeywords( string input )
     {
-        IEnumerable<SpeechEntry> matches =
-            _entries.Value.Where( e => Regex.IsMatch( input, WildCardToRegular( e.Keywords ) ) );
+        SpeechEntry[] entries = _entries.Value;
+        List<int> results = null;
 
-        return [.. matches.Select( e => e.Id ).Distinct()];
+        for ( int i = 0; i < entries.Length; i++ )
+        {
+            if ( !entries[i].Pattern.IsMatch( input ) )
+            {
+                continue;
+            }
+
+            results ??= new List<int>( 4 );
+
+            // Distinct, but over the handful of ids that actually match rather than over every entry.
+            if ( !results.Contains( entries[i].Id ) )
+            {
+                results.Add( entries[i].Id );
+            }
+        }
+
+        return results == null ? [] : [.. results];
     }
 
     public static void Initialize( string dataPath )
@@ -42,15 +58,21 @@ public static class Speech
 
             byte[] buffer = new byte[length];
 
-            binaryReader.Read( buffer, 0, length );
+            reader.ReadExactly( buffer, 0, length );
 
             string text = Encoding.UTF8.GetString( buffer );
 
-            if ( text.Contains( "guards" ) )
+            // The pattern is built once here rather than per call in GetKeywords. speech.mul holds
+            // thousands of entries and Regex's static cache only holds 15, so building them on the fly
+            // meant re-parsing nearly every pattern on every line of speech. Left interpreted:
+            // RegexOptions.Compiled would emit IL for each of the thousands of patterns, and four
+            // fifths of them contain a wildcard so there is no cheap literal shortcut to take instead.
+            entries.Add( new SpeechEntry
             {
-            }
-
-            entries.Add( new SpeechEntry { Id = id, Keywords = text } );
+                Id = id,
+                Keywords = text,
+                Pattern = new Regex( WildCardToRegular( text ), RegexOptions.CultureInvariant )
+            } );
         }
 
         return [.. entries];
@@ -65,5 +87,6 @@ public static class Speech
     {
         public int Id { get; set; }
         public string Keywords { get; set; }
+        public Regex Pattern { get; set; }
     }
 }

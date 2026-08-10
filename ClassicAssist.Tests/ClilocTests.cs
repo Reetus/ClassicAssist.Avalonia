@@ -89,6 +89,23 @@ namespace ClassicAssist.Tests
             Assert.IsTrue( emptyCount > 0, "expected the file to contain empty strings" );
         }
 
+        /// <summary>
+        ///     A '#' that starts no token used to satisfy the loop's Contains check forever while the pass
+        ///     below it did nothing, hanging whichever thread called in. Journal and gump text come straight
+        ///     from the server, so a trailing '#' in a shard's own text was enough to lock the client up.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow( "#" )]
+        [DataRow( "you see: #" )]
+        [DataRow( "## " )]
+        [DataRow( "#a" )]
+        [DataRow( "# 500000" )]
+        [Timeout( 5000 )]
+        public void WillNotHangOnUnterminatedToken( string input )
+        {
+            Assert.AreEqual( input, Cliloc.GetLocalString( input ) );
+        }
+
         [TestMethod]
         public void WillReloadWhenInitializedAgain()
         {

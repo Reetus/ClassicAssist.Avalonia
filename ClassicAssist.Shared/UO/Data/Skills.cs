@@ -39,17 +39,15 @@ public static class Skills
 
     public static string GetSkillName( int skillID )
     {
-        return _lazySkillData.Value.ContainsKey( skillID ) ? _lazySkillData.Value[skillID].Name : string.Empty;
+        return _lazySkillData.Value.TryGetValue( skillID, out SkillData skillData ) ? skillData.Name : string.Empty;
     }
 
     public static bool IsInvokable( int skillID )
     {
-        if ( skillID >= 0 && skillID <= _lazySkillData.Value.Count - 1 )
-        {
-            return _lazySkillData.Value[skillID].Invokable;
-        }
-
-        return false;
+        // The bounds check alone assumed the ids run 0..Count-1 with no gaps, and indexed straight in -
+        // a sparse skills.mul would throw rather than return false.
+        return skillID >= 0 && skillID <= _lazySkillData.Value.Count - 1 &&
+               _lazySkillData.Value.TryGetValue( skillID, out SkillData skillData ) && skillData.Invokable;
     }
 
     /// <summary>
@@ -68,7 +66,7 @@ public static class Skills
         return _lazySkillData?.Value.Values.ToArray();
     }
 
-    internal static Dictionary<int, SkillData> GetSkills()
+    internal static IReadOnlyDictionary<int, SkillData> GetSkills()
     {
         return _lazySkillData.Value;
     }

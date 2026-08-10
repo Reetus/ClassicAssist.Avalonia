@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Buffers.Binary;
 using System.IO;
 using System.Text;
 
@@ -17,6 +18,18 @@ public static class TileData
         _dataPath = dataPath;
     }
 
+    /// <summary>
+    ///     Reads a fixed width, NUL padded ASCII name. Stops at the first NUL rather than trimming the
+    ///     tail, so an interior NUL truncates instead of being kept in the middle of the string.
+    /// </summary>
+    private static string ReadName( ReadOnlySpan<byte> span )
+    {
+        int nul = span.IndexOf( (byte) 0 );
+        ReadOnlySpan<byte> slice = nul < 0 ? span : span[..nul];
+
+        return slice.IsEmpty ? string.Empty : Encoding.ASCII.GetString( slice );
+    }
+
     private static StaticTile[] LoadStaticTiles()
     {
         string fileName = Path.Combine( _dataPath, "tiledata.mul" );
@@ -27,80 +40,72 @@ public static class TileData
         }
 
         byte[] fileBytes = File.ReadAllBytes( fileName );
+        ReadOnlySpan<byte> span = fileBytes;
 
         StaticTile[] staticTiles = new StaticTile[( fileBytes.Length - 428032 ) / 1188 * 32];
 
-        MemoryStream ms = new( fileBytes, false );
-
-        using ( BinaryReader reader = new( ms ) )
+        // The format marker lives at offset 36, 20 bytes.
+        if ( ReadName( span.Slice( 36, 20 ) ) == "VOID!!!!!!" )
         {
-            ms.Seek( 36, SeekOrigin.Begin );
-            string name = Encoding.ASCII.GetString( reader.ReadBytes( 20 ) ).TrimEnd( '\0' );
+            _oldFormat = true;
+        }
 
-            if ( name == "VOID!!!!!!" )
+        if ( _oldFormat )
+        {
+            int p = 428032;
+
+            for ( int i = 0; i < 0x4000; ++i )
             {
-                _oldFormat = true;
-            }
-
-            if ( _oldFormat )
-            {
-                const int offset = 428032;
-
-                ms.Seek( offset, SeekOrigin.Begin );
-
-                for ( int i = 0; i < 0x4000; ++i )
+                if ( ( i & 0x1F ) == 0 )
                 {
-                    if ( ( i & 0x1F ) == 0 )
-                    {
-                        reader.ReadInt32(); // header
-                    }
-
-                    staticTiles[i].ID = (ushort) i;
-                    staticTiles[i].Flags = (TileFlags) reader.ReadInt32();
-                    staticTiles[i].Weight = reader.ReadByte();
-                    staticTiles[i].Quality = reader.ReadByte();
-                    reader.ReadInt16();
-                    reader.ReadByte();
-                    staticTiles[i].Quantity = reader.ReadByte();
-                    reader.ReadInt16();
-                    reader.ReadByte();
-                    reader.ReadByte();
-                    reader.ReadInt16();
-                    staticTiles[i].Height = reader.ReadByte();
-                    staticTiles[i].Name = Encoding.ASCII.GetString( reader.ReadBytes( 20 ) ).TrimEnd( '\0' );
+                    p += 4; // block header
                 }
+
+                staticTiles[i].ID = (ushort) i;
+                staticTiles[i].Flags = (TileFlags) BinaryPrimitives.ReadInt32LittleEndian( span.Slice( p, 4 ) );
+                p += 4;
+                staticTiles[i].Weight = span[p++];
+                staticTiles[i].Quality = span[p++];
+                p += 2; // unknown int16
+                p += 1; // unknown byte
+                staticTiles[i].Quantity = span[p++];
+                p += 2; // unknown int16
+                p += 1; // unknown byte
+                p += 1; // unknown byte
+                p += 2; // unknown int16
+                staticTiles[i].Height = span[p++];
+                staticTiles[i].Name = ReadName( span.Slice( p, 20 ) );
+                p += 20;
             }
-            else
+        }
+        else
+        {
+            int p = 493568;
+
+            for ( int i = 0; i < 0x10000; ++i )
             {
-                const int offset = 493568;
-
-                ms.Seek( offset, SeekOrigin.Begin );
-
-                for ( int i = 0; i < 0x10000; ++i )
+                if ( ( i & 0x1F ) == 0 )
                 {
-                    if ( ( i & 0x1F ) == 0 )
-                    {
-                        reader.ReadInt32(); // header
-                    }
-
-                    staticTiles[i].ID = (ushort) i;
-                    staticTiles[i].Flags = (TileFlags) reader.ReadInt64();
-                    staticTiles[i].Weight = reader.ReadByte();
-                    staticTiles[i].Quality = reader.ReadByte();
-                    reader.ReadInt16();
-                    reader.ReadByte();
-                    staticTiles[i].Quantity = reader.ReadByte();
-                    reader.ReadInt32();
-                    reader.ReadByte();
-                    /*int value = */
-                    reader.ReadByte();
-                    staticTiles[i].Height = reader.ReadByte();
-                    staticTiles[i].Name = Encoding.ASCII.GetString( reader.ReadBytes( 20 ) ).TrimEnd( '\0' );
+                    p += 4; // block header
                 }
+
+                staticTiles[i].ID = (ushort) i;
+                staticTiles[i].Flags = (TileFlags) BinaryPrimitives.ReadInt64LittleEndian( span.Slice( p, 8 ) );
+                p += 8;
+                staticTiles[i].Weight = span[p++];
+                staticTiles[i].Quality = span[p++];
+                p += 2; // unknown int16
+                p += 1; // unknown byte
+                staticTiles[i].Quantity = span[p++];
+                p += 4; // unknown int32
+                p += 1; // unknown byte
+                p += 1; // unknown byte
+                staticTiles[i].Height = span[p++];
+                staticTiles[i].Name = ReadName( span.Slice( p, 20 ) );
+                p += 20;
             }
         }
 
-        ms.Close();
         return staticTiles;
     }
 
@@ -114,55 +119,52 @@ public static class TileData
         }
 
         byte[] fileBytes = File.ReadAllBytes( fileName );
+        ReadOnlySpan<byte> span = fileBytes;
 
         LandTile[] landTiles = new LandTile[16384];
 
-        MemoryStream ms = new( fileBytes, false );
-
-        using ( BinaryReader bin = new( ms ) )
+        if ( ReadName( span.Slice( 36, 20 ) ) == "VOID!!!!!!" )
         {
-            ms.Seek( 36, SeekOrigin.Begin );
+            _oldFormat = true;
+        }
 
-            string name = Encoding.ASCII.GetString( bin.ReadBytes( 20 ) ).TrimEnd( '\0' );
+        int p = 0;
 
-            if ( name == "VOID!!!!!!" )
+        if ( _oldFormat )
+        {
+            for ( int i = 0; i < 0x4000; ++i )
             {
-                _oldFormat = true;
-            }
-
-            ms.Seek( 0, SeekOrigin.Begin );
-
-            if ( _oldFormat )
-            {
-                for ( int i = 0; i < 0x4000; ++i )
+                if ( i == 0 || i > 0 && ( i & 0x1f ) == 0 )
                 {
-                    if ( i == 0 || i > 0 && ( i & 0x1f ) == 0 )
-                    {
-                        bin.ReadInt32(); // block header
-                    }
-
-                    landTiles[i].Flags = (TileFlags) bin.ReadInt32();
-                    landTiles[i].ID = bin.ReadInt16();
-                    landTiles[i].Name = Encoding.ASCII.GetString( bin.ReadBytes( 20 ) ).TrimEnd( '\0' );
+                    p += 4; // block header
                 }
+
+                landTiles[i].Flags = (TileFlags) BinaryPrimitives.ReadInt32LittleEndian( span.Slice( p, 4 ) );
+                p += 4;
+                landTiles[i].ID = BinaryPrimitives.ReadInt16LittleEndian( span.Slice( p, 2 ) );
+                p += 2;
+                landTiles[i].Name = ReadName( span.Slice( p, 20 ) );
+                p += 20;
             }
-            else
+        }
+        else
+        {
+            for ( int i = 0; i < 0x4000; ++i )
             {
-                for ( int i = 0; i < 0x4000; ++i )
+                if ( i == 1 || i > 0 && ( i & 0x1f ) == 0 )
                 {
-                    if ( i == 1 || i > 0 && ( i & 0x1f ) == 0 )
-                    {
-                        bin.ReadInt32(); // block header
-                    }
-
-                    landTiles[i].Flags = (TileFlags) bin.ReadInt64();
-                    landTiles[i].ID = bin.ReadInt16();
-                    landTiles[i].Name = Encoding.ASCII.GetString( bin.ReadBytes( 20 ) ).TrimEnd( '\0' );
+                    p += 4; // block header
                 }
+
+                landTiles[i].Flags = (TileFlags) BinaryPrimitives.ReadInt64LittleEndian( span.Slice( p, 8 ) );
+                p += 8;
+                landTiles[i].ID = BinaryPrimitives.ReadInt16LittleEndian( span.Slice( p, 2 ) );
+                p += 2;
+                landTiles[i].Name = ReadName( span.Slice( p, 20 ) );
+                p += 20;
             }
         }
 
-        ms.Close();
         return landTiles;
     }
 
@@ -171,16 +173,16 @@ public static class TileData
         return _landTiles.Value[index];
     }
 
+    /// <summary>
+    ///     Out of range ids fall back to tile 0, same as before - but as a range check rather than a
+    ///     caught IndexOutOfRangeException, since the try/catch stopped the JIT inlining what is one of
+    ///     the hottest lookups in the assistant.
+    /// </summary>
     public static StaticTile GetStaticTile( int index )
     {
-        try
-        {
-            return _staticTiles.Value[index];
-        }
-        catch ( IndexOutOfRangeException )
-        {
-            return _staticTiles.Value[0];
-        }
+        StaticTile[] tiles = _staticTiles.Value;
+
+        return (uint) index < (uint) tiles.Length ? tiles[index] : tiles[0];
     }
 
     public static Layer GetLayer( int id )

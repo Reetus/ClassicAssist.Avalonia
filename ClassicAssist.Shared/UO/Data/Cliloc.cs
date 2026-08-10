@@ -55,10 +55,7 @@ public static class Cliloc
             string value = Encoding.UTF8.GetString( fileBytes, x + 7, readLen );
 
             // Duplicates do occur; first definition wins rather than throwing.
-            if ( !clilocList.ContainsKey( cliloc ) )
-            {
-                clilocList.Add( cliloc, value );
-            }
+            clilocList.TryAdd( cliloc, value );
         }
 
         return clilocList;
@@ -66,13 +63,24 @@ public static class Cliloc
 
     public static string GetLocalString( string tokenizedString )
     {
-        if ( tokenizedString.ToLower().Contains( "http://" ) || tokenizedString.ToLower().Contains( "https://" ) )
+        // Ordinal comparison rather than ToLower(), which allocated two lowercased copies of the string
+        // on every call for a check that nearly always fails.
+        if ( tokenizedString.Contains( "http://", StringComparison.OrdinalIgnoreCase ) ||
+             tokenizedString.Contains( "https://", StringComparison.OrdinalIgnoreCase ) )
         {
             return tokenizedString;
         }
 
-        while ( tokenizedString.Contains( "#" ) )
+        // Tracks whether the pass below actually replaced anything. Without it a '#' that starts no
+        // token - most obviously a trailing one, as in "you see: #" - satisfies the Contains check
+        // forever while the pass does nothing, and the caller hangs. Journal text and gump text come
+        // straight from the server, so that string is reachable from outside.
+        bool replaced = true;
+
+        while ( replaced && tokenizedString.Contains( "#" ) )
         {
+            replaced = false;
+
             for ( int x = 0; x < tokenizedString.Length; x++ )
             {
                 if ( tokenizedString[x] != '#' || x >= tokenizedString.Length - 1 )
@@ -103,19 +111,14 @@ public static class Cliloc
                     continue;
                 }
 
-                int propertyNum;
-
-                try
-                {
-                    propertyNum = Convert.ToInt32( tokenNum );
-                }
-                catch
+                if ( !int.TryParse( tokenNum, out int propertyNum ) )
                 {
                     return tokenizedString;
                 }
 
                 string property = GetProperty( propertyNum );
                 tokenizedString = tokenizedString.Replace( token, property );
+                replaced = true;
             }
         }
 

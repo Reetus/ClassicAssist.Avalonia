@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ClassicAssist.UO.Data;
 
 public class UOPIndex : IDisposable
 {
+    /// <summary>
+    ///     Running total of entry lengths, so <c>_cumulativeLengths[i]</c> is the exclusive end of entry
+    ///     <c>i</c> in the flattened stream. Lets <see cref="Lookup" /> binary search rather than walk every
+    ///     entry - a map uop has ~1500 of them and the walk ran per tile read.
+    /// </summary>
+    private readonly int[] _cumulativeLengths;
+
     private readonly UOPEntry[] _entries;
     private readonly int _length;
     private readonly BinaryReader _reader;
@@ -67,28 +75,69 @@ public class UOPIndex : IDisposable
         }
 
         entries.Sort();
-        _entries = [.. entries];
+
+        // A zero length entry occupies no space in the flattened stream, so the linear walk this
+        // replaced could never return one. Dropping them keeps the cumulative totals strictly
+        // increasing, which is what makes the binary search below unambiguous.
+        _entries = [.. entries.Where( e => e.Length > 0 )];
+
+        _cumulativeLengths = new int[_entries.Length];
+        int cumulative = 0;
+
+        for ( int i = 0; i < _entries.Length; i++ )
+        {
+            cumulative += _entries[i].Length;
+            _cumulativeLengths[i] = cumulative;
+        }
     }
 
     public int Version { get; }
 
     public int Lookup( int offset )
     {
-        int total = 0;
+        int index = Array.BinarySearch( _cumulativeLengths, offset );
 
-        foreach ( UOPEntry t in _entries )
+        if ( index < 0 )
         {
-            int newTotal = total + t.Length;
-
-            if ( offset < newTotal )
-            {
-                return t.Offset + ( offset - total );
-            }
-
-            total = newTotal;
+            // Not an exact end boundary: the complement is the first entry that ends past offset.
+            index = ~index;
+        }
+        else
+        {
+            // Exactly on an entry's end, which belongs to the next one.
+            index++;
         }
 
-        return _length;
+        if ( index >= _entries.Length )
+        {
+            return _length;
+        }
+
+        int entryStart = index > 0 ? _cumulativeLengths[index - 1] : 0;
+
+        return _entries[index].Offset + ( offset - entryStart );
+    }
+
+    /// <summary>
+    ///     Reads every entry into one buffer, i.e. the file as the client sees it once the uop container
+    ///     is stripped. Callers that would otherwise <see cref="Lookup" /> their way through the whole
+    ///     file can index the result directly.
+    /// </summary>
+    public byte[] ReadAll()
+    {
+        int totalLength = _cumulativeLengths.Length > 0 ? _cumulativeLengths[^1] : 0;
+
+        byte[] result = new byte[totalLength];
+        int position = 0;
+
+        foreach ( UOPEntry entry in _entries )
+        {
+            _reader.BaseStream.Seek( entry.Offset, SeekOrigin.Begin );
+            _reader.BaseStream.ReadExactly( result, position, entry.Length );
+            position += entry.Length;
+        }
+
+        return result;
     }
 
     public void Close()

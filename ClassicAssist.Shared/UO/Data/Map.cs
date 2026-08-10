@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
@@ -21,7 +22,14 @@ public static class MapInfo
 {
     private static string _dataPath;
 
-    private static readonly UOPIndex[] _uopIndex = new UOPIndex[6];
+    /// <summary>
+    ///     One memory mapped view per map, opened on first use. This used to be a File.OpenRead plus a
+    ///     BinaryReader per tile read - four of them per <see cref="GetAverageZ(int,int,int)" /> - which
+    ///     made anything walking the map cost a syscall storm. Mapping rather than reading the file into a
+    ///     byte[] keeps the "don't pay for maps you never query" property at page granularity: map0 alone
+    ///     is ~90MB and the assistant typically touches a handful of tiles around the player.
+    /// </summary>
+    private static readonly Lazy<MapFile>[] _mapFiles = new Lazy<MapFile>[6];
 
     private static int[,] _defaultMapSize { get; } =
     {
@@ -31,43 +39,38 @@ public static class MapInfo
     public static void Initialize( string dataPath )
     {
         _dataPath = dataPath;
+
+        for ( int i = 0; i < 6; i++ )
+        {
+            int map = i;
+
+            _mapFiles[i]?.Value?.Dispose();
+            _mapFiles[i] = new Lazy<MapFile>( () => MapFile.Open( GetMapFilename( map ) ) );
+        }
     }
 
     public static LandTile GetLandTile( int map, int x, int y )
     {
-        int blockIndex = x / 8 * ( _defaultMapSize[map, 1] / 8 ) + y / 8;
-        int cellX = x % 8;
-        int cellY = y % 8;
-        string fileName = GetMapFilename( map );
+        MapFile mapFile = (uint) map < (uint) _mapFiles.Length ? _mapFiles[map]?.Value : null;
 
-        if ( string.IsNullOrEmpty( fileName ) )
+        if ( mapFile == null )
         {
             return new LandTile();
         }
 
-        using FileStream fileStream = File.OpenRead( fileName );
-        if ( fileName.EndsWith( ".uop", StringComparison.InvariantCultureIgnoreCase ) &&
-             _uopIndex[map] == null )
+        int blockIndex = x / 8 * ( _defaultMapSize[map, 1] / 8 ) + y / 8;
+        int offset = blockIndex * 196 + 4 + y % 8 * 24 + x % 8 * 3;
+
+        if ( !mapFile.TryReadCell( offset, out ushort id, out sbyte z ) )
         {
-            _uopIndex[map] = new UOPIndex( File.OpenRead( fileName ) );
+            return new LandTile();
         }
 
-        int offset = blockIndex * 196 + 4 + cellY * 24 + cellX * 3;
-
-        if ( _uopIndex[map] != null )
-        {
-            offset = _uopIndex[map].Lookup( offset );
-        }
-
-        fileStream.Seek( offset, SeekOrigin.Begin );
-
-        using BinaryReader binaryReader = new( fileStream );
-        int id = binaryReader.ReadUInt16();
         LandTile landTile = TileData.GetLandTile( id );
         landTile.ID = id;
         landTile.X = x;
         landTile.Y = y;
-        landTile.Z = binaryReader.ReadSByte();
+        landTile.Z = z;
 
         return landTile;
     }
@@ -461,5 +464,93 @@ public static class MapInfo
         }
 
         return null;
+    }
+
+    /// <summary>
+    ///     A map file held open as a memory mapped view. For a .uop the block offsets are the ones the
+    ///     flattened file would have, so they go through <see cref="UOPIndex.Lookup" /> first - the index
+    ///     itself is built once here rather than per read.
+    /// </summary>
+    private sealed class MapFile : IDisposable
+    {
+        private readonly MemoryMappedViewAccessor _accessor;
+        private readonly MemoryMappedFile _file;
+        private readonly long _length;
+        private readonly UOPIndex _uopIndex;
+
+        private MapFile( MemoryMappedFile file, MemoryMappedViewAccessor accessor, long length, UOPIndex uopIndex )
+        {
+            _file = file;
+            _accessor = accessor;
+            _length = length;
+            _uopIndex = uopIndex;
+        }
+
+        public static MapFile Open( string fileName )
+        {
+            if ( string.IsNullOrEmpty( fileName ) || !File.Exists( fileName ) )
+            {
+                return null;
+            }
+
+            UOPIndex uopIndex = null;
+
+            try
+            {
+                if ( fileName.EndsWith( ".uop", StringComparison.OrdinalIgnoreCase ) )
+                {
+                    using FileStream indexStream = File.OpenRead( fileName );
+                    uopIndex = new UOPIndex( indexStream );
+                }
+
+                long length = new FileInfo( fileName ).Length;
+
+                MemoryMappedFile file = MemoryMappedFile.CreateFromFile( fileName, FileMode.Open, null, 0,
+                    MemoryMappedFileAccess.Read );
+
+                MemoryMappedViewAccessor accessor = file.CreateViewAccessor( 0, 0, MemoryMappedFileAccess.Read );
+
+                return new MapFile( file, accessor, length, uopIndex );
+            }
+            catch ( Exception )
+            {
+                // A missing, locked or malformed map file leaves the tile lookups returning empty tiles,
+                // same as no data path at all - it must not take the caller down.
+                return null;
+            }
+        }
+
+        /// <summary>
+        ///     Reads the tile id and z at a flattened-file offset, or false if it falls outside the file.
+        /// </summary>
+        public bool TryReadCell( int offset, out ushort id, out sbyte z )
+        {
+            id = 0;
+            z = 0;
+
+            if ( offset < 0 )
+            {
+                return false;
+            }
+
+            long fileOffset = _uopIndex?.Lookup( offset ) ?? offset;
+
+            if ( fileOffset < 0 || fileOffset + 3 > _length )
+            {
+                return false;
+            }
+
+            id = _accessor.ReadUInt16( fileOffset );
+            z = _accessor.ReadSByte( fileOffset + 2 );
+
+            return true;
+        }
+
+        public void Dispose()
+        {
+            _uopIndex?.Dispose();
+            _accessor?.Dispose();
+            _file?.Dispose();
+        }
     }
 }
