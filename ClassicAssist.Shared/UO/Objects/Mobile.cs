@@ -99,7 +99,7 @@ public class Mobile : Entity
 
     public int GetLayer( Layer layer )
     {
-        return (int) layer >= _layerArray.Length ? 0 : Thread.VolatileRead( ref _layerArray[(int) layer] );
+        return (int) layer >= _layerArray.Length ? 0 : Volatile.Read( ref _layerArray[(int) layer] );
     }
 
     public Item[] GetEquippedItems()

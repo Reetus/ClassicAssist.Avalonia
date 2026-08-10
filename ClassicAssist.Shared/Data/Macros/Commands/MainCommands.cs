@@ -88,18 +88,10 @@ public static class MainCommands
             return;
         }
 
-        Thread t = new( () =>
-        {
-            //TODO Window
-            //ObjectInspectorWindow window =
-            //    new ObjectInspectorWindow { DataContext = new ObjectInspectorViewModel( entity ) };
-
-            //window.ShowDialog();
-        } )
-        { IsBackground = true };
-
-        t.SetApartmentState( ApartmentState.STA );
-        t.Start();
+        // Was a WPF-era STA thread whose body was never ported, so it opened nothing - and
+        // Thread.SetApartmentState throws PlatformNotSupportedException off Windows, which made this
+        // command fail outright on Linux. Routed through UIInvoker like Commands.InspectObjectAsync.
+        Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [entity] );
     }
 
     [CommandsDisplay( Category = nameof( Strings.Main ),

@@ -38,7 +38,6 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     private readonly string _propertiesFile = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.json" );
 
     private readonly string _propertiesFileCustom = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
-    private RelayCommand _resetContainerCommand;
 
     public AutolootViewModel()
     {
@@ -174,7 +173,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         set => SetProperty( ref field, value );
     }
 
-    public ICommand ResetContainerCommand => _resetContainerCommand = new RelayCommand( ResetContainer, o => true );
+    public ICommand ResetContainerCommand => field ??= new RelayCommand( ResetContainer, o => true );
 
     public AutolootGroup SelectedGroup
     {
@@ -508,7 +507,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
             if ( Engine.Features.HasFlag( FeatureFlags.AOS ) )
             {
-                Engine.SendPacketToServer( new BatchQueryProperties( items.Select( i => i.Serial ).ToArray() ) );
+                Engine.SendPacketToServer( new BatchQueryProperties( [.. items.Select( i => i.Serial )] ) );
                 Thread.Sleep( 1000 );
             }
 
@@ -607,7 +606,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        List<AutolootConstraintEntry> constraints = new( SelectedItem.Constraints ) { new AutolootConstraintEntry { Property = propertyEntry } };
+        List<AutolootConstraintEntry> constraints = [.. SelectedItem.Constraints, new AutolootConstraintEntry { Property = propertyEntry }];
 
         SelectedItem.Constraints = new ObservableCollection<AutolootConstraintEntry>( constraints );
     }
@@ -888,7 +887,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         {
             if ( vm.IgnoreDuplicateEntries )
             {
-                IEnumerable<AutolootEntry> items = Items.Where( i => i.ID == entry.ID && i.Constraints.Count == entry.Constraints.Count ).ToList();
+                IEnumerable<AutolootEntry> items = [.. Items.Where( i => i.ID == entry.ID && i.Constraints.Count == entry.Constraints.Count )];
 
                 if ( items.Any() )
                 {

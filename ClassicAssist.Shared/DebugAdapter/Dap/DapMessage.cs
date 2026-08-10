@@ -63,7 +63,9 @@ public sealed class DapEvent : DapMessage
     [JsonProperty( "body", NullValueHandling = NullValueHandling.Ignore )]
     public object Body { get; set; }
 
-    public static DapEvent Stopped( int threadId, string reason, string file = null, int line = 0 )
+    // No file/line parameters: the DAP stopped event carries no location. The client follows up
+    // with a stackTrace request, which is where StoppedFile/StoppedLine are reported.
+    public static DapEvent Stopped( int threadId, string reason )
     {
         return new DapEvent
         {

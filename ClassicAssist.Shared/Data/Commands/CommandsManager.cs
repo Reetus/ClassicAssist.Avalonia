@@ -130,7 +130,11 @@ public class CommandsManager
         return true;
     }
 
+    // length is unused: the speech parsers read data.Length instead. Kept because the WPF tree
+    // has the identical signature and body, and this is called from the outgoing packet path.
+#pragma warning disable IDE0060
     public static bool CheckCommand( byte[] data, int length )
+#pragma warning restore IDE0060
     {
         string text = null;
 

@@ -31,6 +31,12 @@
         <PackageReference Include="Avalonia.AvaloniaEdit" Version="11.3.0" />
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+        <!--
+          Pinned ahead of Avalonia.FreeDesktop's transitive 0.21.2, which has a high-severity
+          advisory (GHSA-xrw6-gwf8-vvr9 / CVE-2026-39959: D-Bus signal spoofing and fd
+          exhaustion). 0.21.3 is the patch for that line - drop this once Avalonia ships it.
+        -->
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
         <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
         <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
         <PackageReference Include="MessagePack" Version="2.5.302" />

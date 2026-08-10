@@ -28,7 +28,12 @@ public static class Reflection
     public static T GetTypePropertyValue<T>( Type type, string property, object obj = null,
         BindingFlags bindingFlags = BindingFlags.Default )
     {
-        PropertyInfo propertyInfo = type.GetProperty( property );
+        // Default is the no-flags overload, which resolves public instance and static properties.
+        // Passing BindingFlags.Default to GetProperty( string, BindingFlags ) would instead match
+        // nothing, so the two are not interchangeable.
+        PropertyInfo propertyInfo = bindingFlags == BindingFlags.Default
+            ? type.GetProperty( property )
+            : type.GetProperty( property, bindingFlags );
 
         T val = (T) propertyInfo?.GetValue( obj, null );
 

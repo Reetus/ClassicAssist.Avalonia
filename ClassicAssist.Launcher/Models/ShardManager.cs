@@ -203,7 +203,7 @@ public class ShardManager : INotifyPropertyChanged
     {
         OverridePresets = true;
 
-        IEnumerable<ShardEntry> deletedShards = Shards.Where( e => e.IsPreset && !shards.Contains( e ) ).ToList();
+        IEnumerable<ShardEntry> deletedShards = [.. Shards.Where( e => e.IsPreset && !shards.Contains( e ) )];
 
         foreach ( ShardEntry deletedShard in deletedShards )
         {

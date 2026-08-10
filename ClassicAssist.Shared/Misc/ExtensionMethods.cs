@@ -79,7 +79,7 @@ public static class ExtensionMethods
 
     public static IEnumerable<IEnumerable<T>> Split<T>( this IEnumerable<T> source, int chunkSize )
     {
-        IEnumerable<T> enumerable = source.ToList();
+        IEnumerable<T> enumerable = [.. source];
 
         return enumerable.Where( ( x, i ) => i % chunkSize == 0 ).Select( ( x, i ) => enumerable.Skip( i * chunkSize ).Take( chunkSize ) );
     }

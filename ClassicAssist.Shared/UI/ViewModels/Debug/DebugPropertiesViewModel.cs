@@ -52,12 +52,12 @@ public class DebugPropertiesViewModel : DebugBaseViewModel
             }
 
             Items.Clear();
-            Items.AddRange( properties.Select( entityProperty => new Property
+            Items.AddRange( [.. properties.Select( entityProperty => new Property
             {
                 Cliloc = entityProperty.Cliloc,
                 Text = Cliloc.GetProperty( entityProperty.Cliloc ),
                 Arguments = entityProperty.Arguments
-            } ).ToList() );
+            } )] );
         };
     }
 

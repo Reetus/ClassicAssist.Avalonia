@@ -195,7 +195,7 @@ public class ObjectInspectorViewModel : BaseViewModel
     private void AddEquipmentProperty( Item[] items, IReadOnlyList<int> clilocs, IReadOnlyList<int> argumentIndexs,
         string name, string category )
     {
-        int amount = clilocs.Select( ( t, i ) => CountPropertyList( items.ToArray(), t, argumentIndexs[i] ) ).Sum();
+        int amount = clilocs.Select( ( t, i ) => CountPropertyList( [.. items], t, argumentIndexs[i] ) ).Sum();
 
         if ( amount > 0 )
         {
@@ -212,7 +212,7 @@ public class ObjectInspectorViewModel : BaseViewModel
     private void AddEquipmentPropertyWithSymbol( Item[] items, int cliloc, int symbolIndex, int argumentIndex,
         string name, string category )
     {
-        int amount = CountPropertyListWithSymbol( items.ToArray(), cliloc, symbolIndex, argumentIndex );
+        int amount = CountPropertyListWithSymbol( [.. items], cliloc, symbolIndex, argumentIndex );
 
         if ( amount != 0 )
         {

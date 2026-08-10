@@ -969,7 +969,7 @@ public class Commands
                 return;
             }
 
-            Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [entity] );
+            _ = Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [entity] );
         }
         else
         {
@@ -981,7 +981,7 @@ public class Commands
                 }
 
                 LandTile landTile = MapInfo.GetLandTile( (int) Engine.Player.Map, x, y );
-                Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [(object) landTile] );
+                _ = Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [(object) landTile] );
             }
             else
             {
@@ -997,7 +997,7 @@ public class Commands
                     selectedStatic.Z = z;
                 }
 
-                Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [(object) selectedStatic] );
+                _ = Engine.UIInvoker.Invoke( "ObjectInspectorWindow", null, typeof( ObjectInspectorViewModel ), [(object) selectedStatic] );
             }
         }
     }
@@ -1017,7 +1017,7 @@ public class Commands
 
         foreach ( IEnumerable<int> subSerials in serials.Split( 10 ) )
         {
-            Engine.SendPacketToServer( new BatchQueryProperties( subSerials.ToArray() ) );
+            Engine.SendPacketToServer( new BatchQueryProperties( [.. subSerials] ) );
         }
 
         try

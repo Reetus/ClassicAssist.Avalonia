@@ -84,7 +84,7 @@ public class DebugAutolootViewModel : BaseViewModel
             return;
         }
 
-        Engine.SendPacketToServer( new BatchQueryProperties( items.Select( i => i.Serial ).ToArray() ) );
+        Engine.SendPacketToServer( new BatchQueryProperties( [.. items.Select( i => i.Serial )] ) );
 
         foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries()
                      .OrderByDescending( x => x.Priority ) )

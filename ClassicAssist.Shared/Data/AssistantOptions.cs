@@ -192,7 +192,7 @@ public static class AssistantOptions
             return;
         }
 
-        IEnumerable<string> files = Directory.EnumerateFiles( profileDirectory ).ToList();
+        IEnumerable<string> files = [.. Directory.EnumerateFiles( profileDirectory )];
 
         if ( !files.Any() )
         {

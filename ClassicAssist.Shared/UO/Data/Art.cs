@@ -235,9 +235,15 @@ public static class Art
     private static ulong HashFileName( string s )
     {
         uint ecx, edx, ebx, esi, edi;
-        uint eax = _ = _ = _ = _ = edi = 0;
+
+        // Transliterated from the C original, which zeroes the registers as a block before use.
+        // Four of them are overwritten immediately, so this reads as redundant - but keeping the
+        // shape is what makes the function checkable line-by-line against the source it came from.
+#pragma warning disable IDE0059
+        uint eax = ecx = edx = ebx = esi = edi = 0;
+#pragma warning restore IDE0059
         ebx = edi = esi = (uint) s.Length + 0xDEADBEEF;
-        int i = 0;
+        int i;
 
         for ( i = 0; i + 12 < s.Length; i += 12 )
         {

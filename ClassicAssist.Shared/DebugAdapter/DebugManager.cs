@@ -129,7 +129,9 @@ public sealed class DebugManager
     /// <summary>
     ///     Called from OnTrace for "exception" events. Returns true if execution should pause.
     /// </summary>
+#pragma warning disable IDE0060
     public bool ShouldBreakOnException( int threadId, object payload )
+#pragma warning restore IDE0060
     {
         return BreakOnAllExceptions;
     }
@@ -150,7 +152,7 @@ public sealed class DebugManager
         state.Pause();
 
         Action<DapEvent> handler = SendEvent;
-        handler?.Invoke( DapEvent.Stopped( threadId, reason, state.StoppedFile, state.StoppedLine ) );
+        handler?.Invoke( DapEvent.Stopped( threadId, reason ) );
     }
 
     public void WaitForResume( int threadId, CancellationToken token )

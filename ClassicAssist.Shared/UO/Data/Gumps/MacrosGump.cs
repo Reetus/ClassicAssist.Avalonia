@@ -120,7 +120,7 @@ public class MacrosGump : ReflectionRepositionableGump
 
             if ( macros != null )
             {
-                _lastMacros = macros.ToArray();
+                _lastMacros = [.. macros];
             }
         }
         catch ( InvalidOperationException e )

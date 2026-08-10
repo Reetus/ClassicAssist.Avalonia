@@ -73,7 +73,6 @@ public partial class AutolootTabControl : UserControl
         }
     }
 
-    [Obsolete]
     private void OnPointerMoved( object sender, PointerEventArgs e )
     {
         if ( _dragEntry == null || _dragStartArgs == null )
@@ -98,7 +97,6 @@ public partial class AutolootTabControl : UserControl
         _dragStartArgs = null;
     }
 
-    [Obsolete]
     private void OnTreeDragOver( object sender, DragEventArgs e )
     {
         e.DragEffects = DragDropEffects.None;
@@ -117,7 +115,6 @@ public partial class AutolootTabControl : UserControl
         }
     }
 
-    [Obsolete]
     private void OnTreeDrop( object sender, DragEventArgs e )
     {
         if ( !e.Data.Contains( DRAG_FORMAT ) )

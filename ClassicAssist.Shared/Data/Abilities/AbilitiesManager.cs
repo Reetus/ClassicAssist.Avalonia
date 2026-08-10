@@ -158,7 +158,11 @@ public class AbilitiesManager
         ResendGump( 5, 11, abilityType );
     }
 
+    // Parameters are consumed by the commented-out body below, which is waiting on the abilities
+    // gump being wired up - WeaponAbilitiesGump has since been ported, so the TODO is stale.
+#pragma warning disable IDE0060
     private static void ResendGump( int primaryId, int secondaryId, AbilityType abilityType )
+#pragma warning restore IDE0060
     {
         if ( !Options.CurrentOptions.AbilitiesGump )
         {

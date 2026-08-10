@@ -135,7 +135,6 @@ dotnet_analyzer_diagnostic.category-Style.severity = none
 # --- Formatting and documented conventions -----------------------------------
 dotnet_diagnostic.IDE0055.severity = warning   # formatting (whitespace, wrapping)
 dotnet_diagnostic.IDE0011.severity = warning   # add braces - required for all control flow
-dotnet_diagnostic.IDE0005.severity = warning   # remove unnecessary using directives
 
 # --- Dead code ---------------------------------------------------------------
 dotnet_diagnostic.IDE0051.severity = warning   # unused private member
@@ -181,6 +180,11 @@ dotnet_diagnostic.IDE0130.severity = none
 
 # Superseded by IDE0161 above; enabling both makes them fight.
 dotnet_diagnostic.IDE0160.severity = none
+
+# IDE0005 is skipped during build unless GenerateDocumentationFile is also on
+# (https://github.com/dotnet/roslyn/issues/41640), and turning that on costs ~38 doc-comment
+# warnings for a handful of stray usings. `dotnet format` still applies it.
+dotnet_diagnostic.IDE0005.severity = none
 
 # Readability is worse for the long conditionals in the packet handlers.
 dotnet_diagnostic.IDE0010.severity = none

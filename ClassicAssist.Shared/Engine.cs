@@ -49,7 +49,6 @@ public static partial class Engine
 
     private const int MAX_DISTANCE = 32;
 
-    private static GetUOFilePath _getUOFilePath;
     private static SendRecvPacket _sendToClient;
     private static SendRecvPacket _sendToServer;
     private static GetPacketLength _getPacketLength;
@@ -199,7 +198,6 @@ public static partial class Engine
         InitializeExtensions();
 
         _getPacketLength = id => Host.GetPacketLength( id ).Result;
-        _getUOFilePath = () => Host.GetUOFilePath().Result;
         _sendToClient = SendPacketToClientPlugin;
         _sendToServer = SendPacketToServerPlugin;
         _requestMove = ( dir, run ) => Host.RequestMove( dir, run ).Result;
@@ -385,7 +383,6 @@ public static partial class Engine
         AssistantOptions.Load();
     }
 
-    [Obsolete]
     private static void ProcessIncomingQueue( Packet packet )
     {
         try
@@ -402,18 +399,16 @@ public static partial class Engine
         }
         catch ( Exception e )
         {
-            SentrySdk.WithScope( scope =>
+            SentrySdk.CaptureException( e, scope =>
             {
                 scope.SetExtra( "Packet", packet.GetPacket() );
                 scope.SetExtra( "Player", Player.ToString() );
                 scope.SetExtra( "WorldItemCount", Items.Count() );
                 scope.SetExtra( "WorldMobileCount", Mobiles.Count() );
-                SentrySdk.CaptureException( e );
             } );
         }
     }
 
-    [Obsolete]
     private static void ProcessOutgoingQueue( Packet packet )
     {
         try
@@ -430,13 +425,12 @@ public static partial class Engine
         }
         catch ( Exception e )
         {
-            SentrySdk.WithScope( scope =>
+            SentrySdk.CaptureException( e, scope =>
             {
                 scope.SetExtra( "Packet", packet.GetPacket() );
                 scope.SetExtra( "Player", Player.ToString() );
                 scope.SetExtra( "WorldItemCount", Items.Count() );
                 scope.SetExtra( "WorldMobileCount", Mobiles.Count() );
-                SentrySdk.CaptureException( e );
             } );
         }
     }
@@ -979,7 +973,7 @@ public static partial class Engine
 
     public static Direction GetSequence( int sequence )
     {
-        return (Direction) Thread.VolatileRead( ref _sequenceList[sequence] );
+        return (Direction) Volatile.Read( ref _sequenceList[sequence] );
     }
 
     public static void SetSequence( int sequence, Direction direction )

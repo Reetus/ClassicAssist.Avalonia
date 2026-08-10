@@ -27,14 +27,17 @@ namespace ClassicAssist.UO.Gumps;
 public abstract class RepositionableGump : Gump
 {
     private const int REPOSITION_BUTTON_ID = 100;
-    private readonly int _height;
     private readonly int _width;
 
+    // height is unused - the reposition button is anchored to the top-right, so only the width
+    // matters - but the four gumps deriving from this all supply a width/height pair, and dropping
+    // half of it just to satisfy the rule would leave a lopsided constructor.
+#pragma warning disable IDE0060
     protected RepositionableGump( int width, int height, int serial, uint gumpID ) : base( 0, 0, serial,
         gumpID )
+#pragma warning restore IDE0060
     {
         _width = width;
-        _height = height;
     }
 
     public int GumpX { get; set; } = 100;
