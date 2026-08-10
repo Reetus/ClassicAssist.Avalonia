@@ -4,10 +4,12 @@
         <TargetFramework>net10.0</TargetFramework>
         <RollForward>LatestMajor</RollForward>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <!-- No <ApplicationIcon>: that property needs a real file at a project-relative path, but
-             logo.ico here is a linked AvaloniaResource (see below), not a physical file on disk.
-             The runtime window icon comes from the Window style in App.axaml (X11 needs Window.Icon
-             set explicitly - see the comment there). -->
+        <!-- Embedded into the apphost's Win32 resources, which is what Explorer and a Windows
+             shortcut show. Unrelated to the AvaloniaResource link of the same file below: that one
+             feeds Window.Icon at runtime, which is what X11 reports as _NET_WM_ICON. Both are
+             needed, and the path may point outside the project - ApplicationIcon is just a path
+             relative to the project directory. -->
+        <ApplicationIcon>..\ClassicAssist.Avalonia\Assets\logo.ico</ApplicationIcon>
         <!-- Lands beside the plugin build output, so the three ClassicAssist plugin variants
              (ClassicAssist.dll, ClassicAssistNE.*, framework\ClassicAssist.dll) are siblings the
              launcher can resolve with no path guessing - see Client/PluginPathResolver.cs. -->
