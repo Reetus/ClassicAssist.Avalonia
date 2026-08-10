@@ -6,3 +6,6 @@
 #     git config blame.ignoreRevsFile .git-blame-ignore-revs
 #
 # One full 40-character SHA per line.
+
+# Apply .editorconfig style rules to the net10.0 projects
+51edcc49f1377feb10ff641065001f9dd897c256
