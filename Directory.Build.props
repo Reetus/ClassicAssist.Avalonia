@@ -9,6 +9,13 @@
       project that transitively references the package, hence suppressing it here.
     -->
     <NoWarn>$(NoWarn);NETSDK1206</NoWarn>
+
+    <!--
+      IDE* rules ship in the SDK but do not run during build by default - they only surface in the
+      IDE and in `dotnet format`. .editorconfig sets their severity; this makes the build actually
+      run them, so CI enforces the same rules the IDE shows.
+    -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
 </Project>

@@ -1,0 +1,8 @@
+# Revisions to skip when running git blame - bulk reformats and mechanical
+# rewrites that would otherwise sit on top of every line they touched.
+#
+# GitHub honours this file automatically. For local `git blame`, run once:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# One full 40-character SHA per line.

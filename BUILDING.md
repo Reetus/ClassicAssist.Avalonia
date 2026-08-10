@@ -23,6 +23,46 @@ dotnet test  ClassicAssist.Tests/ClassicAssist.Tests.csproj
 
 Everything lands in `Output/ClassicAssist/`, which *is* the deployable folder.
 
+## Code style
+
+`.editorconfig` is enforced during build (`EnforceCodeStyleInBuild` in `Directory.Build.props`), so
+style violations surface as build warnings rather than IDE-only hints. To apply the fixes:
+
+```bash
+dotnet format ClassicAssist.slnx                      # apply
+dotnet format ClassicAssist.slnx --verify-no-changes  # check only, for CI
+```
+
+Rules are enforced for **`ClassicAssist.Avalonia`, `ClassicAssist.Launcher` and
+`ClassicAssist.Shared`** — the projects that target `net10.0` only. Everywhere else the `Style`
+category is `none`, so those projects build without style warnings and `dotnet format` leaves them
+alone. Within the enforced scope each rule is opted in individually in `.editorconfig`, with a
+comment explaining why.
+
+The WPF tree is net48 / C# 7.3 and cannot use the modern constructs enabled here — collection
+expressions, `new()`, `not` patterns, file-scoped namespaces — so expect those to differ when
+diffing the two trees.
+
+The scope is not arbitrary. `ClassicAssist.Plugin` and `ClassicAssist.Plugin.Shared` multi-target
+`net10.0;net472`, and `dotnet format` computes fixes per target framework: where `#if` blocks make
+the two syntax trees diverge it writes **git conflict markers into the source** rather than
+reconciling them. `PluginEngine.cs`, with 54 preprocessor directives, cannot be auto-formatted at
+all. Narrowing a project to one framework to work around this is **not** safe either — IDE0005 then
+strips usings referenced only from `#if NETFRAMEWORK` regions, breaking the net472 build.
+
+If you do widen the scope, check for damage afterwards:
+
+```bash
+grep -rn '^<<<<<<<' --include=*.cs .
+```
+
+Bulk reformats are listed in `.git-blame-ignore-revs`. GitHub applies it automatically; for local
+`git blame`, run once:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ## Deploy
 
 ```bash
