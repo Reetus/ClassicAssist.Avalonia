@@ -8,173 +8,172 @@ using ClassicAssist.UI.Misc;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.Data.Macros
+namespace ClassicAssist.Data.Macros;
+
+public class MacroManager
 {
-    public class MacroManager
+    public delegate void dMacroStartStop( MacroEntry macroEntry );
+    private static readonly Lock _lock = new();
+    private static MacroManager _instance;
+    private readonly List<IMacroCommandParser> _parsers = [];
+    public event dMacroStartStop MacroStartedEvent;
+    public event dMacroStartStop MacroStoppedEvent;
+
+    private MacroManager()
     {
-        public delegate void dMacroStartStop( MacroEntry macroEntry );
-        private static readonly object _lock = new object();
-        private static MacroManager _instance;
-        private readonly List<IMacroCommandParser> _parsers = new List<IMacroCommandParser>();
-        public event dMacroStartStop MacroStartedEvent;
-        public event dMacroStartStop MacroStoppedEvent;
+        Engine.PacketReceivedEvent += PacketReceivedEvent;
+        Engine.PacketSentEvent += PacketSentEvent;
 
-        private MacroManager()
+        IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes()
+            .Where( t => t.IsClass && typeof( IMacroCommandParser ).IsAssignableFrom( t ) );
+
+        foreach ( Type type in types )
         {
-            Engine.PacketReceivedEvent += PacketReceivedEvent;
-            Engine.PacketSentEvent += PacketSentEvent;
+            IMacroCommandParser t = (IMacroCommandParser) Activator.CreateInstance( type );
 
-            IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes()
-                .Where( t => t.IsClass && typeof( IMacroCommandParser ).IsAssignableFrom( t ) );
+            _parsers.Add( t );
+        }
+    }
 
-            foreach ( Type type in types )
-            {
-                IMacroCommandParser t = (IMacroCommandParser) Activator.CreateInstance( type );
+    public MacroEntry CurrentMacro { get; set; }
+    public Action<string> InsertDocument { get; set; }
+    public Func<bool> IsRecording { get; set; }
+    public ObservableCollectionEx<MacroEntry> Items { get; set; }
+    public Action<string, string> NewMacro { get; set; }
+    public static bool QuietMode { get; set; }
+    public bool Replay { get; set; }
 
-                _parsers.Add( t );
-            }
+    private void PacketSentEvent( byte[] data, int length )
+    {
+        if ( !IsRecording() )
+        {
+            return;
         }
 
-        public MacroEntry CurrentMacro { get; set; }
-        public Action<string> InsertDocument { get; set; }
-        public Func<bool> IsRecording { get; set; }
-        public ObservableCollectionEx<MacroEntry> Items { get; set; }
-        public Action<string, string> NewMacro { get; set; }
-        public static bool QuietMode { get; set; }
-        public bool Replay { get; set; }
+        PacketSentReceived( data, length, PacketDirection.Outgoing );
+    }
 
-        private void PacketSentEvent( byte[] data, int length )
+    private void PacketReceivedEvent( byte[] data, int length )
+    {
+        if ( !IsRecording() )
         {
-            if ( !IsRecording() )
-            {
-                return;
-            }
-
-            PacketSentReceived( data, length, PacketDirection.Outgoing );
+            return;
         }
 
-        private void PacketReceivedEvent( byte[] data, int length )
-        {
-            if ( !IsRecording() )
-            {
-                return;
-            }
+        PacketSentReceived( data, length, PacketDirection.Incoming );
+    }
 
-            PacketSentReceived( data, length, PacketDirection.Incoming );
+    private void PacketSentReceived( byte[] data, int length, PacketDirection direction )
+    {
+        foreach ( string result in _parsers.Select( parser => parser.Parse( data, length, direction ) )
+            .Where( result => !string.IsNullOrEmpty( result ) ) )
+        {
+            InsertDocument?.Invoke( result );
+            return;
         }
+    }
 
-        private void PacketSentReceived( byte[] data, int length, PacketDirection direction )
+    public static MacroManager GetInstance()
+    {
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-            foreach ( string result in _parsers.Select( parser => parser.Parse( data, length, direction ) )
-                .Where( result => !string.IsNullOrEmpty( result ) ) )
+            lock ( _lock )
             {
-                InsertDocument?.Invoke( result );
-                return;
-            }
-        }
-
-        public static MacroManager GetInstance()
-        {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
-            {
-                lock ( _lock )
+                if ( _instance != null )
                 {
-                    if ( _instance != null )
-                    {
-                        return _instance;
-                    }
-
-                    _instance = new MacroManager();
                     return _instance;
                 }
-            }
 
-            return _instance;
+                _instance = new MacroManager();
+                return _instance;
+            }
         }
 
-        public void Execute( MacroEntry macro, object[] parameters = null )
+        return _instance;
+    }
+
+    public void Execute( MacroEntry macro, object[] parameters = null )
+    {
+        if ( macro.IsBackground )
         {
-            if ( macro.IsBackground )
+            if ( macro.IsRunning )
             {
-                if ( macro.IsRunning )
-                {
-                    macro.Stop();
-                }
-                else
-                {
-                    macro.Execute( parameters );
-                }
+                macro.Stop();
             }
             else
             {
-                if ( CurrentMacro != null && CurrentMacro.IsRunning )
+                macro.Execute( parameters );
+            }
+        }
+        else
+        {
+            if ( CurrentMacro != null && CurrentMacro.IsRunning )
+            {
+                if ( macro == CurrentMacro && macro.DoNotAutoInterrupt && !Replay )
                 {
-                    if ( macro == CurrentMacro && macro.DoNotAutoInterrupt && !Replay )
-                    {
-                        return;
-                    }
-
-                    CurrentMacro.Stop();
+                    return;
                 }
 
-                CurrentMacro = macro;
-                CurrentMacro.Execute( parameters );
+                CurrentMacro.Stop();
             }
-        }
 
-        public void StopAll()
+            CurrentMacro = macro;
+            CurrentMacro.Execute( parameters );
+        }
+    }
+
+    public void StopAll()
+    {
+        foreach ( MacroEntry entry in Items )
         {
-            foreach ( MacroEntry entry in Items )
+            if ( entry.IsRunning )
             {
-                if ( entry.IsRunning )
-                {
-                    entry.Stop();
-                }
+                entry.Stop();
             }
         }
+    }
 
-        public void Stop( string name = null )
+    public void Stop( string name = null )
+    {
+        if ( string.IsNullOrEmpty( name ) )
         {
-            if ( string.IsNullOrEmpty( name ) )
+            CurrentMacro?.Stop();
+        }
+        else
+        {
+            MacroEntry macro = Items.FirstOrDefault( m => m.Name.ToLower().Equals( name.ToLower() ) );
+            macro?.Stop();
+        }
+    }
+
+    public void Autostart()
+    {
+        foreach ( MacroEntry entry in Items )
+        {
+            if ( entry.IsAutostart )
             {
-                CurrentMacro?.Stop();
-            }
-            else
-            {
-                MacroEntry macro = Items.FirstOrDefault( m => m.Name.ToLower().Equals( name.ToLower() ) );
-                macro?.Stop();
+                Execute( entry );
             }
         }
+    }
 
-        public void Autostart()
-        {
-            foreach ( MacroEntry entry in Items )
-            {
-                if ( entry.IsAutostart )
-                {
-                    Execute( entry );
-                }
-            }
-        }
+    public MacroEntry GetCurrentMacro()
+    {
+        Thread currentThread = Thread.CurrentThread;
 
-        public MacroEntry GetCurrentMacro()
-        {
-            Thread currentThread = Thread.CurrentThread;
+        return Items?.FirstOrDefault( m => m.MacroInvoker.Thread?.Equals( currentThread ) ?? false );
+    }
 
-            return Items?.FirstOrDefault( m => m.MacroInvoker.Thread?.Equals( currentThread ) ?? false );
-        }
+    public void OnMacroStarted( MacroEntry macroEntry )
+    {
+        MacroStartedEvent?.Invoke( macroEntry );
+        ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStarted( macroEntry );
+    }
 
-        public void OnMacroStarted( MacroEntry macroEntry )
-        {
-            MacroStartedEvent?.Invoke( macroEntry );
-            ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStarted( macroEntry );
-        }
-
-        public void OnMacroStopped( MacroEntry macroEntry )
-        {
-            MacroStoppedEvent?.Invoke( macroEntry );
-            ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStopped( macroEntry );
-        }
+    public void OnMacroStopped( MacroEntry macroEntry )
+    {
+        MacroStoppedEvent?.Invoke( macroEntry );
+        ClassicAssist.DebugAdapter.DebugManager.Instance?.OnMacroStopped( macroEntry );
     }
 }

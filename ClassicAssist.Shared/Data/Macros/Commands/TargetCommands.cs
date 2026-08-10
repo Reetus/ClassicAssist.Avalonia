@@ -36,16 +36,16 @@ public static class TargetCommands
     }
 
     private static readonly ushort[] _treeTiles =
-    {
+    [
         0x0CCA, 0x0CCB, 0x0CCC, 0x0CCD, 0x0CD0, 0x0CD3, 0x0CD6, 0x0CD8, 0x0CDA, 0x0CDD, 0x0CE0, 0x0CE3, 0x0CE6, 0x0D41, 0x0D42, 0x0D43, 0x0D44, 0x0D57, 0x0D58, 0x0D59, 0x0D5A,
         0x0D5B, 0x0D6E, 0x0D6F, 0x0D70, 0x0D71, 0x0D72, 0x0D84, 0x0D85, 0x0D86, 0x0D94, 0x0D98, 0x0D9C, 0x0DA0, 0x0DA4, 0x0DA8, 0x0C9E, 0x0CA8, 0x0CAA, 0x0CAB, 0x0CC9, 0x0CF8,
         0x0CFB, 0x0CFE, 0x0D01, 0x12B6, 0x12B7, 0x12B8, 0x12B9, 0x12BA, 0x12BB, 0x12BC, 0x12BD
-    };
+    ];
 
     private static readonly ushort[] _caveTiles =
-    {
+    [
         1339, 1340, 1341, 1342, 1343, 1344, 1345, 1346, 1347, 1348, 1349, 1350, 1351, 1352, 1353, 1354, 1355, 1356, 1357, 1358, 1359, 1361, 1362, 1363
-    };
+    ];
 
     [CommandsDisplay( Category = nameof( Strings.Target ) )]
     public static void CancelTarget()
@@ -114,10 +114,10 @@ public static class TargetCommands
         if ( Engine.InternalTarget )
         {
             PacketWriter writer = new( 19 );
-            writer.Write( ( byte )0x6C );
-            writer.Write( ( byte )0 );
+            writer.Write( (byte) 0x6C );
+            writer.Write( (byte) 0 );
             writer.Write( Engine.InternalTargetSerial );
-            writer.Write( ( byte )0 );
+            writer.Write( (byte) 0 );
             writer.Write( serial );
             writer.Fill();
 
@@ -156,7 +156,7 @@ public static class TargetCommands
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.String ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { null, nameof( TargetResourceType ) } )]
+    [CommandsDisplayStringSeeAlso( [null, nameof( TargetResourceType )] )]
     public static void TargetByResource( object toolObj, string resourceType )
     {
         int serial = AliasCommands.ResolveSerial( toolObj );
@@ -171,7 +171,7 @@ public static class TargetCommands
         {
             TargetResourceType resourceEnum = Utility.GetEnumValueByName<TargetResourceType>( resourceType );
 
-            Engine.SendPacketToServer( new TargetByResource( serial, ( int )resourceEnum ) );
+            Engine.SendPacketToServer( new TargetByResource( serial, (int) resourceEnum ) );
         }
         catch ( InvalidOperationException )
         {
@@ -205,7 +205,7 @@ public static class TargetCommands
         int offsetY = 0;
 
         // TODO
-        Direction direction = ( Direction )( ( int )entity.Direction & ~0x80 );
+        Direction direction = (Direction) ( (int) entity.Direction & ~0x80 );
 
         switch ( direction )
         {
@@ -255,7 +255,7 @@ public static class TargetCommands
         int destinationX = x + totalOffsetX;
         int destinationY = y + totalOffsetY;
 
-        ( int surfaceZ, int surfaceID ) = MapInfo.GetMapSurface( ( int )Engine.Player.Map, destinationX, destinationY );
+        (int surfaceZ, int surfaceID) = MapInfo.GetMapSurface( (int) Engine.Player.Map, destinationX, destinationY );
 
         if ( itemID == 0 )
         {
@@ -288,7 +288,7 @@ public static class TargetCommands
 
         if ( itemID == 0 )
         {
-            StaticTile[] staticTiles = Statics.GetStatics( ( int )Engine.Player.Map, x, y );
+            StaticTile[] staticTiles = Statics.GetStatics( (int) Engine.Player.Map, x, y );
 
             if ( staticTiles != null )
             {
@@ -309,7 +309,7 @@ public static class TargetCommands
 
     [CommandsDisplay( Category = nameof( Strings.Target ),
         Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction ) } )]
+    [CommandsDisplayStringSeeAlso( [nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction )] )]
     public static bool GetEnemy( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )
     {
         TargetNotoriety notoFlags = TargetNotoriety.None;
@@ -341,7 +341,7 @@ public static class TargetCommands
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( TargetDistance ), nameof( TargetInfliction ), nameof( TargetBodyType ) } )]
+    [CommandsDisplayStringSeeAlso( [nameof( TargetDistance ), nameof( TargetInfliction ), nameof( TargetBodyType )] )]
     public static bool GetFriendListOnly( string distance = "Next", string targetInfliction = "Any", string bodyType = "Any", int maxDistance = -1 )
     {
         if ( !Enum.TryParse( distance, true, out TargetDistance td ) )
@@ -364,7 +364,7 @@ public static class TargetCommands
 
     [CommandsDisplay( Category = nameof( Strings.Target ),
         Parameters = new[] { nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Empty ), nameof( ParameterType.Distance ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction ) } )]
+    [CommandsDisplayStringSeeAlso( [nameof( TargetNotoriety ), nameof( TargetBodyType ), nameof( TargetDistance ), nameof( TargetInfliction )] )]
     public static bool GetFriend( IEnumerable<string> notorieties, string bodyType = "Any", string distance = "Next", string infliction = "Any", int maxDistance = -1 )
     {
         TargetNotoriety notoFlags = TargetNotoriety.None;
@@ -396,7 +396,7 @@ public static class TargetCommands
     }
 
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.BeneficialHarmfulNeutral ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( TargetExistsType ) } )]
+    [CommandsDisplayStringSeeAlso( [nameof( TargetExistsType )] )]
     public static bool TargetExists( string targetExistsType = "Any" )
     {
         if ( !Enum.TryParse( targetExistsType, out TargetExistsType enumValue ) )
@@ -481,7 +481,7 @@ public static class TargetCommands
             return;
         }
 
-        Entity entity = ( Entity )Engine.Items.SelectEntity( i => i.ID == id && ( hue == -1 || i.Hue == hue ) && ( range == -1 || i.Distance < range ) ) ??
+        Entity entity = (Entity) Engine.Items.SelectEntity( i => i.ID == id && ( hue == -1 || i.Hue == hue ) && ( range == -1 || i.Distance < range ) ) ??
                         Engine.Mobiles.SelectEntity( m => m.ID == id && ( hue == -1 || m.Hue == hue ) && ( range == -1 || m.Distance < range ) );
 
         if ( entity == null )
@@ -505,7 +505,7 @@ public static class TargetCommands
             return;
         }
 
-        Entity entity = Engine.Items.GetItem( serial ) ?? ( Entity )Engine.Mobiles.GetMobile( serial );
+        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
 
         if ( entity == null )
         {
@@ -528,7 +528,7 @@ public static class TargetCommands
             return;
         }
 
-        Entity entity = Engine.Items.GetItem( serial ) ?? ( Entity )Engine.Mobiles.GetMobile( serial );
+        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
 
         if ( entity == null )
         {
@@ -551,7 +551,7 @@ public static class TargetCommands
             return;
         }
 
-        Entity entity = Engine.Items.GetItem( serial ) ?? ( Entity )Engine.Mobiles.GetMobile( serial );
+        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
 
         if ( entity == null )
         {
@@ -565,7 +565,7 @@ public static class TargetCommands
     [CommandsDisplay( Category = nameof( Strings.Target ), Parameters = new[] { nameof( ParameterType.Timeout ) } )]
     public static bool WaitForTargetOrFizzle( int timeout )
     {
-        ( _, bool result ) = UOC.WaitForTargetOrFizzle( timeout, out int senderSerial );
+        (_, bool result) = UOC.WaitForTargetOrFizzle( timeout, out _ );
 
         return result;
     }

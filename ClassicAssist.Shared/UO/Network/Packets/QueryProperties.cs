@@ -19,17 +19,16 @@
 
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class QueryProperties : BasePacket
 {
-    public class QueryProperties : BasePacket
+    public QueryProperties( int serial )
     {
-        public QueryProperties( int serial )
-        {
-            _writer = new PacketWriter( 9 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 9 );
-            _writer.Write( (short) 0x10 );
-            _writer.Write( serial );
-        }
+        _writer = new PacketWriter( 9 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 9 );
+        _writer.Write( (short) 0x10 );
+        _writer.Write( serial );
     }
 }

@@ -7,229 +7,226 @@ using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
-using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
 // ReSharper disable UnusedVariable
 
-namespace ClassicAssist.Data.Commands
+namespace ClassicAssist.Data.Commands;
+
+public class CommandsManager
 {
-    public class CommandsManager
+    private static Dictionary<string, Func<string[], bool>> _commands;
+
+    private static readonly byte[] _speechPacketIDs = [0xAD, 0x03];
+
+    public static void Initialize()
     {
-        private static Dictionary<string, Func<string[], bool>> _commands;
-
-        private static readonly byte[] _speechPacketIDs = { 0xAD, 0x03 };
-
-        public static void Initialize()
+        _commands = new Dictionary<string, Func<string[], bool>>
         {
-            _commands = new Dictionary<string, Func<string[], bool>>
+            { "help", OnHelp },
+            { "where", OnSendLocation },
+            { "addfriend", OnAddFriend },
+            { "removefriend", OnRemoveFriend },
+            { "info", OnInfo },
+            { "resync", OnResync },
+            { "hide", OnHide }
+        };
+    }
+
+    private static bool OnHide( string[] arg )
+    {
+        Task.Run( async () =>
+        {
+            int serial = await UOC.GetTargetSerialAsync();
+
+            if ( serial == 0 )
             {
-                { "help", OnHelp },
-                { "where", OnSendLocation },
-                { "addfriend", OnAddFriend },
-                { "removefriend", OnRemoveFriend },
-                { "info", OnInfo },
-                { "resync", OnResync },
-                { "hide", OnHide }
-            };
-        }
-
-        private static bool OnHide( string[] arg )
-        {
-            Task.Run( async () =>
-            {
-                int serial = await UOC.GetTargetSerialAsync();
-
-                if ( serial == 0 )
-                {
-                    UOC.SystemMessage( Strings.Cannot_find_item___ );
-                    return;
-                }
-
-                UOC.RemoveObject( serial );
-            } );
-
-            return true;
-        }
-
-        private static bool OnResync( string[] arg )
-        {
-            MainCommands.Resync();
-
-            return true;
-        }
-
-        private static bool OnInfo( string[] arg )
-        {
-            //TODO
-            //Task.Run( async () => await UOC.InspectObjectAsync() );
-
-            return true;
-        }
-
-        private static bool OnRemoveFriend( string[] args )
-        {
-            if ( args.Length != 0 )
-            {
-                return false;
+                UOC.SystemMessage( Strings.Cannot_find_item___ );
+                return;
             }
 
-            Task.Run( () => MobileCommands.RemoveFriend() );
+            UOC.RemoveObject( serial );
+        } );
 
-            return true;
+        return true;
+    }
+
+    private static bool OnResync( string[] arg )
+    {
+        MainCommands.Resync();
+
+        return true;
+    }
+
+    private static bool OnInfo( string[] arg )
+    {
+        //TODO
+        //Task.Run( async () => await UOC.InspectObjectAsync() );
+
+        return true;
+    }
+
+    private static bool OnRemoveFriend( string[] args )
+    {
+        if ( args.Length != 0 )
+        {
+            return false;
         }
 
-        private static bool OnAddFriend( string[] args )
+        Task.Run( () => MobileCommands.RemoveFriend() );
+
+        return true;
+    }
+
+    private static bool OnAddFriend( string[] args )
+    {
+        if ( args.Length != 0 )
         {
-            if ( args.Length != 0 )
-            {
-                return false;
-            }
-
-            Task.Run( () => MobileCommands.AddFriend() );
-
-            return true;
+            return false;
         }
 
-        private static bool OnHelp( string[] args )
+        Task.Run( () => MobileCommands.AddFriend() );
+
+        return true;
+    }
+
+    private static bool OnHelp( string[] args )
+    {
+        if ( args.Length != 0 )
         {
-            if ( args.Length != 0 )
-            {
-                return false;
-            }
-
-            string[] commands = _commands.Select( kvp => kvp.Key ).ToArray();
-
-            UOC.SystemMessage( $"{Strings.Commands_} {string.Join( " ", commands )}" );
-
-            return true;
+            return false;
         }
 
-        public static bool IsSpeechPacket( byte packetId )
+        string[] commands = [.. _commands.Select( kvp => kvp.Key )];
+
+        UOC.SystemMessage( $"{Strings.Commands_} {string.Join( " ", commands )}" );
+
+        return true;
+    }
+
+    public static bool IsSpeechPacket( byte packetId )
+    {
+        return _speechPacketIDs?.Contains( packetId ) ?? false;
+    }
+
+    private static bool OnSendLocation( string[] args )
+    {
+        if ( Engine.Player == null )
         {
-            return _speechPacketIDs?.Contains( packetId ) ?? false;
+            return false;
         }
 
-        private static bool OnSendLocation( string[] args )
+        PlayerMobile player = Engine.Player;
+
+        if ( args?.Length != 0 )
         {
-            if ( Engine.Player == null )
-            {
-                return false;
-            }
-
-            PlayerMobile player = Engine.Player;
-
-            if ( args?.Length != 0 )
-            {
-                return false;
-            }
-
-            UOC.SystemMessage( $"{Strings.Current_Location_} {player.X}, {player.Y}, {player.Map}" );
-            UOC.SystemMessage( $"Region: {Regions.Regions.GetRegion( Engine.Player )}" );
-
-            return true;
+            return false;
         }
 
-        public static bool CheckCommand( byte[] data, int length )
+        UOC.SystemMessage( $"{Strings.Current_Location_} {player.X}, {player.Y}, {player.Map}" );
+        UOC.SystemMessage( $"Region: {Regions.Regions.GetRegion( Engine.Player )}" );
+
+        return true;
+    }
+
+    public static bool CheckCommand( byte[] data, int length )
+    {
+        string text = null;
+
+        if ( data[0] == 0xAD )
         {
-            string text = null;
-
-            if ( data[0] == 0xAD )
-            {
-                text = ParseUnicodeSpeech( data, data.Length );
-            }
-            else if ( data[0] == 0x03 )
-            {
-                text = ParseAsciiSpeech( data, data.Length );
-            }
-
-            // A gump-side macro button plays back this text via GameActions.Say(">macro " + name) - see
-            // ClassicUO.Game.Managers.MacroManager's MacroType.RazorMacro handling. It's a local-only
-            // speech line, never sent to the server, so it's intercepted and consumed here.
-            if ( !string.IsNullOrEmpty( text ) && text.Length >= 7 && text.Substring( 0, 7 ).Equals( ">macro " ) )
-            {
-                string macroName = text.Substring( 7 );
-
-                MacroEntry macro = MacroManager.GetInstance().Items.FirstOrDefault( m => m.Name == macroName );
-
-                if ( macro == null )
-                {
-                    UOC.SystemMessage( Strings.Macro_not_found___, 35 );
-                }
-                else
-                {
-                    MacroManager.GetInstance().Execute( macro );
-                }
-
-                return true;
-            }
-
-            if ( string.IsNullOrEmpty( text ) || text[0] != Options.CurrentOptions.CommandPrefix )
-            {
-                return false;
-            }
-
-            string[] args = text.Remove( 0, 1 ).Split( ' ' );
-
-            return _commands.ContainsKey( args[0] ) && _commands[args[0]].Invoke( args.Skip( 1 ).ToArray() );
+            text = ParseUnicodeSpeech( data, data.Length );
+        }
+        else if ( data[0] == 0x03 )
+        {
+            text = ParseAsciiSpeech( data, data.Length );
         }
 
-        private static string ParseAsciiSpeech( byte[] data, int length )
+        // A gump-side macro button plays back this text via GameActions.Say(">macro " + name) - see
+        // ClassicUO.Game.Managers.MacroManager's MacroType.RazorMacro handling. It's a local-only
+        // speech line, never sent to the server, so it's intercepted and consumed here.
+        if ( !string.IsNullOrEmpty( text ) && text.Length >= 7 && text[..7].Equals( ">macro " ) )
         {
-            PacketReader reader = new PacketReader( data, length, false );
+            string macroName = text[7..];
 
-            int messageType = reader.ReadByte();
-            int hue = reader.ReadInt16();
-            int font = reader.ReadInt16();
+            MacroEntry macro = MacroManager.GetInstance().Items.FirstOrDefault( m => m.Name == macroName );
 
-            string text = reader.ReadString();
-
-            return text.Trim();
-        }
-
-        internal static string ParseUnicodeSpeech( byte[] data, int length )
-        {
-            PacketReader reader = new PacketReader( data, length, false );
-
-            int messageType = reader.ReadByte();
-            int hue = reader.ReadInt16();
-            int font = reader.ReadInt16();
-            string lang = reader.ReadString( 4 );
-
-            string text;
-
-            // skip keywords
-            if ( ( messageType & 0xC0 ) != 0 )
+            if ( macro == null )
             {
-                //https://github.com/runuo/runuo/blob/master/Server/Network/PacketHandlers.cs
-                int count = ( reader.ReadInt16() & 0xFFF0 ) >> 4;
-
-                if ( count < 0 || count > 50 )
-                {
-                    return null;
-                }
-
-                for ( int i = 0; i < count; ++i )
-                {
-                    if ( ( i & 1 ) == 0 )
-                    {
-                        reader.ReadByte();
-                    }
-                    else
-                    {
-                        reader.ReadInt16();
-                    }
-                }
-
-                text = reader.ReadString();
+                UOC.SystemMessage( Strings.Macro_not_found___, 35 );
             }
             else
             {
-                text = reader.ReadUnicodeString();
+                MacroManager.GetInstance().Execute( macro );
             }
 
-            return text.Trim();
+            return true;
         }
+
+        if ( string.IsNullOrEmpty( text ) || text[0] != Options.CurrentOptions.CommandPrefix )
+        {
+            return false;
+        }
+
+        string[] args = text[1..].Split( ' ' );
+
+        return _commands.ContainsKey( args[0] ) && _commands[args[0]].Invoke( [.. args.Skip( 1 )] );
+    }
+
+    private static string ParseAsciiSpeech( byte[] data, int length )
+    {
+        PacketReader reader = new( data, length, false );
+        _ = reader.ReadByte();
+        _ = reader.ReadInt16();
+        _ = reader.ReadInt16();
+
+        string text = reader.ReadString();
+
+        return text.Trim();
+    }
+
+    internal static string ParseUnicodeSpeech( byte[] data, int length )
+    {
+        PacketReader reader = new( data, length, false );
+
+        int messageType = reader.ReadByte();
+        _ = reader.ReadInt16();
+        _ = reader.ReadInt16();
+        _ = reader.ReadString( 4 );
+
+        string text;
+
+        // skip keywords
+        if ( ( messageType & 0xC0 ) != 0 )
+        {
+            //https://github.com/runuo/runuo/blob/master/Server/Network/PacketHandlers.cs
+            int count = ( reader.ReadInt16() & 0xFFF0 ) >> 4;
+
+            if ( count is < 0 or > 50 )
+            {
+                return null;
+            }
+
+            for ( int i = 0; i < count; ++i )
+            {
+                if ( ( i & 1 ) == 0 )
+                {
+                    reader.ReadByte();
+                }
+                else
+                {
+                    reader.ReadInt16();
+                }
+            }
+
+            text = reader.ReadString();
+        }
+        else
+        {
+            text = reader.ReadUnicodeString();
+        }
+
+        return text.Trim();
     }
 }

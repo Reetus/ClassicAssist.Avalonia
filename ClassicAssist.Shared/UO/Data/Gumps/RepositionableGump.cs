@@ -22,66 +22,65 @@ using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects.Gumps;
 
-namespace ClassicAssist.UO.Gumps
+namespace ClassicAssist.UO.Gumps;
+
+public abstract class RepositionableGump : Gump
 {
-    public abstract class RepositionableGump : Gump
+    private const int REPOSITION_BUTTON_ID = 100;
+    private readonly int _height;
+    private readonly int _width;
+
+    protected RepositionableGump( int width, int height, int serial, uint gumpID ) : base( 0, 0, serial,
+        gumpID )
     {
-        private const int REPOSITION_BUTTON_ID = 100;
-        private readonly int _height;
-        private readonly int _width;
+        _width = width;
+        _height = height;
+    }
 
-        protected RepositionableGump( int width, int height, int serial, uint gumpID ) : base( 0, 0, serial,
-            gumpID )
+    public int GumpX { get; set; } = 100;
+    public int GumpY { get; set; } = 100;
+
+    /// <summary>
+    ///     True to fall back to the slider-overlay reposition button/window. False lets the gump be
+    ///     dragged in-client instead - see <see cref="ReflectionRepositionableGump" />, which turns
+    ///     this off when it can read the gump's position back via reflection.
+    /// </summary>
+    protected virtual bool UseManualReposition => true;
+
+    public override void SendGump()
+    {
+        X = GumpX;
+        Y = GumpY;
+
+        if ( UseManualReposition )
         {
-            _width = width;
-            _height = height;
+            AddButton( _width - 15, 5, 0x82C, 0x82C, REPOSITION_BUTTON_ID, GumpButtonType.Reply, 0 );
+        }
+        else
+        {
+            Movable = true;
         }
 
-        public int GumpX { get; set; } = 100;
-        public int GumpY { get; set; } = 100;
+        base.SendGump();
+    }
 
-        /// <summary>
-        ///     True to fall back to the slider-overlay reposition button/window. False lets the gump be
-        ///     dragged in-client instead - see <see cref="ReflectionRepositionableGump" />, which turns
-        ///     this off when it can read the gump's position back via reflection.
-        /// </summary>
-        protected virtual bool UseManualReposition => true;
-
-        public override void SendGump()
+    public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
+    {
+        if ( UseManualReposition && buttonID == REPOSITION_BUTTON_ID )
         {
-            X = GumpX;
-            Y = GumpY;
+            SetPosition( GumpX, GumpY );
 
-            if ( UseManualReposition )
-            {
-                AddButton( _width - 15, 5, 0x82C, 0x82C, REPOSITION_BUTTON_ID, GumpButtonType.Reply, 0 );
-            }
-            else
-            {
-                Movable = true;
-            }
+            RepositionableGumpViewModel vm = new( this, GumpX, GumpY );
 
-            base.SendGump();
+            _ = Engine.UIInvoker.InvokeDialog( "RepositionableGumpWindow", dataContext: vm );
         }
 
-        public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
-        {
-            if ( UseManualReposition && buttonID == REPOSITION_BUTTON_ID )
-            {
-                SetPosition( GumpX, GumpY );
+        base.OnResponse( buttonID, switches, textEntries );
+    }
 
-                RepositionableGumpViewModel vm = new RepositionableGumpViewModel( this, GumpX, GumpY );
-
-                _ = Engine.UIInvoker.InvokeDialog( "RepositionableGumpWindow", dataContext: vm );
-            }
-
-            base.OnResponse( buttonID, switches, textEntries );
-        }
-
-        public virtual void SetPosition( int x, int y )
-        {
-            GumpX = x;
-            GumpY = y;
-        }
+    public virtual void SetPosition( int x, int y )
+    {
+        GumpX = x;
+        GumpY = y;
     }
 }

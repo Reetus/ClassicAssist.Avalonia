@@ -1,10 +1,9 @@
-﻿namespace ClassicAssist.Data.Macros.Commands
+﻿namespace ClassicAssist.Data.Macros.Commands;
+
+public static class DummyCommands
 {
-    public static class DummyCommands
+    public static int Dummy( int a, int b )
     {
-        public static int Dummy( int a, int b )
-        {
-            return a + b;
-        }
+        return a + b;
     }
 }

@@ -17,18 +17,17 @@
 
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class UseTargetedItem : BasePacket
 {
-    public class UseTargetedItem : BasePacket
+    public UseTargetedItem( int serial, int targetSerial )
     {
-        public UseTargetedItem( int serial, int targetSerial )
-        {
-            _writer = new PacketWriter( 13 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 13 );
-            _writer.Write( (short) 0x2C );
-            _writer.Write( serial );
-            _writer.Write( targetSerial );
-        }
+        _writer = new PacketWriter( 13 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 13 );
+        _writer.Write( (short) 0x2C );
+        _writer.Write( serial );
+        _writer.Write( targetSerial );
     }
 }

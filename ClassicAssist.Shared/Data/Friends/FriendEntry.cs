@@ -1,33 +1,32 @@
-﻿namespace ClassicAssist.Data.Friends
+﻿namespace ClassicAssist.Data.Friends;
+
+public class FriendEntry
 {
-    public class FriendEntry
+    public string Name { get; set; }
+    public int Serial { get; set; }
+
+    public override string ToString()
     {
-        public string Name { get; set; }
-        public int Serial { get; set; }
+        return $"{Name}: 0x{Serial:x}";
+    }
 
-        public override string ToString()
+    public override bool Equals( object obj )
+    {
+        if ( obj is not FriendEntry fe )
         {
-            return $"{Name}: 0x{Serial:x}";
+            return false;
         }
 
-        public override bool Equals( object obj )
-        {
-            if ( !( obj is FriendEntry fe ) )
-            {
-                return false;
-            }
+        return Equals( fe );
+    }
 
-            return Equals( fe );
-        }
+    protected bool Equals( FriendEntry other )
+    {
+        return Serial == other.Serial;
+    }
 
-        protected bool Equals( FriendEntry other )
-        {
-            return Serial == other.Serial;
-        }
-
-        public override int GetHashCode()
-        {
-            return Serial.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Serial.GetHashCode();
     }
 }

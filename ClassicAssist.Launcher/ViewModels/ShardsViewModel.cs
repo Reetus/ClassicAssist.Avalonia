@@ -9,195 +9,185 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Launcher.Models;
 
-namespace ClassicAssist.Launcher.ViewModels
+namespace ClassicAssist.Launcher.ViewModels;
+
+public class ShardsViewModel : BaseViewModel
 {
-    public class ShardsViewModel : BaseViewModel
+    public ShardsViewModel()
     {
-        private ICommand _addCommand;
-        private ICommand _cancelCommand;
-        private bool _isRefreshing;
-        private ICommand _okCommand;
-        private ICommand _openWebsiteCommand;
-        private ICommand _refreshCommand;
-        private ICommand _removeCommand;
-        private ShardEntry _selectedShard;
+        Refresh( this );
+    }
 
-        public ShardsViewModel()
+    public ICommand AddCommand => field ??= new RelayCommand( Add, o => true );
+
+    public ICommand CancelCommand => field ??= new RelayCommand( Cancel, o => true );
+
+    public bool DialogResult { get; set; }
+
+    /// <summary>Raised by OK/Cancel once DialogResult is set - the window closes in response,
+    /// never the other way around, so callers awaiting ShowDialog never race the close against
+    /// DialogResult still being set (see ShardsWindow.axaml.cs).</summary>
+    public event Action CloseRequested;
+
+    public bool IsRefreshing
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand OKCommand => field ??= new RelayCommand( OK, o => true );
+
+    public ICommand OpenWebsiteCommand => field ??= new RelayCommand( OpenWebsite, o => true );
+
+    public ICommand RefreshCommand => field ??= new RelayCommand( Refresh, o => !IsRefreshing );
+
+    public ICommand RemoveCommand => field ??= new RelayCommand( Remove, o => SelectedShard != null );
+
+    public ShardEntry SelectedShard
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ShardManager ShardManager => ShardManager.GetInstance();
+
+    private static void OpenWebsite( object obj )
+    {
+        if ( obj is not ShardEntry shardEntry )
         {
-            Refresh( this );
+            return;
         }
 
-        public ICommand AddCommand => _addCommand ?? ( _addCommand = new RelayCommand( Add, o => true ) );
+        ProcessStartInfo psi = new() { FileName = shardEntry.Website, UseShellExecute = true };
+        Process.Start( psi );
+    }
 
-        public ICommand CancelCommand => _cancelCommand ?? ( _cancelCommand = new RelayCommand( Cancel, o => true ) );
-
-        public bool DialogResult { get; set; }
-
-        /// <summary>Raised by OK/Cancel once DialogResult is set - the window closes in response,
-        /// never the other way around, so callers awaiting ShowDialog never race the close against
-        /// DialogResult still being set (see ShardsWindow.axaml.cs).</summary>
-        public event Action CloseRequested;
-
-        public bool IsRefreshing
+    private void Remove( object obj )
+    {
+        if ( obj is not ShardEntry entry )
         {
-            get => _isRefreshing;
-            set => SetProperty( ref _isRefreshing, value );
+            return;
         }
 
-        public ICommand OKCommand => _okCommand ?? ( _okCommand = new RelayCommand( OK, o => true ) );
-
-        public ICommand OpenWebsiteCommand => _openWebsiteCommand ?? ( _openWebsiteCommand = new RelayCommand( OpenWebsite, o => true ) );
-
-        public ICommand RefreshCommand => _refreshCommand ?? ( _refreshCommand = new RelayCommand( Refresh, o => !IsRefreshing ) );
-
-        public ICommand RemoveCommand => _removeCommand ?? ( _removeCommand = new RelayCommand( Remove, o => SelectedShard != null ) );
-
-        public ShardEntry SelectedShard
+        if ( entry.IsPreset )
         {
-            get => _selectedShard;
-            set => SetProperty( ref _selectedShard, value );
+            entry.Deleted = true;
+            return;
         }
 
-        public ShardManager ShardManager => ShardManager.GetInstance();
+        ShardManager.Shards.Remove( entry );
+    }
 
-        private static void OpenWebsite( object obj )
+    private void Add( object obj )
+    {
+        ShardManager.Shards.Add( new ShardEntry { Name = "Shard Name", Address = "localhost", Port = 2593 } );
+    }
+
+    private void Refresh( object obj )
+    {
+        try
         {
-            if ( !( obj is ShardEntry shardEntry ) )
+            foreach ( ShardEntry shard in ShardManager.Shards )
             {
-                return;
-            }
-
-            ProcessStartInfo psi = new ProcessStartInfo { FileName = shardEntry.Website, UseShellExecute = true };
-            Process.Start( psi );
-        }
-
-        private void Remove( object obj )
-        {
-            if ( !( obj is ShardEntry entry ) )
-            {
-                return;
-            }
-
-            if ( entry.IsPreset )
-            {
-                entry.Deleted = true;
-                return;
-            }
-
-            ShardManager.Shards.Remove( entry );
-        }
-
-        private void Add( object obj )
-        {
-            ShardManager.Shards.Add( new ShardEntry { Name = "Shard Name", Address = "localhost", Port = 2593 } );
-        }
-
-        private void Refresh( object obj )
-        {
-            try
-            {
-                foreach ( ShardEntry shard in ShardManager.Shards )
+                Task.Run( async () =>
                 {
-                    Task.Run( async () =>
+                    if ( !shard.HasStatusProtocol )
                     {
-                        if ( !shard.HasStatusProtocol )
-                        {
-                            return "-";
-                        }
+                        return "-";
+                    }
 
-                        string status = await GetStatus( shard );
+                    string status = await GetStatus( shard );
 
-                        return status;
-                    } ).ContinueWith( t =>
+                    return status;
+                } ).ContinueWith( t =>
+                {
+                    if ( !string.IsNullOrEmpty( shard.StatusRegex ) )
                     {
-                        if ( !string.IsNullOrEmpty( shard.StatusRegex ) )
-                        {
-                            Match matches = Regex.Match( t.Result, shard.StatusRegex );
+                        Match matches = Regex.Match( t.Result, shard.StatusRegex );
 
-                            shard.Status = matches.Success ? matches.Groups[1].Value : "-";
-                        }
-                        else
-                        {
-                            shard.Status = t.Result;
-                        }
-
-                        NotifyPropertyChanged( nameof( ShardManager.Shards ) );
-                    } );
-
-                    Task.Run( async () => await GetPing( shard ) ).ContinueWith( result =>
+                        shard.Status = matches.Success ? matches.Groups[1].Value : "-";
+                    }
+                    else
                     {
-                        if ( result.Status != TaskStatus.RanToCompletion || result.Result == null )
-                        {
-                            return;
-                        }
+                        shard.Status = t.Result;
+                    }
 
-                        shard.Ping = result.Result;
-                        NotifyPropertyChanged( nameof( ShardManager.Shards ) );
-                    } );
-                }
-            }
-            finally
-            {
-                IsRefreshing = false;
+                    NotifyPropertyChanged( nameof( ShardManager.Shards ) );
+                } );
+
+                Task.Run( async () => await GetPing( shard ) ).ContinueWith( result =>
+                {
+                    if ( result.Status != TaskStatus.RanToCompletion || result.Result == null )
+                    {
+                        return;
+                    }
+
+                    shard.Ping = result.Result;
+                    NotifyPropertyChanged( nameof( ShardManager.Shards ) );
+                } );
             }
         }
-
-        private void OK( object obj )
+        finally
         {
-            DialogResult = true;
-            CloseRequested?.Invoke();
+            IsRefreshing = false;
         }
+    }
 
-        public async Task<string> GetStatus( ShardEntry shard )
+    private void OK( object obj )
+    {
+        DialogResult = true;
+        CloseRequested?.Invoke();
+    }
+
+    public async Task<string> GetStatus( ShardEntry shard )
+    {
+        if ( !shard.HasStatusProtocol )
         {
-            if ( !shard.HasStatusProtocol )
-            {
-                return "Unknown";
-            }
-
-            using TcpClient client = new TcpClient();
-
-            Task connectTask = client.ConnectAsync( shard.Address, shard.Port );
-
-            await Task.WhenAny( connectTask, Task.Delay( TimeSpan.FromSeconds( 5 ) ) );
-
-            if ( !client.Connected )
-            {
-                return "Unknown";
-            }
-
-            byte[] packet = { 0x7F, 0x00, 0x00, 0x7F, 0xF1, 0x00, 0x04, 0xFF };
-            client.Client.Send( packet );
-
-            NetworkStream stream = client.GetStream();
-            byte[] buffer = new byte[256];
-
-            stream.ReadTimeout = 60000;
-            int read = await stream.ReadAsync( buffer, 0, buffer.Length );
-
-            return Encoding.ASCII.GetString( buffer, 0, read ).TrimEnd( '\0' );
+            return "Unknown";
         }
 
-        public async Task<string> GetPing( ShardEntry entry )
+        using TcpClient client = new();
+
+        Task connectTask = client.ConnectAsync( shard.Address, shard.Port );
+
+        await Task.WhenAny( connectTask, Task.Delay( TimeSpan.FromSeconds( 5 ) ) );
+
+        if ( !client.Connected )
         {
-            IPAddress ip = await Utility.ResolveAddress( entry.Address );
-
-            if ( ip == null )
-            {
-                return "-";
-            }
-
-            Ping ping = new Ping();
-
-            PingReply result = ping.Send( ip.ToString() );
-
-            return result?.Status == IPStatus.Success ? result.RoundtripTime.ToString() : "-";
+            return "Unknown";
         }
 
-        private void Cancel( object obj )
+        byte[] packet = [0x7F, 0x00, 0x00, 0x7F, 0xF1, 0x00, 0x04, 0xFF];
+        client.Client.Send( packet );
+
+        NetworkStream stream = client.GetStream();
+        byte[] buffer = new byte[256];
+
+        stream.ReadTimeout = 60000;
+        int read = await stream.ReadAsync( buffer, 0, buffer.Length );
+
+        return Encoding.ASCII.GetString( buffer, 0, read ).TrimEnd( '\0' );
+    }
+
+    public async Task<string> GetPing( ShardEntry entry )
+    {
+        IPAddress ip = await Utility.ResolveAddress( entry.Address );
+
+        if ( ip == null )
         {
-            DialogResult = false;
-            CloseRequested?.Invoke();
+            return "-";
         }
+
+        Ping ping = new();
+
+        PingReply result = ping.Send( ip.ToString() );
+
+        return result?.Status == IPStatus.Success ? result.RoundtripTime.ToString() : "-";
+    }
+
+    private void Cancel( object obj )
+    {
+        DialogResult = false;
+        CloseRequested?.Invoke();
     }
 }

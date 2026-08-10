@@ -20,57 +20,56 @@
 using ClassicAssist.UO.Network.PacketFilter;
 
 // ReSharper disable once CheckNamespace
-namespace ClassicAssist.Shared
+namespace ClassicAssist.Shared;
+
+public static partial class Engine
 {
-    public static partial class Engine
+    #region Filters
+
+    public static void AddSendPreFilter( PacketFilterInfo pfi )
     {
-        #region Filters
-
-        public static void AddSendPreFilter( PacketFilterInfo pfi )
-        {
-            _outgoingPacketPreFilter.Add( pfi );
-        }
-
-        public static void AddSendPostFilter( PacketFilterInfo pfi )
-        {
-            _outgoingPacketPostFilter.Add( pfi );
-        }
-
-        public static void AddReceiveFilter( PacketFilterInfo pfi )
-        {
-            _incomingPacketFilter.Add( pfi );
-        }
-
-        public static void RemoveReceiveFilter( PacketFilterInfo pfi )
-        {
-            _incomingPacketFilter.Remove( pfi );
-        }
-
-        public static void RemoveSendPreFilter( PacketFilterInfo pfi )
-        {
-            _outgoingPacketPreFilter.Remove( pfi );
-        }
-
-        public static void ClearSendPreFilter()
-        {
-            _outgoingPacketPreFilter?.Clear();
-        }
-
-        public static void RemoveSendPostFilter( PacketFilterInfo pfi )
-        {
-            _outgoingPacketPostFilter.Remove( pfi );
-        }
-
-        public static void ClearSendPostFilter()
-        {
-            _outgoingPacketPostFilter?.Clear();
-        }
-
-        public static void ClearReceiveFilter()
-        {
-            _incomingPacketFilter?.Clear();
-        }
-
-        #endregion
+        _outgoingPacketPreFilter.Add( pfi );
     }
+
+    public static void AddSendPostFilter( PacketFilterInfo pfi )
+    {
+        _outgoingPacketPostFilter.Add( pfi );
+    }
+
+    public static void AddReceiveFilter( PacketFilterInfo pfi )
+    {
+        _incomingPacketFilter.Add( pfi );
+    }
+
+    public static void RemoveReceiveFilter( PacketFilterInfo pfi )
+    {
+        _incomingPacketFilter.Remove( pfi );
+    }
+
+    public static void RemoveSendPreFilter( PacketFilterInfo pfi )
+    {
+        _outgoingPacketPreFilter.Remove( pfi );
+    }
+
+    public static void ClearSendPreFilter()
+    {
+        _outgoingPacketPreFilter?.Clear();
+    }
+
+    public static void RemoveSendPostFilter( PacketFilterInfo pfi )
+    {
+        _outgoingPacketPostFilter.Remove( pfi );
+    }
+
+    public static void ClearSendPostFilter()
+    {
+        _outgoingPacketPostFilter?.Clear();
+    }
+
+    public static void ClearReceiveFilter()
+    {
+        _incomingPacketFilter?.Clear();
+    }
+
+    #endregion
 }

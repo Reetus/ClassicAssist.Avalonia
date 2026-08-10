@@ -19,16 +19,15 @@
 
 using System;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+[Flags]
+public enum AutolootAllowedOperators
 {
-    [Flags]
-    public enum AutolootAllowedOperators
-    {
-        All = 0x00000000,
-        Equal = 0x00000001,
-        NotEqual = 0x00000002,
-        GreaterThan = 0x00000004,
-        LessThan = 0x00000008,
-        NotPresent = 0x00000010
-    }
+    All = 0x00000000,
+    Equal = 0x00000001,
+    NotEqual = 0x00000002,
+    GreaterThan = 0x00000004,
+    LessThan = 0x00000008,
+    NotPresent = 0x00000010
 }

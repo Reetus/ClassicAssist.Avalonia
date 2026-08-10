@@ -27,125 +27,124 @@ using ClassicAssist.Misc;
 using ClassicAssist.Shared.UI.ViewModels.Debug;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Avalonia.Views
+namespace ClassicAssist.Avalonia.Views;
+
+/// <summary>
+///     Debug tabs persist their settings to <see cref="AssistantOptions.DebugWindowOptions" />, which
+///     is written to Assistant.json - the same contract as the WPF window, so a shared Assistant.json
+///     carries the same debug state either way.
+/// </summary>
+public partial class DebugWindow : Window
 {
-    /// <summary>
-    ///     Debug tabs persist their settings to <see cref="AssistantOptions.DebugWindowOptions" />, which
-    ///     is written to Assistant.json - the same contract as the WPF window, so a shared Assistant.json
-    ///     carries the same debug state either way.
-    /// </summary>
-    public partial class DebugWindow : Window
+    public DebugWindow()
     {
-        public DebugWindow()
+        InitializeComponent();
+
+        foreach ( ISettingProvider provider in GetSettingProviders() )
         {
-            InitializeComponent();
+            provider.Deserialize( AssistantOptions.DebugWindowOptions, Options.CurrentOptions );
+        }
+
+        Closing += OnClosing;
+    }
+
+    /// <summary>
+    ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
+    ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
+    ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
+    ///     pre-populated with that entity's properties. Mirrors the WPF build's matching constructor.
+    /// </summary>
+    public DebugWindow( Type viewModelType, object value ) : this()
+    {
+        if ( Content is not TabControl tabControl )
+        {
+            return;
+        }
+
+        foreach ( object item in tabControl.Items )
+        {
+            if ( item is not TabItem tabItem || tabItem.Content is not Control control ||
+                 control.DataContext?.GetType() != viewModelType )
+            {
+                continue;
+            }
+
+            tabControl.SelectedItem = tabItem;
+
+            if ( control.DataContext is DebugBaseViewModel viewModel )
+            {
+                viewModel.Object = value;
+            }
+
+            break;
+        }
+    }
+
+    private void OnClosing( object sender, CancelEventArgs e )
+    {
+        Closing -= OnClosing;
+
+        // Anything thrown from a Closing handler is unhandled and takes the process with it, so a
+        // debug tab that can't save its settings must not be fatal.
+        try
+        {
+            JObject options = [];
 
             foreach ( ISettingProvider provider in GetSettingProviders() )
             {
-                provider.Deserialize( AssistantOptions.DebugWindowOptions, Options.CurrentOptions );
+                provider.Serialize( options );
             }
 
-            Closing += OnClosing;
-        }
+            AssistantOptions.DebugWindowOptions = options;
 
-        /// <summary>
-        ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
-        ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
-        ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
-        ///     pre-populated with that entity's properties. Mirrors the WPF build's matching constructor.
-        /// </summary>
-        public DebugWindow( Type viewModelType, object value ) : this()
+            // WPF leaves the write to its own shutdown path; do it here too, so the settings
+            // survive the UI process being killed alongside the game rather than closed cleanly.
+            AssistantOptions.Save();
+        }
+        catch ( Exception ex )
         {
-            if ( !( Content is TabControl tabControl ) )
-            {
-                return;
-            }
-
-            foreach ( object item in tabControl.Items )
-            {
-                if ( !( item is TabItem tabItem ) || !( tabItem.Content is Control control ) ||
-                     control.DataContext?.GetType() != viewModelType )
-                {
-                    continue;
-                }
-
-                tabControl.SelectedItem = tabItem;
-
-                if ( control.DataContext is DebugBaseViewModel viewModel )
-                {
-                    viewModel.Object = value;
-                }
-
-                break;
-            }
+            Console.WriteLine( $"Failed to save debug window settings: {ex}" );
         }
+    }
 
-        private void OnClosing( object sender, CancelEventArgs e )
+    /// <summary>
+    ///     Every tab whose content carries an <see cref="ISettingProvider" /> DataContext, plus the
+    ///     window's own view model, which owns the Main tab.
+    ///     <para>
+    ///         De-duplicated by reference: the Main tab is declared inline in the window, so its Grid
+    ///         has no DataContext of its own and inherits the window's <c>DebugViewModel</c> - which
+    ///         means it would otherwise be yielded twice and <c>Serialize</c> would be called twice
+    ///         against the same JObject, throwing on the duplicate key and killing the app as the
+    ///         window closed. WPF doesn't hit this because each of its tabs hosts its own view model.
+    ///     </para>
+    /// </summary>
+    private IEnumerable<ISettingProvider> GetSettingProviders()
+    {
+        HashSet<ISettingProvider> seen =
+            new( ReferenceEqualityComparer.Instance );
+
+        if ( DataContext is ISettingProvider windowProvider && seen.Add( windowProvider ) )
         {
-            Closing -= OnClosing;
-
-            // Anything thrown from a Closing handler is unhandled and takes the process with it, so a
-            // debug tab that can't save its settings must not be fatal.
-            try
-            {
-                JObject options = new JObject();
-
-                foreach ( ISettingProvider provider in GetSettingProviders() )
-                {
-                    provider.Serialize( options );
-                }
-
-                AssistantOptions.DebugWindowOptions = options;
-
-                // WPF leaves the write to its own shutdown path; do it here too, so the settings
-                // survive the UI process being killed alongside the game rather than closed cleanly.
-                AssistantOptions.Save();
-            }
-            catch ( Exception ex )
-            {
-                Console.WriteLine( $"Failed to save debug window settings: {ex}" );
-            }
+            yield return windowProvider;
         }
 
-        /// <summary>
-        ///     Every tab whose content carries an <see cref="ISettingProvider" /> DataContext, plus the
-        ///     window's own view model, which owns the Main tab.
-        ///     <para>
-        ///         De-duplicated by reference: the Main tab is declared inline in the window, so its Grid
-        ///         has no DataContext of its own and inherits the window's <c>DebugViewModel</c> - which
-        ///         means it would otherwise be yielded twice and <c>Serialize</c> would be called twice
-        ///         against the same JObject, throwing on the duplicate key and killing the app as the
-        ///         window closed. WPF doesn't hit this because each of its tabs hosts its own view model.
-        ///     </para>
-        /// </summary>
-        private IEnumerable<ISettingProvider> GetSettingProviders()
+        if ( Content is not TabControl tabControl )
         {
-            HashSet<ISettingProvider> seen =
-                new HashSet<ISettingProvider>( ReferenceEqualityComparer.Instance );
-
-            if ( DataContext is ISettingProvider windowProvider && seen.Add( windowProvider ) )
-            {
-                yield return windowProvider;
-            }
-
-            if ( !( Content is TabControl tabControl ) )
-            {
-                yield break;
-            }
-
-            foreach ( object item in tabControl.Items )
-            {
-                if ( item is TabItem tabItem && tabItem.Content is Control control &&
-                     control.DataContext is ISettingProvider provider && seen.Add( provider ) )
-                {
-                    yield return provider;
-                }
-            }
+            yield break;
         }
 
-        private void InitializeComponent()
+        foreach ( object item in tabControl.Items )
         {
-            AvaloniaXamlLoader.Load( this );
+            if ( item is TabItem tabItem && tabItem.Content is Control control &&
+                 control.DataContext is ISettingProvider provider && seen.Add( provider ) )
+            {
+                yield return provider;
+            }
         }
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

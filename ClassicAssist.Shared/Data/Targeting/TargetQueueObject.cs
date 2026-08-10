@@ -19,11 +19,10 @@
 
 using System;
 
-namespace ClassicAssist.Data.Targeting
+namespace ClassicAssist.Data.Targeting;
+
+public class TargetQueueObject
 {
-    public class TargetQueueObject
-    {
-        public DateTime DateTime { get; set; } = DateTime.Now;
-        public object Object { get; set; }
-    }
+    public DateTime DateTime { get; set; } = DateTime.Now;
+    public object Object { get; set; }
 }

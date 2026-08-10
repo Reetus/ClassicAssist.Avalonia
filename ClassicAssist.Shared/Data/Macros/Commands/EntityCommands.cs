@@ -5,369 +5,366 @@ using ClassicAssist.Data.BuffIcons;
 using ClassicAssist.Data.SpecialMoves;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO;
-using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using ClassicAssist.UO.Network.PacketFilter;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class EntityCommands
 {
-    public static class EntityCommands
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int Distance( object obj = null )
     {
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int Distance( object obj = null )
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
-
-            return entity?.Distance ?? int.MaxValue;
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ) } )]
-        public static int Distance( int x, int y )
+        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
+
+        return entity?.Distance ?? int.MaxValue;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ) } )]
+    public static int Distance( int x, int y )
+    {
+        return Math.Max( Math.Abs( x - ( Engine.Player?.X ?? x ) ), Math.Abs( y - ( Engine.Player?.Y ?? y ) ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Distance ) } )]
+    public static bool InRange( object obj, int distance )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
         {
-            return Math.Max( Math.Abs( x - ( Engine.Player?.X ?? x ) ), Math.Abs( y - ( Engine.Player?.Y ?? y ) ) );
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return false;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Distance ) } )]
-        public static bool InRange( object obj, int distance )
+        Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
+
+        if ( entity != null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            return entity.Distance < distance;
+        }
 
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return false;
-            }
+        return false;
+    }
 
-            Entity entity = Engine.Items.GetItem( serial ) ?? (Entity) Engine.Mobiles.GetMobile( serial );
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int Hue( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
 
-            if ( entity != null )
-            {
-                return entity.Distance < distance;
-            }
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
+        }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity != null )
+        {
+            return entity.Hue;
+        }
+
+        if ( !MacroManager.QuietMode )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+        }
+
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int Graphic( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
+        }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity != null )
+        {
+            return entity.ID;
+        }
+
+        if ( !MacroManager.QuietMode )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+        }
+
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int X( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
+        }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity != null )
+        {
+            return entity.X;
+        }
+
+        if ( !MacroManager.QuietMode )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+        }
+
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int Y( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
+        }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity != null )
+        {
+            return entity.Y;
+        }
+
+        if ( !MacroManager.QuietMode )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+        }
+
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ) )]
+    public static int Map()
+    {
+        PlayerMobile player = Engine.Player;
+
+        return player == null ? 0 : (int) player.Map;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static int Z( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return 0;
+        }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity != null )
+        {
+            return entity.Z;
+        }
+
+        if ( !MacroManager.QuietMode )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+        }
+
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.BuffName ) } )]
+    public static bool BuffExists( string name )
+    {
+        return BuffIconManager.GetInstance().BuffExists( name );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
+    public static bool WaitForBuffEnabled( string name, int timeout = 5000 )
+    {
+        return WaitForBuffState( name, true, timeout );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
+    public static bool WaitForBuffDisabled( string name, int timeout = 5000 )
+    {
+        return WaitForBuffState( name, false, timeout );
+    }
+
+    /// <summary>
+    ///     Waits on a 0xDF buff packet naming <paramref name="name" /> whose enable/disable byte matches.
+    /// </summary>
+    private static bool WaitForBuffState( string name, bool enabled, int timeout )
+    {
+        BuffIconData data = BuffIconManager.GetInstance().GetDataByName( name );
+
+        if ( data == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_type___ );
 
             return false;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int Hue( object obj = null )
+        PacketFilterInfo pfi = new( 0xDF,
+            [
+                PacketFilterConditions.ShortAtPositionCondition( data.ID, 7 ),
+                PacketFilterConditions.ByteAtPositionCondition( enabled ? 1 : 0, 10 )
+            ] );
+
+        PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+
+        return pwe.Lock.WaitOne( timeout );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.BuffName ) } )]
+    public static double BuffTime( string name )
+    {
+        return BuffIconManager.GetInstance().BuffTime( name );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SpecialMoveName ) } )]
+    public static bool SpecialMoveExists( string name )
+    {
+        return SpecialMovesManager.GetInstance().SpecialMoveExists( name );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static string DirectionTo( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity != null )
-            {
-                return entity.Hue;
-            }
-
-            if ( !MacroManager.QuietMode )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-            }
-
-            return 0;
+            return UO.Data.Direction.Invalid.ToString();
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int Graphic( object obj = null )
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( entity == null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity != null )
-            {
-                return entity.ID;
-            }
-
-            if ( !MacroManager.QuietMode )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-            }
-
-            return 0;
+            return UO.Data.Direction.Invalid.ToString();
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int X( object obj = null )
+        return UOMath.MapDirection( Engine.Player.X, Engine.Player.Y, entity.X, entity.Y ).ToString();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static string Direction( object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : Engine.Items.GetItem( serial ) as Entity;
+
+        if ( serial == 0 || entity == null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity != null )
-            {
-                return entity.X;
-            }
-
-            if ( !MacroManager.QuietMode )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-            }
-
-            return 0;
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return UO.Data.Direction.Invalid.ToString();
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int Y( object obj = null )
+        return entity.Direction.ToString();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static string Name( object obj = null )
+    {
+        return GetEntityProperty<string>( obj, nameof( Entity.Name ) )?.Trim() ?? string.Empty;
+    }
+
+    private static T GetEntityProperty<T>( object obj, string propertyName )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial <= 0 )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity != null )
-            {
-                return entity.Y;
-            }
-
-            if ( !MacroManager.QuietMode )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-            }
-
-            return 0;
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return default;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ) )]
-        public static int Map()
-        {
-            PlayerMobile player = Engine.Player;
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : (Entity) Engine.Items.GetItem( serial );
 
-            return player == null ? 0 : (int) player.Map;
+        if ( entity == null )
+        {
+            UOC.SystemMessage( Strings.Entity_not_found___ );
+            return default;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static int Z( object obj = null )
+        PropertyInfo property = entity.GetType().GetProperty( propertyName );
+
+        if ( property == null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return 0;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity != null )
-            {
-                return entity.Z;
-            }
-
-            if ( !MacroManager.QuietMode )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-            }
-
-            return 0;
+            return default;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.BuffName ) } )]
-        public static bool BuffExists( string name )
+        T val = (T) property.GetValue( entity );
+
+        return val;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Main ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static void HideEntity( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
         {
-            return BuffIconManager.GetInstance().BuffExists( name );
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
-        public static bool WaitForBuffEnabled( string name, int timeout = 5000 )
-        {
-            return WaitForBuffState( name, true, timeout );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.Name ), nameof( ParameterType.Timeout ) } )]
-        public static bool WaitForBuffDisabled( string name, int timeout = 5000 )
-        {
-            return WaitForBuffState( name, false, timeout );
-        }
-
-        /// <summary>
-        ///     Waits on a 0xDF buff packet naming <paramref name="name" /> whose enable/disable byte matches.
-        /// </summary>
-        private static bool WaitForBuffState( string name, bool enabled, int timeout )
-        {
-            BuffIconData data = BuffIconManager.GetInstance().GetDataByName( name );
-
-            if ( data == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_type___ );
-
-                return false;
-            }
-
-            PacketFilterInfo pfi = new PacketFilterInfo( 0xDF,
-                new[]
-                {
-                    PacketFilterConditions.ShortAtPositionCondition( data.ID, 7 ),
-                    PacketFilterConditions.ByteAtPositionCondition( enabled ? 1 : 0, 10 )
-                } );
-
-            PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
-
-            return pwe.Lock.WaitOne( timeout );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.BuffName ) } )]
-        public static double BuffTime( string name )
-        {
-            return BuffIconManager.GetInstance().BuffTime( name );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SpecialMoveName ) } )]
-        public static bool SpecialMoveExists( string name )
-        {
-            return SpecialMovesManager.GetInstance().SpecialMoveExists( name );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static string DirectionTo( object obj )
-        {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                return UO.Data.Direction.Invalid.ToString();
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( entity == null )
-            {
-                return UO.Data.Direction.Invalid.ToString();
-            }
-
-            return UOMath.MapDirection( Engine.Player.X, Engine.Player.Y, entity.X, entity.Y ).ToString();
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static string Direction( object obj = null )
-        {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : Engine.Items.GetItem( serial ) as Entity;
-
-            if ( serial == 0 || entity == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return UO.Data.Direction.Invalid.ToString();
-            }
-
-            return entity.Direction.ToString();
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static string Name( object obj = null )
-        {
-            return GetEntityProperty<string>( obj, nameof( Entity.Name ) )?.Trim() ?? string.Empty;
-        }
-
-        private static T GetEntityProperty<T>( object obj, string propertyName )
-        {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial <= 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return default;
-            }
-
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : (Entity) Engine.Items.GetItem( serial );
-
-            if ( entity == null )
-            {
-                UOC.SystemMessage( Strings.Entity_not_found___ );
-                return default;
-            }
-
-            PropertyInfo property = entity.GetType().GetProperty( propertyName );
-
-            if ( property == null )
-            {
-                return default;
-            }
-
-            T val = (T) property.GetValue( entity );
-
-            return val;
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Main ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static void HideEntity( object obj )
-        {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            UOC.RemoveObject( serial );
-        }
+        UOC.RemoveObject( serial );
     }
 }

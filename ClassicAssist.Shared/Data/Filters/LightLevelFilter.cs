@@ -1,47 +1,46 @@
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.Data.Filters
-{
-    [FilterOptions( Name = "Light Level", DefaultEnabled = true )]
-    public class LightLevelFilter : DynamicFilterEntry
-    {
-        public LightLevelFilter()
-        {
-            Options.LightLevelChanged += level =>
-            {
-                if ( Engine.Connected )
-                {
-                    SendLightLevel( level );
-                }
-            };
+namespace ClassicAssist.Data.Filters;
 
-            Engine.ConnectedEvent += () => SendLightLevel( Options.CurrentOptions.LightLevel );
+[FilterOptions( Name = "Light Level", DefaultEnabled = true )]
+public class LightLevelFilter : DynamicFilterEntry
+{
+    public LightLevelFilter()
+    {
+        Options.LightLevelChanged += level =>
+        {
+            if ( Engine.Connected )
+            {
+                SendLightLevel( level );
+            }
+        };
+
+        Engine.ConnectedEvent += () => SendLightLevel( Options.CurrentOptions.LightLevel );
+    }
+
+    public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+    {
+        if ( packet[0] == 0x4E && Enabled )
+        {
+            return true;
         }
 
-        public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+        if ( packet[0] != 0x4F || !Enabled )
         {
-            if ( packet[0] == 0x4E && Enabled )
-            {
-                return true;
-            }
-
-            if ( packet[0] != 0x4F || !Enabled )
-            {
-                return false;
-            }
-
-            packet[1] = (byte) Options.CurrentOptions.LightLevel;
-
             return false;
         }
 
-        private void SendLightLevel( int level )
+        packet[1] = (byte) Options.CurrentOptions.LightLevel;
+
+        return false;
+    }
+
+    private void SendLightLevel( int level )
+    {
+        if ( Enabled )
         {
-            if ( Enabled )
-            {
-                Engine.SendPacketToClient( new byte[] { 0x4F, (byte) level }, 2 );
-            }
+            Engine.SendPacketToClient( [0x4F, (byte) level], 2 );
         }
     }
 }

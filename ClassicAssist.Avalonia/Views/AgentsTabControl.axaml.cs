@@ -1,19 +1,17 @@
-﻿using Avalonia;
-using Avalonia.Controls;
+﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views
-{
-    public partial class AgentsTabControl : UserControl
-    {
-        public AgentsTabControl()
-        {
-            this.InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class AgentsTabControl : UserControl
+{
+    public AgentsTabControl()
+    {
+        this.InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

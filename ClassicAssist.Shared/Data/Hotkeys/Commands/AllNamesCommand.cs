@@ -21,17 +21,16 @@ using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "All Names" )]
+public class AllNamesCommand : HotkeyCommand
 {
-    [HotkeyCommand( Name = "All Names" )]
-    public class AllNamesCommand : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
+        foreach ( Mobile mobile in Engine.Mobiles )
         {
-            foreach ( Mobile mobile in Engine.Mobiles )
-            {
-                Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
-            }
+            Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
         }
     }
 }

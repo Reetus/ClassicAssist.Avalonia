@@ -28,68 +28,64 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
+namespace ClassicAssist.Avalonia.Views.Autoloot;
+
+/// <summary>
+///     A <see cref="MultiValueSelector" /> for item IDs: values are shown in hex and added by
+///     targeting an item in the world.
+/// </summary>
+public partial class MultiItemIDSelector : UserControl
 {
-    /// <summary>
-    ///     A <see cref="MultiValueSelector" /> for item IDs: values are shown in hex and added by
-    ///     targeting an item in the world.
-    /// </summary>
-    public partial class MultiItemIDSelector : UserControl
+    public static readonly StyledProperty<ObservableCollection<int>> ValuesProperty =
+        AvaloniaProperty.Register<MultiItemIDSelector, ObservableCollection<int>>( nameof( Values ),
+            [] );
+
+    public MultiItemIDSelector()
     {
-        public static readonly StyledProperty<ObservableCollection<int>> ValuesProperty =
-            AvaloniaProperty.Register<MultiItemIDSelector, ObservableCollection<int>>( nameof( Values ),
-                new ObservableCollection<int>() );
+        InitializeComponent();
 
-        public MultiItemIDSelector()
+        MultiValueSelector selector = this.FindControl<MultiValueSelector>( "selector" );
+        selector.Bind( MultiValueSelector.ValuesProperty, this.GetObservable( ValuesProperty ) );
+    }
+
+    public ObservableCollection<int> Values
+    {
+        get => GetValue( ValuesProperty );
+        set => SetValue( ValuesProperty, value );
+    }
+
+    private async void OnTargetClick( object sender, RoutedEventArgs e )
+    {
+        (_, _, int serial, int _, int _, int _, int itemId) =
+            await Commands.GetTargetInfoAsync( Strings.Target_object___, 90000, true );
+
+        if ( itemId > 0 )
         {
-            InitializeComponent();
-
-            MultiValueSelector selector = this.FindControl<MultiValueSelector>( "selector" );
-            selector.Bind( MultiValueSelector.ValuesProperty, this.GetObservable( ValuesProperty ) );
+            Add( itemId );
         }
-
-        public ObservableCollection<int> Values
+        else if ( serial > 0 )
         {
-            get => GetValue( ValuesProperty );
-            set => SetValue( ValuesProperty, value );
-        }
+            Item item = Engine.Items.GetItem( serial );
 
-        private async void OnTargetClick( object sender, RoutedEventArgs e )
-        {
-            ( _, _, int serial, int _, int _, int _, int itemId ) =
-                await Commands.GetTargetInfoAsync( Strings.Target_object___, 90000, true );
-
-            if ( itemId > 0 )
+            if ( item != null )
             {
-                Add( itemId );
-            }
-            else if ( serial > 0 )
-            {
-                Item item = Engine.Items.GetItem( serial );
-
-                if ( item != null )
-                {
-                    Add( item.ID );
-                }
+                Add( item.ID );
             }
         }
+    }
 
-        private void Add( int value )
+    private void Add( int value )
+    {
+        Values ??= [];
+
+        if ( !Values.Contains( value ) )
         {
-            if ( Values == null )
-            {
-                Values = new ObservableCollection<int>();
-            }
-
-            if ( !Values.Contains( value ) )
-            {
-                Values.Add( value );
-            }
+            Values.Add( value );
         }
+    }
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

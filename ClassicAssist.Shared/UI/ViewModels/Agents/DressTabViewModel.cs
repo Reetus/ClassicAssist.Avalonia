@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,441 +15,409 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Agents
-{
-    public class DressTabViewModel : HotkeyEntryViewModel<DressAgentEntry>, ISettingProvider
-    {
-        private readonly DressManager _manager;
+namespace ClassicAssist.Shared.UI.ViewModels.Agents;
 
-        private readonly Layer[] _validLayers =
+public class DressTabViewModel : HotkeyEntryViewModel<DressAgentEntry>, ISettingProvider
+{
+    private readonly DressManager _manager;
+
+    private readonly Layer[] _validLayers =
+    [
+        Layer.Arms, Layer.Bracelet, Layer.Cloak, Layer.Earrings, Layer.Gloves, Layer.Helm, Layer.InnerLegs,
+        Layer.InnerTorso, Layer.MiddleTorso, Layer.Neck, Layer.OneHanded, Layer.OuterLegs, Layer.OuterTorso,
+        Layer.Pants, Layer.Ring, Layer.Shirt, Layer.Shoes, Layer.Talisman, Layer.TwoHanded, Layer.Waist
+    ];
+
+    public DressTabViewModel() : base( Strings.Dress )
+    {
+        _manager = DressManager.GetInstance();
+
+        _manager.Items = Items;
+
+        HotkeyCommand stopHotkey = new()
         {
-            Layer.Arms, Layer.Bracelet, Layer.Cloak, Layer.Earrings, Layer.Gloves, Layer.Helm, Layer.InnerLegs,
-            Layer.InnerTorso, Layer.MiddleTorso, Layer.Neck, Layer.OneHanded, Layer.OuterLegs, Layer.OuterTorso,
-            Layer.Pants, Layer.Ring, Layer.Shirt, Layer.Shoes, Layer.Talisman, Layer.TwoHanded, Layer.Waist
+            Name = Strings.Stop_Dress,
+            Action = ( entry, objects ) => _manager.Stop(),
+            CanGlobal = false
         };
 
-        private ICommand _addDressItemCommand;
-        private ICommand _changeDressType;
-        private ICommand _clearDressItemsCommand;
-        private ICommand _dressAllItemsCommand;
-        private ICommand _importItemsCommand;
-        private bool _isDressing;
-        private bool _isUndressing;
-        private bool _isUndressingAll;
-        private bool _moveConflictingItems;
-        private ICommand _newDressEntryCommand;
-        private ICommand _removeDressEntryCommand;
-        private ICommand _removeDressItemCommand;
-        private DressAgentItem _selectedDressItem;
-        private DressAgentEntry _selectedItem;
-        private ICommand _setUndressContainerCommand;
-        private ICommand _undressAllItemsCommand;
-        private ICommand _undressItemsCommand;
-        private bool _useUo3DPackets;
+        _staticOptions.Add( stopHotkey );
+    }
 
-        public DressTabViewModel() : base( Strings.Dress )
+    public ICommand AddDressItemCommand => field ??= new RelayCommandAsync( AddDressItem, o => true );
+
+    //TODO UI
+    public ICommand ChangeDressTypeCommand => field ??= new RelayCommand( ChangeDressType, o => SelectedDressItem != null );
+
+    public ICommand ClearDressItemsCommand => field ??=
+            new RelayCommand( ClearDressItems, o => SelectedItem != null );
+
+    public ICommand DressAllItemsCommand => field ??=
+            new RelayCommandAsync( DressAllItems,
+                o => SelectedItem != null && !IsUndressing && !IsUndressingAll );
+
+    public ICommand ImportItemsCommand => field ??=
+            new RelayCommand( ImportItems, o => SelectedItem != null );
+
+    public bool IsDressing
+    {
+        get;
+        set
         {
-            _manager = DressManager.GetInstance();
-
-            _manager.Items = Items;
-
-            HotkeyCommand stopHotkey = new HotkeyCommand
-            {
-                Name = Strings.Stop_Dress, Action = ( entry, objects ) => _manager.Stop(), CanGlobal = false
-            };
-
-            _staticOptions.Add( stopHotkey );
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( IsDressingOrUndressing ) );
         }
+    }
 
-        public ICommand AddDressItemCommand =>
-            _addDressItemCommand ?? ( _addDressItemCommand = new RelayCommandAsync( AddDressItem, o => true ) );
+    public bool IsDressingOrUndressing => IsDressing || IsUndressing || IsUndressingAll;
 
-        //TODO UI
-        public ICommand ChangeDressTypeCommand =>
-            _changeDressType ??
-            ( _changeDressType = new RelayCommand( ChangeDressType, o => SelectedDressItem != null ) );
-
-        public ICommand ClearDressItemsCommand =>
-            _clearDressItemsCommand ?? ( _clearDressItemsCommand =
-                new RelayCommand( ClearDressItems, o => SelectedItem != null ) );
-
-        public ICommand DressAllItemsCommand =>
-            _dressAllItemsCommand ?? ( _dressAllItemsCommand =
-                new RelayCommandAsync( DressAllItems,
-                    o => SelectedItem != null && !IsUndressing && !IsUndressingAll ) );
-
-        public ICommand ImportItemsCommand =>
-            _importItemsCommand ?? ( _importItemsCommand =
-                new RelayCommand( ImportItems, o => SelectedItem != null ) );
-
-        public bool IsDressing
+    public bool IsUndressing
+    {
+        get;
+        set
         {
-            get => _isDressing;
-            set
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( IsDressingOrUndressing ) );
+        }
+    }
+
+    public bool IsUndressingAll
+    {
+        get;
+        set
+        {
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( IsDressingOrUndressing ) );
+        }
+    }
+
+    public bool MoveConflictingItems
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand NewDressEntryCommand => field ??= new RelayCommand( NewDressEntry, o => true );
+
+    public ICommand RemoveDressEntryCommand => field ??=
+            new RelayCommand( RemoveDressEntry, o => SelectedItem != null );
+
+    public ICommand RemoveDressItemCommand => field ??=
+            new RelayCommand( RemoveDressItem, o => SelectedDressItem != null );
+
+    public DressAgentItem SelectedDressItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public DressAgentEntry SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand SetUndressContainerCommand => field ??=
+            new RelayCommandAsync( SetUndressContainer, o => SelectedItem != null );
+
+    public ICommand UndressAllItemsCommand => field ??=
+            new RelayCommandAsync( UndressAllItems, o => !IsDressing && !IsUndressing );
+
+    public ICommand UndressItemsCommand => field ??=
+            new RelayCommandAsync( UndressItems, o => !IsDressing && !IsUndressingAll );
+
+    public bool UseUO3DPackets
+    {
+        get;
+        set
+        {
+            SetProperty( ref field, value );
+
+            _manager?.UseUO3DPackets = value;
+        }
+    }
+
+    public void Serialize( JObject json )
+    {
+        JObject dress = new()
+        {
             {
-                SetProperty( ref _isDressing, value );
-                OnPropertyChanged( nameof( IsDressingOrUndressing ) );
+                "Options",
+                new JObject { ["MoveConflictingItems"] = MoveConflictingItems, ["UseUO3DPackets"] = UseUO3DPackets }
             }
-        }
+        };
 
-        public bool IsDressingOrUndressing => IsDressing || IsUndressing || IsUndressingAll;
+        SerializeStatic( dress );
 
-        public bool IsUndressing
+        JArray dressEntries = [];
+
+        foreach ( DressAgentEntry dae in Items )
         {
-            get => _isUndressing;
-            set
+            JObject djson = [];
+
+            SetJsonValue( djson, "Name", dae.Name );
+            SetJsonValue( djson, "UndressContainer", dae.UndressContainer );
+            SetJsonValue( djson, "PassToUO", dae.PassToUO );
+            SetJsonValue( djson, "Keys", dae.Hotkey.ToJObject() );
+
+            JArray items = [];
+
+            if ( dae.Items != null )
             {
-                SetProperty( ref _isUndressing, value );
-                OnPropertyChanged( nameof( IsDressingOrUndressing ) );
-            }
-        }
-
-        public bool IsUndressingAll
-        {
-            get => _isUndressingAll;
-            set
-            {
-                SetProperty( ref _isUndressingAll, value );
-                OnPropertyChanged( nameof( IsDressingOrUndressing ) );
-            }
-        }
-
-        public bool MoveConflictingItems
-        {
-            get => _moveConflictingItems;
-            set => SetProperty( ref _moveConflictingItems, value );
-        }
-
-        public ICommand NewDressEntryCommand =>
-            _newDressEntryCommand ?? ( _newDressEntryCommand = new RelayCommand( NewDressEntry, o => true ) );
-
-        public ICommand RemoveDressEntryCommand =>
-            _removeDressEntryCommand ?? ( _removeDressEntryCommand =
-                new RelayCommand( RemoveDressEntry, o => SelectedItem != null ) );
-
-        public ICommand RemoveDressItemCommand =>
-            _removeDressItemCommand ?? ( _removeDressItemCommand =
-                new RelayCommand( RemoveDressItem, o => SelectedDressItem != null ) );
-
-        public DressAgentItem SelectedDressItem
-        {
-            get => _selectedDressItem;
-            set => SetProperty( ref _selectedDressItem, value );
-        }
-
-        public DressAgentEntry SelectedItem
-        {
-            get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
-        }
-
-        public ICommand SetUndressContainerCommand =>
-            _setUndressContainerCommand ?? ( _setUndressContainerCommand =
-                new RelayCommandAsync( SetUndressContainer, o => SelectedItem != null ) );
-
-        public ICommand UndressAllItemsCommand =>
-            _undressAllItemsCommand ?? ( _undressAllItemsCommand =
-                new RelayCommandAsync( UndressAllItems, o => !IsDressing && !IsUndressing ) );
-
-        public ICommand UndressItemsCommand =>
-            _undressItemsCommand ?? ( _undressItemsCommand =
-                new RelayCommandAsync( UndressItems, o => !IsDressing && !IsUndressingAll ) );
-
-        public bool UseUO3DPackets
-        {
-            get => _useUo3DPackets;
-            set
-            {
-                SetProperty( ref _useUo3DPackets, value );
-
-                if ( _manager != null )
+                foreach ( DressAgentItem dressAgentItem in dae.Items )
                 {
-                    _manager.UseUO3DPackets = value;
-                }
-            }
-        }
-
-        public void Serialize( JObject json )
-        {
-            JObject dress = new JObject
-            {
-                {
-                    "Options",
-                    new JObject { ["MoveConflictingItems"] = MoveConflictingItems, ["UseUO3DPackets"] = UseUO3DPackets }
-                }
-            };
-
-            SerializeStatic( dress );
-
-            JArray dressEntries = new JArray();
-
-            foreach ( DressAgentEntry dae in Items )
-            {
-                JObject djson = new JObject();
-
-                SetJsonValue( djson, "Name", dae.Name );
-                SetJsonValue( djson, "UndressContainer", dae.UndressContainer );
-                SetJsonValue( djson, "PassToUO", dae.PassToUO );
-                SetJsonValue( djson, "Keys", dae.Hotkey.ToJObject() );
-
-                JArray items = new JArray();
-
-                if ( dae.Items != null )
-                {
-                    foreach ( DressAgentItem dressAgentItem in dae.Items )
+                    JObject item = new()
                     {
-                        JObject item = new JObject
-                        {
-                            { "Layer", (int) dressAgentItem.Layer },
-                            { "Serial", dressAgentItem.Serial },
-                            { "ID", dressAgentItem.ID },
-                            { "Type", (int) dressAgentItem.Type }
-                        };
+                        { "Layer", (int) dressAgentItem.Layer },
+                        { "Serial", dressAgentItem.Serial },
+                        { "ID", dressAgentItem.ID },
+                        { "Type", (int) dressAgentItem.Type }
+                    };
 
-                        items.Add( item );
-                    }
+                    items.Add( item );
                 }
-
-                djson.Add( "Items", items );
-                dressEntries.Add( djson );
             }
 
-            dress.Add( "Entries", dressEntries );
-            json?.Add( "Dress", dress );
+            djson.Add( "Items", items );
+            dressEntries.Add( djson );
         }
 
-        public void Deserialize( JObject json, Options options )
+        dress.Add( "Entries", dressEntries );
+        json?.Add( "Dress", dress );
+    }
+
+    public void Deserialize( JObject json, Options options )
+    {
+        Items.Clear();
+
+        if ( json?["Dress"] == null )
         {
-            Items.Clear();
-
-            if ( json?["Dress"] == null )
-            {
-                return;
-            }
-
-            JToken dress = json["Dress"];
-
-            DeserializeStatic( dress as JObject );
-
-            MoveConflictingItems = GetJsonValue( dress["Options"], "MoveConflictingItems", false );
-            UseUO3DPackets = _manager.UseUO3DPackets = GetJsonValue( dress["Options"], "UseUO3DPackets", false );
-
-            foreach ( JToken entry in dress["Entries"] )
-            {
-                DressAgentEntry dae = new DressAgentEntry
-                {
-                    Name = GetJsonValue( entry, "Name", string.Empty ),
-                    UndressContainer = GetJsonValue( entry, "UndressContainer", 0 ),
-                    PassToUO = GetJsonValue( entry, "PassToUO", true ),
-                    Hotkey = new ShortcutKeys( entry["Keys"] )
-                };
-
-                dae.Action = async ( hks, _ ) => await DressAllItems( dae );
-
-                List<DressAgentItem> items = new List<DressAgentItem>();
-
-                if ( entry["Items"] != null )
-                {
-                    items.AddRange( entry["Items"].Select( itemEntry => new DressAgentItem
-                    {
-                        Layer = GetJsonValue( itemEntry, "Layer", Layer.Invalid ),
-                        Serial = GetJsonValue( itemEntry, "Serial", 0 ),
-                        ID = GetJsonValue( itemEntry, "ID", -1 ),
-                        Type = GetJsonValue( itemEntry, "Type", DressAgentItemType.Serial )
-                    } ) );
-                }
-
-                dae.Items = new List<DressAgentItem>( items );
-
-                Items.Add( dae );
-            }
+            return;
         }
 
-        private async Task UndressItems( object arg )
+        JToken dress = json["Dress"];
+
+        DeserializeStatic( dress as JObject );
+
+        MoveConflictingItems = GetJsonValue( dress["Options"], "MoveConflictingItems", false );
+        UseUO3DPackets = _manager.UseUO3DPackets = GetJsonValue( dress["Options"], "UseUO3DPackets", false );
+
+        foreach ( JToken entry in dress["Entries"] )
         {
-            if ( !( arg is DressAgentEntry dae ) )
+            DressAgentEntry dae = new()
             {
-                return;
-            }
-
-            if ( IsUndressing )
-            {
-                _manager.Stop();
-                return;
-            }
-
-            try
-            {
-                IsUndressing = true;
-
-                await _manager.Undress( dae );
-            }
-            finally
-            {
-                IsUndressing = false;
-            }
-        }
-
-        private static async Task SetUndressContainer( object obj )
-        {
-            if ( !( obj is DressAgentEntry entry ) )
-            {
-                return;
-            }
-
-            int serial = await Commands.GetTargetSerialAsync( Strings.Select_undress_container___ );
-
-            if ( serial <= 0 )
-            {
-                Commands.SystemMessage( Strings.Invalid_container___ );
-                return;
-            }
-
-            entry.UndressContainer = serial;
-        }
-
-        private static void ClearDressItems( object obj )
-        {
-            if ( !( obj is DressAgentEntry dae ) )
-            {
-                return;
-            }
-
-            dae.Items = new List<DressAgentItem>();
-        }
-
-        private void RemoveDressItem( object obj )
-        {
-            if ( !( obj is DressAgentItem removeItem ) )
-            {
-                return;
-            }
-
-            if ( !SelectedItem.Items.Contains( removeItem ) )
-            {
-                return;
-            }
-
-            List<DressAgentItem> list = SelectedItem.Items.ToList();
-            list.Remove( removeItem );
-            SelectedItem.Items = list;
-        }
-
-        private static async Task AddDressItem( object arg )
-        {
-            if ( !( arg is DressAgentEntry dae ) )
-            {
-                return;
-            }
-
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_clothing_item___ );
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            if ( item.Layer == Layer.Invalid )
-            {
-                Commands.SystemMessage( Strings.The_item_needs_to_be_equipped___ );
-                return;
-            }
-
-            dae.AddOrReplaceDressItem( item );
-        }
-
-        private async Task UndressAllItems( object obj )
-        {
-            if ( IsUndressingAll )
-            {
-                _manager.Stop();
-                return;
-            }
-
-            try
-            {
-                IsUndressingAll = true;
-                await _manager.UndressAll( CancellationToken.None );
-            }
-            finally
-            {
-                IsUndressingAll = false;
-            }
-        }
-
-        private void NewDressEntry( object obj )
-        {
-            int count = Items.Count;
-
-            DressAgentEntry dae =
-                new DressAgentEntry { Name = $"Dress-{count + 1}", Items = new List<DressAgentItem>() };
+                Name = GetJsonValue( entry, "Name", string.Empty ),
+                UndressContainer = GetJsonValue( entry, "UndressContainer", 0 ),
+                PassToUO = GetJsonValue( entry, "PassToUO", true ),
+                Hotkey = new ShortcutKeys( entry["Keys"] )
+            };
 
             dae.Action = async ( hks, _ ) => await DressAllItems( dae );
 
+            List<DressAgentItem> items = [];
+
+            if ( entry["Items"] != null )
+            {
+                items.AddRange( entry["Items"].Select( itemEntry => new DressAgentItem
+                {
+                    Layer = GetJsonValue( itemEntry, "Layer", Layer.Invalid ),
+                    Serial = GetJsonValue( itemEntry, "Serial", 0 ),
+                    ID = GetJsonValue( itemEntry, "ID", -1 ),
+                    Type = GetJsonValue( itemEntry, "Type", DressAgentItemType.Serial )
+                } ) );
+            }
+
+            dae.Items = [.. items];
+
             Items.Add( dae );
         }
+    }
 
-        private void RemoveDressEntry( object obj )
+    private async Task UndressItems( object arg )
+    {
+        if ( arg is not DressAgentEntry dae )
         {
-            if ( !( obj is DressAgentEntry dae ) )
-            {
-                return;
-            }
-
-            dae.Hotkey = ShortcutKeys.Default;
-            Items.Remove( dae );
+            return;
         }
 
-        private async Task DressAllItems( object obj )
+        if ( IsUndressing )
         {
-            if ( !( obj is DressAgentEntry dae ) )
-            {
-                return;
-            }
-
-            if ( IsDressing )
-            {
-                _manager.Stop();
-                return;
-            }
-
-            try
-            {
-                IsDressing = true;
-                await _manager.DressAllItems( dae, MoveConflictingItems );
-            }
-            finally
-            {
-                IsDressing = false;
-            }
+            _manager.Stop();
+            return;
         }
 
-        private void ImportItems( object obj )
+        try
         {
-            if ( !( obj is DressAgentEntry dae ) )
-            {
-                return;
-            }
+            IsUndressing = true;
 
-            _manager.ImportItems( dae );
+            await _manager.Undress( dae );
+        }
+        finally
+        {
+            IsUndressing = false;
+        }
+    }
+
+    private static async Task SetUndressContainer( object obj )
+    {
+        if ( obj is not DressAgentEntry entry )
+        {
+            return;
         }
 
-        public bool IsValidLayer( Layer layer )
+        int serial = await Commands.GetTargetSerialAsync( Strings.Select_undress_container___ );
+
+        if ( serial <= 0 )
         {
-            return _validLayers.Any( l => l == layer );
+            Commands.SystemMessage( Strings.Invalid_container___ );
+            return;
         }
 
-        private static void ChangeDressType( object obj )
-        {
-            if ( !( obj is DressAgentItem dai ) )
-            {
-                return;
-            }
+        entry.UndressContainer = serial;
+    }
 
-            dai.Type = dai.Type == DressAgentItemType.Serial ? DressAgentItemType.ID : DressAgentItemType.Serial;
+    private static void ClearDressItems( object obj )
+    {
+        if ( obj is not DressAgentEntry dae )
+        {
+            return;
         }
+
+        dae.Items = [];
+    }
+
+    private void RemoveDressItem( object obj )
+    {
+        if ( obj is not DressAgentItem removeItem )
+        {
+            return;
+        }
+
+        if ( !SelectedItem.Items.Contains( removeItem ) )
+        {
+            return;
+        }
+
+        List<DressAgentItem> list = [.. SelectedItem.Items];
+        list.Remove( removeItem );
+        SelectedItem.Items = list;
+    }
+
+    private static async Task AddDressItem( object arg )
+    {
+        if ( arg is not DressAgentEntry dae )
+        {
+            return;
+        }
+
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_clothing_item___ );
+
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
+        {
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
+        }
+
+        if ( item.Layer == Layer.Invalid )
+        {
+            Commands.SystemMessage( Strings.The_item_needs_to_be_equipped___ );
+            return;
+        }
+
+        dae.AddOrReplaceDressItem( item );
+    }
+
+    private async Task UndressAllItems( object obj )
+    {
+        if ( IsUndressingAll )
+        {
+            _manager.Stop();
+            return;
+        }
+
+        try
+        {
+            IsUndressingAll = true;
+            await _manager.UndressAll( CancellationToken.None );
+        }
+        finally
+        {
+            IsUndressingAll = false;
+        }
+    }
+
+    private void NewDressEntry( object obj )
+    {
+        int count = Items.Count;
+
+        DressAgentEntry dae =
+            new()
+            { Name = $"Dress-{count + 1}", Items = [] };
+
+        dae.Action = async ( hks, _ ) => await DressAllItems( dae );
+
+        Items.Add( dae );
+    }
+
+    private void RemoveDressEntry( object obj )
+    {
+        if ( obj is not DressAgentEntry dae )
+        {
+            return;
+        }
+
+        dae.Hotkey = ShortcutKeys.Default;
+        Items.Remove( dae );
+    }
+
+    private async Task DressAllItems( object obj )
+    {
+        if ( obj is not DressAgentEntry dae )
+        {
+            return;
+        }
+
+        if ( IsDressing )
+        {
+            _manager.Stop();
+            return;
+        }
+
+        try
+        {
+            IsDressing = true;
+            await _manager.DressAllItems( dae, MoveConflictingItems );
+        }
+        finally
+        {
+            IsDressing = false;
+        }
+    }
+
+    private void ImportItems( object obj )
+    {
+        if ( obj is not DressAgentEntry dae )
+        {
+            return;
+        }
+
+        _manager.ImportItems( dae );
+    }
+
+    public bool IsValidLayer( Layer layer )
+    {
+        return _validLayers.Any( l => l == layer );
+    }
+
+    private static void ChangeDressType( object obj )
+    {
+        if ( obj is not DressAgentItem dai )
+        {
+            return;
+        }
+
+        dai.Type = dai.Type == DressAgentItemType.Serial ? DressAgentItemType.ID : DressAgentItemType.Serial;
     }
 }

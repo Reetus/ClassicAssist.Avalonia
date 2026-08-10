@@ -1,33 +1,32 @@
-﻿namespace ClassicAssist.UO.Network.PacketFilter
+﻿namespace ClassicAssist.UO.Network.PacketFilter;
+
+public class PacketFilterConditions
 {
-    public class PacketFilterConditions
+    public static PacketFilterCondition IntAtPositionCondition( int value, int position, bool negate = false )
     {
-        public static PacketFilterCondition IntAtPositionCondition(int value, int position, bool negate = false)
-        {
-            byte[] valueBytes = { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value };
+        byte[] valueBytes = [(byte) ( value >> 24 ), (byte) ( value >> 16 ), (byte) ( value >> 8 ), (byte) value];
 
-            return new PacketFilterCondition(position, valueBytes, 4, negate);
-        }
+        return new PacketFilterCondition( position, valueBytes, 4, negate );
+    }
 
-        public static PacketFilterCondition UIntAtPositionCondition(uint value, int position, bool negate = false)
-        {
-            byte[] valueBytes = { (byte)(value >> 24), (byte)(value >> 16), (byte)(value >> 8), (byte)value };
+    public static PacketFilterCondition UIntAtPositionCondition( uint value, int position, bool negate = false )
+    {
+        byte[] valueBytes = [(byte) ( value >> 24 ), (byte) ( value >> 16 ), (byte) ( value >> 8 ), (byte) value];
 
-            return new PacketFilterCondition(position, valueBytes, 4, negate);
-        }
+        return new PacketFilterCondition( position, valueBytes, 4, negate );
+    }
 
-        public static PacketFilterCondition ShortAtPositionCondition(int value, int position, bool negate = false)
-        {
-            byte[] valueBytes = { (byte)(value >> 8), (byte)value };
+    public static PacketFilterCondition ShortAtPositionCondition( int value, int position, bool negate = false )
+    {
+        byte[] valueBytes = [(byte) ( value >> 8 ), (byte) value];
 
-            return new PacketFilterCondition(position, valueBytes, 2, negate);
-        }
+        return new PacketFilterCondition( position, valueBytes, 2, negate );
+    }
 
-        public static PacketFilterCondition ByteAtPositionCondition(int value, int position, bool negate = false)
-        {
-            byte[] valueBytes = { (byte)value };
+    public static PacketFilterCondition ByteAtPositionCondition( int value, int position, bool negate = false )
+    {
+        byte[] valueBytes = [(byte) value];
 
-            return new PacketFilterCondition(position, valueBytes, 1, negate);
-        }
+        return new PacketFilterCondition( position, valueBytes, 1, negate );
     }
 }

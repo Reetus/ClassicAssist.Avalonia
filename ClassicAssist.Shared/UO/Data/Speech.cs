@@ -5,70 +5,65 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace ClassicAssist.UO.Data
+namespace ClassicAssist.UO.Data;
+
+public static class Speech
 {
-    public static class Speech
+    private static readonly Lazy<SpeechEntry[]> _entries = new( LoadEntries );
+
+    private static string _dataPath;
+
+    public static int[] GetKeywords( string input )
     {
-        private static readonly Lazy<SpeechEntry[]> _entries = new Lazy<SpeechEntry[]>( LoadEntries );
+        IEnumerable<SpeechEntry> matches =
+            _entries.Value.Where( e => Regex.IsMatch( input, WildCardToRegular( e.Keywords ) ) );
 
-        private static string _dataPath;
+        return [.. matches.Select( e => e.Id ).Distinct()];
+    }
 
-        public static int[] GetKeywords( string input )
+    public static void Initialize( string dataPath )
+    {
+        _dataPath = dataPath;
+    }
+
+    private static SpeechEntry[] LoadEntries()
+    {
+        string fullPath = Path.Combine( _dataPath, "speech.mul" );
+
+        using FileStream reader =
+            new( fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite );
+        using BinaryReader binaryReader = new( reader );
+        List<SpeechEntry> entries = [];
+
+        while ( reader.Position < reader.Length )
         {
-            IEnumerable<SpeechEntry> matches =
-                _entries.Value.Where( e => Regex.IsMatch( input, WildCardToRegular( e.Keywords ) ) );
+            int id = ( binaryReader.ReadByte() << 8 ) | binaryReader.ReadByte();
+            int length = ( binaryReader.ReadByte() << 8 ) | binaryReader.ReadByte();
 
-            return matches.Select( e => e.Id ).Distinct().ToArray();
-        }
+            byte[] buffer = new byte[length];
 
-        public static void Initialize( string dataPath )
-        {
-            _dataPath = dataPath;
-        }
+            binaryReader.Read( buffer, 0, length );
 
-        private static SpeechEntry[] LoadEntries()
-        {
-            string fullPath = Path.Combine( _dataPath, "speech.mul" );
+            string text = Encoding.UTF8.GetString( buffer );
 
-            using ( FileStream reader =
-                new FileStream( fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite ) )
+            if ( text.Contains( "guards" ) )
             {
-                using ( BinaryReader binaryReader = new BinaryReader( reader ) )
-                {
-                    List<SpeechEntry> entries = new List<SpeechEntry>();
-
-                    while ( reader.Position < reader.Length )
-                    {
-                        int id = ( binaryReader.ReadByte() << 8 ) | binaryReader.ReadByte();
-                        int length = ( binaryReader.ReadByte() << 8 ) | binaryReader.ReadByte();
-
-                        byte[] buffer = new byte[length];
-
-                        binaryReader.Read( buffer, 0, length );
-
-                        string text = Encoding.UTF8.GetString( buffer );
-
-                        if ( text.Contains( "guards" ) )
-                        {
-                        }
-
-                        entries.Add( new SpeechEntry { Id = id, Keywords = text } );
-                    }
-
-                    return entries.ToArray();
-                }
             }
+
+            entries.Add( new SpeechEntry { Id = id, Keywords = text } );
         }
 
-        private static string WildCardToRegular( string value )
-        {
-            return "^" + Regex.Escape( value ).Replace( "\\*", ".*" ) + "$";
-        }
+        return [.. entries];
+    }
 
-        internal struct SpeechEntry
-        {
-            public int Id { get; set; }
-            public string Keywords { get; set; }
-        }
+    private static string WildCardToRegular( string value )
+    {
+        return "^" + Regex.Escape( value ).Replace( "\\*", ".*" ) + "$";
+    }
+
+    internal struct SpeechEntry
+    {
+        public int Id { get; set; }
+        public string Keywords { get; set; }
     }
 }

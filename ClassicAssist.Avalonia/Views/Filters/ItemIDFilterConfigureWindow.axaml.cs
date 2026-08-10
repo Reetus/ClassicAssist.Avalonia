@@ -20,18 +20,17 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views.Filters
-{
-    public partial class ItemIDFilterConfigureWindow : Window
-    {
-        public ItemIDFilterConfigureWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views.Filters;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class ItemIDFilterConfigureWindow : Window
+{
+    public ItemIDFilterConfigureWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

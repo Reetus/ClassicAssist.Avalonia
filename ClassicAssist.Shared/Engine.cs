@@ -58,17 +58,17 @@ public static partial class Engine
     private static readonly PacketFilter _outgoingPacketPostFilter = new();
 
     /// <summary>Last time each key actually ran its hotkey, for <see cref="Options.LimitHotkeyTrigger" />.</summary>
-    private static readonly Dictionary<Key, DateTime> _lastKeyAction = new();
+    private static readonly Dictionary<Key, DateTime> _lastKeyAction = [];
     private static Move _requestMove;
 
     private static readonly int[] _sequenceList = new int[256];
 
-    private static readonly DateTime[] _lastMouseAction = new DateTime[( int )MouseOptions.None];
-    private static readonly object _clientSendLock = new();
+    private static readonly DateTime[] _lastMouseAction = new DateTime[(int) MouseOptions.None];
+    private static readonly Lock _clientSendLock = new();
     private static DateTime _nextPacketRecvTime;
 
     private static readonly TimeSpan PACKET_RECV_DELAY = TimeSpan.FromMilliseconds( 5 );
-    private static readonly object _serverSendLock = new();
+    private static readonly Lock _serverSendLock = new();
 
     private static readonly TimeSpan PACKET_SEND_DELAY = TimeSpan.FromMilliseconds( 5 );
     private static DateTime _nextPacketSendTime;
@@ -110,7 +110,7 @@ public static partial class Engine
     public static MobileCollection Mobiles { get; set; } = new( Items );
     public static PacketWaitEntries PacketWaitEntries { get; set; }
     public static PlayerMobile Player { get; set; }
-    public static QuestPointerList QuestPointers { get; set; } = new();
+    public static QuestPointerList QuestPointers { get; set; } = [];
 
     /// <summary>
     ///     False when the plugin was loaded via the native DNNE export (modern ClassicUO) rather than
@@ -215,7 +215,7 @@ public static partial class Engine
         {
             try
             {
-                IExtension instance = ( IExtension )Activator.CreateInstance( type );
+                IExtension instance = (IExtension) Activator.CreateInstance( type );
                 instance?.Initialize();
             }
             catch ( Exception e )
@@ -240,7 +240,7 @@ public static partial class Engine
 
             if ( Options.CurrentOptions.LimitMouseWheelTrigger )
             {
-                TimeSpan diff = DateTime.Now - _lastMouseAction[( int )mouse];
+                TimeSpan diff = DateTime.Now - _lastMouseAction[(int) mouse];
 
                 if ( diff < TimeSpan.FromMilliseconds( Options.CurrentOptions.LimitMouseWheelTriggerMS ) )
                 {
@@ -248,7 +248,7 @@ public static partial class Engine
                 }
             }
 
-            _lastMouseAction[( int )mouse] = DateTime.Now;
+            _lastMouseAction[(int) mouse] = DateTime.Now;
         }
 
         HotkeyManager.GetInstance().OnMouseAction( mouse );
@@ -284,7 +284,7 @@ public static partial class Engine
                         TimeSpan.FromMilliseconds( Options.CurrentOptions.LimitHotkeyTriggerMS );
         }
 
-        ( bool found, bool pass ) = HotkeyManager.GetInstance().OnHotkeyPressed( keys, modifier, noexecute );
+        (bool found, bool pass) = HotkeyManager.GetInstance().OnHotkeyPressed( keys, modifier, noexecute );
 
         if ( found && !noexecute )
         {
@@ -385,6 +385,7 @@ public static partial class Engine
         AssistantOptions.Load();
     }
 
+    [Obsolete]
     private static void ProcessIncomingQueue( Packet packet )
     {
         try
@@ -412,6 +413,7 @@ public static partial class Engine
         }
     }
 
+    [Obsolete]
     private static void ProcessOutgoingQueue( Packet packet )
     {
         try
@@ -443,7 +445,7 @@ public static partial class Engine
     {
         string assemblyname = new AssemblyName( args.Name ).Name;
 
-        string[] searchPaths = { StartupPath, RuntimeEnvironment.GetRuntimeDirectory() };
+        string[] searchPaths = [StartupPath, RuntimeEnvironment.GetRuntimeDirectory()];
 
         if ( assemblyname.Contains( "Colletions" ) )
         {
@@ -584,7 +586,7 @@ public static partial class Engine
 
             PacketWaitEntries?.CheckWait( packet, PacketDirection.Outgoing, true );
 
-            ( byte[] data, int dataLength ) = Utility.CopyBuffer( packet, length );
+            (byte[] data, int dataLength) = Utility.CopyBuffer( packet, length );
 
             _sendToServer?.Invoke( ref data, ref dataLength );
 
@@ -628,7 +630,7 @@ public static partial class Engine
 
     public static void SendPacketToClient( BasePacket basePacket, bool delay = true )
     {
-        if ( basePacket.Direction != PacketDirection.Any && basePacket.Direction != PacketDirection.Incoming )
+        if ( basePacket.Direction is not PacketDirection.Any and not PacketDirection.Incoming )
         {
             throw new InvalidOperationException( "Send packet wrong direction." );
         }
@@ -647,7 +649,7 @@ public static partial class Engine
 
     public static void SendPacketToServer( BasePacket basePacket )
     {
-        if ( basePacket.Direction != PacketDirection.Any && basePacket.Direction != PacketDirection.Outgoing )
+        if ( basePacket.Direction is not PacketDirection.Any and not PacketDirection.Outgoing )
         {
             throw new InvalidOperationException( "Send packet wrong direction." );
         }
@@ -666,7 +668,7 @@ public static partial class Engine
 
     public static bool Move( Direction direction, bool run )
     {
-        return _requestMove?.Invoke( ( int )direction, run ) ?? false;
+        return _requestMove?.Invoke( (int) direction, run ) ?? false;
     }
 
     public static void UpdateWindowTitle()
@@ -695,7 +697,7 @@ public static partial class Engine
 
     public static void GetMapZ( int x, int y, out sbyte groundZ, out sbyte staticZ )
     {
-        groundZ = staticZ = ( sbyte )( Player?.Z ?? 0 );
+        groundZ = staticZ = (sbyte) ( Player?.Z ?? 0 );
 
         if ( ClassicAssembly == null )
         {
@@ -718,12 +720,12 @@ public static partial class Engine
             return;
         }
 
-        object[] parameters = { x, y, null, null };
+        object[] parameters = [x, y, null, null];
 
         getMapZMethod.Invoke( mapInstance, parameters );
 
-        groundZ = ( sbyte )parameters[2];
-        staticZ = ( sbyte )parameters[3];
+        groundZ = (sbyte) parameters[2];
+        staticZ = (sbyte) parameters[3];
     }
 
     public static Stream GetResourceStream( string name )
@@ -775,7 +777,7 @@ public static partial class Engine
         {
             if ( !Installed )
             {
-                return Task.FromResult( ( true, Array.Empty<byte>(), 0 ) );
+                return Task.FromResult( (true, Array.Empty<byte>(), 0) );
             }
 
             byte[] original = new byte[length];
@@ -786,14 +788,14 @@ public static partial class Engine
 
             bool modified = length != originalLength || !original.SequenceEqual( data );
 
-            return Task.FromResult( ( result, modified ? data : Array.Empty<byte>(), modified ? length : 0 ) );
+            return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
         }
 
         public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length )
         {
             if ( !Installed )
             {
-                return Task.FromResult( ( true, Array.Empty<byte>(), 0 ) );
+                return Task.FromResult( (true, Array.Empty<byte>(), 0) );
             }
 
             byte[] original = new byte[length];
@@ -804,7 +806,7 @@ public static partial class Engine
 
             bool modified = length != originalLength || !original.SequenceEqual( data );
 
-            return Task.FromResult( ( result, modified ? data : Array.Empty<byte>(), modified ? length : 0 ) );
+            return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
         }
 
         public void OnClientClosing()
@@ -870,21 +872,21 @@ public static partial class Engine
         }
     }
 
-    public static bool CheckOutgoingPreFilter(byte[] data)
+    public static bool CheckOutgoingPreFilter( byte[] data )
     {
-        if (_outgoingPacketPreFilter.MatchFilterAll(data, out PacketFilterInfo[] pfis) <= 0)
+        if ( _outgoingPacketPreFilter.MatchFilterAll( data, out PacketFilterInfo[] pfis ) <= 0 )
         {
             return false;
         }
 
-        foreach (PacketFilterInfo pfi in pfis)
+        foreach ( PacketFilterInfo pfi in pfis )
         {
-            pfi.Action?.Invoke(data, pfi);
+            pfi.Action?.Invoke( data, pfi );
         }
 
-        SentPacketFilteredEvent?.Invoke(data, data.Length);
+        SentPacketFilteredEvent?.Invoke( data, data.Length );
 
-        PacketWaitEntries.CheckWait(data, PacketDirection.Outgoing, true);
+        PacketWaitEntries.CheckWait( data, PacketDirection.Outgoing, true );
 
         return true;
     }
@@ -977,12 +979,12 @@ public static partial class Engine
 
     public static Direction GetSequence( int sequence )
     {
-        return ( Direction )Thread.VolatileRead( ref _sequenceList[sequence] );
+        return (Direction) Thread.VolatileRead( ref _sequenceList[sequence] );
     }
 
     public static void SetSequence( int sequence, Direction direction )
     {
-        _sequenceList[sequence] = ( int )direction;
+        _sequenceList[sequence] = (int) direction;
     }
 
     public static void OnConnected()

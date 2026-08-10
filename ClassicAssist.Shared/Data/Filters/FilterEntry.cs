@@ -3,79 +3,74 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ClassicAssist.Shared.Resources;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+public abstract class FilterEntry : INotifyPropertyChanged
 {
-    public abstract class FilterEntry : INotifyPropertyChanged
+    protected FilterEntry()
     {
-        private bool _enabled;
-        private bool _isConfigurable;
-        private string _name;
+        Action = OnChanged;
 
-        protected FilterEntry()
+        FilterOptionsAttribute a =
+            (FilterOptionsAttribute) Attribute.GetCustomAttribute( GetType(), typeof( FilterOptionsAttribute ) );
+
+        if ( a == null )
         {
-            Action = OnChanged;
-
-            FilterOptionsAttribute a =
-                (FilterOptionsAttribute) Attribute.GetCustomAttribute( GetType(), typeof( FilterOptionsAttribute ) );
-
-            if ( a == null )
-            {
-                return;
-            }
-
-            string resourceName = Strings.ResourceManager.GetString( a.Name );
-
-            if ( string.IsNullOrEmpty( resourceName ) )
-            {
-                throw new InvalidOperationException( $"No localized text for filter: {a.Name}" );
-            }
-
-            Name = string.IsNullOrEmpty( resourceName ) ? a.Name : resourceName;
-            Enabled = a.DefaultEnabled;
-            IsConfigurable = typeof( IConfigurableFilter ).IsAssignableFrom( GetType() );
+            return;
         }
 
-        public Action<bool> Action { get; set; }
+        string resourceName = Strings.ResourceManager.GetString( a.Name );
 
-        public bool Enabled
+        if ( string.IsNullOrEmpty( resourceName ) )
         {
-            get => _enabled;
-            set
-            {
-                SetProperty( ref _enabled, value );
-                Action?.Invoke( value );
-            }
+            throw new InvalidOperationException( $"No localized text for filter: {a.Name}" );
         }
 
-        public bool IsConfigurable
-        {
-            get => _isConfigurable;
-            set => SetProperty( ref _isConfigurable, value );
-        }
+        Name = string.IsNullOrEmpty( resourceName ) ? a.Name : resourceName;
+        Enabled = a.DefaultEnabled;
+        IsConfigurable = typeof( IConfigurableFilter ).IsAssignableFrom( GetType() );
+    }
 
-        public string Name
-        {
-            get => _name;
-            set => SetProperty( ref _name, value );
-        }
+    public Action<bool> Action { get; set; }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnChanged( bool enabled )
+    public bool Enabled
+    {
+        get;
+        set
         {
-            throw new NotImplementedException();
+            SetProperty( ref field, value );
+            Action?.Invoke( value );
         }
+    }
 
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
+    public bool IsConfigurable
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        // ReSharper disable once RedundantAssignment
-        public void SetProperty<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
-        {
-            field = value;
-            OnPropertyChanged( propertyName );
-        }
+    public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected virtual void OnChanged( bool enabled )
+    {
+        throw new NotImplementedException();
+    }
+
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    // ReSharper disable once RedundantAssignment
+    public void SetProperty<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
+    {
+        field = value;
+        OnPropertyChanged( propertyName );
     }
 }

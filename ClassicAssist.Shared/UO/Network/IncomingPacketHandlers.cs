@@ -11,7 +11,6 @@ using ClassicAssist.Data.Chat;
 using ClassicAssist.Data.Counters;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Skills;
-using ClassicAssist.Data.Targeting;
 using ClassicAssist.Data.Vendors;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
@@ -68,7 +67,7 @@ public static class IncomingPacketHandlers
     private static readonly Version _version7000 = new( 7, 0, 0, 0 );
     private static readonly Version _version70130 = new( 7, 0, 13, 0 );
     private static readonly Version _version70331 = new( 7, 0, 33, 1 );
-    private static readonly char[] _tabSeparator = { '\t' };
+    private static readonly char[] _tabSeparator = ['\t'];
     private static readonly XYComparer _xyComparer = new();
 
     public static ConcurrentDictionary<int, Property[]> PropertyCache { get; set; } = new();
@@ -198,10 +197,7 @@ public static class IncomingPacketHandlers
     {
         byte mode = reader.ReadByte();
 
-        if ( Engine.Player != null )
-        {
-            Engine.Player.MovementSpeed = mode;
-        }
+        Engine.Player?.MovementSpeed = mode;
     }
 
     private static void OnSecureTrade( PacketReader reader )
@@ -211,7 +207,7 @@ public static class IncomingPacketHandlers
         int value1 = reader.ReadInt32();
         int value2 = reader.ReadInt32();
 
-        Engine.Trade.Action = ( TradeAction )action;
+        Engine.Trade.Action = (TradeAction) action;
         Engine.Trade.Serial = serial;
 
         if ( Engine.Trade.Action == TradeAction.Start )
@@ -292,43 +288,43 @@ public static class IncomingPacketHandlers
         switch ( command )
         {
             case 0x00:
-            {
-                // Old Bonded Status
-                bool dead = reader.ReadBoolean();
-
-                Mobile mobile = Engine.Mobiles.GetMobile( serial );
-
-                if ( mobile == null )
                 {
-                    return;
-                }
+                    // Old Bonded Status
+                    bool dead = reader.ReadBoolean();
 
-                mobile.IsDead = dead;
+                    Mobile mobile = Engine.Mobiles.GetMobile( serial );
 
-                break;
-            }
-            case 0x05:
-            {
-                // Lifted from CUO, packet is used for both bonded status and updating statues
-                int pos = ( int )reader.Index;
-                byte zero = reader.ReadByte();
-                byte type2 = reader.ReadByte();
-
-                if ( type2 == 0xFF )
-                {
-                    byte status = reader.ReadByte();
-                    ushort animation = reader.ReadUInt16();
-                    ushort frame = reader.ReadUInt16();
-
-                    if ( status == 0 && animation == 0 && frame == 0 )
+                    if ( mobile == null )
                     {
-                        reader.Seek( pos, SeekOrigin.Begin );
-                        goto case 0;
+                        return;
                     }
-                }
 
-                break;
-            }
+                    mobile.IsDead = dead;
+
+                    break;
+                }
+            case 0x05:
+                {
+                    // Lifted from CUO, packet is used for both bonded status and updating statues
+                    int pos = (int) reader.Index;
+                    _ = reader.ReadByte();
+                    byte type2 = reader.ReadByte();
+
+                    if ( type2 == 0xFF )
+                    {
+                        byte status = reader.ReadByte();
+                        ushort animation = reader.ReadUInt16();
+                        ushort frame = reader.ReadUInt16();
+
+                        if ( status == 0 && animation == 0 && frame == 0 )
+                        {
+                            reader.Seek( pos, SeekOrigin.Begin );
+                            goto case 0;
+                        }
+                    }
+
+                    break;
+                }
         }
     }
 
@@ -344,24 +340,24 @@ public static class IncomingPacketHandlers
 
         for ( int i = 0; i < cities; i++ )
         {
-            int index = reader.ReadByte();
-            string cityName = reader.ReadString( isNew ? 32 : 31 );
-            string buildingName = reader.ReadString( isNew ? 32 : 31 );
+            _ = reader.ReadByte();
+            _ = reader.ReadString( isNew ? 32 : 31 );
+            _ = reader.ReadString( isNew ? 32 : 31 );
 
             if ( !isNew )
             {
                 continue;
             }
 
-            int x = reader.ReadInt32();
-            int y = reader.ReadInt32();
-            int z = reader.ReadInt32();
-            int map = reader.ReadInt32();
-            int cliloc = reader.ReadInt32();
+            _ = reader.ReadInt32();
+            _ = reader.ReadInt32();
+            _ = reader.ReadInt32();
+            _ = reader.ReadInt32();
+            _ = reader.ReadInt32();
             reader.ReadInt32();
         }
 
-        Engine.CharacterListFlags = ( CharacterListFlags )reader.ReadInt32();
+        Engine.CharacterListFlags = (CharacterListFlags) reader.ReadInt32();
 
         Engine.TooltipsEnabled = Engine.CharacterListFlags.HasFlag( CharacterListFlags.PaladinNecromancerClassTooltips );
     }
@@ -371,7 +367,7 @@ public static class IncomingPacketHandlers
         int serial = reader.ReadInt32();
         int count = reader.ReadByte();
 
-        List<int> pets = new();
+        List<int> pets = [];
 
         for ( int i = 0; i < count; i++ )
         {
@@ -382,17 +378,14 @@ public static class IncomingPacketHandlers
 
         Mobile mobile = Engine.Mobiles.GetMobile( serial );
 
-        if ( mobile != null )
-        {
-            mobile.Pets = pets.ToArray();
-        }
+        mobile?.Pets = [.. pets];
     }
 
     private static void OnHideWaypoint( PacketReader reader )
     {
         int serial = reader.ReadInt32();
 
-        QuestPointer[] pointers = Engine.QuestPointers.Where( p => p.Serial == serial ).ToArray();
+        QuestPointer[] pointers = [.. Engine.QuestPointers.Where( p => p.Serial == serial )];
 
         foreach ( QuestPointer pointer in pointers )
         {
@@ -410,39 +403,39 @@ public static class IncomingPacketHandlers
         int serial = reader.ReadInt32();
         int x = reader.ReadInt16();
         int y = reader.ReadInt16();
-        int z = reader.ReadSByte();
-        Map map = ( Map )reader.ReadByte();
+        _ = reader.ReadSByte();
+        _ = (Map) reader.ReadByte();
         int type = reader.ReadInt16();
-        int ignoreObjectSerial = reader.ReadInt16();
+        _ = reader.ReadInt16();
         int clilocDescription = reader.ReadInt32();
         string clilocArguments = reader.ReadUnicodeStringLE();
-        string cliloc = Cliloc.GetLocalString( clilocDescription, new[] { clilocArguments } );
+        string cliloc = Cliloc.GetLocalString( clilocDescription, [clilocArguments] );
 
         switch ( type )
         {
             case 0x01:
-            {
-                Engine.QuestPointers.Add( new QuestPointer { Serial = serial, Type = QuestPointerType.Corpse, X = x, Y = y } );
-
-                break;
-            }
-            case 0x06:
-            {
-                if ( Engine.Player != null )
                 {
-                    int distance = Math.Max( Math.Abs( x - Engine.Player.X ), Math.Abs( y - Engine.Player.Y ) );
-                    Direction direction = UOMath.MapDirection( Engine.Player.X, Engine.Player.Y, x, y );
+                    Engine.QuestPointers.Add( new QuestPointer { Serial = serial, Type = QuestPointerType.Corpse, X = x, Y = y } );
 
-                    if ( distance < 100 )
-                    {
-                        Commands.SystemMessage( string.Format( Strings.Resurrection_Point___0____Direction___1____Distance___2_, cliloc, direction.ToString(), distance ) );
-                    }
+                    break;
                 }
+            case 0x06:
+                {
+                    if ( Engine.Player != null )
+                    {
+                        int distance = Math.Max( Math.Abs( x - Engine.Player.X ), Math.Abs( y - Engine.Player.Y ) );
+                        Direction direction = UOMath.MapDirection( Engine.Player.X, Engine.Player.Y, x, y );
 
-                Engine.QuestPointers.Add( new QuestPointer { Serial = serial, Type = QuestPointerType.Resurrection, X = x, Y = y } );
+                        if ( distance < 100 )
+                        {
+                            Commands.SystemMessage( string.Format( Strings.Resurrection_Point___0____Direction___1____Distance___2_, cliloc, direction.ToString(), distance ) );
+                        }
+                    }
 
-                break;
-            }
+                    Engine.QuestPointers.Add( new QuestPointer { Serial = serial, Type = QuestPointerType.Resurrection, X = x, Y = y } );
+
+                    break;
+                }
         }
     }
 
@@ -454,7 +447,7 @@ public static class IncomingPacketHandlers
 
         int numLines = reader.ReadByte();
 
-        List<MenuEntry> entries = new();
+        List<MenuEntry> entries = [];
 
         for ( int i = 0; i < numLines; i++ )
         {
@@ -465,7 +458,7 @@ public static class IncomingPacketHandlers
             entries.Add( new MenuEntry { Index = i + 1, ID = id, Hue = hue, Title = line } );
         }
 
-        Menu menu = new() { Serial = serial, ID = gumpId, Entries = entries.ToArray(), Title = title };
+        Menu menu = new() { Serial = serial, ID = gumpId, Entries = [.. entries], Title = title };
 
         Engine.Menus.Add( menu );
 
@@ -476,19 +469,19 @@ public static class IncomingPacketHandlers
     {
         byte[] packet = reader.GetData();
         Item item;
-        uint serial = ( uint )( ( packet[3] << 24 ) | ( packet[4] << 16 ) | ( packet[5] << 8 ) | packet[6] );
+        uint serial = (uint) ( ( packet[3] << 24 ) | ( packet[4] << 16 ) | ( packet[5] << 8 ) | packet[6] );
         int offset = 9;
 
         if ( ( serial & 0x80000000 ) != 0 )
         {
             serial ^= 0x80000000;
-            item = Engine.GetOrCreateItem( ( int )serial );
+            item = Engine.GetOrCreateItem( (int) serial );
             item.Count = ( packet[offset] << 8 ) | packet[offset + 1];
             offset += 2;
         }
         else
         {
-            item = Engine.GetOrCreateItem( ( int )serial );
+            item = Engine.GetOrCreateItem( (int) serial );
         }
 
         int id = ( packet[7] << 8 ) | packet[8];
@@ -514,12 +507,12 @@ public static class IncomingPacketHandlers
         if ( ( x & 0x8000 ) != 0 )
         {
             x ^= 0x8000;
-            item.Direction = ( Direction )packet[offset];
+            item.Direction = (Direction) packet[offset];
             offset++;
         }
 
         item.X = x;
-        item.Z = ( sbyte )packet[offset];
+        item.Z = (sbyte) packet[offset];
         offset++;
 
         if ( ( y & 0x8000 ) != 0 )
@@ -560,7 +553,7 @@ public static class IncomingPacketHandlers
         reader.ReadByte();
         int count = reader.ReadInt16();
 
-        List<ShardEntry> shards = new();
+        List<ShardEntry> shards = [];
 
         for ( int i = 0; i < count; i++ )
         {
@@ -590,7 +583,7 @@ public static class IncomingPacketHandlers
 
         uint next = reader.ReadUInt32();
 
-        List<Property> properties = new() { new Property { Cliloc = cliloc, Text = Cliloc.GetProperty( cliloc ) } };
+        List<Property> properties = [new Property { Cliloc = cliloc, Text = Cliloc.GetProperty( cliloc ) }];
 
         string journalOutput = Cliloc.GetProperty( cliloc );
 
@@ -606,42 +599,42 @@ public static class IncomingPacketHandlers
                 case 0xFFFFFFFF:
                     break;
                 case 0xFFFFFFFD:
-                {
-                    int nameLen = reader.ReadUInt16();
-                    string craftedBy = reader.ReadString( nameLen );
+                    {
+                        int nameLen = reader.ReadUInt16();
+                        string craftedBy = reader.ReadString( nameLen );
 
-                    properties.Add( new Property { Cliloc = -3, Text = craftedBy } );
+                        properties.Add( new Property { Cliloc = -3, Text = craftedBy } );
 
-                    journalOutput += $" {craftedBy}";
+                        journalOutput += $" {craftedBy}";
 
-                    break;
-                }
+                        break;
+                    }
                 case 0xFFFFFFFC:
-                {
-                    number = reader.ReadUInt32();
-                    charges = reader.ReadUInt16();
+                    {
+                        number = reader.ReadUInt32();
+                        charges = reader.ReadUInt16();
 
-                    attrName = Cliloc.GetProperty( ( int )number );
+                        attrName = Cliloc.GetProperty( (int) number );
 
-                    properties.Add( new Property { Cliloc = ( int )number, Text = attrName, Arguments = new[] { charges.ToString() } } );
+                        properties.Add( new Property { Cliloc = (int) number, Text = attrName, Arguments = [charges.ToString()] } );
 
-                    journalOutput += $" {attrName}";
+                        journalOutput += $" {attrName}";
 
-                    break;
-                }
+                        break;
+                    }
                 default:
-                {
-                    number = next;
-                    charges = reader.ReadUInt16();
+                    {
+                        number = next;
+                        charges = reader.ReadUInt16();
 
-                    attrName = Cliloc.GetProperty( ( int )number );
+                        attrName = Cliloc.GetProperty( (int) number );
 
-                    properties.Add( new Property { Cliloc = ( int )number, Text = attrName, Arguments = new[] { charges.ToString() } } );
+                        properties.Add( new Property { Cliloc = (int) number, Text = attrName, Arguments = [charges.ToString()] } );
 
-                    journalOutput += $" {attrName}";
+                        journalOutput += $" {attrName}";
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             if ( next == 0xFFFFFFFF )
@@ -657,10 +650,7 @@ public static class IncomingPacketHandlers
 
         Item item = Engine.Items.GetItem( serial );
 
-        if ( item != null )
-        {
-            item.Properties = properties.ToArray();
-        }
+        item?.Properties = [.. properties];
     }
 
     private static void OnUnicodePrompt( PacketReader reader )
@@ -678,7 +668,7 @@ public static class IncomingPacketHandlers
         int vendorSerial = reader.ReadInt32();
         int itemCount = reader.ReadInt16();
 
-        List<SellListEntry> shopList = new();
+        List<SellListEntry> shopList = [];
 
         for ( int i = 0; i < itemCount; i++ )
         {
@@ -702,7 +692,7 @@ public static class IncomingPacketHandlers
 
         if ( shopList.Count > 0 )
         {
-            VendorSellDisplayEvent?.Invoke( vendorSerial, shopList.ToArray() );
+            VendorSellDisplayEvent?.Invoke( vendorSerial, [.. shopList] );
         }
     }
 
@@ -739,7 +729,7 @@ public static class IncomingPacketHandlers
 
         if ( manager.Enabled != AbilityType.None )
         {
-            Commands.SystemMessage( Strings.Current_Ability_Cleared, ( int )SystemMessageHues.Red );
+            Commands.SystemMessage( Strings.Current_Ability_Cleared, (int) SystemMessageHues.Red );
         }
 
         manager.Enabled = AbilityType.None;
@@ -751,7 +741,7 @@ public static class IncomingPacketHandlers
         int serial = reader.ReadInt32();
         int count = reader.ReadByte();
 
-        List<ShopListEntry> shopList = new();
+        List<ShopListEntry> shopList = [];
 
         for ( int i = 0; i < count; i++ )
         {
@@ -775,7 +765,7 @@ public static class IncomingPacketHandlers
             return;
         }
 
-        List<Item> containerItems = new( containerItem.Container.GetItems() );
+        List<Item> containerItems = [.. containerItem.Container.GetItems()];
         containerItems.Sort( _xyComparer );
 
         for ( int i = 0; i < shopList.Count; i++ )
@@ -789,7 +779,7 @@ public static class IncomingPacketHandlers
             }
         }
 
-        mobile.ShopBuy = shopList.ToArray();
+        mobile.ShopBuy = [.. shopList];
     }
 
     public static event dToggleSpecialMove ToggleSpecialMoveEvent;
@@ -831,12 +821,12 @@ public static class IncomingPacketHandlers
         {
             Serial = reader.ReadInt32(),
             ID = reader.ReadInt16(),
-            SpeechType = ( JournalSpeech )reader.ReadByte(),
+            SpeechType = (JournalSpeech) reader.ReadByte(),
             SpeechHue = reader.ReadInt16(),
             SpeechFont = reader.ReadInt16(),
             Cliloc = reader.ReadInt32(),
             Name = reader.ReadString( 30 ),
-            Arguments = reader.ReadUnicodeString( ( int )reader.Size - 50 ).Split( new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries )
+            Arguments = reader.ReadUnicodeString( (int) reader.Size - 50 ).Split( ['\t'], StringSplitOptions.RemoveEmptyEntries )
         };
 
         journalEntry.Text = Cliloc.GetLocalString( journalEntry.Cliloc, journalEntry.Arguments );
@@ -866,14 +856,14 @@ public static class IncomingPacketHandlers
     {
         int serial = reader.ReadInt32();
         int graphic = reader.ReadInt16();
-        JournalSpeech messageType = ( JournalSpeech )reader.ReadByte();
+        JournalSpeech messageType = (JournalSpeech) reader.ReadByte();
         int hue = reader.ReadInt16();
         int font = reader.ReadInt16();
         int cliloc = reader.ReadInt32();
-        MessageAffixType affixType = ( MessageAffixType )reader.ReadByte();
+        MessageAffixType affixType = (MessageAffixType) reader.ReadByte();
         string name = reader.ReadString( 30 );
         string affix = reader.ReadString();
-        string[] arguments = reader.ReadUnicodeString().Split( new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries );
+        string[] arguments = reader.ReadUnicodeString().Split( ['\t'], StringSplitOptions.RemoveEmptyEntries );
 
         JournalEntry journalEntry = new()
         {
@@ -908,81 +898,84 @@ public static class IncomingPacketHandlers
         switch ( command )
         {
             case 1:
-            {
-                int count = reader.ReadByte();
-
-                List<int> partyMembers = new();
-
-                for ( int i = 0; i < count; i++ )
                 {
-                    int serial = reader.ReadInt32();
-                    partyMembers.Add( serial );
+                    int count = reader.ReadByte();
+
+                    List<int> partyMembers = [];
+
+                    for ( int i = 0; i < count; i++ )
+                    {
+                        int serial = reader.ReadInt32();
+                        partyMembers.Add( serial );
+                    }
+
+                    if ( Engine.Player == null )
+                    {
+                        return;
+                    }
+
+                    Engine.Player.Party = [.. partyMembers];
+
+                    break;
                 }
-
-                if ( Engine.Player == null )
-                {
-                    return;
-                }
-
-                Engine.Player.Party = partyMembers.ToArray();
-
-                break;
-            }
 
             case 2:
-            {
-                int count = reader.ReadByte();
-
-                reader.ReadInt32(); // removed member serial
-
-                List<int> partyMembers = new();
-
-                for ( int i = 0; i < count; i++ )
                 {
-                    int serial = reader.ReadInt32();
-                    partyMembers.Add( serial );
+                    int count = reader.ReadByte();
+
+                    reader.ReadInt32(); // removed member serial
+
+                    List<int> partyMembers = [];
+
+                    for ( int i = 0; i < count; i++ )
+                    {
+                        int serial = reader.ReadInt32();
+                        partyMembers.Add( serial );
+                    }
+
+                    if ( Engine.Player == null )
+                    {
+                        return;
+                    }
+
+                    Engine.Player.Party = [.. partyMembers];
+
+                    break;
                 }
-
-                if ( Engine.Player == null )
-                {
-                    return;
-                }
-
-                Engine.Player.Party = partyMembers.ToArray();
-
-                break;
-            }
 
             case 4:
-            {
-                int serial = reader.ReadInt32();
-                string message = reader.ReadUnicodeString();
-
-                JournalEntry journalEntry = new()
                 {
-                    Serial = serial, Name = Engine.Mobiles.GetMobile( serial )?.Name ?? "Unknown", SpeechType = JournalSpeech.Whisper, Text = message
-                };
+                    int serial = reader.ReadInt32();
+                    string message = reader.ReadUnicodeString();
 
-                AddToJournal( journalEntry );
-
-                break;
-            }
-
-            case 7:
-            {
-                int leaderSerial = reader.ReadInt32();
-
-                if ( Options.CurrentOptions.AutoAcceptPartyInvite )
-                {
-                    if ( !Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends ||
-                         ( Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends && MobileCommands.InFriendList( leaderSerial ) ) )
+                    JournalEntry journalEntry = new()
                     {
-                        Engine.SendPacketToServer( new AcceptPartyInvitation( leaderSerial ) );
-                    }
+                        Serial = serial,
+                        Name = Engine.Mobiles.GetMobile( serial )?.Name ?? "Unknown",
+                        SpeechType = JournalSpeech.Whisper,
+                        Text = message
+                    };
+
+                    AddToJournal( journalEntry );
+
+                    break;
                 }
 
-                break;
-            }
+            case 7:
+                {
+                    int leaderSerial = reader.ReadInt32();
+
+                    if ( Options.CurrentOptions.AutoAcceptPartyInvite )
+                    {
+                        if ( !Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends ||
+                             ( Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends && MobileCommands.InFriendList( leaderSerial ) ) )
+                        {
+                            Engine.SendPacketToServer( new AcceptPartyInvitation( leaderSerial ) );
+                        }
+                    }
+
+                    break;
+                }
         }
     }
 
@@ -1081,7 +1074,7 @@ public static class IncomingPacketHandlers
         {
             Serial = reader.ReadInt32(),
             ID = reader.ReadInt16(),
-            SpeechType = ( JournalSpeech )reader.ReadByte(),
+            SpeechType = (JournalSpeech) reader.ReadByte(),
             SpeechHue = reader.ReadInt16(),
             SpeechFont = reader.ReadInt16(),
             Name = reader.ReadString( 30 ),
@@ -1097,7 +1090,7 @@ public static class IncomingPacketHandlers
         {
             Serial = reader.ReadInt32(),
             ID = reader.ReadInt16(),
-            SpeechType = ( JournalSpeech )reader.ReadByte(),
+            SpeechType = (JournalSpeech) reader.ReadByte(),
             SpeechHue = reader.ReadInt16(),
             SpeechFont = reader.ReadInt16(),
             SpeechLanguage = reader.ReadString( 4 ),
@@ -1112,24 +1105,18 @@ public static class IncomingPacketHandlers
     {
         Direction direction = Engine.GetSequence( reader.ReadByte() );
 
-        if ( Engine.Player != null )
-        {
-            Engine.Player.Direction = direction;
-        }
+        Engine.Player?.Direction = direction;
     }
 
     private static void OnMoveRejected( PacketReader reader )
     {
-        int sequence = reader.ReadByte();
-        int x = reader.ReadInt16();
-        int y = reader.ReadInt16();
-        Direction direction = ( Direction )reader.ReadByte();
-        int z = reader.ReadSByte();
+        _ = reader.ReadByte();
+        _ = reader.ReadInt16();
+        _ = reader.ReadInt16();
+        Direction direction = (Direction) reader.ReadByte();
+        _ = reader.ReadSByte();
 
-        if ( Engine.Player != null )
-        {
-            Engine.Player.Direction = direction;
-        }
+        Engine.Player?.Direction = direction;
     }
 
     private static void OnCompressedGump( PacketReader reader )
@@ -1252,10 +1239,10 @@ public static class IncomingPacketHandlers
         mobile.X = x;
         mobile.Y = y;
         mobile.Z = z;
-        mobile.Direction = ( Direction )direction;
+        mobile.Direction = (Direction) direction;
         mobile.Hue = hue;
-        mobile.Status = ( MobileStatus )status;
-        mobile.Notoriety = ( Notoriety )notoriety;
+        mobile.Status = (MobileStatus) status;
+        mobile.Notoriety = (Notoriety) notoriety;
 
         Engine.Mobiles.Add( mobile );
     }
@@ -1276,10 +1263,10 @@ public static class IncomingPacketHandlers
         Mobile mobile = Engine.GetOrCreateMobile( serial );
         mobile.ID = id;
         mobile.Hue = hue;
-        mobile.Status = ( MobileStatus )status;
+        mobile.Status = (MobileStatus) status;
         mobile.X = x;
         mobile.Y = y;
-        mobile.Direction = ( Direction )direction;
+        mobile.Direction = (Direction) direction;
         mobile.Z = z;
 
         Engine.Mobiles.Add( mobile );
@@ -1305,9 +1292,9 @@ public static class IncomingPacketHandlers
     {
         byte type = reader.ReadByte();
         int tid = reader.ReadInt32();
-        TargetFlags flags = ( TargetFlags )reader.ReadByte();
+        TargetFlags flags = (TargetFlags) reader.ReadByte();
 
-        Engine.TargetType = ( TargetType )type;
+        Engine.TargetType = (TargetType) type;
         Engine.TargetSerial = tid;
         Engine.TargetFlags = flags;
         Engine.TargetExists = flags != TargetFlags.Cancel;
@@ -1375,7 +1362,7 @@ public static class IncomingPacketHandlers
 
     private static void OnSupportedFeatures( PacketReader reader )
     {
-        Engine.Features = ( FeatureFlags )reader.ReadInt32();
+        Engine.Features = (FeatureFlags) reader.ReadInt32();
     }
 
     private static void OnSkillsList( PacketReader reader )
@@ -1386,27 +1373,27 @@ public static class IncomingPacketHandlers
         int id = reader.ReadInt16();
         int value = reader.ReadInt16();
         int baseValue = reader.ReadInt16();
-        LockStatus lockStatus = ( LockStatus )reader.ReadByte();
+        LockStatus lockStatus = (LockStatus) reader.ReadByte();
         int skillCap = haveCap ? reader.ReadInt16() : 1000;
 
         if ( reader.Size <= 13 )
         {
-            SkillUpdatedEvent?.Invoke( id, ( float )value / 10, ( float )baseValue / 10, lockStatus, ( float )skillCap / 10 );
+            SkillUpdatedEvent?.Invoke( id, (float) value / 10, (float) baseValue / 10, lockStatus, (float) skillCap / 10 );
         }
         else
         {
             SkillInfo si = new()
             {
-                Value = ( float )value / 10,
-                BaseValue = ( float )baseValue / 10,
+                Value = (float) value / 10,
+                BaseValue = (float) baseValue / 10,
                 LockStatus = lockStatus,
-                SkillCap = ( float )skillCap / 10,
+                SkillCap = (float) skillCap / 10,
                 ID = id - 1
             };
 
             List<SkillInfo> skillInfoList = new( 128 ) { si };
 
-            for ( ;; )
+            for (; ; )
             {
                 id = reader.ReadInt16();
 
@@ -1417,22 +1404,22 @@ public static class IncomingPacketHandlers
 
                 value = reader.ReadInt16();
                 baseValue = reader.ReadInt16();
-                lockStatus = ( LockStatus )reader.ReadByte();
+                lockStatus = (LockStatus) reader.ReadByte();
                 skillCap = haveCap ? reader.ReadInt16() : 1000;
 
                 si = new SkillInfo
                 {
-                    Value = ( float )value / 10,
-                    BaseValue = ( float )baseValue / 10,
+                    Value = (float) value / 10,
+                    BaseValue = (float) baseValue / 10,
                     LockStatus = lockStatus,
-                    SkillCap = ( float )skillCap / 10,
+                    SkillCap = (float) skillCap / 10,
                     ID = id - 1
                 };
 
                 skillInfoList.Add( si );
             }
 
-            SkillsListEvent?.Invoke( skillInfoList.ToArray() );
+            SkillsListEvent?.Invoke( [.. skillInfoList] );
         }
     }
 
@@ -1446,12 +1433,9 @@ public static class IncomingPacketHandlers
 
     private static void OnMapChange( PacketReader reader )
     {
-        Map map = ( Map )reader.ReadByte();
+        Map map = (Map) reader.ReadByte();
 
-        if ( Engine.Player != null )
-        {
-            Engine.Player.Map = map;
-        }
+        Engine.Player?.Map = map;
 
         Engine.Items.ClearMultis();
 
@@ -1530,10 +1514,7 @@ public static class IncomingPacketHandlers
 
             item.Owner = container.Serial;
 
-            if ( container.Container == null )
-            {
-                container.Container = new ItemCollection( containerSerial );
-            }
+            container.Container ??= new ItemCollection( containerSerial );
 
             container.Container.Add( item );
         }
@@ -1605,7 +1586,7 @@ public static class IncomingPacketHandlers
         Item item = Engine.GetOrCreateItem( serial );
 
         item.Owner = mobileSerial;
-        item.Layer = ( Layer )layer;
+        item.Layer = (Layer) layer;
         item.Hue = hue;
         item.ID = id;
 
@@ -1616,7 +1597,7 @@ public static class IncomingPacketHandlers
 
         Mobile mobile = Engine.GetOrCreateMobile( mobileSerial );
 
-        Item existing = mobile.Equipment.FirstOrDefault( i => i.Layer == ( Layer )layer );
+        Item existing = mobile.Equipment.FirstOrDefault( i => i.Layer == (Layer) layer );
 
         if ( existing != null && item.Layer != Layer.Backpack )
         {
@@ -1639,7 +1620,7 @@ public static class IncomingPacketHandlers
 
         int hash = reader.ReadInt32();
 
-        List<Property> list = new();
+        List<Property> list = [];
 
         int cliloc;
         bool first = true;
@@ -1664,7 +1645,7 @@ public static class IncomingPacketHandlers
             list.Add( property );
         }
 
-        Property[] propertyArray = list.ToArray();
+        Property[] propertyArray = [.. list];
 
         PropertyCache.AddOrUpdate( serial, v => propertyArray, ( k, v ) => propertyArray );
 
@@ -1694,7 +1675,7 @@ public static class IncomingPacketHandlers
 
     private static void OnMobileStatus( PacketReader reader )
     {
-        long length = reader.Size;
+        _ = reader.Size;
 
         int serial = reader.ReadInt32();
         string name = reader.ReadString( 30 );
@@ -1714,7 +1695,7 @@ public static class IncomingPacketHandlers
             return;
         }
 
-        int sex = reader.ReadByte();
+        _ = reader.ReadByte();
 
         if ( serial != Engine.Player?.Serial )
         {
@@ -1733,12 +1714,12 @@ public static class IncomingPacketHandlers
         player.Gold = reader.ReadInt32();
         player.PhysicalResistance = reader.ReadInt16();
         player.Weight = reader.ReadInt16();
-        player.WeightMax = 40 + ( int )( 3.5 * player.Strength );
+        player.WeightMax = 40 + (int) ( 3.5 * player.Strength );
 
         if ( features >= 5 )
         {
             player.WeightMax = reader.ReadInt16();
-            player.Race = ( MobileRace )reader.ReadByte();
+            player.Race = (MobileRace) reader.ReadByte();
         }
 
         if ( features >= 3 )
@@ -1795,14 +1776,14 @@ public static class IncomingPacketHandlers
         mobile.X = reader.ReadInt16();
         mobile.Y = reader.ReadInt16();
         mobile.Z = reader.ReadSByte();
-        mobile.Direction = ( Direction )( reader.ReadByte() & 0x07 );
+        mobile.Direction = (Direction) ( reader.ReadByte() & 0x07 );
         mobile.Hue = reader.ReadUInt16();
-        mobile.Status = ( MobileStatus )reader.ReadByte();
-        mobile.Notoriety = ( Notoriety )reader.ReadByte();
+        mobile.Status = (MobileStatus) reader.ReadByte();
+        mobile.Notoriety = (Notoriety) reader.ReadByte();
 
         bool useNewIncoming = Engine.ClientVersion == null || Engine.ClientVersion >= _version70331;
 
-        for ( ;; )
+        for (; ; )
         {
             int itemSerial = reader.ReadInt32();
 
@@ -1814,7 +1795,7 @@ public static class IncomingPacketHandlers
             Item item = Engine.GetOrCreateItem( itemSerial );
             item.Owner = serial;
             item.ID = reader.ReadUInt16();
-            item.Layer = ( Layer )reader.ReadByte();
+            item.Layer = (Layer) reader.ReadByte();
 
             if ( useNewIncoming )
             {
@@ -1844,7 +1825,7 @@ public static class IncomingPacketHandlers
 
         Engine.Items.Add( equippedItems );
 
-        if ( !( mobile is PlayerMobile ) )
+        if ( mobile is not PlayerMobile )
         {
             Engine.Mobiles.Add( mobile );
         }
@@ -1901,10 +1882,7 @@ public static class IncomingPacketHandlers
                 int containerSerial = reader.ReadInt32();
                 int hue = reader.ReadUInt16();
 
-                if ( container == null )
-                {
-                    container = new ItemCollection( containerSerial );
-                }
+                container ??= new ItemCollection( containerSerial );
 
                 Item item = Engine.GetOrCreateItem( serial, containerSerial );
 
@@ -1967,7 +1945,7 @@ public static class IncomingPacketHandlers
         Item item = Engine.GetOrCreateItem( serialf3 );
         item.ArtDataID = type;
         item.ID = reader.ReadUInt16();
-        item.Direction = ( Direction )reader.ReadByte();
+        item.Direction = (Direction) reader.ReadByte();
         item.Count = reader.ReadUInt16();
         reader.ReadInt16(); // Second Amount?
         item.X = reader.ReadInt16();
@@ -2009,7 +1987,7 @@ public static class IncomingPacketHandlers
         mobile.X = x;
         mobile.Y = y;
         mobile.Z = z;
-        mobile.Direction = ( Direction )direction;
+        mobile.Direction = (Direction) direction;
 
         Engine.SetPlayer( mobile );
     }
@@ -2040,7 +2018,7 @@ public static class IncomingPacketHandlers
         {
             if ( layers[i] == serial )
             {
-                return ( Layer )i;
+                return (Layer) i;
             }
         }
 
@@ -2065,7 +2043,7 @@ public static class IncomingPacketHandlers
             Serial = -1,
             ID = -1,
             SpeechType = JournalSpeech.System,
-            SpeechHue = ( int )SystemMessageHues.Normal,
+            SpeechHue = (int) SystemMessageHues.Normal,
             SpeechFont = 0x03,
             Name = "System",
             Text = text

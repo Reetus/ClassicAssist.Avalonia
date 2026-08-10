@@ -18,211 +18,211 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+/* NOTE: This class forces thread safety on every access to make it more user-friendly
+ * in scripts at the expense of a bit of performance.  Obviously if you use this code
+ * elsewhere you would want to implement the thread-safety yourself. */
+
+/// <summary>
+///     Thread-safe generic circular buffer (not a queue). Read position is remembered per named
+///     buffer key, so independent consumers (e.g. the journal "main" buffer vs a macro buffer)
+///     can each track their own position through the same underlying data.
+/// </summary>
+public sealed class CircularBuffer<T>
 {
-    /* NOTE: This class forces thread safety on every access to make it more user-friendly
-     * in scripts at the expense of a bit of performance.  Obviously if you use this code
-     * elsewhere you would want to implement the thread-safety yourself. */
+    private readonly Lock _syncRoot;
+    private T[] _buffer;
+    private int _capacity, _head, _tail;
+
+    private readonly Dictionary<string, int> _readOffsets = [];
+
+    public CircularBuffer( int capacity )
+    {
+        _capacity = capacity;
+        Count = 0;
+        _head = 0;
+        _tail = 0;
+        _buffer = new T[capacity + 1];
+        _syncRoot = new Lock();
+    }
 
     /// <summary>
-    ///     Thread-safe generic circular buffer (not a queue). Read position is remembered per named
-    ///     buffer key, so independent consumers (e.g. the journal "main" buffer vs a macro buffer)
-    ///     can each track their own position through the same underlying data.
+    ///     Get or set buffer capacity. Buffer can only grow.
     /// </summary>
-    public sealed class CircularBuffer<T>
+    public int Capacity
     {
-        private readonly object _syncRoot;
-        private T[] _buffer;
-        private int _capacity, _head, _tail;
-
-        private readonly Dictionary<string, int> _readOffsets = new Dictionary<string, int>();
-
-        public CircularBuffer( int capacity )
+        get => _capacity;
+        set
         {
-            _capacity = capacity;
+            lock ( _syncRoot )
+            {
+                if ( value <= _capacity )
+                {
+                    return;
+                }
+
+                T[] newBuffer = new T[value + 1];
+                T[] oldBuffer = GetEntireBuffer();
+                Array.Copy( oldBuffer, 0, newBuffer, 0, oldBuffer.Length );
+                _buffer = newBuffer;
+                _capacity = value;
+                _head = 0;
+                _tail = Count;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Get number of elements actually contained in buffer.
+    /// </summary>
+    public int Count { get; private set; }
+
+    /// <summary>
+    ///     Physically reset the buffer (all entries discarded, every named read offset reset).
+    /// </summary>
+    public void Clear()
+    {
+        lock ( _syncRoot )
+        {
             Count = 0;
             _head = 0;
             _tail = 0;
-            _buffer = new T[capacity + 1];
-            _syncRoot = new object();
+            _readOffsets.Clear();
         }
+    }
 
-        /// <summary>
-        ///     Get or set buffer capacity. Buffer can only grow.
-        /// </summary>
-        public int Capacity
+    /// <summary>
+    ///     Reset the named buffer. Does not actually clear it but sets the position to the end of
+    ///     the buffer, so consumers of that key only see entries written after this call.
+    /// </summary>
+    public void Clear( string key )
+    {
+        lock ( _syncRoot )
         {
-            get => _capacity;
-            set
+            if ( _head <= _tail )
             {
-                lock ( _syncRoot )
-                {
-                    if ( value <= _capacity )
-                    {
-                        return;
-                    }
+                _readOffsets[key] = _tail - _head;
+            }
+            else
+            {
+                _readOffsets[key] = _buffer.Length - _head + _tail;
+            }
+        }
+    }
 
-                    T[] newBuffer = new T[value + 1];
-                    T[] oldBuffer = GetEntireBuffer();
-                    Array.Copy( oldBuffer, 0, newBuffer, 0, oldBuffer.Length );
-                    _buffer = newBuffer;
-                    _capacity = value;
-                    _head = 0;
-                    _tail = Count;
+    /// <summary>
+    ///     Change read position to specified number of indices from the beginning.
+    /// </summary>
+    public void Seek( int count, string key )
+    {
+        lock ( _syncRoot )
+        {
+            _readOffsets[key] = Math.Min( count, Count );
+        }
+    }
+
+    /// <summary>
+    ///     Write item to buffer.
+    /// </summary>
+    public void Write( T item )
+    {
+        lock ( _syncRoot )
+        {
+            _buffer[_tail] = item;
+            _tail = ++_tail % _buffer.Length;
+
+            if ( _tail == _head )
+            {
+                _head = ++_head % _buffer.Length;
+
+                foreach ( KeyValuePair<string, int> readOffset in _readOffsets.ToArray() )
+                {
+                    _readOffsets[readOffset.Key] = Math.Max( 0, readOffset.Value - 1 );
                 }
             }
+
+            Count = Math.Min( Count + 1, _capacity );
         }
+    }
 
-        /// <summary>
-        ///     Get number of elements actually contained in buffer.
-        /// </summary>
-        public int Count { get; private set; }
-
-        /// <summary>
-        ///     Physically reset the buffer (all entries discarded, every named read offset reset).
-        /// </summary>
-        public void Clear()
+    /// <summary>
+    ///     Read item from named buffer and increment read position. Item remains in buffer until overwritten.
+    /// </summary>
+    /// <returns>True on success, false if nothing new to read.</returns>
+    public bool Read( out T item, string key )
+    {
+        lock ( _syncRoot )
         {
-            lock ( _syncRoot )
+            EnsureReadOffset( key );
+
+            int readPos = ( _head + _readOffsets[key] ) % _buffer.Length;
+
+            if ( readPos == _tail )
             {
-                Count = 0;
-                _head = 0;
-                _tail = 0;
-                _readOffsets.Clear();
+                item = default;
+                return false;
             }
+
+            _readOffsets[key] = Math.Min( _readOffsets[key] + 1, Count );
+            item = _buffer[readPos];
+            return true;
         }
+    }
 
-        /// <summary>
-        ///     Reset the named buffer. Does not actually clear it but sets the position to the end of
-        ///     the buffer, so consumers of that key only see entries written after this call.
-        /// </summary>
-        public void Clear( string key )
+    /// <summary>
+    ///     Get array of elements contained in buffer.
+    /// </summary>
+    public T[] GetEntireBuffer()
+    {
+        lock ( _syncRoot )
         {
-            lock ( _syncRoot )
+            T[] buffer = new T[Count];
+
+            for ( int x = 0; x < Count; x++ )
             {
-                if ( _head <= _tail )
-                {
-                    _readOffsets[key] = _tail - _head;
-                }
-                else
-                {
-                    _readOffsets[key] = _buffer.Length - _head + _tail;
-                }
+                buffer[x] = _buffer[( _head + x ) % _buffer.Length];
             }
+
+            return buffer;
         }
+    }
 
-        /// <summary>
-        ///     Change read position to specified number of indices from the beginning.
-        /// </summary>
-        public void Seek( int count, string key )
+    /// <summary>
+    ///     Determines whether any elements in the named buffer associated with the specified key satisfy the given
+    ///     predicate.
+    /// </summary>
+    /// <param name="predicate">A function to test each element for a condition. Cannot be <see langword="null"/>.</param>
+    /// <param name="key">The key identifying the named buffer to search. Cannot be <see langword="null"/>.</param>
+    /// <returns><see langword="true"/> if any elements in the named buffer satisfy the predicate; otherwise, <see
+    /// langword="false"/>.</returns>
+    public bool FindAny( Func<T, bool> predicate, string key )
+    {
+        lock ( _syncRoot )
         {
-            lock ( _syncRoot )
-            {
-                _readOffsets[key] = Math.Min( count, Count );
-            }
+            EnsureReadOffset( key );
+
+            return EnumerateNamedBuffer( key ).Any( predicate );
         }
+    }
 
-        /// <summary>
-        ///     Write item to buffer.
-        /// </summary>
-        public void Write( T item )
+    private IEnumerable<T> EnumerateNamedBuffer( string key )
+    {
+        int readPos = _head + _readOffsets[key];
+
+        while ( readPos % _buffer.Length != _tail )
         {
-            lock ( _syncRoot )
-            {
-                _buffer[_tail] = item;
-                _tail = ++_tail % _buffer.Length;
-
-                if ( _tail == _head )
-                {
-                    _head = ++_head % _buffer.Length;
-
-                    foreach ( KeyValuePair<string, int> readOffset in _readOffsets.ToArray() )
-                    {
-                        _readOffsets[readOffset.Key] = Math.Max( 0, readOffset.Value - 1 );
-                    }
-                }
-
-                Count = Math.Min( Count + 1, _capacity );
-            }
+            yield return _buffer[readPos++ % _buffer.Length];
         }
+    }
 
-        /// <summary>
-        ///     Read item from named buffer and increment read position. Item remains in buffer until overwritten.
-        /// </summary>
-        /// <returns>True on success, false if nothing new to read.</returns>
-        public bool Read( out T item, string key )
+    private void EnsureReadOffset( string key )
+    {
+        if ( !_readOffsets.ContainsKey( key ) )
         {
-            lock ( _syncRoot )
-            {
-                EnsureReadOffset( key );
-
-                int readPos = ( _head + _readOffsets[key] ) % _buffer.Length;
-
-                if ( readPos == _tail )
-                {
-                    item = default;
-                    return false;
-                }
-
-                _readOffsets[key] = Math.Min( _readOffsets[key] + 1, Count );
-                item = _buffer[readPos];
-                return true;
-            }
-        }
-
-        /// <summary>
-        ///     Get array of elements contained in buffer.
-        /// </summary>
-        public T[] GetEntireBuffer()
-        {
-            lock ( _syncRoot )
-            {
-                T[] buffer = new T[Count];
-
-                for ( int x = 0; x < Count; x++ )
-                {
-                    buffer[x] = _buffer[( _head + x ) % _buffer.Length];
-                }
-
-                return buffer;
-            }
-        }
-
-        /// <summary>
-        ///     Determines whether any elements in the named buffer associated with the specified key satisfy the given
-        ///     predicate.
-        /// </summary>
-        /// <param name="predicate">A function to test each element for a condition. Cannot be <see langword="null"/>.</param>
-        /// <param name="key">The key identifying the named buffer to search. Cannot be <see langword="null"/>.</param>
-        /// <returns><see langword="true"/> if any elements in the named buffer satisfy the predicate; otherwise, <see
-        /// langword="false"/>.</returns>
-        public bool FindAny( Func<T, bool> predicate, string key )
-        {
-            lock ( _syncRoot )
-            {
-                EnsureReadOffset( key );
-
-                return EnumerateNamedBuffer( key ).Any( predicate );
-            }
-        }
-
-        private IEnumerable<T> EnumerateNamedBuffer( string key )
-        {
-            int readPos = _head + _readOffsets[key];
-
-            while ( readPos % _buffer.Length != _tail )
-            {
-                yield return _buffer[readPos++ % _buffer.Length];
-            }
-        }
-
-        private void EnsureReadOffset( string key )
-        {
-            if ( !_readOffsets.ContainsKey( key ) )
-            {
-                _readOffsets[key] = 0;
-            }
+            _readOffsets[key] = 0;
         }
     }
 }

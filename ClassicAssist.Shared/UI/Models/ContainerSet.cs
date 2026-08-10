@@ -1,23 +1,19 @@
 using System.Collections.ObjectModel;
 using ClassicAssist.Shared.UI;
 
-namespace ClassicAssist.UI.Models
+namespace ClassicAssist.UI.Models;
+
+public class ContainerSet : SetPropertyNotifyChanged
 {
-    public class ContainerSet : SetPropertyNotifyChanged
+    public ObservableCollection<int> Items
     {
-        private ObservableCollection<int> _items = new ObservableCollection<int>();
-        private string _name;
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        public ObservableCollection<int> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public string Name
-        {
-            get => _name;
-            set => SetProperty( ref _name, value );
-        }
+    public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

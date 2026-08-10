@@ -1,31 +1,30 @@
 ﻿using ClassicAssist.Data.Macros.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Category = "Movement", Name = "Toggle Force Walk" )]
+public class ToggleForceWalk : HotkeyCommand
 {
-    [HotkeyCommand( Category = "Movement", Name = "Toggle Force Walk" )]
-    public class ToggleForceWalk : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MovementCommands.ToggleForceWalk();
-        }
+        MovementCommands.ToggleForceWalk();
     }
+}
 
-    [HotkeyCommand( Category = "Movement", Name = "Force Walk On" )]
-    public class SetForceWalkOn : HotkeyCommand
+[HotkeyCommand( Category = "Movement", Name = "Force Walk On" )]
+public class SetForceWalkOn : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MovementCommands.SetForceWalk( true );
-        }
+        MovementCommands.SetForceWalk( true );
     }
+}
 
-    [HotkeyCommand( Category = "Movement", Name = "Force Walk Off" )]
-    public class SetForceWalkOff : HotkeyCommand
+[HotkeyCommand( Category = "Movement", Name = "Force Walk Off" )]
+public class SetForceWalkOff : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MovementCommands.SetForceWalk( false );
-        }
+        MovementCommands.SetForceWalk( false );
     }
 }

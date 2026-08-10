@@ -20,76 +20,73 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
+using System.Threading;
 using ClassicAssist.Shared.UO.Data;
-using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Data.Chat
+namespace ClassicAssist.Data.Chat;
+
+public class ChatManager
 {
-    public class ChatManager
+    public delegate void dChannelCreated( string channel );
+
+    public delegate void dChannelRemoved( string channel );
+
+    public delegate void dChatMessage( string username, string channel, string message );
+
+    public delegate void dClearUsers();
+
+    public delegate void dJoinedChatChannel( string channel );
+
+    public delegate void dLeftChatChannel( string channel );
+
+    public delegate void dUserJoined( string username, string channel );
+
+    public delegate void dUserLeft( string username, string channel );
+
+    private static readonly Lock _instanceLock = new();
+    private static ChatManager _instance;
+    public List<string> Channels { get; set; } = [];
+
+    public string CurrentChannel { get; set; }
+
+    public ObservableCollection<ChatMessage> Messages { get; set; } = [];
+
+    public List<string> Users { get; set; } = [];
+
+    public event dJoinedChatChannel JoinedChatChannelEvent;
+    public event dLeftChatChannel LeftChatChannelEvent;
+    public event dChannelCreated ChannelCreatedEvent;
+    public event dChannelRemoved ChannelRemovedEvent;
+    public event dChatMessage ChatMessageEvent;
+    public event dUserJoined UserJoinedEvent;
+    public event dUserLeft UserLeftEvent;
+    public event dClearUsers ClearUsersEvent;
+
+    public static ChatManager GetInstance()
     {
-        public delegate void dChannelCreated( string channel );
-
-        public delegate void dChannelRemoved( string channel );
-
-        public delegate void dChatMessage( string username, string channel, string message );
-
-        public delegate void dClearUsers();
-
-        public delegate void dJoinedChatChannel( string channel );
-
-        public delegate void dLeftChatChannel( string channel );
-
-        public delegate void dUserJoined( string username, string channel );
-
-        public delegate void dUserLeft( string username, string channel );
-
-        private static readonly object _instanceLock = new object();
-        private static ChatManager _instance;
-        public List<string> Channels { get; set; } = new List<string>();
-
-        public string CurrentChannel { get; set; }
-
-        public ObservableCollection<ChatMessage> Messages { get; set; } = new ObservableCollection<ChatMessage>();
-
-        public List<string> Users { get; set; } = new List<string>();
-
-        public event dJoinedChatChannel JoinedChatChannelEvent;
-        public event dLeftChatChannel LeftChatChannelEvent;
-        public event dChannelCreated ChannelCreatedEvent;
-        public event dChannelRemoved ChannelRemovedEvent;
-        public event dChatMessage ChatMessageEvent;
-        public event dUserJoined UserJoinedEvent;
-        public event dUserLeft UserLeftEvent;
-        public event dClearUsers ClearUsersEvent;
-
-        public static ChatManager GetInstance()
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
+            lock ( _instanceLock )
             {
-                lock ( _instanceLock )
-                {
-                    if ( _instance == null )
-                    {
-                        _instance = new ChatManager();
-                    }
-                }
+                _instance ??= new ChatManager();
             }
-
-            return _instance;
         }
 
-        public void OnChatPacket( PacketReader reader )
+        return _instance;
+    }
+
+    public void OnChatPacket( PacketReader reader )
+    {
+        int messageNum = reader.ReadInt16();
+
+        reader.ReadString( 4 ); // Language
+
+        byte[] packet = reader.GetData();
+
+        switch ( messageNum )
         {
-            int messageNum = reader.ReadInt16();
-
-            reader.ReadString( 4 ); // Language
-
-            byte[] packet = reader.GetData();
-
-            switch ( messageNum )
-            {
-                case 0x25:
+            case 0x25:
                 {
                     int messageType = reader.ReadInt16();
                     string username = reader.ReadUnicodeString();
@@ -109,7 +106,7 @@ namespace ClassicAssist.Data.Chat
                     break;
                 }
 
-                case 0x3e8:
+            case 0x3e8:
                 {
                     string channel = reader.ReadUnicodeString();
 
@@ -122,7 +119,7 @@ namespace ClassicAssist.Data.Chat
                     break;
                 }
 
-                case 0x3e9:
+            case 0x3e9:
                 {
                     string channel = reader.ReadUnicodeString();
 
@@ -135,7 +132,7 @@ namespace ClassicAssist.Data.Chat
                     break;
                 }
 
-                case 0x3ee:
+            case 0x3ee:
                 {
                     reader.ReadInt16();
                     string userName = reader.ReadUnicodeString();
@@ -148,7 +145,7 @@ namespace ClassicAssist.Data.Chat
 
                     break;
                 }
-                case 0x3ef:
+            case 0x3ef:
                 {
                     string userName = reader.ReadUnicodeString();
 
@@ -161,31 +158,30 @@ namespace ClassicAssist.Data.Chat
                     break;
                 }
 
-                case 0x3f1:
+            case 0x3f1:
                 {
                     CurrentChannel = reader.ReadUnicodeString();
                     JoinedChatChannelEvent?.Invoke( CurrentChannel );
                     break;
                 }
 
-                case 0x3f0:
+            case 0x3f0:
                 {
                     Users.Clear();
                     ClearUsersEvent?.Invoke();
                     break;
                 }
 
-                case 0x3f4:
+            case 0x3f4:
                 {
                     LeftChatChannelEvent?.Invoke( CurrentChannel );
                     CurrentChannel = null;
                     break;
                 }
 
-                // ReSharper disable once RedundantEmptySwitchSection
-                default:
-                    break;
-            }
+            // ReSharper disable once RedundantEmptySwitchSection
+            default:
+                break;
         }
     }
 }

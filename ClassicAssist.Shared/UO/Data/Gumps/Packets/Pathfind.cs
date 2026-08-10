@@ -17,17 +17,16 @@
 
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class Pathfind : BasePacket
 {
-    public class Pathfind : BasePacket
+    public Pathfind( int x, int y, int z )
     {
-        public Pathfind(int x, int y, int z)
-        {
-            _writer = new PacketWriter(7);
-            _writer.Write((byte)0x38);
-            _writer.Write((short)x);
-            _writer.Write((short)y);
-            _writer.Write((short)z);
-        }
+        _writer = new PacketWriter( 7 );
+        _writer.Write( (byte) 0x38 );
+        _writer.Write( (short) x );
+        _writer.Write( (short) y );
+        _writer.Write( (short) z );
     }
 }

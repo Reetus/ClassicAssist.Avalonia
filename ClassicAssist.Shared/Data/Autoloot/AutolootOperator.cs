@@ -1,24 +1,23 @@
 ﻿using System.ComponentModel;
 using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+[TypeConverter( typeof( EnumDescriptionTypeConverter ) )]
+public enum AutolootOperator
 {
-    [TypeConverter( typeof( EnumDescriptionTypeConverter ) )]
-    public enum AutolootOperator
-    {
-        [Description( "==" )]
-        Equal,
+    [Description( "==" )]
+    Equal,
 
-        [Description( "!=" )]
-        NotEqual,
+    [Description( "!=" )]
+    NotEqual,
 
-        [Description( ">=" )]
-        GreaterThan,
+    [Description( ">=" )]
+    GreaterThan,
 
-        [Description( "<=" )]
-        LessThan,
+    [Description( "<=" )]
+    LessThan,
 
-        [Description( "X" )]
-        NotPresent
-    }
+    [Description( "X" )]
+    NotPresent
 }

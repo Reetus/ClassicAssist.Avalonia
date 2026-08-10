@@ -25,112 +25,111 @@ using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Avalonia.Views
+namespace ClassicAssist.Avalonia.Views;
+
+public partial class EntityCollectionViewer : Window
 {
-    public partial class EntityCollectionViewer : Window
+    public EntityCollectionViewer()
     {
-        public EntityCollectionViewer()
+        InitializeComponent();
+    }
+
+    private EntityCollectionViewerViewModel ViewModel => DataContext as EntityCollectionViewerViewModel;
+
+    /// <summary>
+    ///     Filter profiles have no explicit Save button - edits (renames, added/removed conditions) are
+    ///     only persisted on close.
+    ///     <para>
+    ///         This has to happen here rather than in <see cref="OnClosed" />: closing detaches the
+    ///         filter DataGrid, at which point each Property cell's ComboBox loses the
+    ///         <c>$parent[Window]</c> ancestor binding feeding its ItemsSource. An empty ComboBox drops
+    ///         its selection, and SelectedItem is bound two-way, so every condition's Property is
+    ///         nulled - saving afterwards wrote "Property": null for the lot, and the next load
+    ///         silently rebound them all to whichever constraint sorted first. Closing still sees the
+    ///         real values.
+    ///     </para>
+    /// </summary>
+    protected override void OnClosing( WindowClosingEventArgs e )
+    {
+        ViewModel?.SaveFilterProfiles();
+
+        base.OnClosing( e );
+    }
+
+    protected override void OnClosed( EventArgs e )
+    {
+        // The view model listens to a collection that outlives the window, so it has to let go here or
+        // every item the server sends keeps rebuilding a list nobody is looking at.
+        ViewModel?.Cleanup();
+
+        base.OnClosed( e );
+    }
+
+    /// <summary>
+    ///     Mirrors the list's selection into the view model, which the status bar counts.
+    /// </summary>
+    private void OnSelectionChanged( object sender, SelectionChangedEventArgs e )
+    {
+        EntityCollectionViewerViewModel viewModel = ViewModel;
+
+        if ( viewModel == null || sender is not ListBox listBox )
         {
-            InitializeComponent();
+            return;
         }
 
-        private EntityCollectionViewerViewModel ViewModel => DataContext as EntityCollectionViewerViewModel;
+        viewModel.SelectedItems.Clear();
 
-        /// <summary>
-        ///     Filter profiles have no explicit Save button - edits (renames, added/removed conditions) are
-        ///     only persisted on close.
-        ///     <para>
-        ///         This has to happen here rather than in <see cref="OnClosed" />: closing detaches the
-        ///         filter DataGrid, at which point each Property cell's ComboBox loses the
-        ///         <c>$parent[Window]</c> ancestor binding feeding its ItemsSource. An empty ComboBox drops
-        ///         its selection, and SelectedItem is bound two-way, so every condition's Property is
-        ///         nulled - saving afterwards wrote "Property": null for the lot, and the next load
-        ///         silently rebound them all to whichever constraint sorted first. Closing still sees the
-        ///         real values.
-        ///     </para>
-        /// </summary>
-        protected override void OnClosing( WindowClosingEventArgs e )
+        foreach ( EntityCollectionData data in listBox.SelectedItems.OfType<EntityCollectionData>() )
         {
-            ViewModel?.SaveFilterProfiles();
+            viewModel.SelectedItems.Add( data );
+        }
+    }
 
-            base.OnClosing( e );
+    /// <summary>
+    ///     Right-clicking an item outside the current selection collapses the selection to just that
+    ///     item, so the context menu it opens operates on what you actually right-clicked rather than
+    ///     whatever was left selected from before. Right-clicking within an existing multi-selection
+    ///     leaves it untouched.
+    /// </summary>
+    private void OnItemPointerPressed( object sender, PointerPressedEventArgs e )
+    {
+        if ( sender is not ListBox listBox ||
+             !e.GetCurrentPoint( listBox ).Properties.IsRightButtonPressed )
+        {
+            return;
         }
 
-        protected override void OnClosed( EventArgs e )
-        {
-            // The view model listens to a collection that outlives the window, so it has to let go here or
-            // every item the server sends keeps rebuilding a list nobody is looking at.
-            ViewModel?.Cleanup();
+        ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
 
-            base.OnClosed( e );
+        if ( item?.DataContext is not EntityCollectionData data || listBox.SelectedItems.Contains( data ) )
+        {
+            return;
         }
 
-        /// <summary>
-        ///     Mirrors the list's selection into the view model, which the status bar counts.
-        /// </summary>
-        private void OnSelectionChanged( object sender, SelectionChangedEventArgs e )
+        listBox.SelectedItem = data;
+    }
+
+    private void OnItemDoubleTapped( object sender, TappedEventArgs e )
+    {
+        EntityCollectionViewerViewModel viewModel = ViewModel;
+
+        // The tap lands on whatever part of the tile was hit, so walk up to the row it belongs to
+        // rather than trusting the sender.
+        ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
+
+        if ( viewModel == null || item?.DataContext is not EntityCollectionData data )
         {
-            EntityCollectionViewerViewModel viewModel = ViewModel;
-
-            if ( viewModel == null || !( sender is ListBox listBox ) )
-            {
-                return;
-            }
-
-            viewModel.SelectedItems.Clear();
-
-            foreach ( EntityCollectionData data in listBox.SelectedItems.OfType<EntityCollectionData>() )
-            {
-                viewModel.SelectedItems.Add( data );
-            }
+            return;
         }
 
-        /// <summary>
-        ///     Right-clicking an item outside the current selection collapses the selection to just that
-        ///     item, so the context menu it opens operates on what you actually right-clicked rather than
-        ///     whatever was left selected from before. Right-clicking within an existing multi-selection
-        ///     leaves it untouched.
-        /// </summary>
-        private void OnItemPointerPressed( object sender, PointerPressedEventArgs e )
+        if ( viewModel.ItemDoubleClickCommand.CanExecute( data ) )
         {
-            if ( !( sender is ListBox listBox ) ||
-                 !e.GetCurrentPoint( listBox ).Properties.IsRightButtonPressed )
-            {
-                return;
-            }
-
-            ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
-
-            if ( !( item?.DataContext is EntityCollectionData data ) || listBox.SelectedItems.Contains( data ) )
-            {
-                return;
-            }
-
-            listBox.SelectedItem = data;
+            viewModel.ItemDoubleClickCommand.Execute( data );
         }
+    }
 
-        private void OnItemDoubleTapped( object sender, TappedEventArgs e )
-        {
-            EntityCollectionViewerViewModel viewModel = ViewModel;
-
-            // The tap lands on whatever part of the tile was hit, so walk up to the row it belongs to
-            // rather than trusting the sender.
-            ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
-
-            if ( viewModel == null || !( item?.DataContext is EntityCollectionData data ) )
-            {
-                return;
-            }
-
-            if ( viewModel.ItemDoubleClickCommand.CanExecute( data ) )
-            {
-                viewModel.ItemDoubleClickCommand.Execute( data );
-            }
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

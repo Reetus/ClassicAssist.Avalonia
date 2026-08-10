@@ -32,86 +32,83 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Microsoft.Scripting.Utils;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+public class DebugPropertiesViewModel : DebugBaseViewModel
 {
-    public class DebugPropertiesViewModel : DebugBaseViewModel
+
+    /// <summary>
+    ///     Lets a caller outside this tab (Object Inspector's "double-click a Properties row") feed it
+    ///     a property list directly, rather than only through <see cref="TargetCommand" />'s manual
+    ///     target-and-wait flow.
+    /// </summary>
+    public DebugPropertiesViewModel()
     {
-        private ObservableCollection<Property> _items = new ObservableCollection<Property>();
-        private ICommand _targetCommand;
-
-        /// <summary>
-        ///     Lets a caller outside this tab (Object Inspector's "double-click a Properties row") feed it
-        ///     a property list directly, rather than only through <see cref="TargetCommand" />'s manual
-        ///     target-and-wait flow.
-        /// </summary>
-        public DebugPropertiesViewModel()
+        PropertyChanged += ( sender, args ) =>
         {
-            PropertyChanged += ( sender, args ) =>
-            {
-                if ( args.PropertyName != nameof( Object ) || !( Object is IEnumerable<Property> properties ) )
-                {
-                    return;
-                }
-
-                Items.Clear();
-                Items.AddRange( properties.Select( entityProperty => new Property
-                {
-                    Cliloc = entityProperty.Cliloc, Text = Cliloc.GetProperty( entityProperty.Cliloc ),
-                    Arguments = entityProperty.Arguments
-                } ).ToList() );
-            };
-        }
-
-        public ObservableCollection<Property> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public ICommand TargetCommand =>
-            _targetCommand ?? ( _targetCommand = new RelayCommandAsync( Target, o => true ) );
-
-        private async Task Target( object arg )
-        {
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
-
-            if ( serial == 0 )
+            if ( args.PropertyName != nameof( Object ) || Object is not IEnumerable<Property> properties )
             {
                 return;
             }
 
-            Entity entity = UOMath.IsMobile( serial )
-                ? Engine.Mobiles.GetMobile( serial )
-                : (Entity) Engine.Items.GetItem( serial );
-
-            if ( entity == null )
-            {
-                return;
-            }
-
-            if ( entity.Properties == null )
-            {
-                if ( Engine.Features.HasFlag( FeatureFlags.AOS ) )
-                {
-                    PropertiesCommands.WaitForProperties( entity.Serial, 5000 );
-                }
-
-                if ( entity.Properties == null )
-                {
-                    Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
-                    return;
-                }
-            }
-
-            List<Property> properties = entity.Properties.Select( entityProperty => new Property
+            Items.Clear();
+            Items.AddRange( properties.Select( entityProperty => new Property
             {
                 Cliloc = entityProperty.Cliloc,
                 Text = Cliloc.GetProperty( entityProperty.Cliloc ),
                 Arguments = entityProperty.Arguments
-            } ).ToList();
+            } ).ToList() );
+        };
+    }
 
-            Items.Clear();
-            Items.AddRange( properties );
+    public ObservableCollection<Property> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public ICommand TargetCommand => field ??= new RelayCommandAsync( Target, o => true );
+
+    private async Task Target( object arg )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
+
+        if ( serial == 0 )
+        {
+            return;
         }
+
+        Entity entity = UOMath.IsMobile( serial )
+            ? Engine.Mobiles.GetMobile( serial )
+            : (Entity) Engine.Items.GetItem( serial );
+
+        if ( entity == null )
+        {
+            return;
+        }
+
+        if ( entity.Properties == null )
+        {
+            if ( Engine.Features.HasFlag( FeatureFlags.AOS ) )
+            {
+                PropertiesCommands.WaitForProperties( entity.Serial, 5000 );
+            }
+
+            if ( entity.Properties == null )
+            {
+                Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
+                return;
+            }
+        }
+
+        List<Property> properties = [.. entity.Properties.Select( entityProperty => new Property
+        {
+            Cliloc = entityProperty.Cliloc,
+            Text = Cliloc.GetProperty( entityProperty.Cliloc ),
+            Arguments = entityProperty.Arguments
+        } )];
+
+        Items.Clear();
+        Items.AddRange( properties );
     }
 }

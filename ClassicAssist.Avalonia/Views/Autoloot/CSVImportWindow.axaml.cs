@@ -17,34 +17,32 @@
 
 #endregion
 
-using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using ClassicAssist.Misc;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
+namespace ClassicAssist.Avalonia.Views.Autoloot;
+
+/// <summary>
+///     Interaction logic for CSVImportWindow.xaml
+/// </summary>
+public partial class CSVImportWindow : Window
 {
-    /// <summary>
-    ///     Interaction logic for CSVImportWindow.xaml
-    /// </summary>
-    public partial class CSVImportWindow : Window
+    private const string WIKI_URL = "https://github.com/Reetus/ClassicAssist/wiki/Importing-Autoloot-Items";
+
+    public CSVImportWindow()
     {
-        private const string WIKI_URL = "https://github.com/Reetus/ClassicAssist/wiki/Importing-Autoloot-Items";
+        InitializeComponent();
+    }
 
-        public CSVImportWindow()
-        {
-            InitializeComponent();
-        }
+    private void OnWikiLinkClick( object sender, PointerPressedEventArgs e )
+    {
+        ShellLauncher.OpenUrl( WIKI_URL );
+    }
 
-        private void OnWikiLinkClick( object sender, PointerPressedEventArgs e )
-        {
-            ShellLauncher.OpenUrl( WIKI_URL );
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

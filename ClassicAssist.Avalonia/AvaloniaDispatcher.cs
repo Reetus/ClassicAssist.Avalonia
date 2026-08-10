@@ -21,30 +21,29 @@ using System;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 
-namespace ClassicAssist.Avalonia
+namespace ClassicAssist.Avalonia;
+
+public class AvaloniaDispatcher : IDispatcher
 {
-    public class AvaloniaDispatcher : IDispatcher
+    private readonly Dispatcher _dispatcher;
+
+    public AvaloniaDispatcher( Dispatcher dispatcher )
     {
-        private readonly Dispatcher _dispatcher;
+        _dispatcher = dispatcher;
+    }
 
-        public AvaloniaDispatcher( Dispatcher dispatcher )
-        {
-            _dispatcher = dispatcher;
-        }
+    public void Invoke( Action action )
+    {
+        _dispatcher.Post( action );
+    }
 
-        public void Invoke( Action action )
-        {
-            _dispatcher.Post( action );
-        }
+    public Task InvokeAsync( Action action )
+    {
+        return _dispatcher.InvokeAsync( action ).GetTask();
+    }
 
-        public Task InvokeAsync( Action action )
-        {
-            return _dispatcher.InvokeAsync( action ).GetTask();
-        }
-
-        public bool CheckAccess()
-        {
-            return _dispatcher.CheckAccess();
-        }
+    public bool CheckAccess()
+    {
+        return _dispatcher.CheckAccess();
     }
 }

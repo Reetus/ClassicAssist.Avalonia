@@ -73,7 +73,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
     {
         get;
         set => SetProperty( ref field, value );
-    } = new();
+    } = [];
 
     public int MinItemsAvailable
     {
@@ -110,9 +110,9 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        JObject vendorBuy = new();
+        JObject vendorBuy = [];
 
-        JArray items = new();
+        JArray items = [];
 
         vendorBuy.Add( "AutoDisableOnLogin", AutoDisableOnLogin );
         vendorBuy.Add( "CheckWeight", CheckWeight );
@@ -124,7 +124,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
         {
             JObject config = new() { { "Name", entry.Name }, { "Enabled", entry.Enabled }, { "IncludeBackpackAmount", entry.IncludeBackpackAmount } };
 
-            JArray itemObj = new();
+            JArray itemObj = [];
 
             foreach ( VendorBuyAgentItem item in entry.Items )
             {
@@ -155,7 +155,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 
     private static async Task InsertEntry( object arg )
     {
-        if ( !( arg is VendorBuyAgentEntry entry ) )
+        if ( arg is not VendorBuyAgentEntry entry )
         {
             return;
         }
@@ -183,7 +183,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
         {
             //1072788 - Weight: ~1_WEIGHT~ stone
             //1072789 - Weight: ~1_WEIGHT~ stones
-            Property weightProperty = item.Properties.FirstOrDefault( p => p.Cliloc == 1072788 || p.Cliloc == 1072789 );
+            Property weightProperty = item.Properties.FirstOrDefault( p => p.Cliloc is 1072788 or 1072789 );
 
             if ( weightProperty != null && weightProperty.Arguments.Length > 0 )
             {
@@ -231,7 +231,9 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
             // Convert from Legacy "Items" to "Entries"
             VendorBuyAgentEntry entry = new()
             {
-                Name = "Legacy", Enabled = config["Enabled"]?.ToObject<bool>() ?? false, IncludeBackpackAmount = config["IncludeBackpackAmount"]?.ToObject<bool>() ?? false
+                Name = "Legacy",
+                Enabled = config["Enabled"]?.ToObject<bool>() ?? false,
+                IncludeBackpackAmount = config["IncludeBackpackAmount"]?.ToObject<bool>() ?? false
             };
 
             foreach ( JToken token in config["Items"] )
@@ -314,7 +316,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 
         if ( CheckItemCount && Engine.TooltipsEnabled )
         {
-            ( int count, int max ) = GetBackpackItemCount();
+            (int count, int max) = GetBackpackItemCount();
 
             if ( max - count < MinItemsAvailable )
             {
@@ -323,7 +325,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
             }
         }
 
-        List<ShopListEntry> buyList = new();
+        List<ShopListEntry> buyList = [];
 
         int purchasedWeight = 0;
 
@@ -331,8 +333,8 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
         {
             foreach ( VendorBuyAgentItem item in entry.Items.Where( e => e.Enabled ) )
             {
-                ShopListEntry[] matches = entries.Where( i =>
-                    i.Item.ID == item.Graphic && ( item.Hue == -1 || i.Item.Hue == item.Hue ) && ( item.MaxPrice == -1 || i.Price <= item.MaxPrice ) ).ToArray();
+                ShopListEntry[] matches = [.. entries.Where( i =>
+                    i.Item.ID == item.Graphic && ( item.Hue == -1 || i.Item.Hue == item.Hue ) && ( item.MaxPrice == -1 || i.Price <= item.MaxPrice ) )];
 
                 if ( matches.Length > 0 && Engine.CharacterListFlags.HasFlag( CharacterListFlags.PaladinNecromancerClassTooltips ) )
                 {
@@ -363,21 +365,21 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
                     {
                         int availableWeight = Engine.Player.WeightMax - Engine.Player.Weight - MinWeightAvailable - purchasedWeight;
 
-                        int maxBuy = ( int )( availableWeight / item.Weight );
+                        int maxBuy = (int) ( availableWeight / item.Weight );
 
                         if ( match.Amount > maxBuy )
                         {
                             match.Amount = maxBuy;
                         }
 
-                        purchasedWeight += ( int )( match.Amount * item.Weight );
+                        purchasedWeight += (int) ( match.Amount * item.Weight );
                     }
 
                     if ( CheckItemCount && Engine.TooltipsEnabled )
                     {
                         int itemCount = item.Stackable ? 1 : match.Amount;
 
-                        ( int count, int max ) = GetBackpackItemCount();
+                        (int count, int max) = GetBackpackItemCount();
 
                         if ( max - count - MinItemsAvailable < itemCount )
                         {
@@ -395,7 +397,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 
         if ( buyList.Count > 0 )
         {
-            UOC.VendorBuy( serial, buyList.ToArray() );
+            UOC.VendorBuy( serial, [.. buyList] );
         }
 
         if ( buyList.Count == 0 )
@@ -411,7 +413,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 
     private void Remove( object obj )
     {
-        if ( !( obj is VendorBuyAgentEntry entry ) )
+        if ( obj is not VendorBuyAgentEntry entry )
         {
             return;
         }
@@ -421,7 +423,7 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
 
     private void RemoveEntry( object obj )
     {
-        if ( !( obj is VendorBuyAgentItem item ) )
+        if ( obj is not VendorBuyAgentItem item )
         {
             return;
         }
@@ -433,13 +435,13 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
     {
         if ( Engine.Player?.Backpack == null || Engine.Player.Backpack.Properties == null )
         {
-            return ( -1, -1 );
+            return (-1, -1);
         }
 
         int count = -1;
         int max = -1;
 
-        Property contentsProperty = Engine.Player.Backpack.Properties.FirstOrDefault( p => p.Cliloc == 1072241 || p.Cliloc == 1073841 );
+        Property contentsProperty = Engine.Player.Backpack.Properties.FirstOrDefault( p => p.Cliloc is 1072241 or 1073841 );
 
         if ( contentsProperty != null && contentsProperty.Arguments.Length > 0 )
         {
@@ -447,6 +449,6 @@ public class VendorBuyTabViewModel : BaseViewModel, ISettingProvider
             int.TryParse( contentsProperty.Arguments[1], out max );
         }
 
-        return ( count, max );
+        return (count, max);
     }
 }

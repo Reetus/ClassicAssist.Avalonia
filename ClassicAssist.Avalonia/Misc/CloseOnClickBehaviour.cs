@@ -26,65 +26,61 @@ using Avalonia.Interactivity;
 using Avalonia.Xaml.Interactivity;
 using AvaloniaEdit.Utils;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class CloseOnClickBehaviour : Behavior<Button>
 {
-    public class CloseOnClickBehaviour : Behavior<Button>
+    public static readonly DirectProperty<CloseOnClickBehaviour, ICommand> CommandProperty =
+        AvaloniaProperty.RegisterDirect<CloseOnClickBehaviour, ICommand>( nameof( Command ), o => o.Command,
+            ( o, v ) => o.Command = v, default, BindingMode.TwoWay );
+
+    public static readonly DirectProperty<CloseOnClickBehaviour, object> CommandParameterProperty =
+        AvaloniaProperty.RegisterDirect<CloseOnClickBehaviour, object>( nameof( CommandParameter ),
+            o => o.CommandParameter, ( o, v ) => o.CommandParameter = v, default, BindingMode.TwoWay );
+
+    public ICommand Command
     {
-        public static readonly DirectProperty<CloseOnClickBehaviour, ICommand> CommandProperty =
-            AvaloniaProperty.RegisterDirect<CloseOnClickBehaviour, ICommand>( nameof( Command ), o => o.Command,
-                ( o, v ) => o.Command = v, default, BindingMode.TwoWay );
+        get;
+        set => SetAndRaise( CommandProperty, ref field, value );
+    }
 
-        public static readonly DirectProperty<CloseOnClickBehaviour, object> CommandParameterProperty =
-            AvaloniaProperty.RegisterDirect<CloseOnClickBehaviour, object>( nameof( CommandParameter ),
-                o => o.CommandParameter, ( o, v ) => o.CommandParameter = v, default, BindingMode.TwoWay );
+    public object CommandParameter
+    {
+        get;
+        set => SetAndRaise( CommandParameterProperty, ref field, value );
+    }
 
-        private ICommand _command;
-        private object _commandParameter;
+    protected override void OnAttached()
+    {
+        base.OnAttached();
 
-        public ICommand Command
+        if ( AssociatedObject != null )
         {
-            get => _command;
-            set => SetAndRaise( CommandProperty, ref _command, value );
+            AssociatedObject.Click += OnPointerPressed;
+        }
+    }
+
+    private void OnPointerPressed( object sender, RoutedEventArgs e )
+    {
+        if ( sender is not Button button )
+        {
+            return;
         }
 
-        public object CommandParameter
+        Window window = button.VisualAncestorsAndSelf().OfType<Window>().FirstOrDefault();
+
+        Command?.Execute( CommandParameter );
+
+        window?.Close();
+    }
+
+    protected override void OnDetaching()
+    {
+        base.OnDetaching();
+
+        if ( AssociatedObject != null )
         {
-            get => _commandParameter;
-            set => SetAndRaise( CommandParameterProperty, ref _commandParameter, value );
-        }
-
-        protected override void OnAttached()
-        {
-            base.OnAttached();
-
-            if ( AssociatedObject != null )
-            {
-                AssociatedObject.Click += OnPointerPressed;
-            }
-        }
-
-        private void OnPointerPressed( object sender, RoutedEventArgs e )
-        {
-            if ( !( sender is Button button ) )
-            {
-                return;
-            }
-
-            Window window = button.VisualAncestorsAndSelf().OfType<Window>().FirstOrDefault();
-
-            Command?.Execute( CommandParameter );
-
-            window?.Close();
-        }
-
-        protected override void OnDetaching()
-        {
-            base.OnDetaching();
-
-            if ( AssociatedObject != null )
-            {
-                AssociatedObject.Click -= OnPointerPressed;
-            }
+            AssociatedObject.Click -= OnPointerPressed;
         }
     }
 }

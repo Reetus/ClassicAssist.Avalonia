@@ -1,18 +1,17 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views
-{
-    public partial class NewProfileWindow : Window
-    {
-        public NewProfileWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class NewProfileWindow : Window
+{
+    public NewProfileWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

@@ -21,69 +21,64 @@ using System.Drawing;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Gumps;
 
-namespace ClassicAssist.UI.ViewModels
+namespace ClassicAssist.UI.ViewModels;
+
+public class RepositionableGumpViewModel : BaseViewModel
 {
-    public class RepositionableGumpViewModel : BaseViewModel
+    private readonly RepositionableGump _gump;
+
+    public RepositionableGumpViewModel()
     {
-        private readonly RepositionableGump _gump;
-        private int _horizontalMax;
-        private int _verticalMax;
-        private int _x;
-        private int _y;
+    }
 
-        public RepositionableGumpViewModel()
+    public RepositionableGumpViewModel( RepositionableGump gump, int initialX, int initialY )
+    {
+        _gump = gump;
+        X = initialX;
+        Y = initialY;
+        HorizontalMax = 3840;
+        VerticalMax = 2160;
+
+        Size gameWindowSize = ReflectionCommands.GetGameWindowSize();
+
+        if ( gameWindowSize == Size.Empty )
         {
+            return;
         }
 
-        public RepositionableGumpViewModel( RepositionableGump gump, int initialX, int initialY )
+        HorizontalMax = gameWindowSize.Width;
+        VerticalMax = gameWindowSize.Height;
+    }
+
+    public int HorizontalMax
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int VerticalMax
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int X
+    {
+        get;
+        set
         {
-            _gump = gump;
-            X = initialX;
-            Y = initialY;
-            HorizontalMax = 3840;
-            VerticalMax = 2160;
-
-            Size gameWindowSize = ReflectionCommands.GetGameWindowSize();
-
-            if ( gameWindowSize == Size.Empty )
-            {
-                return;
-            }
-
-            HorizontalMax = gameWindowSize.Width;
-            VerticalMax = gameWindowSize.Height;
+            SetProperty( ref field, value );
+            _gump?.SetPosition( field, Y );
         }
+    }
 
-        public int HorizontalMax
+    public int Y
+    {
+        get;
+        set
         {
-            get => _horizontalMax;
-            set => SetProperty( ref _horizontalMax, value );
-        }
-
-        public int VerticalMax
-        {
-            get => _verticalMax;
-            set => SetProperty( ref _verticalMax, value );
-        }
-
-        public int X
-        {
-            get => _x;
-            set
-            {
-                SetProperty( ref _x, value );
-                _gump?.SetPosition( _x, _y );
-            }
-        }
-
-        public int Y
-        {
-            get => _y;
-            set
-            {
-                SetProperty( ref _y, value );
-                _gump?.SetPosition( _x, _y );
-            }
+            SetProperty( ref field, value );
+            _gump?.SetPosition( X, field );
         }
     }
 }

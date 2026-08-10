@@ -24,121 +24,118 @@ using Avalonia.Interactivity;
 using Avalonia.Xaml.Interactivity;
 using AvaloniaEdit;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/*
+ * Feels a bit hacky, there must be a proper way to do this with Observables?
+ */
+public class AvalonEditBehaviour : Behavior<TextEditor>
 {
-    /*
-     * Feels a bit hacky, there must be a proper way to do this with Observables?
-     */
-    public class AvalonEditBehaviour : Behavior<TextEditor>
+    public static readonly DirectProperty<AvalonEditBehaviour, string> TextProperty =
+        AvaloniaProperty.RegisterDirect<AvalonEditBehaviour, string>( nameof( Text ), o => o.Text,
+            ( o, v ) => { o.Text = v; }, defaultBindingMode: BindingMode.TwoWay );
+
+    public string Text
     {
-        public static readonly DirectProperty<AvalonEditBehaviour, string> TextProperty =
-            AvaloniaProperty.RegisterDirect<AvalonEditBehaviour, string>(nameof(Text), o => o.Text,
-                (o, v) => { o.Text = v; }, defaultBindingMode: BindingMode.TwoWay);
-
-        private string _text;
-
-        public string Text
+        get;
+        set
         {
-            get => _text;
-            set
-            {
-                SetAndRaise(TextProperty, ref _text, value);
-                SetText(value);
-            }
+            SetAndRaise( TextProperty, ref field, value );
+            SetText( value );
+        }
+    }
+
+    /// <summary>
+    ///     True for the duration of a <see cref="SetText" /> full-document replace (i.e. a macro
+    ///     switch pushing new content in) so other behaviours - notably the breakpoint margin, which
+    ///     shifts breakpoint line numbers off <see cref="AvaloniaEdit.Document.TextDocument.Changed" />
+    ///     - can tell that apart from a real, incremental user edit.
+    /// </summary>
+    public static bool IsProgrammaticTextChange { get; private set; }
+
+    private void SetText( string value )
+    {
+        if ( AssociatedObject?.Document == null )
+        {
+            return;
         }
 
-        /// <summary>
-        ///     True for the duration of a <see cref="SetText" /> full-document replace (i.e. a macro
-        ///     switch pushing new content in) so other behaviours - notably the breakpoint margin, which
-        ///     shifts breakpoint line numbers off <see cref="AvaloniaEdit.Document.TextDocument.Changed" />
-        ///     - can tell that apart from a real, incremental user edit.
-        /// </summary>
-        public static bool IsProgrammaticTextChange { get; private set; }
+        string newValue = value ?? string.Empty;
 
-        private void SetText(string value)
+        // AssociatedObjectOnTextChanged below round-trips typed text back through this setter to
+        // keep Text in sync; without this guard that would replace the whole document with content
+        // it already holds on every keystroke.
+        if ( AssociatedObject.Document.Text.Equals( newValue ) )
         {
-            if (AssociatedObject?.Document == null)
-            {
-                return;
-            }
-
-            string newValue = value ?? string.Empty;
-
-            // AssociatedObjectOnTextChanged below round-trips typed text back through this setter to
-            // keep Text in sync; without this guard that would replace the whole document with content
-            // it already holds on every keystroke.
-            if (AssociatedObject.Document.Text.Equals(newValue))
-            {
-                return;
-            }
-
-            IsProgrammaticTextChange = true;
-
-            try
-            {
-                AssociatedObject.Document.Text = newValue;
-            }
-            finally
-            {
-                IsProgrammaticTextChange = false;
-            }
+            return;
         }
 
-        protected override void OnAttached()
-        {
-            base.OnAttached();
+        IsProgrammaticTextChange = true;
 
-            if (AssociatedObject != null)
-            {
-                AssociatedObject.TextChanged += AssociatedObjectOnTextChanged;
-                AssociatedObject.LostFocus += AssociatedObjectOnLostFocus;
-            }
+        try
+        {
+            AssociatedObject.Document.Text = newValue;
+        }
+        finally
+        {
+            IsProgrammaticTextChange = false;
+        }
+    }
+
+    protected override void OnAttached()
+    {
+        base.OnAttached();
+
+        if ( AssociatedObject != null )
+        {
+            AssociatedObject.TextChanged += AssociatedObjectOnTextChanged;
+            AssociatedObject.LostFocus += AssociatedObjectOnLostFocus;
+        }
+    }
+
+    protected override void OnDetaching()
+    {
+        base.OnDetaching();
+
+        if ( AssociatedObject != null )
+        {
+            AssociatedObject.TextChanged -= AssociatedObjectOnTextChanged;
+            AssociatedObject.LostFocus -= AssociatedObjectOnLostFocus;
+        }
+    }
+
+    private void AssociatedObjectOnTextChanged( object sender, EventArgs eventArgs )
+    {
+        if ( sender is not TextEditor textEditor )
+        {
+            return;
         }
 
-        protected override void OnDetaching()
+        if ( textEditor.Document == null )
         {
-            base.OnDetaching();
-
-            if (AssociatedObject != null)
-            {
-                AssociatedObject.TextChanged -= AssociatedObjectOnTextChanged;
-                AssociatedObject.LostFocus -= AssociatedObjectOnLostFocus;
-            }
+            return;
         }
 
-        private void AssociatedObjectOnTextChanged(object sender, EventArgs eventArgs)
+        if ( Text == null || Text.Equals( textEditor.Document.Text ) )
         {
-            if (!(sender is TextEditor textEditor))
-            {
-                return;
-            }
+            return;
+        }
 
-            if (textEditor.Document == null)
-            {
-                return;
-            }
+        int carot = textEditor.CaretOffset;
+        Text = textEditor.Document.Text;
+        textEditor.CaretOffset = carot;
+    }
 
-            if (Text == null || Text.Equals(textEditor.Document.Text))
-            {
-                return;
-            }
+    private void AssociatedObjectOnLostFocus( object sender, RoutedEventArgs routedEventArgs )
+    {
+        if ( sender is not TextEditor textEditor )
+        {
+            return;
+        }
 
-            int carot = textEditor.CaretOffset;
+        if ( textEditor.Document != null )
+        {
             Text = textEditor.Document.Text;
-            textEditor.CaretOffset = carot;
-        }
-
-        private void AssociatedObjectOnLostFocus(object sender, RoutedEventArgs routedEventArgs)
-        {
-            if (!(sender is TextEditor textEditor))
-            {
-                return;
-            }
-
-            if (textEditor.Document != null)
-            {
-                Text = textEditor.Document.Text;
-            }
         }
     }
 }

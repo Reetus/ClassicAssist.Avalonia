@@ -1,18 +1,17 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views
-{
-    public partial class HotkeysTabControl : UserControl
-    {
-        public HotkeysTabControl()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class HotkeysTabControl : UserControl
+{
+    public HotkeysTabControl()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

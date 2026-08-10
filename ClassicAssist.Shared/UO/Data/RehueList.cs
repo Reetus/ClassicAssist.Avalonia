@@ -7,161 +7,160 @@ using ClassicAssist.Shared.UO;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.UO.Data
+namespace ClassicAssist.UO.Data;
+
+public enum RehueType
 {
-    public enum RehueType
+    Custom,
+    Friends,
+    Enemies
+}
+
+public class RehueEntry
+{
+    public int Hue { get; set; }
+    public int Serial { get; set; }
+    public RehueType Type { get; set; }
+}
+
+public class RehueList
+{
+    private readonly ConcurrentDictionary<int, RehueEntry> _rehueList = new();
+
+    public void Add( int serial, int hue, RehueType type = RehueType.Custom )
     {
-        Custom,
-        Friends,
-        Enemies
+        RehueEntry entry = new() { Serial = serial, Hue = hue, Type = type };
+
+        _rehueList.AddOrUpdate( serial, i => entry, ( i, rehueEntry ) => entry );
     }
 
-    public class RehueEntry
+    public bool Remove( int serial )
     {
-        public int Hue { get; set; }
-        public int Serial { get; set; }
-        public RehueType Type { get; set; }
+        return _rehueList.TryRemove( serial, out _ );
     }
 
-    public class RehueList
+    public bool Contains( int serial )
     {
-        private readonly ConcurrentDictionary<int, RehueEntry> _rehueList = new ConcurrentDictionary<int, RehueEntry>();
+        return _rehueList.ContainsKey( serial );
+    }
 
-        public void Add( int serial, int hue, RehueType type = RehueType.Custom )
+    public void RemoveByType( RehueType type )
+    {
+        IEnumerable<int> keys = _rehueList.Where( kvp => kvp.Value.Type == type ).Select( kvp => kvp.Key );
+
+        foreach ( int key in keys )
         {
-            RehueEntry entry = new RehueEntry { Serial = serial, Hue = hue, Type = type };
+            Remove( key );
+        }
+    }
 
-            _rehueList.AddOrUpdate( serial, i => entry, ( i, rehueEntry ) => entry );
+    public void CheckItem( Item item )
+    {
+        if ( !_rehueList.TryGetValue( item.Serial, out RehueEntry entry ) )
+        {
+            return;
         }
 
-        public bool Remove( int serial )
+        if ( item.Owner != 0 && !UOMath.IsMobile( item.Serial ) )
         {
-            return _rehueList.TryRemove( serial, out _ );
+            Engine.SendPacketToClient( new ContainerContentUpdate( item.Serial, item.ID, item.Direction, item.Count,
+                item.X, item.Y, item.Grid, item.Owner, entry.Hue ) );
         }
-
-        public bool Contains( int serial )
+        else
         {
-            return _rehueList.ContainsKey( serial );
+            // TODO
+            Commands.Resync();
         }
+    }
 
-        public void RemoveByType( RehueType type )
+    public bool CheckSAWorldItem( ref byte[] packet, ref int length )
+    {
+        int serial = ( packet[4] << 24 ) | ( packet[5] << 16 ) | ( packet[6] << 8 ) | packet[7];
+
+        if ( !_rehueList.TryGetValue( serial, out RehueEntry entry ) )
         {
-            IEnumerable<int> keys = _rehueList.Where( kvp => kvp.Value.Type == type ).Select( kvp => kvp.Key );
-
-            foreach ( int key in keys )
-            {
-                Remove( key );
-            }
-        }
-
-        public void CheckItem( Item item )
-        {
-            if ( !_rehueList.TryGetValue( item.Serial, out RehueEntry entry ) )
-            {
-                return;
-            }
-
-            if ( item.Owner != 0 && !UOMath.IsMobile( item.Serial ) )
-            {
-                Engine.SendPacketToClient( new ContainerContentUpdate( item.Serial, item.ID, item.Direction, item.Count,
-                    item.X, item.Y, item.Grid, item.Owner, entry.Hue ) );
-            }
-            else
-            {
-                // TODO
-                Commands.Resync();
-            }
-        }
-
-        public bool CheckSAWorldItem( ref byte[] packet, ref int length )
-        {
-            int serial = ( packet[4] << 24 ) | ( packet[5] << 16 ) | ( packet[6] << 8 ) | packet[7];
-
-            if ( !_rehueList.TryGetValue( serial, out RehueEntry entry ) )
-            {
-                return false;
-            }
-
-            Engine.SendPacketToClient( new SAWorldItem( packet, length, entry.Hue ) );
-            return true;
-        }
-
-        public bool CheckMobileIncoming( Mobile mobile, ItemCollection equipment )
-        {
-            bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
-
-            if ( result )
-            {
-                Engine.SendPacketToClient( new MobileIncoming( mobile, equipment, entry.Hue ) );
-                return true;
-            }
-
-            if ( Options.CurrentOptions.RehueFriends &&
-                 Options.CurrentOptions.Friends.Any( e => e.Serial == mobile.Serial ) )
-            {
-                Engine.SendPacketToClient( new MobileIncoming( mobile, equipment,
-                    Options.CurrentOptions.RehueFriendsHue ) );
-                return true;
-            }
-
             return false;
         }
 
-        public bool CheckMobileUpdate( Mobile mobile )
+        Engine.SendPacketToClient( new SAWorldItem( packet, length, entry.Hue ) );
+        return true;
+    }
+
+    public bool CheckMobileIncoming( Mobile mobile, ItemCollection equipment )
+    {
+        bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
+
+        if ( result )
         {
-            bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
+            Engine.SendPacketToClient( new MobileIncoming( mobile, equipment, entry.Hue ) );
+            return true;
+        }
 
-            if ( result )
-            {
-                Engine.SendPacketToClient( new MobileUpdate( mobile.Serial, mobile.ID,
-                    entry.Hue > 0 ? entry.Hue : mobile.Hue, mobile.Status, mobile.X, mobile.Y, mobile.Z,
-                    mobile.Direction ) );
-                return true;
-            }
+        if ( Options.CurrentOptions.RehueFriends &&
+             Options.CurrentOptions.Friends.Any( e => e.Serial == mobile.Serial ) )
+        {
+            Engine.SendPacketToClient( new MobileIncoming( mobile, equipment,
+                Options.CurrentOptions.RehueFriendsHue ) );
+            return true;
+        }
 
-            if ( !Options.CurrentOptions.RehueFriends ||
-                 Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
-            {
-                return false;
-            }
+        return false;
+    }
 
+    public bool CheckMobileUpdate( Mobile mobile )
+    {
+        bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
+
+        if ( result )
+        {
             Engine.SendPacketToClient( new MobileUpdate( mobile.Serial, mobile.ID,
-                Options.CurrentOptions.RehueFriendsHue, mobile.Status, mobile.X, mobile.Y, mobile.Z,
+                entry.Hue > 0 ? entry.Hue : mobile.Hue, mobile.Status, mobile.X, mobile.Y, mobile.Z,
                 mobile.Direction ) );
             return true;
         }
 
-        public void CheckContainer( ItemCollection collection )
+        if ( !Options.CurrentOptions.RehueFriends ||
+             Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
         {
-            int backpack = Engine.Player?.Backpack?.Serial ?? 0;
-
-            foreach ( Item item in collection.GetItems() )
-            {
-                if ( item.IsDescendantOf( backpack ) )
-                {
-                    CheckItem( item );
-                }
-            }
+            return false;
         }
 
-        public bool CheckMobileMoving( Mobile mobile )
+        Engine.SendPacketToClient( new MobileUpdate( mobile.Serial, mobile.ID,
+            Options.CurrentOptions.RehueFriendsHue, mobile.Status, mobile.X, mobile.Y, mobile.Z,
+            mobile.Direction ) );
+        return true;
+    }
+
+    public void CheckContainer( ItemCollection collection )
+    {
+        int backpack = Engine.Player?.Backpack?.Serial ?? 0;
+
+        foreach ( Item item in collection.GetItems() )
         {
-            bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
-
-            if ( result )
+            if ( item.IsDescendantOf( backpack ) )
             {
-                Engine.SendPacketToClient( new MobileMoving( mobile, entry.Hue ) );
-                return true;
+                CheckItem( item );
             }
+        }
+    }
 
-            if ( !Options.CurrentOptions.RehueFriends ||
-                 Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
-            {
-                return false;
-            }
+    public bool CheckMobileMoving( Mobile mobile )
+    {
+        bool result = _rehueList.TryGetValue( mobile.Serial, out RehueEntry entry );
 
-            Engine.SendPacketToClient( new MobileMoving( mobile, Options.CurrentOptions.RehueFriendsHue ) );
+        if ( result )
+        {
+            Engine.SendPacketToClient( new MobileMoving( mobile, entry.Hue ) );
             return true;
         }
+
+        if ( !Options.CurrentOptions.RehueFriends ||
+             Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
+        {
+            return false;
+        }
+
+        Engine.SendPacketToClient( new MobileMoving( mobile, Options.CurrentOptions.RehueFriendsHue ) );
+        return true;
     }
 }

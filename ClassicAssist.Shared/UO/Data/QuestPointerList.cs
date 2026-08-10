@@ -20,81 +20,81 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.UO.Data
+namespace ClassicAssist.UO.Data;
+
+public enum QuestPointerType
 {
-    public enum QuestPointerType
+    Resurrection,
+    Corpse,
+    Other
+}
+
+public class QuestPointerList : IEnumerable<QuestPointer>
+{
+    private readonly Lock _lock = new();
+    private readonly List<QuestPointer> _questPointers = [];
+
+    public IEnumerator<QuestPointer> GetEnumerator()
     {
-        Resurrection,
-        Corpse,
-        Other
+        return _questPointers.GetEnumerator();
     }
 
-    public class QuestPointerList : IEnumerable<QuestPointer>
+    IEnumerator IEnumerable.GetEnumerator()
     {
-        private readonly object _lock = new object();
-        private readonly List<QuestPointer> _questPointers = new List<QuestPointer>();
+        return GetEnumerator();
+    }
 
-        public IEnumerator<QuestPointer> GetEnumerator()
+    public void Add( QuestPointer questPointer )
+    {
+        lock ( _lock )
         {
-            return _questPointers.GetEnumerator();
+            _questPointers.Add( questPointer );
         }
 
-        IEnumerator IEnumerable.GetEnumerator()
+        Engine.SendPacketToClient( new DisplayQuestPointer( true, questPointer.X, questPointer.Y,
+            questPointer.Serial ) );
+    }
+
+    public void Remove( QuestPointer questPointer )
+    {
+        lock ( _lock )
         {
-            return GetEnumerator();
+            _questPointers.Remove( questPointer );
         }
 
-        public void Add( QuestPointer questPointer )
+        Engine.SendPacketToClient( new DisplayQuestPointer( false, questPointer.X, questPointer.Y,
+            questPointer.Serial ) );
+    }
+
+    public void Clear()
+    {
+        Remove( _questPointers );
+    }
+
+    public void Remove( IEnumerable<QuestPointer> questPointers )
+    {
+        foreach ( QuestPointer questPointer in questPointers.ToArray() )
         {
-            lock ( _lock )
-            {
-                _questPointers.Add( questPointer );
-            }
-
-            Engine.SendPacketToClient( new DisplayQuestPointer( true, questPointer.X, questPointer.Y,
-                questPointer.Serial ) );
-        }
-
-        public void Remove( QuestPointer questPointer )
-        {
-            lock ( _lock )
-            {
-                _questPointers.Remove( questPointer );
-            }
-
-            Engine.SendPacketToClient( new DisplayQuestPointer( false, questPointer.X, questPointer.Y,
-                questPointer.Serial ) );
-        }
-
-        public void Clear()
-        {
-            Remove( _questPointers );
-        }
-
-        public void Remove( IEnumerable<QuestPointer> questPointers )
-        {
-            foreach ( QuestPointer questPointer in questPointers.ToArray() )
-            {
-                Remove( questPointer );
-            }
-        }
-
-        public void RemoveByType( QuestPointerType type )
-        {
-            IEnumerable<QuestPointer> pointers = _questPointers.Where( p => p.Type == type );
-
-            Remove( pointers );
+            Remove( questPointer );
         }
     }
 
-    public class QuestPointer
+    public void RemoveByType( QuestPointerType type )
     {
-        public int Serial { get; set; }
-        public QuestPointerType Type { get; set; }
-        public int X { get; set; }
-        public int Y { get; set; }
+        IEnumerable<QuestPointer> pointers = _questPointers.Where( p => p.Type == type );
+
+        Remove( pointers );
     }
+}
+
+public class QuestPointer
+{
+    public int Serial { get; set; }
+    public QuestPointerType Type { get; set; }
+    public int X { get; set; }
+    public int Y { get; set; }
 }

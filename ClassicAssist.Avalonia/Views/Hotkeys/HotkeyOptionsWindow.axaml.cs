@@ -20,18 +20,17 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views.Hotkeys
-{
-    public partial class HotkeyOptionsWindow : Window
-    {
-        public HotkeyOptionsWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views.Hotkeys;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class HotkeyOptionsWindow : Window
+{
+    public HotkeyOptionsWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

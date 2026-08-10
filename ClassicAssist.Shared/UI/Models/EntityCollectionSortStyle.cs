@@ -1,13 +1,12 @@
-namespace ClassicAssist.UI.Models
+namespace ClassicAssist.UI.Models;
+
+public enum EntityCollectionSortStyle
 {
-    public enum EntityCollectionSortStyle
-    {
-        None,
-        Name,
-        Serial,
-        Hue,
-        ID,
-        Quantity,
-        Weight
-    }
+    None,
+    Name,
+    Serial,
+    Hue,
+    ID,
+    Quantity,
+    Weight
 }

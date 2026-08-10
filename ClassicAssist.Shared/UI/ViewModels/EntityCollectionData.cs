@@ -17,101 +17,100 @@ using System.Linq;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.UI.ViewModels
+namespace ClassicAssist.UI.ViewModels;
+
+/// <summary>
+///     One entity as the collection viewer shows it: its art, its display name, and its properties.
+///     <para>
+///         The WPF build exposes the art as a <c>System.Windows.Media.ImageSource</c>. This one stops at
+///         <see cref="Pixmap" /> so the type stays usable from the plugin process, which has no UI
+///         framework at all; the view converts it on the way to the screen.
+///     </para>
+/// </summary>
+public class EntityCollectionData
 {
-    /// <summary>
-    ///     One entity as the collection viewer shows it: its art, its display name, and its properties.
-    ///     <para>
-    ///         The WPF build exposes the art as a <c>System.Windows.Media.ImageSource</c>. This one stops at
-    ///         <see cref="Pixmap" /> so the type stays usable from the plugin process, which has no UI
-    ///         framework at all; the view converts it on the way to the screen.
-    ///     </para>
-    /// </summary>
-    public class EntityCollectionData
+    private readonly Dictionary<int, Pixmap> _cache = [];
+
+    public Entity Entity { get; set; }
+
+    public string FullName => GetProperties( Entity );
+
+    public bool IsCoin => Entity?.ID is 0x0EEA or 0x0EED or 0x0EF0;
+
+    // Session-only: the WPF side persists this to EntityCollectionViewerOptions.LockedItems, which
+    // hasn't been ported yet, so a lock here doesn't survive closing the window.
+    public bool IsLocked { get; set; }
+
+    public string Name => GetName( Entity );
+
+    public Pixmap Pixmap
     {
-        private readonly Dictionary<int, Pixmap> _cache = new Dictionary<int, Pixmap>();
-
-        public Entity Entity { get; set; }
-
-        public string FullName => GetProperties( Entity );
-
-        public bool IsCoin => Entity?.ID == 0x0EEA || Entity?.ID == 0x0EED || Entity?.ID == 0x0EF0;
-
-        // Session-only: the WPF side persists this to EntityCollectionViewerOptions.LockedItems, which
-        // hasn't been ported yet, so a lock here doesn't survive closing the window.
-        public bool IsLocked { get; set; }
-
-        public string Name => GetName( Entity );
-
-        public Pixmap Pixmap
+        get
         {
-            get
+            int id = Entity.ID;
+
+            // Gold, silver and copper draw as a single coin, a small pile or a large pile depending on
+            // how many are in the stack.
+            if ( IsCoin && Entity is Item coin )
             {
-                int id = Entity.ID;
-
-                // Gold, silver and copper draw as a single coin, a small pile or a large pile depending on
-                // how many are in the stack.
-                if ( IsCoin && Entity is Item coin )
+                if ( coin.Count > 5 )
                 {
-                    if ( coin.Count > 5 )
-                    {
-                        id += 2;
-                    }
-                    else if ( coin.Count > 1 )
-                    {
-                        id += 1;
-                    }
+                    id += 2;
                 }
-
-                int key = ( id << 16 ) | Entity.Hue;
-
-                if ( _cache.TryGetValue( key, out Pixmap cached ) )
+                else if ( coin.Count > 1 )
                 {
-                    return cached;
+                    id += 1;
                 }
-
-                Pixmap result = Art.GetStatic( id, Entity.Hue );
-
-                // A mount in the equipment layer has its own item ID, which draws as nothing useful. The
-                // lookup maps it to the statue graphic the client would show.
-                if ( Entity is Item item && item.Layer == Layer.Mount &&
-                     ( EntityCollectionViewerViewModel.MountIDEntries.Value?.TryGetValue( Entity.ID,
-                         out int mountId ) ?? false ) )
-                {
-                    result = Art.GetStatic( mountId, Entity.Hue );
-                }
-
-                _cache.Add( key, result );
-
-                return result;
-            }
-        }
-
-        private static string GetProperties( Entity entity )
-        {
-            return entity.Properties == null
-                ? GetName( entity )
-                : entity.Properties
-                    .Aggregate( "", ( current, entityProperty ) => current + entityProperty.Text + "\r\n" )
-                    .TrimEnd( '\r', '\n' );
-        }
-
-        private static string GetName( Entity entity )
-        {
-            if ( !( entity is Item item ) || item.Layer != Layer.Mount )
-            {
-                return entity.Name;
             }
 
-            if ( !( EntityCollectionViewerViewModel.MountIDEntries.Value?.TryGetValue( entity.ID, out int id ) ??
-                    false ) || id == 0 )
+            int key = ( id << 16 ) | Entity.Hue;
+
+            if ( _cache.TryGetValue( key, out Pixmap cached ) )
             {
-                return entity.Name;
+                return cached;
             }
 
-            StaticTile tileData = TileData.GetStaticTile( id );
+            Pixmap result = Art.GetStatic( id, Entity.Hue );
 
-            return !string.IsNullOrEmpty( tileData.Name ) ? tileData.Name : entity.Name;
+            // A mount in the equipment layer has its own item ID, which draws as nothing useful. The
+            // lookup maps it to the statue graphic the client would show.
+            if ( Entity is Item item && item.Layer == Layer.Mount &&
+                 ( EntityCollectionViewerViewModel.MountIDEntries.Value?.TryGetValue( Entity.ID,
+                     out int mountId ) ?? false ) )
+            {
+                result = Art.GetStatic( mountId, Entity.Hue );
+            }
+
+            _cache.Add( key, result );
+
+            return result;
         }
+    }
+
+    private static string GetProperties( Entity entity )
+    {
+        return entity.Properties == null
+            ? GetName( entity )
+            : entity.Properties
+                .Aggregate( "", ( current, entityProperty ) => current + entityProperty.Text + "\r\n" )
+                .TrimEnd( '\r', '\n' );
+    }
+
+    private static string GetName( Entity entity )
+    {
+        if ( entity is not Item item || item.Layer != Layer.Mount )
+        {
+            return entity.Name;
+        }
+
+        if ( !( EntityCollectionViewerViewModel.MountIDEntries.Value?.TryGetValue( entity.ID, out int id ) ??
+                false ) || id == 0 )
+        {
+            return entity.Name;
+        }
+
+        StaticTile tileData = TileData.GetStaticTile( id );
+
+        return !string.IsNullOrEmpty( tileData.Name ) ? tileData.Name : entity.Name;
     }
 }

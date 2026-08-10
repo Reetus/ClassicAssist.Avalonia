@@ -25,83 +25,82 @@ using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects.Gumps;
 
-namespace ClassicAssist.UO.Data.Gumps
-{
-    public class BoatGumpExtension : IExtension
-    {
-        public void Initialize()
-        {
-            IncomingPacketHandlers.JournalEntryAddedEvent += OnJournalEntryAddedEvent;
-        }
+namespace ClassicAssist.UO.Data.Gumps;
 
-        private static void OnJournalEntryAddedEvent( JournalEntry je )
-        {
-            switch ( je.Cliloc )
-            {
-                /* You are now piloting this vessel. */
-                case 1116727:
-                    new BoatMovementGump().SendGump();
-                    break;
-                /* You are no longer piloting this vessel. */
-                case 1149592:
-                    Shared.UO.Commands.CloseClientGump( typeof( BoatMovementGump ) );
-                    break;
-            }
-        }
+public class BoatGumpExtension : IExtension
+{
+    public void Initialize()
+    {
+        IncomingPacketHandlers.JournalEntryAddedEvent += OnJournalEntryAddedEvent;
     }
 
-    public class BoatMovementGump : Gump
+    private static void OnJournalEntryAddedEvent( JournalEntry je )
     {
-        private static BoatSpeed _lastSpeed = BoatSpeed.OneTile;
-
-        public BoatMovementGump() : base( 100, 100 )
+        switch ( je.Cliloc )
         {
-            Movable = true;
-            Closable = true;
-            Resizable = false;
-            Disposable = false;
-            AddPage( 0 );
-            AddBackground( 0, 0, 150, 175, 9200 );
-            AddButton( 0, 0, 4507, 4507, (int) Direction.Northwest + 1, GumpButtonType.Reply, 0 );
-            AddButton( 50, 0, 4500, 4500, (int) Direction.North + 1, GumpButtonType.Reply, 0 );
-            AddButton( 100, 0, 4501, 4501, (int) Direction.Northeast + 1, GumpButtonType.Reply, 0 );
-            AddButton( 10, 50, 4506, 4506, (int) Direction.West + 1, GumpButtonType.Reply, 0 );
-            AddButton( 90, 50, 4502, 4502, (int) Direction.East + 1, GumpButtonType.Reply, 0 );
-            AddButton( 0, 100, 4505, 4505, (int) Direction.Southwest + 1, GumpButtonType.Reply, 0 );
-            AddButton( 50, 100, 4504, 4504, (int) Direction.South + 1, GumpButtonType.Reply, 0 );
-            AddButton( 100, 100, 4503, 4503, (int) Direction.Southeast + 1, GumpButtonType.Reply, 0 );
-            AddRadio( 10, 150, 208, 209, _lastSpeed == BoatSpeed.Normal, 1 );
-            AddLabel( 40, 150, 0, "Fast" );
-            AddButton( 60, 60, 2151, 2151, 10, GumpButtonType.Reply, 0 );
+            /* You are now piloting this vessel. */
+            case 1116727:
+                new BoatMovementGump().SendGump();
+                break;
+            /* You are no longer piloting this vessel. */
+            case 1149592:
+                Shared.UO.Commands.CloseClientGump( typeof( BoatMovementGump ) );
+                break;
+        }
+    }
+}
+
+public class BoatMovementGump : Gump
+{
+    private static BoatSpeed _lastSpeed = BoatSpeed.OneTile;
+
+    public BoatMovementGump() : base( 100, 100 )
+    {
+        Movable = true;
+        Closable = true;
+        Resizable = false;
+        Disposable = false;
+        AddPage( 0 );
+        AddBackground( 0, 0, 150, 175, 9200 );
+        AddButton( 0, 0, 4507, 4507, (int) Direction.Northwest + 1, GumpButtonType.Reply, 0 );
+        AddButton( 50, 0, 4500, 4500, (int) Direction.North + 1, GumpButtonType.Reply, 0 );
+        AddButton( 100, 0, 4501, 4501, (int) Direction.Northeast + 1, GumpButtonType.Reply, 0 );
+        AddButton( 10, 50, 4506, 4506, (int) Direction.West + 1, GumpButtonType.Reply, 0 );
+        AddButton( 90, 50, 4502, 4502, (int) Direction.East + 1, GumpButtonType.Reply, 0 );
+        AddButton( 0, 100, 4505, 4505, (int) Direction.Southwest + 1, GumpButtonType.Reply, 0 );
+        AddButton( 50, 100, 4504, 4504, (int) Direction.South + 1, GumpButtonType.Reply, 0 );
+        AddButton( 100, 100, 4503, 4503, (int) Direction.Southeast + 1, GumpButtonType.Reply, 0 );
+        AddRadio( 10, 150, 208, 209, _lastSpeed == BoatSpeed.Normal, 1 );
+        AddLabel( 40, 150, 0, "Fast" );
+        AddButton( 60, 60, 2151, 2151, 10, GumpButtonType.Reply, 0 );
+    }
+
+    public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
+    {
+        if ( buttonID == 0 )
+        {
+            return;
         }
 
-        public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
+        BoatSpeed speed = BoatSpeed.OneTile;
+
+        if ( switches?.Any( e => e == 1 ) ?? false )
         {
-            if ( buttonID == 0 )
-            {
-                return;
-            }
-
-            BoatSpeed speed = BoatSpeed.OneTile;
-
-            if ( switches?.Any( e => e == 1 ) ?? false )
-            {
-                speed = BoatSpeed.Normal;
-            }
-
-            _lastSpeed = speed;
-
-            if ( buttonID < 9 )
-            {
-                Engine.SendPacketToServer( new WheelBoatMoving( (Direction) buttonID - 1, speed ) );
-            }
-
-            if ( buttonID == 10 )
-            {
-                Engine.SendPacketToServer( new WheelBoatMoving( Direction.North, BoatSpeed.Stop ) );
-            }
-
-            new BoatMovementGump().SendGump();
+            speed = BoatSpeed.Normal;
         }
+
+        _lastSpeed = speed;
+
+        if ( buttonID < 9 )
+        {
+            Engine.SendPacketToServer( new WheelBoatMoving( (Direction) buttonID - 1, speed ) );
+        }
+
+        if ( buttonID == 10 )
+        {
+            Engine.SendPacketToServer( new WheelBoatMoving( Direction.North, BoatSpeed.Stop ) );
+        }
+
+        new BoatMovementGump().SendGump();
     }
 }

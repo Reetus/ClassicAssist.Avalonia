@@ -23,45 +23,44 @@ using Avalonia.Controls;
 using Avalonia.Xaml.Interactivity;
 using ClassicAssist.Data;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class WindowInitializedBehaviour : Behavior<Window>
 {
-    public class WindowInitializedBehaviour : Behavior<Window>
+    protected override void OnAttached()
     {
-        protected override void OnAttached()
+        base.OnAttached();
+
+        if ( AssociatedObject == null )
         {
-            base.OnAttached();
-
-            if ( AssociatedObject == null )
-            {
-                return;
-            }
-
-            AssociatedObject.Initialized += OnInitialized;
-            AssociatedObject.Closing += OnClosing;
+            return;
         }
 
-        protected override void OnDetaching()
+        AssociatedObject.Initialized += OnInitialized;
+        AssociatedObject.Closing += OnClosing;
+    }
+
+    protected override void OnDetaching()
+    {
+        base.OnDetaching();
+
+        if ( AssociatedObject == null )
         {
-            base.OnDetaching();
-
-            if ( AssociatedObject == null )
-            {
-                return;
-            }
-
-            AssociatedObject.Initialized -= OnInitialized;
-            AssociatedObject.Closing -= OnClosing;
+            return;
         }
 
-        private static void OnClosing( object sender, CancelEventArgs e )
-        {
-            Options.Save( Options.CurrentOptions );
-            AssistantOptions.Save();
-        }
+        AssociatedObject.Initialized -= OnInitialized;
+        AssociatedObject.Closing -= OnClosing;
+    }
 
-        private static void OnInitialized( object sender, EventArgs e )
-        {
-            AssistantOptions.OnWindowLoaded();
-        }
+    private static void OnClosing( object sender, CancelEventArgs e )
+    {
+        Options.Save( Options.CurrentOptions );
+        AssistantOptions.Save();
+    }
+
+    private static void OnInitialized( object sender, EventArgs e )
+    {
+        AssistantOptions.OnWindowLoaded();
     }
 }

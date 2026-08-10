@@ -20,18 +20,17 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views
-{
-    public partial class ActiveObjectsWindow : Window
-    {
-        public ActiveObjectsWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class ActiveObjectsWindow : Window
+{
+    public ActiveObjectsWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

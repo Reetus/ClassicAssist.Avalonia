@@ -24,54 +24,50 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+public class DebugVendorBuyViewModel : BaseViewModel
 {
-    public class DebugVendorBuyViewModel : BaseViewModel
+    public bool IsEnabled
     {
-        private bool _isEnabled;
-        private ObservableCollection<string> _messages = new ObservableCollection<string>();
-
-        public bool IsEnabled
+        get;
+        set
         {
-            get => _isEnabled;
-            set
+            if ( value != field )
             {
-                if ( value != _isEnabled )
+                if ( value )
                 {
-                    if ( value )
-                    {
-                        IncomingPacketHandlers.VendorBuyDisplayEvent += OnVendorBuyDisplayEvent;
-                    }
-                    else
-                    {
-                        IncomingPacketHandlers.VendorBuyDisplayEvent -= OnVendorBuyDisplayEvent;
-                    }
+                    IncomingPacketHandlers.VendorBuyDisplayEvent += OnVendorBuyDisplayEvent;
                 }
-
-                SetProperty( ref _isEnabled, value );
+                else
+                {
+                    IncomingPacketHandlers.VendorBuyDisplayEvent -= OnVendorBuyDisplayEvent;
+                }
             }
-        }
 
-        public ObservableCollection<string> Messages
-        {
-            get => _messages;
-            set => SetProperty( ref _messages, value );
+            SetProperty( ref field, value );
         }
+    }
 
-        private void OnVendorBuyDisplayEvent( int serial, ShopListEntry[] entries )
+    public ObservableCollection<string> Messages
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    private void OnVendorBuyDisplayEvent( int serial, ShopListEntry[] entries )
+    {
+        _dispatcher.Invoke( () =>
         {
-            _dispatcher.Invoke( () =>
+            Messages.Add( $"Vendor: Serial: 0x{serial:x}" );
+
+            foreach ( ShopListEntry entry in entries )
             {
-                Messages.Add( $"Vendor: Serial: 0x{serial:x}" );
+                bool isCliloc = entry.Name.All( char.IsDigit );
 
-                foreach ( ShopListEntry entry in entries )
-                {
-                    bool isCliloc = entry.Name.All( char.IsDigit );
-
-                    Messages.Add(
-                        $"\tName: {entry.Name} {( isCliloc ? $"({Cliloc.GetProperty( int.Parse( entry.Name ) )})" : string.Empty )}, Amount: {entry.Amount}, Price: {entry.Price}, ItemID: {entry.Item.ID} (0x{entry.Item.ID:x})" );
-                }
-            } );
-        }
+                Messages.Add(
+                    $"\tName: {entry.Name} {( isCliloc ? $"({Cliloc.GetProperty( int.Parse( entry.Name ) )})" : string.Empty )}, Amount: {entry.Amount}, Price: {entry.Price}, ItemID: {entry.Item.ID} (0x{entry.Item.ID:x})" );
+            }
+        } );
     }
 }

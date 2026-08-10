@@ -18,16 +18,15 @@
 using System;
 using System.Threading.Tasks;
 
-namespace ClassicAssist
-{
-    public interface IDispatcher
-    {
-        void Invoke( Action action );
-        Task InvokeAsync( Action action );
+namespace ClassicAssist;
 
-        /// <summary>
-        ///     True when the caller is already on the UI thread and can touch bound state directly.
-        /// </summary>
-        bool CheckAccess();
-    }
+public interface IDispatcher
+{
+    void Invoke( Action action );
+    Task InvokeAsync( Action action );
+
+    /// <summary>
+    ///     True when the caller is already on the UI thread and can touch bound state directly.
+    /// </summary>
+    bool CheckAccess();
 }

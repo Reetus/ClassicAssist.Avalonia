@@ -25,53 +25,50 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
+namespace ClassicAssist.Shared.UI.ViewModels.Autoloot;
+
+public class PropertySelectionViewModel : BaseViewModel
 {
-    public class PropertySelectionViewModel : BaseViewModel
+    public PropertySelectionViewModel()
     {
-        private MessageBoxResult _dialogResult = MessageBoxResult.Cancel;
-        private ICommand _okCommand;
-        private ObservableCollection<SelectProperties> _properties = new ObservableCollection<SelectProperties>();
+    }
 
-        public PropertySelectionViewModel()
+    public PropertySelectionViewModel( IEnumerable<Property> properties )
+    {
+        foreach ( Property property in properties )
         {
-        }
-
-        public PropertySelectionViewModel( IEnumerable<Property> properties )
-        {
-            foreach ( Property property in properties )
+            Properties.Add( new SelectProperties
             {
-                Properties.Add( new SelectProperties
-                {
-                    Name = Cliloc.GetProperty( property.Cliloc ), Property = property, Selected = false
-                } );
-            }
-        }
-
-        public MessageBoxResult DialogResult
-        {
-            get => _dialogResult;
-            set => SetProperty( ref _dialogResult, value );
-        }
-
-        public ICommand OKCommand => _okCommand ?? ( _okCommand = new RelayCommand( OK, o => true ) );
-
-        public ObservableCollection<SelectProperties> Properties
-        {
-            get => _properties;
-            set => SetProperty( ref _properties, value );
-        }
-
-        private void OK( object obj )
-        {
-            DialogResult = MessageBoxResult.OK;
+                Name = Cliloc.GetProperty( property.Cliloc ),
+                Property = property,
+                Selected = false
+            } );
         }
     }
 
-    public class SelectProperties
+    public MessageBoxResult DialogResult
     {
-        public string Name { get; set; }
-        public Property Property { get; set; }
-        public bool Selected { get; set; }
+        get;
+        set => SetProperty( ref field, value );
+    } = MessageBoxResult.Cancel;
+
+    public ICommand OKCommand => field ??= new RelayCommand( OK, o => true );
+
+    public ObservableCollection<SelectProperties> Properties
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    private void OK( object obj )
+    {
+        DialogResult = MessageBoxResult.OK;
     }
+}
+
+public class SelectProperties
+{
+    public string Name { get; set; }
+    public Property Property { get; set; }
+    public bool Selected { get; set; }
 }

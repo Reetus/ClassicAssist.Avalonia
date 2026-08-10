@@ -4,77 +4,69 @@ using ClassicAssist.Data;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels
+namespace ClassicAssist.Shared.UI.ViewModels;
+
+public enum NewProfileOption
 {
-    public enum NewProfileOption
+    Blank,
+    Duplicate
+}
+
+public class NewProfileViewModel : BaseViewModel
+{
+    // Avalonia only
+    public ICommand ChangeOptionCommand => field ??=
+            new RelayCommand( o => ChangeOption( (NewProfileOption) o ), o => true );
+
+    public string FileName { get; set; }
+
+    public string Name
     {
-        Blank,
-        Duplicate
+        get;
+        set => SetProperty( ref field, value );
     }
 
-    public class NewProfileViewModel : BaseViewModel
+    public ICommand OkCommand => field ??= new RelayCommand( Ok, o => !string.IsNullOrEmpty( Name ) );
+
+    public NewProfileOption Option
     {
-        private ICommand _changeOptionCommand;
-        private string _name;
-        private ICommand _okCommand;
-        private NewProfileOption _option = NewProfileOption.Duplicate;
+        get;
+        set => SetProperty( ref field, value );
+    } = NewProfileOption.Duplicate;
 
-        // Avalonia only
-        public ICommand ChangeOptionCommand =>
-            _changeOptionCommand ?? ( _changeOptionCommand =
-                new RelayCommand( o => ChangeOption( (NewProfileOption) o ), o => true ) );
+    private void Ok( object obj )
+    {
+        string profileName = Name?.Trim();
 
-        public string FileName { get; set; }
+        bool valid = profileName?.IndexOfAny( Path.GetInvalidFileNameChars() ) == -1;
 
-        public string Name
+        if ( valid )
         {
-            get => _name;
-            set => SetProperty( ref _name, value );
-        }
+            FileName = $"{profileName}.json";
 
-        public ICommand OkCommand =>
-            _okCommand ?? ( _okCommand = new RelayCommand( Ok, o => !string.IsNullOrEmpty( Name ) ) );
-
-        public NewProfileOption Option
-        {
-            get => _option;
-            set => SetProperty( ref _option, value );
-        }
-
-        private void Ok( object obj )
-        {
-            string profileName = Name?.Trim();
-
-            bool valid = profileName?.IndexOfAny( Path.GetInvalidFileNameChars() ) == -1;
-
-            if ( valid )
+            if ( Option == NewProfileOption.Duplicate )
             {
-                FileName = $"{profileName}.json";
-
-                if ( Option == NewProfileOption.Duplicate )
-                {
-                    Options options = Options.CurrentOptions;
-                    options.Name = $"{profileName}.json";
-                    Options.Save( options );
-                }
-                else
-                {
-                    Options.ClearOptions();
-                    Options options = new Options { Name = $"{profileName}.json" };
-                    Options.CurrentOptions = options;
-                    Options.Load( options.Name, options );
-                    Options.Save( options );
-                }
+                Options options = Options.CurrentOptions;
+                options.Name = $"{profileName}.json";
+                Options.Save( options );
             }
             else
             {
-                Engine.MessageBoxProvider.Show( Strings.Profile_name_contains_illegal_characters_ );
+                Options.ClearOptions();
+                Options options = new() { Name = $"{profileName}.json" };
+                Options.CurrentOptions = options;
+                Options.Load( options.Name, options );
+                Options.Save( options );
             }
         }
-
-        private void ChangeOption( NewProfileOption obj )
+        else
         {
-            Option = obj;
+            Engine.MessageBoxProvider.Show( Strings.Profile_name_contains_illegal_characters_ );
         }
+    }
+
+    private void ChangeOption( NewProfileOption obj )
+    {
+        Option = obj;
     }
 }

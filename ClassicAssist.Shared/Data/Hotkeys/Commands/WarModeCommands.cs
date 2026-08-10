@@ -1,31 +1,30 @@
 ﻿using ClassicAssist.Data.Macros.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "WarMode On" )]
+public class WarModeOnCommand : HotkeyCommand
 {
-    [HotkeyCommand( Name = "WarMode On" )]
-    public class WarModeOnCommand : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MainCommands.WarMode( "on" );
-        }
+        MainCommands.WarMode( "on" );
     }
+}
 
-    [HotkeyCommand( Name = "WarMode Off" )]
-    public class WarModeOffCommand : HotkeyCommand
+[HotkeyCommand( Name = "WarMode Off" )]
+public class WarModeOffCommand : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MainCommands.WarMode( "off" );
-        }
+        MainCommands.WarMode( "off" );
     }
+}
 
-    [HotkeyCommand( Name = "WarMode Toggle" )]
-    public class WarModeCommand : HotkeyCommand
+[HotkeyCommand( Name = "WarMode Toggle" )]
+public class WarModeCommand : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            MainCommands.WarMode();
-        }
+        MainCommands.WarMode();
     }
 }

@@ -17,14 +17,13 @@
 
 #endregion
 
-namespace ClassicAssist.UO.Data
+namespace ClassicAssist.UO.Data;
+
+public class ShardEntry
 {
-    public class ShardEntry
-    {
-        public int Index { get; set; }
-        public int IP { get; set; }
-        public string Name { get; set; }
-        public int PercentFull { get; set; }
-        public int Timezone { get; set; }
-    }
+    public int Index { get; set; }
+    public int IP { get; set; }
+    public string Name { get; set; }
+    public int PercentFull { get; set; }
+    public int Timezone { get; set; }
 }

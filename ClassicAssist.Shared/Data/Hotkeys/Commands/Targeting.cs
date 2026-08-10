@@ -4,190 +4,189 @@ using ClassicAssist.Data.Targeting;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO;
-using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+public class Targeting
 {
-    public class Targeting
+    [HotkeyCommand( Name = "Set Enemy", Category = "Targeting" )]
+    public class SetEnemyCommand : HotkeyCommand
     {
-        [HotkeyCommand( Name = "Set Enemy", Category = "Targeting" )]
-        public class SetEnemyCommand : HotkeyCommand
+        public override void Execute()
         {
-            public override void Execute()
+            TargetManager manager = TargetManager.GetInstance();
+
+            Entity mobile = manager.PromptTarget();
+
+            if ( mobile == null )
             {
-                TargetManager manager = TargetManager.GetInstance();
+                return;
+            }
 
-                Entity mobile = manager.PromptTarget();
+            manager.SetEnemy( mobile );
+            Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
+        }
+    }
 
-                if ( mobile == null )
-                {
-                    return;
-                }
+    [HotkeyCommand( Name = "Set Friend", Category = "Targeting" )]
+    public class SetFriendCommand : HotkeyCommand
+    {
+        public override void Execute()
+        {
+            TargetManager manager = TargetManager.GetInstance();
 
-                manager.SetEnemy( mobile );
-                Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
+            Entity mobile = manager.PromptTarget();
+
+            if ( mobile == null )
+            {
+                return;
+            }
+
+            manager.SetFriend( mobile );
+            Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
+        }
+    }
+
+    [HotkeyCommand( Name = "Set Last Target", Category = "Targeting" )]
+    public class SetLastTargetCommand : HotkeyCommand
+    {
+        public override void Execute()
+        {
+            TargetManager manager = TargetManager.GetInstance();
+
+            Entity entity = manager.PromptTarget();
+
+            if ( entity == null )
+            {
+                return;
+            }
+
+            manager.SetLastTarget( entity );
+
+            if ( UOMath.IsMobile( entity.Serial ) )
+            {
+                Engine.SendPacketToServer( new LookRequest( entity.Serial ) );
             }
         }
+    }
 
-        [HotkeyCommand( Name = "Set Friend", Category = "Targeting" )]
-        public class SetFriendCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Target Enemy", Category = "Targeting" )]
+    public class TargetEnemyCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager manager = TargetManager.GetInstance();
-
-                Entity mobile = manager.PromptTarget();
-
-                if ( mobile == null )
-                {
-                    return;
-                }
-
-                manager.SetFriend( mobile );
-                Engine.SendPacketToServer( new LookRequest( mobile.Serial ) );
-            }
+            TargetCommands.Target( "enemy", Options.CurrentOptions.RangeCheckLastTarget,
+                Options.CurrentOptions.QueueLastTarget );
         }
+    }
 
-        [HotkeyCommand( Name = "Set Last Target", Category = "Targeting" )]
-        public class SetLastTargetCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Target Last", Category = "Targeting" )]
+    public class TargetLastCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
+            if ( Options.CurrentOptions.SmartTargetOption == SmartTargetOption.None )
             {
-                TargetManager manager = TargetManager.GetInstance();
-
-                Entity entity = manager.PromptTarget();
-
-                if ( entity == null )
-                {
-                    return;
-                }
-
-                manager.SetLastTarget( entity );
-
-                if ( UOMath.IsMobile( entity.Serial ) )
-                {
-                    Engine.SendPacketToServer( new LookRequest( entity.Serial ) );
-                }
-            }
-        }
-
-        [HotkeyCommand( Name = "Target Enemy", Category = "Targeting" )]
-        public class TargetEnemyCommand : HotkeyCommand
-        {
-            public override void Execute()
-            {
-                TargetCommands.Target( "enemy", Options.CurrentOptions.RangeCheckLastTarget,
+                TargetCommands.Target( "last", Options.CurrentOptions.RangeCheckLastTarget,
                     Options.CurrentOptions.QueueLastTarget );
             }
-        }
-
-        [HotkeyCommand( Name = "Target Last", Category = "Targeting" )]
-        public class TargetLastCommand : HotkeyCommand
-        {
-            public override void Execute()
+            else
             {
-                if ( Options.CurrentOptions.SmartTargetOption == SmartTargetOption.None )
+                if ( Engine.TargetExists )
                 {
-                    TargetCommands.Target( "last", Options.CurrentOptions.RangeCheckLastTarget,
-                        Options.CurrentOptions.QueueLastTarget );
-                }
-                else
-                {
-                    if ( Engine.TargetExists )
+                    if ( Options.CurrentOptions.SmartTargetOption.HasFlag( SmartTargetOption.Friend ) &&
+                         Engine.TargetFlags == TargetFlags.Beneficial && AliasCommands.FindAlias( "friend" ) )
                     {
-                        if ( Options.CurrentOptions.SmartTargetOption.HasFlag( SmartTargetOption.Friend ) &&
-                             Engine.TargetFlags == TargetFlags.Beneficial && AliasCommands.FindAlias( "friend" ) )
-                        {
-                            TargetCommands.Target( "friend", Options.CurrentOptions.RangeCheckLastTarget,
-                                Options.CurrentOptions.QueueLastTarget );
-                            return;
-                        }
-
-                        if ( Options.CurrentOptions.SmartTargetOption.HasFlag( SmartTargetOption.Enemy ) &&
-                             Engine.TargetFlags == TargetFlags.Harmful && AliasCommands.FindAlias( "enemy" ) )
-                        {
-                            TargetCommands.Target( "enemy", Options.CurrentOptions.RangeCheckLastTarget,
-                                Options.CurrentOptions.QueueLastTarget );
-                            return;
-                        }
+                        TargetCommands.Target( "friend", Options.CurrentOptions.RangeCheckLastTarget,
+                            Options.CurrentOptions.QueueLastTarget );
+                        return;
                     }
 
-                    TargetCommands.Target( "last", Options.CurrentOptions.RangeCheckLastTarget,
-                        Options.CurrentOptions.QueueLastTarget );
+                    if ( Options.CurrentOptions.SmartTargetOption.HasFlag( SmartTargetOption.Enemy ) &&
+                         Engine.TargetFlags == TargetFlags.Harmful && AliasCommands.FindAlias( "enemy" ) )
+                    {
+                        TargetCommands.Target( "enemy", Options.CurrentOptions.RangeCheckLastTarget,
+                            Options.CurrentOptions.QueueLastTarget );
+                        return;
+                    }
                 }
-            }
-        }
 
-        [HotkeyCommand( Name = "Target Friend", Category = "Targeting" )]
-        public class TargetFriendCommand : HotkeyCommand
-        {
-            public override void Execute()
-            {
-                TargetCommands.Target( "friend", Options.CurrentOptions.RangeCheckLastTarget,
+                TargetCommands.Target( "last", Options.CurrentOptions.RangeCheckLastTarget,
                     Options.CurrentOptions.QueueLastTarget );
             }
         }
+    }
 
-        [HotkeyCommand( Name = "Target Self", Category = "Targeting" )]
-        public class TargetSelfCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Target Friend", Category = "Targeting" )]
+    public class TargetFriendCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetCommands.Target( "self", Options.CurrentOptions.RangeCheckLastTarget,
-                    Options.CurrentOptions.QueueLastTarget );
-            }
+            TargetCommands.Target( "friend", Options.CurrentOptions.RangeCheckLastTarget,
+                Options.CurrentOptions.QueueLastTarget );
         }
+    }
 
-        [HotkeyCommand( Name = "Clear Target Queue", Category = "Targeting" )]
-        public class ClearTargetQueueCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Target Self", Category = "Targeting" )]
+    public class TargetSelfCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetCommands.ClearTargetQueue();
-            }
+            TargetCommands.Target( "self", Options.CurrentOptions.RangeCheckLastTarget,
+                Options.CurrentOptions.QueueLastTarget );
         }
+    }
 
-        [HotkeyCommand( Name = "Attack Last", Category = "Targeting" )]
-        public class AttackLastCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Clear Target Queue", Category = "Targeting" )]
+    public class ClearTargetQueueCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                ActionCommands.Attack( "last" );
-            }
+            TargetCommands.ClearTargetQueue();
         }
+    }
 
-        [HotkeyCommand( Name = "Attack Enemy", Category = "Targeting" )]
-        public class AttackEnemyCommand : HotkeyCommand
+    [HotkeyCommand( Name = "Attack Last", Category = "Targeting" )]
+    public class AttackLastCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                ActionCommands.Attack( "enemy" );
-            }
+            ActionCommands.Attack( "last" );
         }
+    }
 
-        [HotkeyCommand( Name = "Show Next Target In Queue", Category = "Targeting" )]
-        public class ShowNextTargetQueue : HotkeyCommand
+    [HotkeyCommand( Name = "Attack Enemy", Category = "Targeting" )]
+    public class AttackEnemyCommand : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
+            ActionCommands.Attack( "enemy" );
+        }
+    }
+
+    [HotkeyCommand( Name = "Show Next Target In Queue", Category = "Targeting" )]
+    public class ShowNextTargetQueue : HotkeyCommand
+    {
+        public override void Execute()
+        {
+            if ( !Options.CurrentOptions.QueueLastTarget )
             {
-                if ( !Options.CurrentOptions.QueueLastTarget )
-                {
-                    UOC.SystemMessage( Strings.Target_queue_is_not_enabled___ );
-                    return;
-                }
+                UOC.SystemMessage( Strings.Target_queue_is_not_enabled___ );
+                return;
+            }
 
-                object nextTarget = Engine.LastTargetQueue.Peek();
+            object nextTarget = Engine.LastTargetQueue.Peek();
 
-                switch ( nextTarget )
-                {
-                    case string targetAlias:
-                        MsgCommands.HeadMsg( string.Format( Strings.Next_Target___0_, targetAlias ),
-                            Engine.Player?.Serial );
-                        break;
-                    case int targetSerial:
+            switch ( nextTarget )
+            {
+                case string targetAlias:
+                    MsgCommands.HeadMsg( string.Format( Strings.Next_Target___0_, targetAlias ),
+                        Engine.Player?.Serial );
+                    break;
+                case int targetSerial:
                     {
                         Mobile entity = Engine.Mobiles.GetMobile( targetSerial );
 
@@ -196,7 +195,6 @@ namespace ClassicAssist.Data.Hotkeys.Commands
                                 $"0x{targetSerial:x} - {entity?.Name ?? "Unknown"}" ), Engine.Player?.Serial );
                         break;
                     }
-                }
             }
         }
     }

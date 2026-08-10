@@ -22,96 +22,91 @@ using System.Text;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+public class DebugMenusViewModel : BaseViewModel
 {
-    public class DebugMenusViewModel : BaseViewModel
+    public DebugMenusViewModel()
     {
-        private ObservableCollection<Menu> _items = new ObservableCollection<Menu>();
-        private Menu _selectedItem;
-        private string _text;
-
-        public DebugMenusViewModel()
+        if ( Engine.Menus.GetMenus( out Menu[] menus ) )
         {
-            if ( Engine.Menus.GetMenus( out Menu[] menus ) )
+            foreach ( Menu menu in menus )
             {
-                foreach ( Menu menu in menus )
-                {
-                    Items.Add( menu );
-                }
-            }
-
-            Engine.Menus.CollectionChangedEvent += OnCollectionChangedEvent;
-        }
-
-        public ObservableCollection<Menu> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public Menu SelectedItem
-        {
-            get => _selectedItem;
-            set
-            {
-                SetProperty( ref _selectedItem, value );
-                UpdateText( value );
+                Items.Add( menu );
             }
         }
 
-        public string Text
+        Engine.Menus.CollectionChangedEvent += OnCollectionChangedEvent;
+    }
+
+    public ObservableCollection<Menu> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public Menu SelectedItem
+    {
+        get;
+        set
         {
-            get => _text;
-            set => SetProperty( ref _text, value );
+            SetProperty( ref field, value );
+            UpdateText( value );
+        }
+    }
+
+    public string Text
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private void UpdateText( Menu menu )
+    {
+        if ( menu == null )
+        {
+            Text = string.Empty;
+            return;
         }
 
-        private void UpdateText( Menu menu )
+        StringBuilder sb = new();
+        sb.AppendLine( $"GumpID: 0x{menu.ID:x4}" );
+        sb.AppendLine( $"Serial: 0x{menu.Serial:x8}" );
+        sb.AppendLine( $"Title: {menu.Title}" );
+        sb.AppendLine( $"Entries: {menu.Entries?.Length ?? 0}" );
+        sb.AppendLine();
+        sb.AppendLine( "Entries:" );
+
+        if ( menu.Entries != null )
         {
-            if ( menu == null )
+            foreach ( MenuEntry menuEntry in menu.Entries )
             {
-                Text = string.Empty;
+                sb.AppendLine( $"Index: {menuEntry.Index}" );
+                sb.AppendLine( $"ID: 0x{menuEntry.ID:x4}" );
+                sb.AppendLine( $"Hue: {menuEntry.Hue}" );
+                sb.AppendLine( $"Title: {menuEntry.Title}" );
+                sb.AppendLine();
+            }
+        }
+
+        Text = sb.ToString();
+    }
+
+    private void OnCollectionChangedEvent( Menu[] menus )
+    {
+        _dispatcher.Invoke( () =>
+        {
+            Items.Clear();
+
+            if ( menus == null )
+            {
                 return;
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine( $"GumpID: 0x{menu.ID:x4}" );
-            sb.AppendLine( $"Serial: 0x{menu.Serial:x8}" );
-            sb.AppendLine( $"Title: {menu.Title}" );
-            sb.AppendLine( $"Entries: {menu.Entries?.Length ?? 0}" );
-            sb.AppendLine();
-            sb.AppendLine( "Entries:" );
-
-            if ( menu.Entries != null )
+            foreach ( Menu menu in menus )
             {
-                foreach ( MenuEntry menuEntry in menu.Entries )
-                {
-                    sb.AppendLine( $"Index: {menuEntry.Index}" );
-                    sb.AppendLine( $"ID: 0x{menuEntry.ID:x4}" );
-                    sb.AppendLine( $"Hue: {menuEntry.Hue}" );
-                    sb.AppendLine( $"Title: {menuEntry.Title}" );
-                    sb.AppendLine();
-                }
+                Items.Add( menu );
             }
-
-            Text = sb.ToString();
-        }
-
-        private void OnCollectionChangedEvent( Menu[] menus )
-        {
-            _dispatcher.Invoke( () =>
-            {
-                Items.Clear();
-
-                if ( menus == null )
-                {
-                    return;
-                }
-
-                foreach ( Menu menu in menus )
-                {
-                    Items.Add( menu );
-                }
-            } );
-        }
+        } );
     }
 }

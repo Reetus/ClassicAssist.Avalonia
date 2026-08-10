@@ -25,154 +25,168 @@ using ClassicAssist.Shared;
 using ClassicAssist.Shared.UO;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Objects.Gumps
+namespace ClassicAssist.UO.Objects.Gumps;
+
+public class Gump
 {
-    public class Gump
+    private static readonly Random _random = new();
+
+    private static readonly byte[] BeginLayout = StringToBuffer( "{ " );
+    private static readonly byte[] EndLayout = StringToBuffer( " }" );
+
+    private static readonly byte[] NoMove = StringToBuffer( "{ nomove }" );
+    private static readonly byte[] NoClose = StringToBuffer( "{ noclose }" );
+    private static readonly byte[] NoDispose = StringToBuffer( "{ nodispose }" );
+    private static readonly byte[] NoResize = StringToBuffer( "{ noresize }" );
+
+    private static readonly byte[] True = StringToBuffer( " 1" );
+    private static readonly byte[] False = StringToBuffer( " 0" );
+
+    private static readonly byte[] BeginTextSeparator = StringToBuffer( " @" );
+    private static readonly byte[] EndTextSeparator = StringToBuffer( "@" );
+
+    public readonly string Layout;
+    public readonly GumpPage[] Pages;
+
+    private List<GumpElement> _elements;
+    private List<string> _strings;
+    public int Serial;
+    public int X;
+    public int Y;
+
+    public Gump()
     {
-        private static readonly Random _random = new Random();
+    }
 
-        private static readonly byte[] BeginLayout = StringToBuffer( "{ " );
-        private static readonly byte[] EndLayout = StringToBuffer( " }" );
+    public Gump( int x, int y, uint id, int serial, string layout, string[] strings, GumpElement[] elements,
+        GumpPage[] pages )
+    {
+        X = x;
+        Y = y;
+        ID = id;
+        Serial = serial;
+        Layout = layout;
+        Strings = strings;
+        GumpElements = elements;
+        Pages = pages;
 
-        private static readonly byte[] NoMove = StringToBuffer( "{ nomove }" );
-        private static readonly byte[] NoClose = StringToBuffer( "{ noclose }" );
-        private static readonly byte[] NoDispose = StringToBuffer( "{ nodispose }" );
-        private static readonly byte[] NoResize = StringToBuffer( "{ noresize }" );
-
-        private static readonly byte[] True = StringToBuffer( " 1" );
-        private static readonly byte[] False = StringToBuffer( " 0" );
-
-        private static readonly byte[] BeginTextSeparator = StringToBuffer( " @" );
-        private static readonly byte[] EndTextSeparator = StringToBuffer( "@" );
-
-        public readonly string Layout;
-        public readonly GumpPage[] Pages;
-
-        private List<GumpElement> _elements;
-        private List<string> _strings;
-        public int Serial;
-        public int X;
-        public int Y;
-
-        public Gump()
+        foreach ( GumpPage gp in pages )
         {
+            gp.ParentGump = this;
+        }
+    }
+
+    public Gump( int x, int y, int serial = 0, uint id = 0 )
+    {
+        X = x;
+        Y = y;
+
+        Serial = serial;
+        ID = id;
+
+        string fullName = GetType().FullName;
+
+        if ( ID == 0 && fullName != null )
+        {
+            ID = (uint) fullName.GetHashCode();
         }
 
-        public Gump( int x, int y, uint id, int serial, string layout, string[] strings, GumpElement[] elements,
-            GumpPage[] pages )
+        if ( Serial == 0 && fullName != null )
         {
-            X = x;
-            Y = y;
-            ID = id;
-            Serial = serial;
-            Layout = layout;
-            Strings = strings;
-            GumpElements = elements;
-            Pages = pages;
+            uint hashCode = (uint) fullName.GetHashCode();
 
-            foreach ( GumpPage gp in pages )
-            {
-                gp.ParentGump = this;
-            }
+            hashCode &= 0x0000FFFF;
+            hashCode <<= 8;
+            hashCode |= (uint) 0xFF << 24;
+
+            Serial = (int) ( hashCode + _random.Next( 0, 0xFF ) );
         }
 
-        public Gump( int x, int y, int serial = 0, uint id = 0 )
+        _elements = [];
+        _strings = [];
+    }
+
+    public bool Closable { get; set; }
+
+    public bool Disposable { get; set; }
+
+    public GumpElement[] GumpElements
+    {
+        get => [.. _elements];
+        set
         {
-            X = x;
-            Y = y;
+            _elements = [];
 
-            Serial = serial;
-            ID = id;
-
-            string fullName = GetType().FullName;
-
-            if ( ID == 0 && fullName != null )
+            for ( int i = 0; i < value.Length; i++ )
             {
-                ID = (uint) fullName.GetHashCode();
+                _elements.Add( value[i] );
             }
+        }
+    }
 
-            if ( Serial == 0 && fullName != null )
+    public uint ID { get; }
+
+    public bool Movable { get; set; }
+
+    public bool Resizable { get; set; }
+
+    public string[] Strings
+    {
+        get => [.. _strings];
+        set
+        {
+            _strings = [];
+
+            for ( int i = 0; i < value.Length; i++ )
             {
-                uint hashCode = (uint) fullName.GetHashCode();
-
-                hashCode &= 0x0000FFFF;
-                hashCode <<= 8;
-                hashCode |= (uint) 0xFF << 24;
-
-                Serial = (int) ( hashCode + _random.Next( 0, 0xFF ) );
+                _strings.Add( value[i] );
             }
+        }
+    }
 
-            _elements = new List<GumpElement>();
-            _strings = new List<string>();
+    /// <summary>
+    ///     Get array of GumpElements which match the specified ElementType from all pages.
+    /// </summary>
+    public GumpElement[] GetElementsByType( ElementType type )
+    {
+        List<GumpElement> elementList = [];
+
+        if ( GumpElements != null )
+        {
+            elementList.AddRange( GumpElements.Where( ge => ge.Type == type ) );
         }
 
-        public bool Closable { get; set; }
-
-        public bool Disposable { get; set; }
-
-        public GumpElement[] GumpElements
+        if ( Pages != null )
         {
-            get => _elements.ToArray();
-            set
-            {
-                _elements = new List<GumpElement>();
+            elementList.AddRange( from p in Pages from ge in p.GumpElements where ge.Type == type select ge );
+        }
 
-                for ( int i = 0; i < value.Length; i++ )
+        return [.. elementList];
+    }
+
+    /// <summary>
+    ///     Get the GumpElement with the specified ID.  Searches all pages/elements.
+    /// </summary>
+    /// <returns>True on success.</returns>
+    public bool GetElementByID( int id, out GumpElement element )
+    {
+        if ( GumpElements != null )
+        {
+            foreach ( GumpElement ge in GumpElements )
+            {
+                if ( ge.ElementID == id )
                 {
-                    _elements.Add( value[i] );
+                    element = ge;
+                    return true;
                 }
             }
         }
 
-        public uint ID { get; }
-
-        public bool Movable { get; set; }
-
-        public bool Resizable { get; set; }
-
-        public string[] Strings
+        if ( Pages != null )
         {
-            get => _strings.ToArray();
-            set
+            foreach ( GumpPage p in Pages )
             {
-                _strings = new List<string>();
-
-                for ( int i = 0; i < value.Length; i++ )
-                {
-                    _strings.Add( value[i] );
-                }
-            }
-        }
-
-        /// <summary>
-        ///     Get array of GumpElements which match the specified ElementType from all pages.
-        /// </summary>
-        public GumpElement[] GetElementsByType( ElementType type )
-        {
-            List<GumpElement> elementList = new List<GumpElement>();
-
-            if ( GumpElements != null )
-            {
-                elementList.AddRange( GumpElements.Where( ge => ge.Type == type ) );
-            }
-
-            if ( Pages != null )
-            {
-                elementList.AddRange( from p in Pages from ge in p.GumpElements where ge.Type == type select ge );
-            }
-
-            return elementList.ToArray();
-        }
-
-        /// <summary>
-        ///     Get the GumpElement with the specified ID.  Searches all pages/elements.
-        /// </summary>
-        /// <returns>True on success.</returns>
-        public bool GetElementByID( int id, out GumpElement element )
-        {
-            if ( GumpElements != null )
-            {
-                foreach ( GumpElement ge in GumpElements )
+                foreach ( GumpElement ge in p.GumpElements )
                 {
                     if ( ge.ElementID == id )
                     {
@@ -181,751 +195,736 @@ namespace ClassicAssist.UO.Objects.Gumps
                     }
                 }
             }
+        }
 
-            if ( Pages != null )
+        element = null;
+        return false;
+    }
+
+    /// <summary>
+    ///     Get the GumpElement nearest to the specified GumpElement.
+    /// </summary>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( GumpElement source, out GumpElement element )
+    {
+        GumpElement nearest = null;
+        double closest = 0;
+
+        if ( source.ParentPage != null )
+        {
+            return source.ParentPage.GetNearestElement( source, out element );
+        }
+
+        foreach ( GumpElement ge in GumpElements )
+        {
+            if ( ge == source )
             {
-                foreach ( GumpPage p in Pages )
-                {
-                    foreach ( GumpElement ge in p.GumpElements )
-                    {
-                        if ( ge.ElementID == id )
-                        {
-                            element = ge;
-                            return true;
-                        }
-                    }
-                }
+                continue;
             }
 
-            element = null;
+            double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
+
+            if ( nearest == null )
+            {
+                closest = distance;
+                nearest = ge;
+            }
+            else
+            {
+                if ( distance < closest )
+                {
+                    closest = distance;
+                    nearest = ge;
+                }
+            }
+        }
+
+        element = nearest;
+        return nearest != null;
+    }
+
+    /// <summary>
+    ///     Get nearest GumpElement to source, but only if it's ElementType is contained in the include list.
+    /// </summary>
+    /// <param name="source">Source GumpElement</param>
+    /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
+    /// <param name="element">GumpElement (out).</param>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( GumpElement source, ElementType[] includeTypes, out GumpElement element )
+    {
+        GumpElement nearest = null;
+        double closest = 0;
+
+        if ( source.ParentPage != null )
+        {
+            return source.ParentPage.GetNearestElement( source, includeTypes, out element );
+        }
+
+        foreach ( GumpElement ge in GumpElements )
+        {
+            if ( ge == source )
+            {
+                continue;
+            }
+
+            bool found = includeTypes.Any( et => ge.Type == et );
+
+            if ( !found )
+            {
+                continue;
+            }
+
+            double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
+
+            if ( nearest == null )
+            {
+                closest = distance;
+                nearest = ge;
+            }
+            else
+            {
+                if ( distance < closest )
+                {
+                    closest = distance;
+                    nearest = ge;
+                }
+            }
+        }
+
+        element = nearest;
+        return nearest != null;
+    }
+
+    public bool GetElementByXY( int x, int y, out GumpElement gumpElement )
+    {
+        gumpElement = null;
+
+        if ( GumpElements == null )
+        {
             return false;
         }
 
-        /// <summary>
-        ///     Get the GumpElement nearest to the specified GumpElement.
-        /// </summary>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( GumpElement source, out GumpElement element )
-        {
-            GumpElement nearest = null;
-            double closest = 0;
+        GumpElement element = GumpElements.FirstOrDefault( m => m.X == x && m.Y == y );
 
-            if ( source.ParentPage != null )
+        if ( element != null )
+        {
+            gumpElement = element;
+        }
+
+        return gumpElement != null;
+    }
+
+    public GumpElement GetElementByXY( int x, int y )
+    {
+        return GetElementByXY( x, y, out GumpElement element ) ? element : null;
+    }
+
+    public bool GetElementByCliloc( int cliloc, out GumpElement gumpElement )
+    {
+        gumpElement = null;
+
+        if ( GumpElements == null )
+        {
+            return false;
+        }
+
+        GumpElement element = GumpElements.FirstOrDefault( m => m.Cliloc == cliloc );
+
+        if ( element != null )
+        {
+            gumpElement = element;
+        }
+
+        return gumpElement != null;
+    }
+
+    public GumpElement GetElementByCliloc( int cliloc )
+    {
+        return GetElementByCliloc( cliloc, out GumpElement element ) ? element : null;
+    }
+
+    public override int GetHashCode()
+    {
+        return ID.GetHashCode() ^ Layout?.GetHashCode() ?? 0;
+    }
+
+    public virtual void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
+    {
+    }
+
+    public virtual void OnClosing()
+    {
+    }
+
+    /// <summary>
+    ///     The client's own game window center, reached through <see cref="ReflectionCommands" />
+    ///     rather than the WPF original's in-process reflection, since this fork's UI runs out of
+    ///     process from the client.
+    /// </summary>
+    public static Point GetGameWindowCenter()
+    {
+        return ReflectionCommands.GetGameWindowCenter();
+    }
+
+    /// <summary>
+    ///     Centers the gump on the client's game window. Falls back to a fixed (300, 300) when the
+    ///     center can't be determined (reflection unavailable) - unlike the WPF original there is no
+    ///     native window handle to fall back to querying on Linux.
+    /// </summary>
+    public void SetCenterPosition( int width, int height )
+    {
+        Point gameCenterPosition = GetGameWindowCenter();
+
+        if ( gameCenterPosition == Point.Empty )
+        {
+            X = 300;
+            Y = 300;
+
+            return;
+        }
+
+        X = gameCenterPosition.X - width / 2;
+        Y = gameCenterPosition.Y - height / 2;
+    }
+
+    public virtual void SendGump()
+    {
+        byte[] bytes = Compile();
+
+        Engine.Gumps.Add( this );
+        Engine.SendPacketToClient( bytes, bytes.Length );
+    }
+
+    public void CloseGump()
+    {
+        Commands.CloseClientGump( ID );
+    }
+
+    public void Add( GumpElement e )
+    {
+        e.ParentGump = this;
+        _elements.Add( e );
+    }
+
+    public void AddPage( int page )
+    {
+        GumpElement ge = new() { Type = ElementType.page, PageNumber = page };
+        Add( ge );
+    }
+
+    public void AddAlphaRegion( int x, int y, int width, int height )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.checkertrans,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height
+        };
+        Add( ge );
+    }
+
+    public void AddBackground( int x, int y, int width, int height, int gumpID )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.resizepic,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            ElementID = gumpID
+        };
+        Add( ge );
+    }
+
+    public void AddButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type, int param )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.button,
+            X = x,
+            Y = y,
+            InactiveID = normalID,
+            ActiveID = pressedID,
+            ButtonType = (int) type,
+            ElementID = buttonID,
+            Param = param
+        };
+        Add( ge );
+    }
+
+    public void AddCheck( int x, int y, int inactiveID, int activeID, bool initialState, int switchID )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.checkbox,
+            X = x,
+            Y = y,
+            InactiveID = inactiveID,
+            ActiveID = activeID,
+            InitialState = initialState,
+            ElementID = switchID
+        };
+        Add( ge );
+    }
+
+    public void AddGroup( int group )
+    {
+        GumpElement ge = new() { Type = ElementType.group, Group = group };
+        Add( ge );
+    }
+
+    public void AddTooltip( int number )
+    {
+        GumpElement ge = new() { Type = ElementType.tooltip, Cliloc = number };
+        Add( ge );
+    }
+
+    public void AddHtml( int x, int y, int width, int height, string text, bool background, bool scrollbar )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.htmlgump,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Text = text,
+            ScrollBar = scrollbar,
+            Background = background
+        };
+        Add( ge );
+    }
+
+    public void AddHtmlLocalized( int x, int y, int width, int height, int number, bool background, bool scrollbar )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.xmfhtmlgump,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Cliloc = number,
+            Background = background,
+            ScrollBar = scrollbar
+        };
+        Add( ge );
+    }
+
+    public void AddHtmlLocalized( int x, int y, int width, int height, int number, int color, bool background,
+        bool scrollbar )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.xmfhtmlgumpcolor,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Cliloc = number,
+            Hue = color,
+            Background = background,
+            ScrollBar = scrollbar
+        };
+        Add( ge );
+    }
+
+    public void AddHtmlLocalized( int x, int y, int width, int height, int number, string args, int color,
+        bool background, bool scrollbar )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.xmfhtmltok,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Cliloc = number,
+            Args = args,
+            Hue = color,
+            Background = background,
+            ScrollBar = scrollbar
+        };
+        Add( ge );
+    }
+
+    public void AddImage( int x, int y, int gumpID )
+    {
+        AddImage( x, y, gumpID, 0 );
+    }
+
+    public void AddImage( int x, int y, int gumpID, int hue )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.gumppic,
+            X = x,
+            Y = y,
+            ElementID = gumpID,
+            Hue = hue
+        };
+        Add( ge );
+    }
+
+    public void AddImageTiled( int x, int y, int width, int height, int gumpID )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.gumppictiled,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            ElementID = gumpID
+        };
+        Add( ge );
+    }
+
+    public void AddImageTiledButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type,
+        int param, int itemID, int hue, int width, int height )
+    {
+        AddImageTiledButton( x, y, normalID, pressedID, buttonID, type, param, itemID, hue, width, height, -1 );
+    }
+
+    public void AddImageTiledButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type,
+        int param, int itemID, int hue, int width, int height, int localizedTooltip )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.buttontileart,
+            X = x,
+            Y = y,
+            InactiveID = normalID,
+            ActiveID = pressedID,
+            ElementID = buttonID,
+            ButtonType = (int) type,
+            Param = param,
+            ItemID = itemID,
+            Hue = hue,
+            Height = height,
+            Width = width,
+            Cliloc = localizedTooltip
+        };
+        Add( ge );
+    }
+
+    public void AddItem( int x, int y, int itemID )
+    {
+        GumpElement ge = new() { Type = ElementType.tilepic, X = x, Y = y, ItemID = itemID };
+        Add( ge );
+    }
+
+    public void AddItem( int x, int y, int itemID, int hue )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.tilepic,
+            X = x,
+            Y = y,
+            ItemID = itemID,
+            Hue = hue
+        };
+        Add( ge );
+    }
+
+    public void AddLabel( int x, int y, int hue, string text )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.text,
+            X = x,
+            Y = y,
+            Hue = hue,
+            Text = text
+        };
+        Add( ge );
+    }
+
+    public void AddLabelCropped( int x, int y, int width, int height, int hue, string text )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.croppedtext,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Hue = hue,
+            Text = text
+        };
+        Add( ge );
+    }
+
+    public void AddRadio( int x, int y, int inactiveID, int activeID, bool initialState, int switchID )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.radio,
+            X = x,
+            Y = y,
+            InactiveID = inactiveID,
+            ActiveID = activeID,
+            InitialState = initialState,
+            ElementID = switchID
+        };
+        Add( ge );
+    }
+
+    public void AddTextEntry( int x, int y, int width, int height, int hue, int entryID, string initialText )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.textentry,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Hue = hue,
+            ElementID = entryID,
+            Text = initialText
+        };
+        Add( ge );
+    }
+
+    public void AddTextEntry( int x, int y, int width, int height, int hue, int entryID, string initialText,
+        int size )
+    {
+        GumpElement ge = new()
+        {
+            Type = ElementType.textentrylimited,
+            X = x,
+            Y = y,
+            Width = width,
+            Height = height,
+            Hue = hue,
+            ElementID = entryID,
+            Text = initialText,
+            Size = size
+        };
+        Add( ge );
+    }
+
+    public void AddItemProperty( int serial )
+    {
+        GumpElement ge = new() { Type = ElementType.itemproperty, Serial = serial };
+        Add( ge );
+    }
+
+    public int Intern( string value )
+    {
+        int indexOf = _strings.IndexOf( value );
+
+        if ( indexOf >= 0 )
+        {
+            return indexOf;
+        }
+
+        _strings.Add( value );
+        return _strings.Count - 1;
+    }
+
+    internal static byte[] StringToBuffer( string str )
+    {
+        return Encoding.ASCII.GetBytes( str );
+    }
+
+    protected byte[] Compile()
+    {
+        IGumpWriter disp = new GumpWriter( this );
+
+        if ( !Movable )
+        {
+            disp.AppendLayout( NoMove );
+        }
+
+        if ( !Closable )
+        {
+            disp.AppendLayout( NoClose );
+        }
+
+        if ( !Disposable )
+        {
+            disp.AppendLayout( NoDispose );
+        }
+
+        if ( !Resizable )
+        {
+            disp.AppendLayout( NoResize );
+        }
+
+        int count = GumpElements.Length;
+
+        for ( int i = 0; i < count; ++i )
+        {
+            GumpElement e = GumpElements[i];
+
+            disp.AppendLayout( BeginLayout );
+            e.AppendTo( disp );
+            disp.AppendLayout( EndLayout );
+        }
+
+        List<string> strings = [];
+
+        if ( Strings != null )
+        {
+            for ( int i = 0; i < Strings.Length; i++ )
             {
-                return source.ParentPage.GetNearestElement( source, out element );
+                strings.Add( Strings[i] );
             }
+        }
 
-            foreach ( GumpElement ge in GumpElements )
+        disp.WriteStrings( strings );
+
+        disp.Flush();
+
+        return disp.ToArray();
+    }
+
+    internal interface IGumpWriter
+    {
+        int Switches { get; set; }
+        int TextEntries { get; set; }
+
+        void AppendLayout( bool val );
+        void AppendLayout( int val );
+        void AppendLayoutNS( int val );
+        void AppendLayout( string text );
+        void AppendLayout( byte[] buffer );
+        void WriteStrings( List<string> strings );
+        void Flush();
+        byte[] ToArray();
+    }
+
+    internal class GumpWriter : IGumpWriter, IDisposable
+    {
+        private readonly byte[] _buffer = new byte[48];
+
+        private readonly PacketWriter _stream;
+
+        private int m_LayoutLength;
+        private int m_PacketLength;
+        private int m_StringsLength;
+
+        public GumpWriter( Gump g )
+        {
+            _stream = new PacketWriter( 4096 );
+            _buffer[0] = (byte) ' ';
+            _stream.Write( (byte) 0xB0 );
+            _stream.Write( (short) 0 );
+            _stream.Write( g.Serial );
+            _stream.Write( g.ID );
+            _stream.Write( g.X );
+            _stream.Write( g.Y );
+            _stream.Write( (ushort) 0xFFFF );
+        }
+
+        public int Switches { get; set; }
+        public int TextEntries { get; set; }
+
+        public void AppendLayout( byte[] buffer )
+        {
+            int length = buffer.Length;
+            _stream.Write( buffer, 0, length );
+            m_LayoutLength += length;
+        }
+
+        public void AppendLayout( string text )
+        {
+            AppendLayout( BeginTextSeparator );
+
+            int length = text.Length;
+            _stream.WriteAsciiFixed( text, length );
+            m_LayoutLength += length;
+
+            AppendLayout( EndTextSeparator );
+        }
+
+        public void AppendLayout( int val )
+        {
+            string toString = val.ToString();
+            int bytes = Encoding.ASCII.GetBytes( toString, 0, toString.Length, _buffer, 1 ) + 1;
+
+            _stream.Write( _buffer, 0, bytes );
+            m_LayoutLength += bytes;
+        }
+
+        public void AppendLayout( bool val )
+        {
+            AppendLayout( val ? True : False );
+        }
+
+        public void AppendLayoutNS( int val )
+        {
+            string toString = val.ToString();
+            int bytes = Encoding.ASCII.GetBytes( toString, 0, toString.Length, _buffer, 1 );
+
+            _stream.Write( _buffer, 1, bytes );
+            m_LayoutLength += bytes;
+        }
+
+        public void Flush()
+        {
+            int length = 23 + m_LayoutLength + m_StringsLength;
+            _stream.Seek( 1, SeekOrigin.Begin );
+            _stream.Write( (short) length );
+            m_PacketLength = length;
+        }
+
+        public void WriteStrings( List<string> text )
+        {
+            _stream.Seek( 19, SeekOrigin.Begin );
+            _stream.Write( (ushort) m_LayoutLength );
+            _stream.Seek( 0, SeekOrigin.End );
+
+            _stream.Write( (ushort) text.Count );
+
+            for ( int i = 0; i < text.Count; ++i )
             {
-                if ( ge == source )
-                {
-                    continue;
-                }
+                string v = text[i] ?? string.Empty;
 
-                double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
+                int length = (ushort) v.Length;
+                m_StringsLength += length * 2 + 2;
 
-                if ( nearest == null )
-                {
-                    closest = distance;
-                    nearest = ge;
-                }
-                else
-                {
-                    if ( distance < closest )
-                    {
-                        closest = distance;
-                        nearest = ge;
-                    }
-                }
+                _stream.Write( (ushort) length );
+                _stream.WriteBigUniFixed( v, length );
             }
-
-            element = nearest;
-            return nearest != null;
         }
 
-        /// <summary>
-        ///     Get nearest GumpElement to source, but only if it's ElementType is contained in the include list.
-        /// </summary>
-        /// <param name="source">Source GumpElement</param>
-        /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
-        /// <param name="element">GumpElement (out).</param>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( GumpElement source, ElementType[] includeTypes, out GumpElement element )
+        public byte[] ToArray()
         {
-            GumpElement nearest = null;
-            double closest = 0;
+            byte[] packet = new byte[m_PacketLength];
+            Buffer.BlockCopy( _stream.ToArray(), 0, packet, 0, m_PacketLength );
+            return packet;
+        }
 
-            if ( source.ParentPage != null )
+        #region IDisposable Support
+
+        private bool disposedValue; // To detect redundant calls
+
+        protected virtual void Dispose( bool disposing )
+        {
+            if ( disposedValue )
             {
-                return source.ParentPage.GetNearestElement( source, includeTypes, out element );
-            }
-
-            foreach ( GumpElement ge in GumpElements )
-            {
-                if ( ge == source )
-                {
-                    continue;
-                }
-
-                bool found = includeTypes.Any( et => ge.Type == et );
-
-                if ( !found )
-                {
-                    continue;
-                }
-
-                double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
-
-                if ( nearest == null )
-                {
-                    closest = distance;
-                    nearest = ge;
-                }
-                else
-                {
-                    if ( distance < closest )
-                    {
-                        closest = distance;
-                        nearest = ge;
-                    }
-                }
-            }
-
-            element = nearest;
-            return nearest != null;
-        }
-
-        public bool GetElementByXY( int x, int y, out GumpElement gumpElement )
-        {
-            gumpElement = null;
-
-            if ( GumpElements == null )
-            {
-                return false;
-            }
-
-            GumpElement element = GumpElements.FirstOrDefault( m => m.X == x && m.Y == y );
-
-            if ( element != null )
-            {
-                gumpElement = element;
-            }
-
-            return gumpElement != null;
-        }
-
-        public GumpElement GetElementByXY( int x, int y )
-        {
-            return GetElementByXY( x, y, out GumpElement element ) ? element : null;
-        }
-
-        public bool GetElementByCliloc( int cliloc, out GumpElement gumpElement )
-        {
-            gumpElement = null;
-
-            if ( GumpElements == null )
-            {
-                return false;
-            }
-
-            GumpElement element = GumpElements.FirstOrDefault( m => m.Cliloc == cliloc );
-
-            if ( element != null )
-            {
-                gumpElement = element;
-            }
-
-            return gumpElement != null;
-        }
-
-        public GumpElement GetElementByCliloc( int cliloc )
-        {
-            return GetElementByCliloc( cliloc, out GumpElement element ) ? element : null;
-        }
-
-        public override int GetHashCode()
-        {
-            return ID.GetHashCode() ^ Layout?.GetHashCode() ?? 0;
-        }
-
-        public virtual void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
-        {
-        }
-
-        public virtual void OnClosing()
-        {
-        }
-
-        /// <summary>
-        ///     The client's own game window center, reached through <see cref="ReflectionCommands" />
-        ///     rather than the WPF original's in-process reflection, since this fork's UI runs out of
-        ///     process from the client.
-        /// </summary>
-        public static Point GetGameWindowCenter()
-        {
-            return ReflectionCommands.GetGameWindowCenter();
-        }
-
-        /// <summary>
-        ///     Centers the gump on the client's game window. Falls back to a fixed (300, 300) when the
-        ///     center can't be determined (reflection unavailable) - unlike the WPF original there is no
-        ///     native window handle to fall back to querying on Linux.
-        /// </summary>
-        public void SetCenterPosition( int width, int height )
-        {
-            Point gameCenterPosition = GetGameWindowCenter();
-
-            if ( gameCenterPosition == Point.Empty )
-            {
-                X = 300;
-                Y = 300;
-
                 return;
             }
 
-            X = gameCenterPosition.X - width / 2;
-            Y = gameCenterPosition.Y - height / 2;
-        }
-
-        public virtual void SendGump()
-        {
-            byte[] bytes = Compile();
-
-            Engine.Gumps.Add( this );
-            Engine.SendPacketToClient( bytes, bytes.Length );
-        }
-
-        public void CloseGump()
-        {
-            Commands.CloseClientGump( ID );
-        }
-
-        public void Add( GumpElement e )
-        {
-            e.ParentGump = this;
-            _elements.Add( e );
-        }
-
-        public void AddPage( int page )
-        {
-            GumpElement ge = new GumpElement { Type = ElementType.page, PageNumber = page };
-            Add( ge );
-        }
-
-        public void AddAlphaRegion( int x, int y, int width, int height )
-        {
-            GumpElement ge = new GumpElement
+            if ( disposing )
             {
-                Type = ElementType.checkertrans,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height
-            };
-            Add( ge );
-        }
-
-        public void AddBackground( int x, int y, int width, int height, int gumpID )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.resizepic,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                ElementID = gumpID
-            };
-            Add( ge );
-        }
-
-        public void AddButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type, int param )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.button,
-                X = x,
-                Y = y,
-                InactiveID = normalID,
-                ActiveID = pressedID,
-                ButtonType = (int) type,
-                ElementID = buttonID,
-                Param = param
-            };
-            Add( ge );
-        }
-
-        public void AddCheck( int x, int y, int inactiveID, int activeID, bool initialState, int switchID )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.checkbox,
-                X = x,
-                Y = y,
-                InactiveID = inactiveID,
-                ActiveID = activeID,
-                InitialState = initialState,
-                ElementID = switchID
-            };
-            Add( ge );
-        }
-
-        public void AddGroup( int group )
-        {
-            GumpElement ge = new GumpElement { Type = ElementType.group, Group = group };
-            Add( ge );
-        }
-
-        public void AddTooltip( int number )
-        {
-            GumpElement ge = new GumpElement { Type = ElementType.tooltip, Cliloc = number };
-            Add( ge );
-        }
-
-        public void AddHtml( int x, int y, int width, int height, string text, bool background, bool scrollbar )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.htmlgump,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Text = text,
-                ScrollBar = scrollbar,
-                Background = background
-            };
-            Add( ge );
-        }
-
-        public void AddHtmlLocalized( int x, int y, int width, int height, int number, bool background, bool scrollbar )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.xmfhtmlgump,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Cliloc = number,
-                Background = background,
-                ScrollBar = scrollbar
-            };
-            Add( ge );
-        }
-
-        public void AddHtmlLocalized( int x, int y, int width, int height, int number, int color, bool background,
-            bool scrollbar )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.xmfhtmlgumpcolor,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Cliloc = number,
-                Hue = color,
-                Background = background,
-                ScrollBar = scrollbar
-            };
-            Add( ge );
-        }
-
-        public void AddHtmlLocalized( int x, int y, int width, int height, int number, string args, int color,
-            bool background, bool scrollbar )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.xmfhtmltok,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Cliloc = number,
-                Args = args,
-                Hue = color,
-                Background = background,
-                ScrollBar = scrollbar
-            };
-            Add( ge );
-        }
-
-        public void AddImage( int x, int y, int gumpID )
-        {
-            AddImage( x, y, gumpID, 0 );
-        }
-
-        public void AddImage( int x, int y, int gumpID, int hue )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.gumppic,
-                X = x,
-                Y = y,
-                ElementID = gumpID,
-                Hue = hue
-            };
-            Add( ge );
-        }
-
-        public void AddImageTiled( int x, int y, int width, int height, int gumpID )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.gumppictiled,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                ElementID = gumpID
-            };
-            Add( ge );
-        }
-
-        public void AddImageTiledButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type,
-            int param, int itemID, int hue, int width, int height )
-        {
-            AddImageTiledButton( x, y, normalID, pressedID, buttonID, type, param, itemID, hue, width, height, -1 );
-        }
-
-        public void AddImageTiledButton( int x, int y, int normalID, int pressedID, int buttonID, GumpButtonType type,
-            int param, int itemID, int hue, int width, int height, int localizedTooltip )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.buttontileart,
-                X = x,
-                Y = y,
-                InactiveID = normalID,
-                ActiveID = pressedID,
-                ElementID = buttonID,
-                ButtonType = (int) type,
-                Param = param,
-                ItemID = itemID,
-                Hue = hue,
-                Height = height,
-                Width = width,
-                Cliloc = localizedTooltip
-            };
-            Add( ge );
-        }
-
-        public void AddItem( int x, int y, int itemID )
-        {
-            GumpElement ge = new GumpElement { Type = ElementType.tilepic, X = x, Y = y, ItemID = itemID };
-            Add( ge );
-        }
-
-        public void AddItem( int x, int y, int itemID, int hue )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.tilepic,
-                X = x,
-                Y = y,
-                ItemID = itemID,
-                Hue = hue
-            };
-            Add( ge );
-        }
-
-        public void AddLabel( int x, int y, int hue, string text )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.text,
-                X = x,
-                Y = y,
-                Hue = hue,
-                Text = text
-            };
-            Add( ge );
-        }
-
-        public void AddLabelCropped( int x, int y, int width, int height, int hue, string text )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.croppedtext,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Hue = hue,
-                Text = text
-            };
-            Add( ge );
-        }
-
-        public void AddRadio( int x, int y, int inactiveID, int activeID, bool initialState, int switchID )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.radio,
-                X = x,
-                Y = y,
-                InactiveID = inactiveID,
-                ActiveID = activeID,
-                InitialState = initialState,
-                ElementID = switchID
-            };
-            Add( ge );
-        }
-
-        public void AddTextEntry( int x, int y, int width, int height, int hue, int entryID, string initialText )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.textentry,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Hue = hue,
-                ElementID = entryID,
-                Text = initialText
-            };
-            Add( ge );
-        }
-
-        public void AddTextEntry( int x, int y, int width, int height, int hue, int entryID, string initialText,
-            int size )
-        {
-            GumpElement ge = new GumpElement
-            {
-                Type = ElementType.textentrylimited,
-                X = x,
-                Y = y,
-                Width = width,
-                Height = height,
-                Hue = hue,
-                ElementID = entryID,
-                Text = initialText,
-                Size = size
-            };
-            Add( ge );
-        }
-
-        public void AddItemProperty( int serial )
-        {
-            GumpElement ge = new GumpElement { Type = ElementType.itemproperty, Serial = serial };
-            Add( ge );
-        }
-
-        public int Intern( string value )
-        {
-            int indexOf = _strings.IndexOf( value );
-
-            if ( indexOf >= 0 )
-            {
-                return indexOf;
+                _stream.Dispose();
             }
 
-            _strings.Add( value );
-            return _strings.Count - 1;
+            disposedValue = true;
         }
 
-        internal static byte[] StringToBuffer( string str )
+        public void Dispose()
         {
-            return Encoding.ASCII.GetBytes( str );
+            Dispose( true );
+            GC.SuppressFinalize( this );
         }
 
-        protected byte[] Compile()
-        {
-            IGumpWriter disp = new GumpWriter( this );
-
-            if ( !Movable )
-            {
-                disp.AppendLayout( NoMove );
-            }
-
-            if ( !Closable )
-            {
-                disp.AppendLayout( NoClose );
-            }
-
-            if ( !Disposable )
-            {
-                disp.AppendLayout( NoDispose );
-            }
-
-            if ( !Resizable )
-            {
-                disp.AppendLayout( NoResize );
-            }
-
-            int count = GumpElements.Length;
-
-            for ( int i = 0; i < count; ++i )
-            {
-                GumpElement e = GumpElements[i];
-
-                disp.AppendLayout( BeginLayout );
-                e.AppendTo( disp );
-                disp.AppendLayout( EndLayout );
-            }
-
-            List<string> strings = new List<string>();
-
-            if ( Strings != null )
-            {
-                for ( int i = 0; i < Strings.Length; i++ )
-                {
-                    strings.Add( Strings[i] );
-                }
-            }
-
-            disp.WriteStrings( strings );
-
-            disp.Flush();
-
-            return disp.ToArray();
-        }
-
-        internal interface IGumpWriter
-        {
-            int Switches { get; set; }
-            int TextEntries { get; set; }
-
-            void AppendLayout( bool val );
-            void AppendLayout( int val );
-            void AppendLayoutNS( int val );
-            void AppendLayout( string text );
-            void AppendLayout( byte[] buffer );
-            void WriteStrings( List<string> strings );
-            void Flush();
-            byte[] ToArray();
-        }
-
-        internal class GumpWriter : IGumpWriter, IDisposable
-        {
-            private readonly byte[] _buffer = new byte[48];
-
-            private readonly PacketWriter _stream;
-
-            private int m_LayoutLength;
-            private int m_PacketLength;
-            private int m_StringsLength;
-
-            public GumpWriter( Gump g )
-            {
-                _stream = new PacketWriter( 4096 );
-                _buffer[0] = (byte) ' ';
-                _stream.Write( (byte) 0xB0 );
-                _stream.Write( (short) 0 );
-                _stream.Write( g.Serial );
-                _stream.Write( g.ID );
-                _stream.Write( g.X );
-                _stream.Write( g.Y );
-                _stream.Write( (ushort) 0xFFFF );
-            }
-
-            public int Switches { get; set; }
-            public int TextEntries { get; set; }
-
-            public void AppendLayout( byte[] buffer )
-            {
-                int length = buffer.Length;
-                _stream.Write( buffer, 0, length );
-                m_LayoutLength += length;
-            }
-
-            public void AppendLayout( string text )
-            {
-                AppendLayout( BeginTextSeparator );
-
-                int length = text.Length;
-                _stream.WriteAsciiFixed( text, length );
-                m_LayoutLength += length;
-
-                AppendLayout( EndTextSeparator );
-            }
-
-            public void AppendLayout( int val )
-            {
-                string toString = val.ToString();
-                int bytes = Encoding.ASCII.GetBytes( toString, 0, toString.Length, _buffer, 1 ) + 1;
-
-                _stream.Write( _buffer, 0, bytes );
-                m_LayoutLength += bytes;
-            }
-
-            public void AppendLayout( bool val )
-            {
-                AppendLayout( val ? True : False );
-            }
-
-            public void AppendLayoutNS( int val )
-            {
-                string toString = val.ToString();
-                int bytes = Encoding.ASCII.GetBytes( toString, 0, toString.Length, _buffer, 1 );
-
-                _stream.Write( _buffer, 1, bytes );
-                m_LayoutLength += bytes;
-            }
-
-            public void Flush()
-            {
-                int length = 23 + m_LayoutLength + m_StringsLength;
-                _stream.Seek( 1, SeekOrigin.Begin );
-                _stream.Write( (short) length );
-                m_PacketLength = length;
-            }
-
-            public void WriteStrings( List<string> text )
-            {
-                _stream.Seek( 19, SeekOrigin.Begin );
-                _stream.Write( (ushort) m_LayoutLength );
-                _stream.Seek( 0, SeekOrigin.End );
-
-                _stream.Write( (ushort) text.Count );
-
-                for ( int i = 0; i < text.Count; ++i )
-                {
-                    string v = text[i] ?? string.Empty;
-
-                    int length = (ushort) v.Length;
-                    m_StringsLength += length * 2 + 2;
-
-                    _stream.Write( (ushort) length );
-                    _stream.WriteBigUniFixed( v, length );
-                }
-            }
-
-            public byte[] ToArray()
-            {
-                byte[] packet = new byte[m_PacketLength];
-                Buffer.BlockCopy( _stream.ToArray(), 0, packet, 0, m_PacketLength );
-                return packet;
-            }
-
-            #region IDisposable Support
-
-            private bool disposedValue; // To detect redundant calls
-
-            protected virtual void Dispose( bool disposing )
-            {
-                if ( disposedValue )
-                {
-                    return;
-                }
-
-                if ( disposing )
-                {
-                    _stream.Dispose();
-                }
-
-                disposedValue = true;
-            }
-
-            public void Dispose()
-            {
-                Dispose( true );
-                GC.SuppressFinalize( this );
-            }
-
-            #endregion
-        }
+        #endregion
     }
 }

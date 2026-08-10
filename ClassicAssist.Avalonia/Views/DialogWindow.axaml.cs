@@ -1,18 +1,17 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Misc
-{
-    public partial class DialogWindow : Window
-    {
-        public DialogWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Misc;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class DialogWindow : Window
+{
+    public DialogWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

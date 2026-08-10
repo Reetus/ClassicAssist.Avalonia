@@ -20,17 +20,16 @@
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Cast Last Spell" )]
+public class CastLastSpell : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Cast Last Spell" )]
-    public class CastLastSpell : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
+        if ( Engine.LastSpellID != 0 )
         {
-            if ( Engine.LastSpellID != 0 )
-            {
-                Engine.SendPacketToServer( new CastSpell( Engine.LastSpellID ) );
-            }
+            Engine.SendPacketToServer( new CastSpell( Engine.LastSpellID ) );
         }
     }
 }

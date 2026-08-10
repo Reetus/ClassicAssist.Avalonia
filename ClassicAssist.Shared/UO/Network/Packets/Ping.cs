@@ -1,11 +1,10 @@
-﻿namespace ClassicAssist.UO.Network.Packets
+﻿namespace ClassicAssist.UO.Network.Packets;
+
+public class Ping : BasePacket
 {
-    public class Ping : BasePacket
+    public Ping( byte value ) : base( 2 )
     {
-        public Ping( byte value ) : base( 2 )
-        {
-            _writer.Write( (byte) 0x73 );
-            _writer.Write( value );
-        }
+        _writer.Write( (byte) 0x73 );
+        _writer.Write( value );
     }
 }

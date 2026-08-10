@@ -20,84 +20,83 @@
 using System.Collections.Concurrent;
 using System.Linq;
 
-namespace ClassicAssist.UO.Objects
+namespace ClassicAssist.UO.Objects;
+
+public class MenuCollection
 {
-    public class MenuCollection
+    public delegate void dCollectionChanged( Menu[] menus );
+
+    private readonly ConcurrentDictionary<int, Menu> _dictionary;
+
+    public MenuCollection()
     {
-        public delegate void dCollectionChanged( Menu[] menus );
+        _dictionary = new ConcurrentDictionary<int, Menu>();
+    }
 
-        private readonly ConcurrentDictionary<int, Menu> _dictionary;
+    public event dCollectionChanged CollectionChangedEvent;
 
-        public MenuCollection()
+    public void Add( Menu menu )
+    {
+        bool result = _dictionary.AddOrUpdate( menu.ID, menu, ( k, v ) => menu ) != null;
+
+        if ( result )
         {
-            _dictionary = new ConcurrentDictionary<int, Menu>();
+            OnCollectionChanged();
+        }
+    }
+
+    public bool Remove( int id )
+    {
+        bool result = _dictionary.TryRemove( id, out _ );
+
+        if ( result )
+        {
+            OnCollectionChanged();
         }
 
-        public event dCollectionChanged CollectionChangedEvent;
+        return result;
+    }
 
-        public void Add( Menu menu )
+    public bool GetMenu( int id, out Menu menu )
+    {
+        return _dictionary.TryGetValue( id, out menu );
+    }
+
+    public bool FindMenu( int serial, out Menu menu )
+    {
+        menu = _dictionary.Values.FirstOrDefault( g => g.Serial == serial );
+
+        return menu != null;
+    }
+
+    public bool GetMenus( out Menu[] menus )
+    {
+        menus = null;
+
+        if ( _dictionary.Values.Count == 0 )
         {
-            bool result = _dictionary.AddOrUpdate( menu.ID, menu, ( k, v ) => menu ) != null;
-
-            if ( result )
-            {
-                OnCollectionChanged();
-            }
+            return false;
         }
 
-        public bool Remove( int id )
+        menus = [.. _dictionary.Values];
+
+        return menus.Length > 0;
+    }
+
+    public void Clear()
+    {
+        int previousCount = _dictionary.Count;
+
+        _dictionary.Clear();
+
+        if ( previousCount > 0 )
         {
-            bool result = _dictionary.TryRemove( id, out Menu m );
-
-            if ( result )
-            {
-                OnCollectionChanged();
-            }
-
-            return result;
+            OnCollectionChanged();
         }
+    }
 
-        public bool GetMenu( int id, out Menu menu )
-        {
-            return _dictionary.TryGetValue( id, out menu );
-        }
-
-        public bool FindMenu( int serial, out Menu menu )
-        {
-            menu = _dictionary.Values.FirstOrDefault( g => g.Serial == serial );
-
-            return menu != null;
-        }
-
-        public bool GetMenus( out Menu[] menus )
-        {
-            menus = null;
-
-            if ( _dictionary.Values.Count == 0 )
-            {
-                return false;
-            }
-
-            menus = _dictionary.Values.ToArray();
-
-            return menus.Length > 0;
-        }
-
-        public void Clear()
-        {
-            int previousCount = _dictionary.Count;
-
-            _dictionary.Clear();
-
-            if ( previousCount > 0 )
-            {
-                OnCollectionChanged();
-            }
-        }
-
-        private void OnCollectionChanged()
-        {
-            CollectionChangedEvent?.Invoke( _dictionary.Values.ToArray() );
-        }
+    private void OnCollectionChanged()
+    {
+        CollectionChangedEvent?.Invoke( [.. _dictionary.Values] );
     }
 }

@@ -20,84 +20,83 @@ using System.Collections.Generic;
 using System.Linq;
 using ClassicAssist.UO.Objects.Gumps;
 
-namespace ClassicAssist.UO.Objects
+namespace ClassicAssist.UO.Objects;
+
+public sealed class GumpCollection
 {
-    public sealed class GumpCollection
+    private readonly ConcurrentDictionary<uint, Gump> _dictionary;
+
+    public GumpCollection()
     {
-        private readonly ConcurrentDictionary<uint, Gump> _dictionary;
+        _dictionary = new ConcurrentDictionary<uint, Gump>();
+    }
 
-        public GumpCollection()
+    public void Add( Gump gump )
+    {
+        bool result = _dictionary.AddOrUpdate( gump.ID, gump, ( k, v ) => gump ) != null;
+
+        if ( result )
         {
-            _dictionary = new ConcurrentDictionary<uint, Gump>();
+            OnCollectionChanged();
+        }
+    }
+
+    public bool Remove( uint id, int buttonId = 0, int[] switches = null,
+        List<(int Key, string Value)> textEntries = null )
+    {
+        bool result = _dictionary.TryRemove( id, out Gump g );
+
+        g?.OnResponse( buttonId, switches, textEntries );
+
+        if ( result )
+        {
+            OnCollectionChanged();
         }
 
-        public void Add( Gump gump )
-        {
-            bool result = _dictionary.AddOrUpdate( gump.ID, gump, ( k, v ) => gump ) != null;
+        g?.OnClosing();
 
-            if ( result )
-            {
-                OnCollectionChanged();
-            }
+        return result;
+    }
+
+    public bool GetGump( uint id, out Gump gump )
+    {
+        return _dictionary.TryGetValue( id, out gump );
+    }
+
+    public bool FindGump( int serial, out Gump gump )
+    {
+        gump = _dictionary.Values.FirstOrDefault( g => g.Serial == serial );
+
+        return gump != null;
+    }
+
+    public bool GetGumps( out Gump[] gumps )
+    {
+        gumps = null;
+
+        if ( _dictionary.Values.Count == 0 )
+        {
+            return false;
         }
 
-        public bool Remove( uint id, int buttonId = 0, int[] switches = null,
-            List<(int Key, string Value)> textEntries = null )
+        gumps = [.. _dictionary.Values];
+
+        return gumps.Length > 0;
+    }
+
+    public void Clear()
+    {
+        int previousCount = _dictionary.Count;
+
+        _dictionary.Clear();
+
+        if ( previousCount > 0 )
         {
-            bool result = _dictionary.TryRemove( id, out Gump g );
-
-            g?.OnResponse( buttonId, switches, textEntries );
-
-            if ( result )
-            {
-                OnCollectionChanged();
-            }
-
-            g?.OnClosing();
-
-            return result;
+            OnCollectionChanged();
         }
+    }
 
-        public bool GetGump( uint id, out Gump gump )
-        {
-            return _dictionary.TryGetValue( id, out gump );
-        }
-
-        public bool FindGump( int serial, out Gump gump )
-        {
-            gump = _dictionary.Values.FirstOrDefault( g => g.Serial == serial );
-
-            return gump != null;
-        }
-
-        public bool GetGumps( out Gump[] gumps )
-        {
-            gumps = null;
-
-            if ( _dictionary.Values.Count == 0 )
-            {
-                return false;
-            }
-
-            gumps = _dictionary.Values.ToArray();
-
-            return gumps.Length > 0;
-        }
-
-        public void Clear()
-        {
-            int previousCount = _dictionary.Count;
-
-            _dictionary.Clear();
-
-            if ( previousCount > 0 )
-            {
-                OnCollectionChanged();
-            }
-        }
-
-        private void OnCollectionChanged()
-        {
-        }
+    private void OnCollectionChanged()
+    {
     }
 }

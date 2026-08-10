@@ -13,323 +13,303 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Agents
+namespace ClassicAssist.Shared.UI.ViewModels.Agents;
+
+public class OrganizerTabViewModel : HotkeyEntryViewModel<OrganizerEntry>, ISettingProvider
 {
-    public class OrganizerTabViewModel : HotkeyEntryViewModel<OrganizerEntry>, ISettingProvider
+    private readonly OrganizerManager _manager;
+
+    public OrganizerTabViewModel() : base( Strings.Organizer )
     {
-        private readonly OrganizerManager _manager;
-        private ICommand _clearEntryDestinationContainerCommand;
-        private ICommand _clearEntrySourceContainerCommand;
-        private ICommand _insertItemCommand;
-        private bool _isOrganizing;
-        private ICommand _newOrganizerEntryCommand;
-        private ICommand _organizeCommand;
-        private ICommand _removeItemCommand;
-        private ICommand _removeOrganizerAgentEntryCommand;
-        private OrganizerEntry _selectedItem;
-        private OrganizerItem _selectedOrganizerItem;
-        private ICommand _setContainersCommand;
-        private ICommand _setEntryDestinationContainerCommand;
-        private ICommand _setEntrySourceContainerCommand;
+        _manager = OrganizerManager.GetInstance();
 
-        public OrganizerTabViewModel() : base( Strings.Organizer )
+        _manager.Items = Items;
+
+        // A category-level hotkey rather than a per-entry one: it stops whichever organizer is
+        // running. Persisted separately from the entries, under the top-level "OrganizerOptions".
+        _staticOptions.Add( new HotkeyCommand
         {
-            _manager = OrganizerManager.GetInstance();
+            Name = Strings.Stop_Organizer,
+            Action = ( entry, objects ) => _manager.Stop(),
+            CanGlobal = false
+        } );
+    }
 
-            _manager.Items = Items;
+    public ICommand InsertItemCommand => field ??=
+            new RelayCommandAsync( InsertItem, o => SelectedItem != null && !IsOrganizing );
 
-            // A category-level hotkey rather than a per-entry one: it stops whichever organizer is
-            // running. Persisted separately from the entries, under the top-level "OrganizerOptions".
-            _staticOptions.Add( new HotkeyCommand
-            {
-                Name = Strings.Stop_Organizer, Action = ( entry, objects ) => _manager.Stop(), CanGlobal = false
-            } );
+    public ICommand ClearEntryDestinationContainerCommand => field ??=
+            new RelayCommand( ClearEntryDestinationContainer, o => !IsOrganizing );
+
+    public ICommand ClearEntrySourceContainerCommand => field ??=
+            new RelayCommand( ClearEntrySourceContainer, o => !IsOrganizing );
+
+    public bool IsOrganizing
+    {
+        get;
+        set
+        {
+            SetProperty( ref field, value );
+            NotifyPropertyChanged( nameof( PlayStopButtonText ) );
         }
+    }
 
-        public ICommand InsertItemCommand =>
-            _insertItemCommand ?? ( _insertItemCommand =
-                new RelayCommandAsync( InsertItem, o => SelectedItem != null && !IsOrganizing ) );
+    public ICommand NewOrganizerEntryCommand => field ??= new RelayCommand( NewOrganizerEntry, o => !IsOrganizing );
 
-        public ICommand ClearEntryDestinationContainerCommand =>
-            _clearEntryDestinationContainerCommand ?? ( _clearEntryDestinationContainerCommand =
-                new RelayCommand( ClearEntryDestinationContainer, o => !IsOrganizing ) );
+    public ICommand OrganizeCommand => field ??= new RelayCommandAsync( Organize, o => SelectedItem != null );
 
-        public ICommand ClearEntrySourceContainerCommand =>
-            _clearEntrySourceContainerCommand ?? ( _clearEntrySourceContainerCommand =
-                new RelayCommand( ClearEntrySourceContainer, o => !IsOrganizing ) );
+    public string PlayStopButtonText => IsOrganizing ? Strings.Stop : Strings.Play;
 
-        public bool IsOrganizing
+    public ICommand RemoveItemCommand => field ??=
+            new RelayCommand( RemoveItem, o => !IsOrganizing && SelectedOrganizerItem != null );
+
+    public ICommand RemoveOrganizerAgentEntryCommand => field ??=
+            new RelayCommand( RemoveOrganizerAgentEntry, o => SelectedItem != null );
+
+    public OrganizerEntry SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public OrganizerItem SelectedOrganizerItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand SetContainersCommand => field ??=
+            new RelayCommandAsync( _manager.SetContainers, o => SelectedItem != null && !IsOrganizing );
+
+    public ICommand SetEntryDestinationContainerCommand => field ??=
+            new RelayCommandAsync( SetEntryDestinationContainer, o => !IsOrganizing && Engine.Connected );
+
+    public ICommand SetEntrySourceContainerCommand => field ??=
+            new RelayCommandAsync( SetEntrySourceContainer, o => !IsOrganizing && Engine.Connected );
+
+    public void Serialize( JObject json )
+    {
+        JObject options = [];
+
+        SerializeStatic( options );
+
+        json?.Add( "OrganizerOptions", options );
+
+        JArray organizer = [];
+
+        foreach ( OrganizerEntry organizerEntry in Items )
         {
-            get => _isOrganizing;
-            set
+            JObject entryObj = [];
+
+            SetJsonValue( entryObj, "Name", organizerEntry.Name );
+            SetJsonValue( entryObj, "Stack", organizerEntry.Stack );
+            SetJsonValue( entryObj, "SourceContainer", organizerEntry.SourceContainer );
+            SetJsonValue( entryObj, "DestinationContainer", organizerEntry.DestinationContainer );
+            SetJsonValue( entryObj, "Keys", organizerEntry.Hotkey.ToJObject() );
+            SetJsonValue( entryObj, "Complete", organizerEntry.Complete );
+            SetJsonValue( entryObj, "ReturnExcess", organizerEntry.ReturnExcess );
+
+            JArray itemsArray = [];
+
+            foreach ( OrganizerItem organizerItem in organizerEntry.Items )
             {
-                SetProperty( ref _isOrganizing, value );
-                NotifyPropertyChanged( nameof( PlayStopButtonText ) );
+                JObject itemsObj = [];
+
+                SetJsonValue( itemsObj, "Item", organizerItem.Item );
+                SetJsonValue( itemsObj, "ID", organizerItem.ID );
+                SetJsonValue( itemsObj, "Hue", organizerItem.Hue );
+                SetJsonValue( itemsObj, "Amount", organizerItem.Amount );
+                SetJsonValue( itemsObj, "SourceContainer", organizerItem.SourceContainer );
+                SetJsonValue( itemsObj, "DestinationContainer", organizerItem.DestinationContainer );
+
+                itemsArray.Add( itemsObj );
             }
+
+            entryObj.Add( "Items", itemsArray );
+
+            organizer.Add( entryObj );
         }
 
-        public ICommand NewOrganizerEntryCommand =>
-            _newOrganizerEntryCommand ??
-            ( _newOrganizerEntryCommand = new RelayCommand( NewOrganizerEntry, o => !IsOrganizing ) );
+        json?.Add( "Organizer", organizer );
+    }
 
-        public ICommand OrganizeCommand =>
-            _organizeCommand ?? ( _organizeCommand = new RelayCommandAsync( Organize, o => SelectedItem != null ) );
+    public void Deserialize( JObject json, Options options )
+    {
+        Items.Clear();
 
-        public string PlayStopButtonText => IsOrganizing ? Strings.Stop : Strings.Play;
-
-        public ICommand RemoveItemCommand =>
-            _removeItemCommand ?? ( _removeItemCommand =
-                new RelayCommand( RemoveItem, o => !IsOrganizing && SelectedOrganizerItem != null ) );
-
-        public ICommand RemoveOrganizerAgentEntryCommand =>
-            _removeOrganizerAgentEntryCommand ?? ( _removeOrganizerAgentEntryCommand =
-                new RelayCommand( RemoveOrganizerAgentEntry, o => SelectedItem != null ) );
-
-        public OrganizerEntry SelectedItem
+        if ( json?["OrganizerOptions"] is JObject organizerOptions )
         {
-            get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
+            DeserializeStatic( organizerOptions );
         }
 
-        public OrganizerItem SelectedOrganizerItem
+        if ( json?["Organizer"] == null )
         {
-            get => _selectedOrganizerItem;
-            set => SetProperty( ref _selectedOrganizerItem, value );
+            return;
         }
 
-        public ICommand SetContainersCommand =>
-            _setContainersCommand ?? ( _setContainersCommand =
-                new RelayCommandAsync( _manager.SetContainers, o => SelectedItem != null && !IsOrganizing ) );
-
-        public ICommand SetEntryDestinationContainerCommand =>
-            _setEntryDestinationContainerCommand ?? ( _setEntryDestinationContainerCommand =
-                new RelayCommandAsync( SetEntryDestinationContainer, o => !IsOrganizing && Engine.Connected ) );
-
-        public ICommand SetEntrySourceContainerCommand =>
-            _setEntrySourceContainerCommand ?? ( _setEntrySourceContainerCommand =
-                new RelayCommandAsync( SetEntrySourceContainer, o => !IsOrganizing && Engine.Connected ) );
-
-        public void Serialize( JObject json )
+        foreach ( JToken token in json["Organizer"] )
         {
-            JObject options = new JObject();
-
-            SerializeStatic( options );
-
-            json?.Add( "OrganizerOptions", options );
-
-            JArray organizer = new JArray();
-
-            foreach ( OrganizerEntry organizerEntry in Items )
+            OrganizerEntry entry = new()
             {
-                JObject entryObj = new JObject();
+                Name = GetJsonValue( token, "Name", "Organizer" ),
+                Stack = GetJsonValue( token, "Stack", true ),
+                SourceContainer = GetJsonValue( token, "SourceContainer", 0 ),
+                DestinationContainer = GetJsonValue( token, "DestinationContainer", 0 ),
+                Hotkey = new ShortcutKeys( token["Keys"] ),
+                Complete = GetJsonValue( token, "Complete", false ),
+                ReturnExcess = GetJsonValue( token, "ReturnExcess", false )
+            };
 
-                SetJsonValue( entryObj, "Name", organizerEntry.Name );
-                SetJsonValue( entryObj, "Stack", organizerEntry.Stack );
-                SetJsonValue( entryObj, "SourceContainer", organizerEntry.SourceContainer );
-                SetJsonValue( entryObj, "DestinationContainer", organizerEntry.DestinationContainer );
-                SetJsonValue( entryObj, "Keys", organizerEntry.Hotkey.ToJObject() );
-                SetJsonValue( entryObj, "Complete", organizerEntry.Complete );
-                SetJsonValue( entryObj, "ReturnExcess", organizerEntry.ReturnExcess );
+            entry.Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( entry ) );
+            entry.IsRunning = () => IsOrganizing;
 
-                JArray itemsArray = new JArray();
-
-                foreach ( OrganizerItem organizerItem in organizerEntry.Items )
+            foreach ( JToken itemToken in token["Items"] )
+            {
+                OrganizerItem item = new()
                 {
-                    JObject itemsObj = new JObject();
-
-                    SetJsonValue( itemsObj, "Item", organizerItem.Item );
-                    SetJsonValue( itemsObj, "ID", organizerItem.ID );
-                    SetJsonValue( itemsObj, "Hue", organizerItem.Hue );
-                    SetJsonValue( itemsObj, "Amount", organizerItem.Amount );
-                    SetJsonValue( itemsObj, "SourceContainer", organizerItem.SourceContainer );
-                    SetJsonValue( itemsObj, "DestinationContainer", organizerItem.DestinationContainer );
-
-                    itemsArray.Add( itemsObj );
-                }
-
-                entryObj.Add( "Items", itemsArray );
-
-                organizer.Add( entryObj );
-            }
-
-            json?.Add( "Organizer", organizer );
-        }
-
-        public void Deserialize( JObject json, Options options )
-        {
-            Items.Clear();
-
-            if ( json?["OrganizerOptions"] is JObject organizerOptions )
-            {
-                DeserializeStatic( organizerOptions );
-            }
-
-            if ( json?["Organizer"] == null )
-            {
-                return;
-            }
-
-            foreach ( JToken token in json["Organizer"] )
-            {
-                OrganizerEntry entry = new OrganizerEntry
-                {
-                    Name = GetJsonValue( token, "Name", "Organizer" ),
-                    Stack = GetJsonValue( token, "Stack", true ),
-                    SourceContainer = GetJsonValue( token, "SourceContainer", 0 ),
-                    DestinationContainer = GetJsonValue( token, "DestinationContainer", 0 ),
-                    Hotkey = new ShortcutKeys( token["Keys"] ),
-                    Complete = GetJsonValue( token, "Complete", false ),
-                    ReturnExcess = GetJsonValue( token, "ReturnExcess", false )
+                    Item = GetJsonValue( itemToken, "Item", string.Empty ),
+                    ID = GetJsonValue( itemToken, "ID", 0 ),
+                    Hue = GetJsonValue( itemToken, "Hue", -1 ),
+                    Amount = GetJsonValue( itemToken, "Amount", -1 ),
+                    SourceContainer = GetJsonValue<int?>( itemToken, "SourceContainer", null ),
+                    DestinationContainer = GetJsonValue<int?>( itemToken, "DestinationContainer", null )
                 };
 
-                entry.Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( entry ) );
-                entry.IsRunning = () => IsOrganizing;
-
-                foreach ( JToken itemToken in token["Items"] )
-                {
-                    OrganizerItem item = new OrganizerItem
-                    {
-                        Item = GetJsonValue( itemToken, "Item", string.Empty ),
-                        ID = GetJsonValue( itemToken, "ID", 0 ),
-                        Hue = GetJsonValue( itemToken, "Hue", -1 ),
-                        Amount = GetJsonValue( itemToken, "Amount", -1 ),
-                        SourceContainer = GetJsonValue<int?>( itemToken, "SourceContainer", null ),
-                        DestinationContainer = GetJsonValue<int?>( itemToken, "DestinationContainer", null )
-                    };
-
-                    entry.Items.Add( item );
-                }
-
-                Items.Add( entry );
+                entry.Items.Add( item );
             }
-        }
-
-        private async Task Organize( object arg )
-        {
-            if ( !( arg is OrganizerEntry entry ) )
-            {
-                return;
-            }
-
-            IsOrganizing = true;
-
-            await _manager.Organize( entry );
-
-            IsOrganizing = false;
-        }
-
-        private void NewOrganizerEntry( object obj )
-        {
-            int count = Items.Count + 1;
-
-            OrganizerEntry entry = new OrganizerEntry
-            {
-                Name = $"Organizer-{count}",
-                Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( SelectedItem ) ),
-                IsRunning = () => IsOrganizing
-            };
 
             Items.Add( entry );
         }
+    }
 
-        private void RemoveOrganizerAgentEntry( object obj )
+    private async Task Organize( object arg )
+    {
+        if ( arg is not OrganizerEntry entry )
         {
-            if ( !( obj is OrganizerEntry entry ) )
-            {
-                return;
-            }
-
-            Items.Remove( entry );
+            return;
         }
 
-        private void RemoveItem( object obj )
-        {
-            if ( !( obj is OrganizerItem item ) )
-            {
-                return;
-            }
+        IsOrganizing = true;
 
-            SelectedItem.Items.Remove( item );
+        await _manager.Organize( entry );
+
+        IsOrganizing = false;
+    }
+
+    private void NewOrganizerEntry( object obj )
+    {
+        int count = Items.Count + 1;
+
+        OrganizerEntry entry = new()
+        {
+            Name = $"Organizer-{count}",
+            Action = ( hks, _ ) => Task.Run( async () => await _manager.Organize( SelectedItem ) ),
+            IsRunning = () => IsOrganizing
+        };
+
+        Items.Add( entry );
+    }
+
+    private void RemoveOrganizerAgentEntry( object obj )
+    {
+        if ( obj is not OrganizerEntry entry )
+        {
+            return;
         }
 
-        private static async Task InsertItem( object arg )
+        Items.Remove( entry );
+    }
+
+    private void RemoveItem( object obj )
+    {
+        if ( obj is not OrganizerItem item )
         {
-            if ( !( arg is OrganizerEntry entry ) )
-            {
-                return;
-            }
-
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_new_item___ );
-
-            if ( serial <= 0 )
-            {
-                Commands.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            OrganizerItem organizerItem = new OrganizerItem
-            {
-                Item = TileData.GetStaticTile( item.ID ).Name, ID = item.ID, Hue = item.Hue, Amount = -1
-            };
-
-            entry.Items.Add( organizerItem );
+            return;
         }
 
-        private static void ClearEntryDestinationContainer( object obj )
+        SelectedItem.Items.Remove( item );
+    }
+
+    private static async Task InsertItem( object arg )
+    {
+        if ( arg is not OrganizerEntry entry )
         {
-            if ( obj is OrganizerItem entry )
-            {
-                entry.DestinationContainer = null;
-            }
+            return;
         }
 
-        private static void ClearEntrySourceContainer( object obj )
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_new_item___ );
+
+        if ( serial <= 0 )
         {
-            if ( obj is OrganizerItem entry )
-            {
-                entry.SourceContainer = null;
-            }
+            Commands.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
         }
 
-        private static async Task SetEntryContainer( Action<int> action )
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
         {
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_container___ );
-
-            if ( serial <= 0 )
-            {
-                Commands.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            action( serial );
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        private static Task SetEntryDestinationContainer( object obj )
+        OrganizerItem organizerItem = new()
         {
-            if ( !( obj is OrganizerItem entry ) )
-            {
-                return Task.CompletedTask;
-            }
+            Item = TileData.GetStaticTile( item.ID ).Name,
+            ID = item.ID,
+            Hue = item.Hue,
+            Amount = -1
+        };
 
-            return SetEntryContainer( serial => entry.DestinationContainer = serial );
+        entry.Items.Add( organizerItem );
+    }
+
+    private static void ClearEntryDestinationContainer( object obj )
+    {
+        if ( obj is OrganizerItem entry )
+        {
+            entry.DestinationContainer = null;
+        }
+    }
+
+    private static void ClearEntrySourceContainer( object obj )
+    {
+        if ( obj is OrganizerItem entry )
+        {
+            entry.SourceContainer = null;
+        }
+    }
+
+    private static async Task SetEntryContainer( Action<int> action )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_container___ );
+
+        if ( serial <= 0 )
+        {
+            Commands.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
         }
 
-        private static Task SetEntrySourceContainer( object obj )
-        {
-            if ( !( obj is OrganizerItem entry ) )
-            {
-                return Task.CompletedTask;
-            }
+        action( serial );
+    }
 
-            return SetEntryContainer( serial => entry.SourceContainer = serial );
+    private static Task SetEntryDestinationContainer( object obj )
+    {
+        if ( obj is not OrganizerItem entry )
+        {
+            return Task.CompletedTask;
         }
+
+        return SetEntryContainer( serial => entry.DestinationContainer = serial );
+    }
+
+    private static Task SetEntrySourceContainer( object obj )
+    {
+        if ( obj is not OrganizerItem entry )
+        {
+            return Task.CompletedTask;
+        }
+
+        return SetEntryContainer( serial => entry.SourceContainer = serial );
     }
 }

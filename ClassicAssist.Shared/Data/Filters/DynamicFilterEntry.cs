@@ -21,24 +21,23 @@ using System;
 using System.Collections.Generic;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+public abstract class DynamicFilterEntry : FilterEntry
 {
-    public abstract class DynamicFilterEntry : FilterEntry
+    protected DynamicFilterEntry()
     {
-        protected DynamicFilterEntry()
-        {
-            Filters.Add( this );
-        }
+        Filters.Add( this );
+    }
 
-        public static List<DynamicFilterEntry> Filters { get; set; } = new List<DynamicFilterEntry>();
+    public static List<DynamicFilterEntry> Filters { get; set; } = [];
 
-        protected override void OnChanged( bool enabled )
-        {
-        }
+    protected override void OnChanged( bool enabled )
+    {
+    }
 
-        public virtual bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
-        {
-            throw new NotImplementedException();
-        }
+    public virtual bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+    {
+        throw new NotImplementedException();
     }
 }

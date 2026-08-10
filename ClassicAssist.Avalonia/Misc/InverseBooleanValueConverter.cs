@@ -21,28 +21,27 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class InverseBooleanValueConverter : IValueConverter
 {
-    public class InverseBooleanValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not bool valueBool )
         {
-            if ( !( value is bool valueBool ) )
-            {
-                return false;
-            }
-
-            return !valueBool;
+            return false;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            if ( !( value is bool valueBool ) )
-            {
-                return false;
-            }
+        return !valueBool;
+    }
 
-            return !valueBool;
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        if ( value is not bool valueBool )
+        {
+            return false;
         }
+
+        return !valueBool;
     }
 }

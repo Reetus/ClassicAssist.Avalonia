@@ -14,21 +14,18 @@
 
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
-{
-    /// <summary>
-    ///     Lets a caller outside the Debug Window pre-populate one of its tabs - e.g. Object Inspector's
-    ///     "double-click a Properties row" opens the Property tab with <see cref="Object" /> set to the
-    ///     entity's property list. Ported from the WPF build's DebugBaseViewModel.
-    /// </summary>
-    public class DebugBaseViewModel : BaseViewModel
-    {
-        private object _object;
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-        public object Object
-        {
-            get => _object;
-            set => SetProperty( ref _object, value );
-        }
+/// <summary>
+///     Lets a caller outside the Debug Window pre-populate one of its tabs - e.g. Object Inspector's
+///     "double-click a Properties row" opens the Property tab with <see cref="Object" /> set to the
+///     entity's property list. Ported from the WPF build's DebugBaseViewModel.
+/// </summary>
+public class DebugBaseViewModel : BaseViewModel
+{
+    public object Object
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

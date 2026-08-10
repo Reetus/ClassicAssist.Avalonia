@@ -17,11 +17,10 @@
 
 #endregion
 
-namespace ClassicAssist.Data.Dress
+namespace ClassicAssist.Data.Dress;
+
+public enum DressAgentItemType
 {
-    public enum DressAgentItemType
-    {
-        Serial,
-        ID
-    }
+    Serial,
+    ID
 }

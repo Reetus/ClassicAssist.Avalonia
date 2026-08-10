@@ -21,37 +21,36 @@ using System;
 using System.Reflection;
 using ClassicAssist.Shared;
 
-namespace ClassicAssist.Helpers
+namespace ClassicAssist.Helpers;
+
+public static class Reflection
 {
-    public static class Reflection
+    public static T GetTypePropertyValue<T>( Type type, string property, object obj = null,
+        BindingFlags bindingFlags = BindingFlags.Default )
     {
-        public static T GetTypePropertyValue<T>( Type type, string property, object obj = null,
-            BindingFlags bindingFlags = BindingFlags.Default )
+        PropertyInfo propertyInfo = type.GetProperty( property );
+
+        T val = (T) propertyInfo?.GetValue( obj, null );
+
+        // ReSharper disable once ConvertIfStatementToReturnStatement
+        if ( val == null )
         {
-            PropertyInfo propertyInfo = type.GetProperty( property );
-
-            T val = (T) propertyInfo?.GetValue( obj, null );
-
-            // ReSharper disable once ConvertIfStatementToReturnStatement
-            if ( val == null )
-            {
-                return default;
-            }
-
-            return val;
+            return default;
         }
 
-        public static T GetTypePropertyValue<T>( string type, string property, object obj,
-            BindingFlags bindingFlags = BindingFlags.Default, Assembly assembly = null )
+        return val;
+    }
+
+    public static T GetTypePropertyValue<T>( string type, string property, object obj,
+        BindingFlags bindingFlags = BindingFlags.Default, Assembly assembly = null )
+    {
+        if ( assembly == null )
         {
-            if ( assembly == null )
-            {
-                assembly = Engine.ClassicAssembly;
-            }
-
-            Type t = assembly?.GetType( type );
-
-            return t == null ? default : GetTypePropertyValue<T>( t, property, obj, bindingFlags );
+            assembly = Engine.ClassicAssembly;
         }
+
+        Type t = assembly?.GetType( type );
+
+        return t == null ? default : GetTypePropertyValue<T>( t, property, obj, bindingFlags );
     }
 }

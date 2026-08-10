@@ -15,34 +15,33 @@
  * You should have received a copy of the GNU General Public License
  * along with UO Machine.  If not, see <http://www.gnu.org/licenses/>. */
 
-namespace ClassicAssist.UO.Objects.Gumps
+namespace ClassicAssist.UO.Objects.Gumps;
+
+public enum ElementType : byte
 {
-    public enum ElementType : byte
-    {
-        invalid,
-        button,
-        buttontileart,
-        checkbox,
-        checkertrans,
-        croppedtext,
-        gumppic,
-        gumppictiled,
-        htmlgump,
-        kr_xmfhtmlgump,
-        mastergump,
-        radio,
-        resizepic,
-        text,
-        textentry,
-        textentrylimited,
-        tilepic,
-        tilepichue,
-        xmfhtmlgump,
-        xmfhtmlgumpcolor,
-        xmfhtmltok,
-        itemproperty,
-        page,
-        group,
-        tooltip
-    }
+    invalid,
+    button,
+    buttontileart,
+    checkbox,
+    checkertrans,
+    croppedtext,
+    gumppic,
+    gumppictiled,
+    htmlgump,
+    kr_xmfhtmlgump,
+    mastergump,
+    radio,
+    resizepic,
+    text,
+    textentry,
+    textentrylimited,
+    tilepic,
+    tilepichue,
+    xmfhtmlgump,
+    xmfhtmlgumpcolor,
+    xmfhtmltok,
+    itemproperty,
+    page,
+    group,
+    tooltip
 }

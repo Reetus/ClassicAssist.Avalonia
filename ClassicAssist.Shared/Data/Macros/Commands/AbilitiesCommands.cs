@@ -2,75 +2,74 @@
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
-using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class AbilitiesCommands
 {
-    public static class AbilitiesCommands
+    [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
+    public static void ClearAbility()
     {
-        [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
-        public static void ClearAbility()
-        {
-            AbilitiesManager manager = AbilitiesManager.GetInstance();
+        AbilitiesManager manager = AbilitiesManager.GetInstance();
 
-            if ( manager.IsPrimaryEnabled )
-            {
-                manager.SetAbility( AbilityType.Primary );
-            }
-            else if ( manager.IsSecondaryEnabled )
-            {
-                manager.SetAbility( AbilityType.Secondary );
-            }
+        if ( manager.IsPrimaryEnabled )
+        {
+            manager.SetAbility( AbilityType.Primary );
+        }
+        else if ( manager.IsSecondaryEnabled )
+        {
+            manager.SetAbility( AbilityType.Secondary );
+        }
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
+    public static bool ActiveAbility()
+    {
+        AbilitiesManager manager = AbilitiesManager.GetInstance();
+
+        return manager.IsPrimaryEnabled || manager.IsSecondaryEnabled;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Abilities ),
+        Parameters = new[] { nameof( ParameterType.Ability ), nameof( ParameterType.OnOff ) } )]
+    public static void SetAbility( string ability, string onOff = "toggle" )
+    {
+        AbilitiesManager manager = AbilitiesManager.GetInstance();
+
+        if ( ability.ToLower().Equals( "stun" ) )
+        {
+            Engine.SendPacketToServer( new StunRequest() );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
-        public static bool ActiveAbility()
+        if ( ability.ToLower().Equals( "disarm" ) )
         {
-            AbilitiesManager manager = AbilitiesManager.GetInstance();
-
-            return manager.IsPrimaryEnabled || manager.IsSecondaryEnabled;
+            Engine.SendPacketToServer( new DisarmRequest() );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Abilities ),
-            Parameters = new[] { nameof( ParameterType.Ability ), nameof( ParameterType.OnOff ) } )]
-        public static void SetAbility( string ability, string onOff = "toggle" )
+        bool primary;
+
+        switch ( ability.ToLower() )
         {
-            AbilitiesManager manager = AbilitiesManager.GetInstance();
+            case "primary":
+                primary = true;
+                break;
+            default:
+                primary = false;
+                break;
+        }
 
-            if ( ability.ToLower().Equals( "stun" ) )
+        string onOffNormalized = onOff.Trim().ToLower();
+
+        if ( onOffNormalized != "toggle" )
+        {
+            switch ( onOffNormalized )
             {
-                Engine.SendPacketToServer( new StunRequest() );
-                return;
-            }
-
-            if ( ability.ToLower().Equals( "disarm" ) )
-            {
-                Engine.SendPacketToServer( new DisarmRequest() );
-                return;
-            }
-
-            bool primary;
-
-            switch ( ability.ToLower() )
-            {
-                case "primary":
-                    primary = true;
-                    break;
-                default:
-                    primary = false;
-                    break;
-            }
-
-            string onOffNormalized = onOff.Trim().ToLower();
-
-            if ( onOffNormalized != "toggle" )
-            {
-                switch ( onOffNormalized )
-                {
-                    case "on":
+                case "on":
                     {
                         if ( primary && manager.IsPrimaryEnabled || !primary && manager.IsSecondaryEnabled )
                         {
@@ -84,7 +83,7 @@ namespace ClassicAssist.Data.Macros.Commands
 
                         break;
                     }
-                    case "off":
+                case "off":
                     {
                         if ( primary && !manager.IsPrimaryEnabled || !primary && !manager.IsSecondaryEnabled )
                         {
@@ -98,67 +97,66 @@ namespace ClassicAssist.Data.Macros.Commands
 
                         break;
                     }
-                }
-            }
-
-            UOC.SystemMessage( string.Format( Strings.Setting_ability___0_____, ability ), 0x3F );
-            manager.SetAbility( primary ? AbilityType.Primary : AbilityType.Secondary );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
-        public static void Fly()
-        {
-            PlayerMobile player = Engine.Player;
-
-            if ( player == null )
-            {
-                return;
-            }
-
-            if ( !player.Status.HasFlag( MobileStatus.Flying ) )
-            {
-                UOC.ToggleGargoyleFlying();
             }
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Abilities ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static bool Flying( object obj )
+        UOC.SystemMessage( string.Format( Strings.Setting_ability___0_____, ability ), 0x3F );
+        manager.SetAbility( primary ? AbilityType.Primary : AbilityType.Secondary );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
+    public static void Fly()
+    {
+        PlayerMobile player = Engine.Player;
+
+        if ( player == null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return false;
-            }
-
-            Mobile mobile = Engine.Mobiles.GetMobile( serial );
-
-            if ( mobile == null )
-            {
-                // TODO better message
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return false;
-            }
-
-            return mobile.Status.HasFlag( MobileStatus.Flying );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
-        public static void Land()
+        if ( !player.Status.HasFlag( MobileStatus.Flying ) )
         {
-            PlayerMobile player = Engine.Player;
+            UOC.ToggleGargoyleFlying();
+        }
+    }
 
-            if ( player == null )
-            {
-                return;
-            }
+    [CommandsDisplay( Category = nameof( Strings.Abilities ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static bool Flying( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
 
-            if ( player.Status.HasFlag( MobileStatus.Flying ) )
-            {
-                UOC.ToggleGargoyleFlying();
-            }
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return false;
+        }
+
+        Mobile mobile = Engine.Mobiles.GetMobile( serial );
+
+        if ( mobile == null )
+        {
+            // TODO better message
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return false;
+        }
+
+        return mobile.Status.HasFlag( MobileStatus.Flying );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Abilities ) )]
+    public static void Land()
+    {
+        PlayerMobile player = Engine.Player;
+
+        if ( player == null )
+        {
+            return;
+        }
+
+        if ( player.Status.HasFlag( MobileStatus.Flying ) )
+        {
+            UOC.ToggleGargoyleFlying();
         }
     }
 }

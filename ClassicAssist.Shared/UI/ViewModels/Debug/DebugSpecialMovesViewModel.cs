@@ -3,51 +3,47 @@ using ClassicAssist.Data.SpecialMoves;
 using ClassicAssist.UI.ViewModels;
 using Microsoft.Scripting.Utils;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+public class DebugSpecialMovesViewModel : BaseViewModel
 {
-    public class DebugSpecialMovesViewModel : BaseViewModel
+    private readonly SpecialMovesManager _manager;
+
+    public DebugSpecialMovesViewModel()
     {
-        private readonly SpecialMovesManager _manager;
-        private ObservableCollection<string> _items = new ObservableCollection<string>();
-        private ObservableCollection<string> _messages = new ObservableCollection<string>();
-        private string _selectedItem;
+        _manager = SpecialMovesManager.GetInstance();
 
-        public DebugSpecialMovesViewModel()
+        Items.AddRange( _manager.GetEnabledNames() );
+
+        _manager.SpecialMovesChanged += OnSpecialMovesChanged;
+    }
+
+    public ObservableCollection<string> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public ObservableCollection<string> Messages
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public string SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private void OnSpecialMovesChanged( string name, bool enabled )
+    {
+        _dispatcher.Invoke( () =>
         {
-            _manager = SpecialMovesManager.GetInstance();
+            Messages.Add( enabled ? $"Enabled: {name}" : $"Disabled: {name}" );
 
+            Items.Clear();
             Items.AddRange( _manager.GetEnabledNames() );
-
-            _manager.SpecialMovesChanged += OnSpecialMovesChanged;
-        }
-
-        public ObservableCollection<string> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public ObservableCollection<string> Messages
-        {
-            get => _messages;
-            set => SetProperty( ref _messages, value );
-        }
-
-        public string SelectedItem
-        {
-            get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
-        }
-
-        private void OnSpecialMovesChanged( string name, bool enabled )
-        {
-            _dispatcher.Invoke( () =>
-            {
-                Messages.Add( enabled ? $"Enabled: {name}" : $"Disabled: {name}" );
-
-                Items.Clear();
-                Items.AddRange( _manager.GetEnabledNames() );
-            } );
-        }
+        } );
     }
 }

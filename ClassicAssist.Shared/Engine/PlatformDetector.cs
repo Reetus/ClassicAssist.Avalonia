@@ -21,40 +21,39 @@
 using System;
 using System.Runtime.InteropServices;
 
-namespace ClassicAssist.Shared
+namespace ClassicAssist.Shared;
+
+public enum PlatformType
 {
-    public enum PlatformType
+    Windows,
+    Unix,
+    MacOSX
+}
+
+public static partial class Engine
+{
+    private static readonly Lazy<PlatformType> m_Platform = new( DetectPlatformType );
+
+    public static PlatformType GetPlatformType()
     {
-        Windows,
-        Unix,
-        MacOSX
+#if DEBUG
+        Console.WriteLine( $"Using Platform: {m_Platform.Value}" );
+#endif
+        return m_Platform.Value;
     }
 
-    public static partial class Engine
+    private static PlatformType DetectPlatformType()
     {
-        private static readonly Lazy<PlatformType> m_Platform = new Lazy<PlatformType>( DetectPlatformType );
-
-        public static PlatformType GetPlatformType()
+        if ( RuntimeInformation.IsOSPlatform( OSPlatform.Linux ) )
         {
-#if DEBUG
-            Console.WriteLine( $"Using Platform: {m_Platform.Value}" );
-#endif
-            return m_Platform.Value;
+            return PlatformType.Unix;
         }
 
-        private static PlatformType DetectPlatformType()
+        if ( RuntimeInformation.IsOSPlatform( OSPlatform.OSX ) )
         {
-            if ( RuntimeInformation.IsOSPlatform( OSPlatform.Linux ) )
-            {
-                return PlatformType.Unix;
-            }
-
-            if ( RuntimeInformation.IsOSPlatform( OSPlatform.OSX ) )
-            {
-                return PlatformType.MacOSX;
-            }
-
-            return PlatformType.Windows;
+            return PlatformType.MacOSX;
         }
+
+        return PlatformType.Windows;
     }
 }

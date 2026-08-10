@@ -19,84 +19,83 @@
 
 using ClassicAssist.Data.Targeting;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+public class TargetAcquisitionEnemy
 {
-    public class TargetAcquisitionEnemy
+    [HotkeyCommand( Name = "Get Next Friend", Category = "Target Acquisition - Enemy" )]
+    public class GetNextFriend : HotkeyCommand
     {
-        [HotkeyCommand( Name = "Get Next Friend", Category = "Target Acquisition - Enemy" )]
-        public class GetNextFriend : HotkeyCommand
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance().GetEnemy( TargetNotoriety.Friend, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance().GetEnemy( TargetNotoriety.Friend, TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Innocent", Category = "Target Acquisition - Enemy" )]
-        public class GetNextInnocent : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Innocent", Category = "Target Acquisition - Enemy" )]
+    public class GetNextInnocent : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance()
-                    .GetEnemy( TargetNotoriety.Innocent, TargetBodyType.Any, TargetDistance.Closest );
-            }
+            TargetManager.GetInstance()
+                .GetEnemy( TargetNotoriety.Innocent, TargetBodyType.Any, TargetDistance.Closest );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Gray", Category = "Target Acquisition - Enemy" )]
-        public class GetNextGray : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Gray", Category = "Target Acquisition - Enemy" )]
+    public class GetNextGray : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance().GetEnemy( TargetNotoriety.Gray, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance().GetEnemy( TargetNotoriety.Gray, TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Criminal", Category = "Target Acquisition - Enemy" )]
-        public class GetNextCriminal : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Criminal", Category = "Target Acquisition - Enemy" )]
+    public class GetNextCriminal : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance()
-                    .GetEnemy( TargetNotoriety.Criminal, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance()
+                .GetEnemy( TargetNotoriety.Criminal, TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Gray / Criminal", Category = "Target Acquisition - Enemy" )]
-        public class GetNextGrayCriminal : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Gray / Criminal", Category = "Target Acquisition - Enemy" )]
+    public class GetNextGrayCriminal : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance().GetEnemy( TargetNotoriety.Gray | TargetNotoriety.Criminal,
-                    TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance().GetEnemy( TargetNotoriety.Gray | TargetNotoriety.Criminal,
+                TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Enemy", Category = "Target Acquisition - Enemy" )]
-        public class GetNextEnemy : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Enemy", Category = "Target Acquisition - Enemy" )]
+    public class GetNextEnemy : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance().GetEnemy( TargetNotoriety.Enemy, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance().GetEnemy( TargetNotoriety.Enemy, TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Murderer", Category = "Target Acquisition - Enemy" )]
-        public class GetNextMurderer : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Murderer", Category = "Target Acquisition - Enemy" )]
+    public class GetNextMurderer : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance()
-                    .GetEnemy( TargetNotoriety.Murderer, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance()
+                .GetEnemy( TargetNotoriety.Murderer, TargetBodyType.Any, TargetDistance.Next );
         }
+    }
 
-        [HotkeyCommand( Name = "Get Next Any", Category = "Target Acquisition - Enemy" )]
-        public class GetNextAny : HotkeyCommand
+    [HotkeyCommand( Name = "Get Next Any", Category = "Target Acquisition - Enemy" )]
+    public class GetNextAny : HotkeyCommand
+    {
+        public override void Execute()
         {
-            public override void Execute()
-            {
-                TargetManager.GetInstance().GetEnemy( TargetNotoriety.Any, TargetBodyType.Any, TargetDistance.Next );
-            }
+            TargetManager.GetInstance().GetEnemy( TargetNotoriety.Any, TargetBodyType.Any, TargetDistance.Next );
         }
     }
 }

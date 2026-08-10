@@ -31,170 +31,157 @@ using ClassicAssist.Data;
 using ClassicAssist.Shared;
 using Engine = ClassicAssist.Avalonia.UiHost;
 
-namespace ClassicAssist.Avalonia
+namespace ClassicAssist.Avalonia;
+
+/// <summary>
+///     Opens windows on behalf of view models, which live in ClassicAssist.Shared and so cannot name
+///     an Avalonia type.
+///     <para>
+///         Everything here constructs its window inside the dispatcher callback rather than before it.
+///         Avalonia's <see cref="Window" /> constructor creates the platform window and throws
+///         "Call from invalid thread" off the UI thread - unlike WPF, which lets a window be built on
+///         any STA thread. Callers routinely are not on the UI thread: hotkeys run under
+///         <c>Task.Run</c>, and packet handlers run on whatever thread StreamJsonRpc dispatched them
+///         on. Constructing first meant those callers threw before ever reaching the dispatcher, and
+///         the exception died in the caller's task with no window and no message.
+///     </para>
+/// </summary>
+public class AvaloniaUIInvoker : IUIInvoker
 {
-    /// <summary>
-    ///     Opens windows on behalf of view models, which live in ClassicAssist.Shared and so cannot name
-    ///     an Avalonia type.
-    ///     <para>
-    ///         Everything here constructs its window inside the dispatcher callback rather than before it.
-    ///         Avalonia's <see cref="Window" /> constructor creates the platform window and throws
-    ///         "Call from invalid thread" off the UI thread - unlike WPF, which lets a window be built on
-    ///         any STA thread. Callers routinely are not on the UI thread: hotkeys run under
-    ///         <c>Task.Run</c>, and packet handlers run on whatever thread StreamJsonRpc dispatched them
-    ///         on. Constructing first meant those callers threw before ever reaching the dispatcher, and
-    ///         the exception died in the caller's task with no window and no message.
-    ///     </para>
-    /// </summary>
-    public class AvaloniaUIInvoker : IUIInvoker
+    private readonly Dispatcher _dispatcher;
+
+    public AvaloniaUIInvoker( Dispatcher dispatcher )
     {
-        private readonly Dispatcher _dispatcher;
+        _dispatcher = dispatcher;
+    }
 
-        public AvaloniaUIInvoker( Dispatcher dispatcher )
+    public Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
+        object[] dataContextParam = null )
+    {
+        Type type = FindWindowType( typeName );
+
+        if ( type == null )
         {
-            _dispatcher = dispatcher;
+            return Task.CompletedTask;
         }
 
-        public Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
-            object[] dataContextParam = null )
+        return _dispatcher.InvokeAsync( () =>
         {
-            Type type = FindWindowType( typeName );
-
-            if ( type == null )
+            try
             {
-                return Task.CompletedTask;
+                Window window = (Window) Activator.CreateInstance( type, ctorParam ) ?? throw new InvalidOperationException( $"Failed to create window of type: {typeName}" );
+                if ( dataContextType != null )
+                {
+                    window.DataContext = Activator.CreateInstance( dataContextType, dataContextParam );
+                }
+
+                window.Show();
+                window.Activate();
             }
-
-            return _dispatcher.InvokeAsync( () =>
+            catch ( Exception e )
             {
-                try
-                {
-                    Window window = (Window) Activator.CreateInstance( type, ctorParam );
-
-                    if ( window == null )
-                    {
-                        throw new InvalidOperationException( $"Failed to create window of type: {typeName}" );
-                    }
-
-                    if ( dataContextType != null )
-                    {
-                        window.DataContext = Activator.CreateInstance( dataContextType, dataContextParam );
-                    }
-
-                    window.Show();
-                    window.Activate();
-                }
-                catch ( Exception e )
-                {
-                    Report( typeName, e );
-                }
-            } ).GetTask();
-        }
-
-        public Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default )
-            where T : class
-        {
-            Type type = FindWindowType( typeName );
-
-            if ( type == null )
-            {
-                return Task.CompletedTask;
+                Report( typeName, e );
             }
+        } ).GetTask();
+    }
 
-            TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
+    public Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default )
+        where T : class
+    {
+        Type type = FindWindowType( typeName );
 
-            _dispatcher.InvokeAsync( async () =>
-            {
-                try
-                {
-                    Window window = (Window) Activator.CreateInstance( type, ctorParam );
-
-                    if ( window == null )
-                    {
-                        throw new InvalidOperationException( $"Failed to create window of type: {typeName}" );
-                    }
-
-                    if ( dataContext != null )
-                    {
-                        window.DataContext = dataContext;
-                    }
-
-                    await window.ShowDialog( Engine.MainWindow );
-
-                    taskCompletionSource.TrySetResult( true );
-                }
-                catch ( Exception e )
-                {
-                    Report( typeName, e );
-
-                    // Awaiting a dialog that never opened would hang the caller forever.
-                    taskCompletionSource.TrySetResult( false );
-                }
-            } );
-
-            return taskCompletionSource.Task;
+        if ( type == null )
+        {
+            return Task.CompletedTask;
         }
 
-        public Task<int> GetHueAsync()
+        TaskCompletionSource<bool> taskCompletionSource = new();
+
+        _dispatcher.InvokeAsync( async () =>
         {
-            return _dispatcher.InvokeAsync( async () =>
+            try
             {
-                HuePickerWindow window = new HuePickerWindow { Topmost = Options.CurrentOptions.AlwaysOnTop };
+                Window window = (Window) Activator.CreateInstance( type, ctorParam ) ?? throw new InvalidOperationException( $"Failed to create window of type: {typeName}" );
+                if ( dataContext != null )
+                {
+                    window.DataContext = dataContext;
+                }
 
                 await window.ShowDialog( Engine.MainWindow );
 
-                return window.SelectedHue;
-            } );
-        }
-
-        public Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions )
-        {
-            return _dispatcher.InvokeAsync( async () =>
-            {
-                IReadOnlyList<IStorageFile> files = await Engine.MainWindow.StorageProvider.OpenFilePickerAsync(
-                    new FilePickerOpenOptions
-                    {
-                        Title = title,
-                        AllowMultiple = false,
-                        FileTypeFilter = new[] { new FilePickerFileType( filterName ) { Patterns = extensions } }
-                    } );
-
-                return files.Count > 0 ? files[0].TryGetLocalPath() : null;
-            } );
-        }
-
-        public void SetClipboardText( string text )
-        {
-            _dispatcher.InvokeAsync( () => Engine.MainWindow.Clipboard?.SetTextAsync( text ) );
-        }
-
-        public string GetClipboardText()
-        {
-            return _dispatcher.InvokeAsync( () => Engine.MainWindow.Clipboard?.TryGetTextAsync() ).Result;
-        }
-
-        private static Type FindWindowType( string typeName )
-        {
-            Type type = Assembly.GetExecutingAssembly().GetTypes()
-                .FirstOrDefault( t => t.Name == typeName && t.IsSubclassOf( typeof( Window ) ) );
-
-            if ( type == null )
-            {
-                Shared.Engine.MessageBoxProvider.Show( $"Cannot find type: {typeName}" );
+                taskCompletionSource.TrySetResult( true );
             }
+            catch ( Exception e )
+            {
+                Report( typeName, e );
 
-            return type;
-        }
+                // Awaiting a dialog that never opened would hang the caller forever.
+                taskCompletionSource.TrySetResult( false );
+            }
+        } );
 
-        /// <summary>
-        ///     A window that fails to open is otherwise completely silent - the caller is usually a hotkey
-        ///     or a packet handler with nowhere to surface an exception.
-        /// </summary>
-        private static void Report( string typeName, Exception e )
+        return taskCompletionSource.Task;
+    }
+
+    public Task<int> GetHueAsync()
+    {
+        return _dispatcher.InvokeAsync( async () =>
         {
-            Console.WriteLine( $"Failed to open {typeName}: {e}" );
+            HuePickerWindow window = new() { Topmost = Options.CurrentOptions.AlwaysOnTop };
 
-            Shared.Engine.MessageBoxProvider?.Show( $"Failed to open {typeName}: {e.Message}" );
+            await window.ShowDialog( Engine.MainWindow );
+
+            return window.SelectedHue;
+        } );
+    }
+
+    public Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions )
+    {
+        return _dispatcher.InvokeAsync( async () =>
+        {
+            IReadOnlyList<IStorageFile> files = await Engine.MainWindow.StorageProvider.OpenFilePickerAsync(
+                new FilePickerOpenOptions
+                {
+                    Title = title,
+                    AllowMultiple = false,
+                    FileTypeFilter = [new FilePickerFileType( filterName ) { Patterns = extensions }]
+                } );
+
+            return files.Count > 0 ? files[0].TryGetLocalPath() : null;
+        } );
+    }
+
+    public void SetClipboardText( string text )
+    {
+        _dispatcher.InvokeAsync( () => Engine.MainWindow.Clipboard?.SetTextAsync( text ) );
+    }
+
+    public string GetClipboardText()
+    {
+        return _dispatcher.InvokeAsync( () => Engine.MainWindow.Clipboard?.TryGetTextAsync() ).Result;
+    }
+
+    private static Type FindWindowType( string typeName )
+    {
+        Type type = Assembly.GetExecutingAssembly().GetTypes()
+            .FirstOrDefault( t => t.Name == typeName && t.IsSubclassOf( typeof( Window ) ) );
+
+        if ( type == null )
+        {
+            Shared.Engine.MessageBoxProvider.Show( $"Cannot find type: {typeName}" );
         }
+
+        return type;
+    }
+
+    /// <summary>
+    ///     A window that fails to open is otherwise completely silent - the caller is usually a hotkey
+    ///     or a packet handler with nowhere to surface an exception.
+    /// </summary>
+    private static void Report( string typeName, Exception e )
+    {
+        Console.WriteLine( $"Failed to open {typeName}: {e}" );
+
+        Shared.Engine.MessageBoxProvider?.Show( $"Failed to open {typeName}: {e.Message}" );
     }
 }

@@ -5,7 +5,7 @@ namespace ClassicAssist.UO.Network.PacketFilter;
 
 public class PacketFilter
 {
-    private List<PacketFilterInfo> _filters = new();
+    private List<PacketFilterInfo> _filters = [];
 
     public void Add( byte packet, PacketFilterCondition[] constraints )
     {
@@ -14,20 +14,14 @@ public class PacketFilter
 
     public void Add( PacketFilterInfo pfi )
     {
-        if ( _filters == null )
-        {
-            _filters = new List<PacketFilterInfo>();
-        }
+        _filters ??= [];
 
         _filters.Add( pfi );
     }
 
     public void Remove( PacketFilterInfo pfi )
     {
-        if ( _filters == null )
-        {
-            _filters = new List<PacketFilterInfo>();
-        }
+        _filters ??= [];
 
         if ( _filters.Contains( pfi ) )
         {
@@ -37,10 +31,7 @@ public class PacketFilter
 
     public bool Remove( byte packet, PacketFilterCondition[] constraints )
     {
-        if ( _filters == null )
-        {
-            _filters = new List<PacketFilterInfo>();
-        }
+        _filters ??= [];
 
         for ( int i = 0; i < _filters.Count; i++ )
         {
@@ -164,7 +155,7 @@ public class PacketFilter
 
     public int MatchFilterAll( byte[] packet, out PacketFilterInfo[] pfis )
     {
-        List<PacketFilterInfo> pfiList = new();
+        List<PacketFilterInfo> pfiList = [];
         pfis = null;
 
         if ( _filters == null || packet == null )
@@ -208,7 +199,7 @@ public class PacketFilter
             }
         }
 
-        pfis = pfiList.ToArray();
+        pfis = [.. pfiList];
 
         return pfiList.Count;
     }

@@ -1,13 +1,12 @@
 ﻿using ClassicAssist.Data.Macros.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Equip Last Weapon (Quick Weapon Switch)", Tooltip = "Requires Server Support" )]
+public class EquipLastWeapon : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Equip Last Weapon (Quick Weapon Switch)", Tooltip = "Requires Server Support" )]
-    public class EquipLastWeapon : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            ActionCommands.EquipLastWeapon();
-        }
+        ActionCommands.EquipLastWeapon();
     }
 }

@@ -21,82 +21,82 @@ using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.UO.Network.PacketFilter;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+[FilterOptions( Name = "ItemID Filter", DefaultEnabled = false )]
+public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 {
-    [FilterOptions( Name = "ItemID Filter", DefaultEnabled = false )]
-    public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
+    public ObservableCollection<ItemIDFilterEntry> Items { get; set; } =
+        [];
+
+    public async Task Configure()
     {
-        public ObservableCollection<ItemIDFilterEntry> Items { get; set; } =
-            new ObservableCollection<ItemIDFilterEntry>();
+        ItemIDFilterConfigureViewModel vm = new( Items );
 
-        public async Task Configure()
+        await Engine.UIInvoker.InvokeDialog( "ItemIDFilterConfigureWindow", dataContext: vm );
+    }
+
+    public void Deserialize( JToken token )
+    {
+        if ( token?["Items"] == null )
         {
-            ItemIDFilterConfigureViewModel vm = new ItemIDFilterConfigureViewModel( Items );
-
-            await Engine.UIInvoker.InvokeDialog( "ItemIDFilterConfigureWindow", dataContext: vm );
+            return;
         }
 
-        public void Deserialize( JToken token )
+        foreach ( JToken itemsToken in token["Items"] )
         {
-            if ( token?["Items"] == null )
+            Items.Add( new ItemIDFilterEntry
             {
-                return;
-            }
+                Enabled = itemsToken["Enabled"]?.ToObject<bool>() ?? false,
+                SourceID = itemsToken["SourceID"]?.ToObject<int>() ?? 0,
+                DestinationID = itemsToken["DestinationID"]?.ToObject<int>() ?? 0,
+                Hue = itemsToken["Hue"]?.ToObject<int>() ?? -1
+            } );
+        }
+    }
 
-            foreach ( JToken itemsToken in token["Items"] )
+    public JObject Serialize()
+    {
+        JObject config = [];
+
+        JArray items = [];
+
+        foreach ( ItemIDFilterEntry item in Items )
+        {
+            items.Add( new JObject
             {
-                Items.Add( new ItemIDFilterEntry
-                {
-                    Enabled = itemsToken["Enabled"]?.ToObject<bool>() ?? false,
-                    SourceID = itemsToken["SourceID"]?.ToObject<int>() ?? 0,
-                    DestinationID = itemsToken["DestinationID"]?.ToObject<int>() ?? 0,
-                    Hue = itemsToken["Hue"]?.ToObject<int>() ?? -1
-                } );
-            }
+                { "Enabled", item.Enabled },
+                { "SourceID", item.SourceID },
+                { "DestinationID", item.DestinationID },
+                { "Hue", item.Hue }
+            } );
         }
 
-        public JObject Serialize()
+        config.Add( "Items", items );
+
+        return config;
+    }
+
+    public void ResetOptions()
+    {
+        Items.Clear();
+    }
+
+    public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+    {
+        if ( packet == null || !Enabled )
         {
-            JObject config = new JObject();
-
-            JArray items = new JArray();
-
-            foreach ( ItemIDFilterEntry item in Items )
-            {
-                items.Add( new JObject
-                {
-                    { "Enabled", item.Enabled },
-                    { "SourceID", item.SourceID },
-                    { "DestinationID", item.DestinationID },
-                    { "Hue", item.Hue }
-                } );
-            }
-
-            config.Add( "Items", items );
-
-            return config;
+            return false;
         }
 
-        public void ResetOptions()
+        if ( direction != PacketDirection.Incoming )
         {
-            Items.Clear();
+            return false;
         }
 
-        public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+        switch ( packet[0] )
         {
-            if ( packet == null || !Enabled )
-            {
-                return false;
-            }
-
-            if ( direction != PacketDirection.Incoming )
-            {
-                return false;
-            }
-
-            switch ( packet[0] )
-            {
-                case 0xF3:
+            case 0xF3:
                 {
                     int itemId = ( packet[8] << 8 ) | packet[9];
 
@@ -119,7 +119,7 @@ namespace ClassicAssist.Data.Filters
                     packet[22] = (byte) entry.Hue;
                     break;
                 }
-                case 0x3C:
+            case 0x3C:
                 {
                     bool oldStyle = false;
 
@@ -157,7 +157,7 @@ namespace ClassicAssist.Data.Filters
 
                     break;
                 }
-                case 0x25:
+            case 0x25:
                 {
                     int itemId = ( packet[5] << 8 ) | packet[6];
 
@@ -182,7 +182,7 @@ namespace ClassicAssist.Data.Filters
                     packet[oldStyle ? 19 : 20] = (byte) entry.Hue;
                     break;
                 }
-                case 0x1A:
+            case 0x1A:
                 {
                     int serial = ( packet[3] << 24 ) | ( packet[4] << 16 ) | ( packet[5] << 8 ) | packet[6];
                     int itemId = ( packet[7] << 8 ) | packet[8];
@@ -269,54 +269,48 @@ namespace ClassicAssist.Data.Filters
 
                     break;
                 }
-            }
-
-            return false;
         }
 
-        private ItemIDFilterEntry FindEnabledEntry( int sourceId )
-        {
-            for ( int i = 0; i < Items.Count; i++ )
-            {
-                if ( Items[i].SourceID == sourceId && Items[i].Enabled )
-                {
-                    return Items[i];
-                }
-            }
-
-            return null;
-        }
+        return false;
     }
 
-    public class ItemIDFilterEntry : SetPropertyNotifyChanged
+    private ItemIDFilterEntry FindEnabledEntry( int sourceId )
     {
-        private int _destinationId;
-        private bool _enabled;
-        private int _hue = -1;
-        private int _sourceId;
-
-        public int DestinationID
+        for ( int i = 0; i < Items.Count; i++ )
         {
-            get => _destinationId;
-            set => SetProperty( ref _destinationId, value );
+            if ( Items[i].SourceID == sourceId && Items[i].Enabled )
+            {
+                return Items[i];
+            }
         }
 
-        public bool Enabled
-        {
-            get => _enabled;
-            set => SetProperty( ref _enabled, value );
-        }
+        return null;
+    }
+}
 
-        public int Hue
-        {
-            get => _hue;
-            set => SetProperty( ref _hue, value );
-        }
+public class ItemIDFilterEntry : SetPropertyNotifyChanged
+{
+    public int DestinationID
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public int SourceID
-        {
-            get => _sourceId;
-            set => SetProperty( ref _sourceId, value );
-        }
+    public bool Enabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int Hue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = -1;
+
+    public int SourceID
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

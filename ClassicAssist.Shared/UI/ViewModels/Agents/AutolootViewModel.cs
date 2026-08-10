@@ -33,20 +33,11 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents;
 public class AutolootViewModel : BaseViewModel, ISettingProvider
 {
     private const int LOOT_TIMEOUT = 5000;
-    private readonly object _autolootLock = new();
+    private readonly Lock _autolootLock = new();
 
     private readonly string _propertiesFile = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.json" );
 
     private readonly string _propertiesFileCustom = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
-
-    private ObservableCollectionEx<AutolootEntry> _items = new();
-
-    private ObservableCollection<IDraggable> _draggables = new();
-
-    private bool _lootHumanoids;
-    private bool _requeueFailedItems;
-    private AutolootGroup _selectedGroup;
-
     private RelayCommand _resetContainerCommand;
 
     public AutolootViewModel()
@@ -68,7 +59,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         AutolootHelpers.SetAutolootContainer = serial => ContainerSerial = serial;
         IncomingPacketHandlers.CorpseContainerDisplayEvent += OnCorpseEvent;
         AutolootManager manager = AutolootManager.GetInstance();
-        manager.GetEntries = () => _items.ToList();
+        manager.GetEntries = () => [.. Items];
         manager.CheckContainer = OnCorpseEvent;
         manager.IsEnabled = () => Enabled;
         manager.SetEnabled = enabled => Enabled = enabled;
@@ -82,7 +73,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     ///     The <see cref="AutolootGroup" /> entries in <see cref="Draggables" />, for menus that must
     ///     offer only groups as targets (e.g. Move to group).
     /// </summary>
-    public ObservableCollection<AutolootGroup> Groups { get; } = new();
+    public ObservableCollection<AutolootGroup> Groups { get; } = [];
 
     private void OnDraggablesChanged( object sender, NotifyCollectionChangedEventArgs e )
     {
@@ -109,7 +100,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     {
         get;
         set => SetProperty( ref field, value );
-    } = new();
+    } = [];
 
     public int ContainerSerial
     {
@@ -130,9 +121,9 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     public ObservableCollection<IDraggable> Draggables
     {
-        get => _draggables;
-        set => SetProperty( ref _draggables, value );
-    }
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
     public bool Enabled
     {
@@ -148,14 +139,14 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     public ObservableCollectionEx<AutolootEntry> Items
     {
-        get => _items;
-        set => SetProperty( ref _items, value );
-    }
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
     public bool LootHumanoids
     {
-        get => _lootHumanoids;
-        set => SetProperty( ref _lootHumanoids, value );
+        get;
+        set => SetProperty( ref field, value );
     }
 
     public bool MatchTextValue
@@ -175,20 +166,20 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     public ICommand RemoveGroupCommand => field ??= new RelayCommand( RemoveGroup, o => o is IDraggableGroup );
 
     public ICommand RemoveSingleConstraintCommand =>
-        field ??= new RelayCommand( o => RemoveSingleConstraint( ( AutolootConstraintEntry )o ), o => SelectedProperty != null );
+        field ??= new RelayCommand( o => RemoveSingleConstraint( (AutolootConstraintEntry) o ), o => SelectedProperty != null );
 
     public bool RequeueFailedItems
     {
-        get => _requeueFailedItems;
-        set => SetProperty( ref _requeueFailedItems, value );
+        get;
+        set => SetProperty( ref field, value );
     }
 
     public ICommand ResetContainerCommand => _resetContainerCommand = new RelayCommand( ResetContainer, o => true );
 
     public AutolootGroup SelectedGroup
     {
-        get => _selectedGroup;
-        set => SetProperty( ref _selectedGroup, value );
+        get;
+        set => SetProperty( ref field, value );
     }
 
     public AutolootEntry SelectedItem
@@ -201,7 +192,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     {
         get;
         set => SetProperty( ref field, value );
-    } = new();
+    } = [];
 
     public AutolootConstraintEntry SelectedProperty
     {
@@ -220,7 +211,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        JArray groupArray = new();
+        JArray groupArray = [];
 
         foreach ( AutolootGroup draggableGroup in Draggables.Where( i => i is AutolootGroup )
                      .OrderBy( e => DraggableTreeViewHelpers.GetIndex( e, Draggables ) )
@@ -242,7 +233,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             { "Groups", groupArray }
         };
 
-        JArray itemsArray = new();
+        JArray itemsArray = [];
 
         foreach ( AutolootEntry entry in Items.OrderBy( e => DraggableTreeViewHelpers.GetIndex( e, Draggables ) ) )
         {
@@ -260,7 +251,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
             if ( entry.Constraints != null )
             {
-                JArray constraintsArray = new();
+                JArray constraintsArray = [];
 
                 foreach ( AutolootConstraintEntry constraint in entry.Constraints )
                 {
@@ -355,7 +346,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
                 if ( token["Properties"] != null )
                 {
-                    List<AutolootConstraintEntry> constraintsList = new();
+                    List<AutolootConstraintEntry> constraintsList = [];
 
                     // ReSharper disable once LoopCanBeConvertedToQuery
                     foreach ( JToken constraintToken in token["Properties"] )
@@ -379,7 +370,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
                         if ( constraintToken["Values"] != null )
                         {
-                            constraintObj.Values = constraintToken["Values"].ToObject<ObservableCollection<int>>() ?? new ObservableCollection<int>();
+                            constraintObj.Values = constraintToken["Values"].ToObject<ObservableCollection<int>>() ?? [];
                         }
 
                         constraintsList.Add( constraintObj );
@@ -417,17 +408,13 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
         JsonSerializer serializer = new();
 
-        using ( StreamReader sr = new( _propertiesFileCustom ) )
-        {
-            using ( JsonTextReader reader = new( sr ) )
-            {
-                PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
+        using StreamReader sr = new( _propertiesFileCustom );
+        using JsonTextReader reader = new( sr );
+        PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
 
-                foreach ( PropertyEntry constraint in constraints )
-                {
-                    Constraints.AddSorted( constraint );
-                }
-            }
+        foreach ( PropertyEntry constraint in constraints )
+        {
+            Constraints.AddSorted( constraint );
         }
     }
 
@@ -435,17 +422,13 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     {
         JsonSerializer serializer = new();
 
-        using ( StreamReader sr = new( _propertiesFile ) )
-        {
-            using ( JsonTextReader reader = new( sr ) )
-            {
-                PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
+        using StreamReader sr = new( _propertiesFile );
+        using JsonTextReader reader = new( sr );
+        PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
 
-                foreach ( PropertyEntry constraint in constraints )
-                {
-                    Constraints.AddSorted( constraint );
-                }
-            }
+        foreach ( PropertyEntry constraint in constraints )
+        {
+            Constraints.AddSorted( constraint );
         }
     }
 
@@ -478,7 +461,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private static void ClipboardCopy( object obj )
     {
-        if ( !( obj is IList<AutolootConstraintEntry> entries ) )
+        if ( obj is not IList<AutolootConstraintEntry> entries )
         {
             return;
         }
@@ -511,7 +494,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 return;
             }
 
-            PacketWaitEntry we = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x3C, new[] { PacketFilterConditions.IntAtPositionCondition( serial, 19 ) } ),
+            PacketWaitEntry we = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x3C, [PacketFilterConditions.IntAtPositionCondition( serial, 19 )] ),
                 PacketDirection.Incoming );
 
             we.Lock.WaitOne( 2000 );
@@ -529,7 +512,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 Thread.Sleep( 1000 );
             }
 
-            List<Item> lootItems = new();
+            List<Item> lootItems = [];
 
             // If change logic, also change in DebugAutolootViewModel
 
@@ -582,7 +565,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 }
 
                 UOC.SystemMessage( string.Format( Strings.Autolooting___0__, lootItem.Name ), 61 );
-                DragDropOptions options = new DragDropOptions
+                DragDropOptions options = new()
                 {
                     CheckRange = true,
                     CheckExisting = true,
@@ -606,7 +589,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private void RemoveConstraint( object obj )
     {
-        if ( !( obj is IEnumerable<AutolootConstraintEntry> constraints ) )
+        if ( obj is not IEnumerable<AutolootConstraintEntry> constraints )
         {
             return;
         }
@@ -619,7 +602,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private void InsertConstraint( object obj )
     {
-        if ( !( obj is PropertyEntry propertyEntry ) )
+        if ( obj is not PropertyEntry propertyEntry )
         {
             return;
         }
@@ -662,7 +645,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private void InsertMatchAny( object obj )
     {
-        AutolootEntry entry = new() { Name = Strings.Any, ID = -1, Constraints = new ObservableCollection<AutolootConstraintEntry>() };
+        AutolootEntry entry = new() { Name = Strings.Any, ID = -1, Constraints = [] };
 
         Items.Add( entry );
     }
@@ -685,14 +668,14 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        AutolootEntry entry = new() { Name = TileData.GetStaticTile( item.ID ).Name, ID = item.ID, Constraints = new ObservableCollection<AutolootConstraintEntry>() };
+        AutolootEntry entry = new() { Name = TileData.GetStaticTile( item.ID ).Name, ID = item.ID, Constraints = [] };
 
         Items.Add( entry );
     }
 
     private async Task Remove( object arg )
     {
-        if ( !( arg is AutolootEntry entry ) )
+        if ( arg is not AutolootEntry entry )
         {
             return;
         }
@@ -704,7 +687,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private static async Task SelectHue( object obj )
     {
-        if ( !( obj is AutolootEntry entry ) )
+        if ( obj is not AutolootEntry entry )
         {
             return;
         }
@@ -730,7 +713,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private void RemoveGroup( object obj )
     {
-        if ( !( obj is IDraggableGroup group ) )
+        if ( obj is not IDraggableGroup group )
         {
             return;
         }
@@ -747,7 +730,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private void MoveToGroup( object obj )
     {
-        if ( SelectedItem == null || !( obj is AutolootGroup autolootGroup ) )
+        if ( SelectedItem == null || obj is not AutolootGroup autolootGroup )
         {
             return;
         }
@@ -805,7 +788,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         {
             foreach ( object newItem in e.NewItems )
             {
-                if ( !( newItem is AutolootEntry autolootEntry ) )
+                if ( newItem is not AutolootEntry autolootEntry )
                 {
                     continue;
                 }
@@ -828,7 +811,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
         foreach ( object oldItem in e.OldItems )
         {
-            if ( !( oldItem is AutolootEntry autolootEntry ) )
+            if ( oldItem is not AutolootEntry autolootEntry )
             {
                 continue;
             }
@@ -892,7 +875,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     private async Task CSVImport( object obj )
     {
-        CSVImportViewModel vm = new CSVImportViewModel();
+        CSVImportViewModel vm = new();
 
         await Engine.UIInvoker.InvokeDialog( "CSVImportWindow", dataContext: vm );
 
@@ -910,10 +893,10 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 if ( items.Any() )
                 {
                     bool exclude = ( from item in items
-                            select item.Constraints.All( constraint =>
-                                entry.Constraints.Any( e =>
-                                    e.Property.Name == constraint.Property.Name && e.Operator == constraint.Operator &&
-                                    e.Value == constraint.Value ) ) )
+                                     select item.Constraints.All( constraint =>
+                                         entry.Constraints.Any( e =>
+                                             e.Property.Name == constraint.Property.Name && e.Operator == constraint.Operator &&
+                                             e.Value == constraint.Value ) ) )
                         .Any( allMatch => allMatch );
 
                     if ( exclude )

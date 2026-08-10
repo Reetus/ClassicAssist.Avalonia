@@ -20,30 +20,26 @@
 using ClassicAssist.Data.Filters;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Filters
+namespace ClassicAssist.Shared.UI.ViewModels.Filters;
+
+/// <summary>
+///     Edits the live <see cref="RepeatedMessagesFilter.FilterOptions" /> in place - the dialog has only
+///     a Close button, matching WPF.
+/// </summary>
+public class RepeatedMessagesFilterConfigureViewModel : BaseViewModel
 {
-    /// <summary>
-    ///     Edits the live <see cref="RepeatedMessagesFilter.FilterOptions" /> in place - the dialog has only
-    ///     a Close button, matching WPF.
-    /// </summary>
-    public class RepeatedMessagesFilterConfigureViewModel : BaseViewModel
+    public RepeatedMessagesFilterConfigureViewModel()
     {
-        private RepeatedMessagesFilter.MessageFilterOptions _options =
-            new RepeatedMessagesFilter.MessageFilterOptions();
-
-        public RepeatedMessagesFilterConfigureViewModel()
-        {
-        }
-
-        public RepeatedMessagesFilterConfigureViewModel( RepeatedMessagesFilter.MessageFilterOptions options )
-        {
-            Options = options;
-        }
-
-        public RepeatedMessagesFilter.MessageFilterOptions Options
-        {
-            get => _options;
-            set => SetProperty( ref _options, value );
-        }
     }
+
+    public RepeatedMessagesFilterConfigureViewModel( RepeatedMessagesFilter.MessageFilterOptions options )
+    {
+        Options = options;
+    }
+
+    public RepeatedMessagesFilter.MessageFilterOptions Options
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = new RepeatedMessagesFilter.MessageFilterOptions();
 }

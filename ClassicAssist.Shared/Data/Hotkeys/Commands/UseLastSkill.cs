@@ -20,14 +20,13 @@
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Use Last Skill" )]
+public class UseLastSkill : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Use Last Skill" )]
-    public class UseLastSkill : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            Engine.SendPacketToServer( new UseSkill( Engine.LastSkillID ) );
-        }
+        Engine.SendPacketToServer( new UseSkill( Engine.LastSkillID ) );
     }
 }

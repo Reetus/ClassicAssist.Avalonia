@@ -45,7 +45,7 @@ public class MacroInvoker
         ScriptRuntime runtime = _engine.Runtime;
         runtime.LoadAssembly( Assembly.GetExecutingAssembly() );
 
-        foreach ( string assembly in AssistantOptions.Assemblies ?? new string[0] )
+        foreach ( string assembly in AssistantOptions.Assemblies ?? [] )
         {
             try
             {
@@ -57,10 +57,7 @@ public class MacroInvoker
             }
         }
 
-        if ( _importCache == null )
-        {
-            _importCache = InitializeImports( _engine );
-        }
+        _importCache ??= InitializeImports( _engine );
 
         // The DLR hands macro output to the stream in different encodings per platform - UTF-8 on
         // non-Windows, UTF-16 on Windows. TextStream must decode with the matching encoding or plain
@@ -101,7 +98,7 @@ public class MacroInvoker
             .Where( t => t.Namespace != null && t.IsPublic && t.IsClass && t.Namespace.EndsWith( "Macros.Commands" ) )
             .Aggregate( string.Empty, ( current, t ) => current + $"from {t.FullName} import * \n" );
 
-        foreach ( string assemblyName in AssistantOptions.Assemblies ?? new string[0] )
+        foreach ( string assemblyName in AssistantOptions.Assemblies ?? [] )
         {
             try
             {
@@ -126,12 +123,12 @@ public class MacroInvoker
 
     public static Dictionary<string, object> InitializeImports( ScriptEngine engine )
     {
-        Dictionary<string, object> dictionary = new();
+        Dictionary<string, object> dictionary = [];
 
         // A freshly Assembly.LoadFile'd assembly is visible to the CLR but not yet to IronPython's own
         // import machinery - "from Namespace import *" below needs it registered with the runtime first,
         // same as the executing assembly is registered in the constructor.
-        foreach ( string assemblyName in AssistantOptions.Assemblies ?? new string[0] )
+        foreach ( string assemblyName in AssistantOptions.Assemblies ?? [] )
         {
             try
             {
@@ -202,16 +199,13 @@ public class MacroInvoker
 
         _cancellationToken = new CancellationTokenSource();
 
-        if ( _importCache == null )
-        {
-            _importCache = InitializeImports( _engine );
-        }
+        _importCache ??= InitializeImports( _engine );
 
         ScriptSource source = _macro.IsFileBacked && !string.IsNullOrEmpty( _macro.FilePath )
             ? _engine.CreateScriptSourceFromString( _macro.Macro, _macro.FilePath, SourceCodeKind.Statements )
             : _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
 
-        Dictionary<string, object> importCache = new(_importCache);
+        Dictionary<string, object> importCache = new( _importCache );
 
         IsFaulted = false;
 
@@ -229,7 +223,7 @@ public class MacroInvoker
                 _macroScope.SetVariable( "Events", new Events() );
                 _engine.SetTrace( OnTrace );
 
-                _macroScope.SetVariable( "args", parameters ?? Array.Empty<object>() );
+                _macroScope.SetVariable( "args", parameters ?? [] );
 
                 StopWatch.Reset();
                 StopWatch.Start();
@@ -260,7 +254,7 @@ public class MacroInvoker
                         Shared.UO.Commands.SystemMessage( string.Format( Strings.Loop_time___0_, StopWatch.Elapsed ) );
                     }
 
-                    int diff = 50 - (int)StopWatch.ElapsedMilliseconds;
+                    int diff = 50 - (int) StopWatch.ElapsedMilliseconds;
 
                     if ( diff > 0 )
                     {
@@ -297,7 +291,8 @@ public class MacroInvoker
                 StoppedEvent?.Invoke();
                 MacroManager.GetInstance().OnMacroStopped( _macro );
             }
-        } ) { IsBackground = true };
+        } )
+        { IsBackground = true };
 
         try
         {
@@ -316,14 +311,14 @@ public class MacroInvoker
 
     private static Dictionary<string, object> GetFrameVariables( TraceBackFrame frame )
     {
-        Dictionary<string, object> variables = new();
+        Dictionary<string, object> variables = [];
 
         // Locals
         if ( frame.f_locals is PythonDictionary locals )
         {
             foreach ( KeyValuePair<object, object> kvp in locals )
             {
-                if ( !( kvp.Key is string key ) )
+                if ( kvp.Key is not string key )
                 {
                     continue;
                 }
@@ -331,7 +326,7 @@ public class MacroInvoker
                 object value = kvp.Value;
 
                 // Skip built-in functions / methods
-                if ( value is BuiltinFunction || value is BuiltinMethodDescriptor || value is PythonType || value is PythonModule )
+                if ( value is BuiltinFunction or BuiltinMethodDescriptor or PythonType or PythonModule )
                 {
                     continue;
                 }
@@ -350,7 +345,7 @@ public class MacroInvoker
                     object value = kvp.Value;
 
                     // Skip built-in functions / methods
-                    if ( value is BuiltinFunction || value is BuiltinMethodDescriptor || value is PythonType || value is PythonModule )
+                    if ( value is BuiltinFunction or BuiltinMethodDescriptor or PythonType or PythonModule )
                     {
                         continue;
                     }
@@ -416,7 +411,7 @@ public class MacroInvoker
         {
             StopWatch.Stop();
 
-            int diff = 50 - (int)StopWatch.ElapsedMilliseconds;
+            int diff = 50 - (int) StopWatch.ElapsedMilliseconds;
 
             if ( diff > 0 )
             {

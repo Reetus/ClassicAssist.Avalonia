@@ -19,154 +19,145 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Text;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+/// <summary>
+///     Minimal RFC-4180-ish CSV reader covering the shape the Autoloot CSV import files use: a header
+///     row followed by data rows, with optional double-quoted fields (including embedded commas and
+///     doubled quotes). Replaces CsvHelper, which the WPF tree uses but this port does not depend on.
+/// </summary>
+public class CsvReader
 {
-    /// <summary>
-    ///     Minimal RFC-4180-ish CSV reader covering the shape the Autoloot CSV import files use: a header
-    ///     row followed by data rows, with optional double-quoted fields (including embedded commas and
-    ///     doubled quotes). Replaces CsvHelper, which the WPF tree uses but this port does not depend on.
-    /// </summary>
-    public class CsvReader
+    private readonly List<List<string>> _records;
+    private int _position;
+
+    public CsvReader( TextReader reader )
     {
-        private readonly List<List<string>> _records;
-        private int _position;
+        _records = Parse( reader.ReadToEnd() );
+    }
 
-        public CsvReader( TextReader reader )
+    /// <summary>Names from the first row, if any.</summary>
+    public string[] HeaderRecord { get; private set; } = [];
+
+    public static List<List<string>> Parse( string text )
+    {
+        List<List<string>> records = [];
+        List<string> row = [];
+        StringBuilder field = new();
+        bool inQuotes = false;
+
+        for ( int i = 0; i < text.Length; i++ )
         {
-            _records = Parse( reader.ReadToEnd() );
-        }
+            char c = text[i];
 
-        /// <summary>Names from the first row, if any.</summary>
-        public string[] HeaderRecord { get; private set; } = Array.Empty<string>();
-
-        public static List<List<string>> Parse( string text )
-        {
-            List<List<string>> records = new List<List<string>>();
-            List<string> row = new List<string>();
-            StringBuilder field = new StringBuilder();
-            bool inQuotes = false;
-
-            for ( int i = 0; i < text.Length; i++ )
+            if ( inQuotes )
             {
-                char c = text[i];
-
-                if ( inQuotes )
+                if ( c == '"' )
                 {
-                    if ( c == '"' )
+                    if ( i + 1 < text.Length && text[i + 1] == '"' )
                     {
-                        if ( i + 1 < text.Length && text[i + 1] == '"' )
-                        {
-                            field.Append( '"' );
-                            i++;
-                        }
-                        else
-                        {
-                            inQuotes = false;
-                        }
+                        field.Append( '"' );
+                        i++;
                     }
                     else
                     {
-                        field.Append( c );
+                        inQuotes = false;
                     }
-
-                    continue;
                 }
-
-                switch ( c )
+                else
                 {
-                    case '"':
-                        inQuotes = true;
-
-                        break;
-                    case ',':
-                        row.Add( field.ToString() );
-                        field.Clear();
-
-                        break;
-                    case '\r':
-                        break;
-                    case '\n':
-                        row.Add( field.ToString() );
-                        field.Clear();
-                        records.Add( row );
-                        row = new List<string>();
-
-                        break;
-                    default:
-                        field.Append( c );
-
-                        break;
+                    field.Append( c );
                 }
+
+                continue;
             }
 
-            if ( field.Length > 0 || row.Count > 0 )
+            switch ( c )
             {
-                row.Add( field.ToString() );
-                records.Add( row );
+                case '"':
+                    inQuotes = true;
+
+                    break;
+                case ',':
+                    row.Add( field.ToString() );
+                    field.Clear();
+
+                    break;
+                case '\r':
+                    break;
+                case '\n':
+                    row.Add( field.ToString() );
+                    field.Clear();
+                    records.Add( row );
+                    row = [];
+
+                    break;
+                default:
+                    field.Append( c );
+
+                    break;
             }
-
-            return records;
         }
 
-        /// <summary>Advances to the first data row, using row zero as the header.</summary>
-        public void ReadHeader()
+        if ( field.Length > 0 || row.Count > 0 )
         {
-            if ( _records.Count > 0 )
-            {
-                HeaderRecord = _records[0].ToArray();
-            }
-
-            _position = 0;
+            row.Add( field.ToString() );
+            records.Add( row );
         }
 
-        /// <summary>Advances to the next data row, skipping the header row already consumed by
-        /// <see cref="ReadHeader" />.</summary>
-        public bool Read()
+        return records;
+    }
+
+    /// <summary>Advances to the first data row, using row zero as the header.</summary>
+    public void ReadHeader()
+    {
+        if ( _records.Count > 0 )
         {
-            _position++;
-
-            return _position < _records.Count;
+            HeaderRecord = [.. _records[0]];
         }
 
-        public bool TryGetField( string name, out string value )
+        _position = 0;
+    }
+
+    /// <summary>Advances to the next data row, skipping the header row already consumed by
+    /// <see cref="ReadHeader" />.</summary>
+    public bool Read()
+    {
+        _position++;
+
+        return _position < _records.Count;
+    }
+
+    public bool TryGetField( string name, out string value )
+    {
+        value = null;
+
+        int index = Array.IndexOf( HeaderRecord, name );
+
+        if ( index < 0 || _position >= _records.Count || index >= _records[_position].Count )
         {
-            value = null;
-
-            int index = Array.IndexOf( HeaderRecord, name );
-
-            if ( index < 0 || _position >= _records.Count || index >= _records[_position].Count )
-            {
-                return false;
-            }
-
-            value = _records[_position][index];
-
-            return true;
+            return false;
         }
 
-        public bool TryGetField( int index, out string value )
+        value = _records[_position][index];
+
+        return true;
+    }
+
+    public bool TryGetField( int index, out string value )
+    {
+        value = null;
+
+        if ( _position >= _records.Count || index >= _records[_position].Count )
         {
-            value = null;
-
-            if ( _position >= _records.Count || index >= _records[_position].Count )
-            {
-                return false;
-            }
-
-            value = _records[_position][index];
-
-            return true;
+            return false;
         }
 
-        private static int ConvertToInt( string value )
-        {
-            return value.StartsWith( "0x", StringComparison.CurrentCultureIgnoreCase )
-                ? Convert.ToInt32( value.Substring( 2 ), 16 )
-                : Convert.ToInt32( value, CultureInfo.InvariantCulture );
-        }
+        value = _records[_position][index];
+
+        return true;
     }
 }

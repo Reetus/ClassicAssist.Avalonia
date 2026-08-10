@@ -2,57 +2,50 @@
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.Data.Organizer
+namespace ClassicAssist.Data.Organizer;
+
+public class OrganizerEntry : HotkeyEntry
 {
-    public class OrganizerEntry : HotkeyEntry
+    public Func<bool> IsRunning;
+
+    public bool Complete
     {
-        private bool _complete;
-        private ObservableCollectionEx<OrganizerItem> _items = new ObservableCollectionEx<OrganizerItem>();
-        private bool _stack = true;
-
-        public Func<bool> IsRunning;
-
-        public bool Complete
+        get;
+        set
         {
-            get => _complete;
-            set
-            {
-                SetProperty( ref _complete, value );
+            SetProperty( ref field, value );
 
-                if ( !value )
-                {
-                    ReturnExcess = false;
-                }
+            if ( !value )
+            {
+                ReturnExcess = false;
             }
         }
+    }
 
-        public int DestinationContainer { get; set; }
+    public int DestinationContainer { get; set; }
 
-        public ObservableCollectionEx<OrganizerItem> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
+    public ObservableCollectionEx<OrganizerItem> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        public int SourceContainer { get; set; }
+    public int SourceContainer { get; set; }
 
-        public bool Stack
-        {
-            get => _stack;
-            set => SetProperty( ref _stack, value );
-        }
+    public bool Stack
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
 
-        private bool _returnExcess;
+    public bool ReturnExcess
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public bool ReturnExcess
-        {
-            get => _returnExcess;
-            set => SetProperty( ref _returnExcess, value );
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
+    public override string ToString()
+    {
+        return Name;
     }
 }

@@ -1,111 +1,96 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Windows.Input;
 using ClassicAssist.UI.Misc.DraggableTreeView;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+public class AutolootEntry : INotifyPropertyChanged, IDraggableEntry
 {
-    public class AutolootEntry : INotifyPropertyChanged, IDraggableEntry
+    public bool Autoloot
     {
-        private bool _autoloot = true;
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
 
-        private ObservableCollection<AutolootConstraintEntry> _constraints =
-            new ObservableCollection<AutolootConstraintEntry>();
+    public ObservableCollection<AutolootConstraintEntry> Constraints
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        private bool _enabled = true;
-        private AutolootGroup _group;
-        private int _id;
-        private string _name;
-        private AutolootPriority _priority = AutolootPriority.Normal;
-        private bool _rehue;
-        private int _rehueHue = 1153;
+    public bool Enabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
 
-        public bool Autoloot
+    public AutolootGroup Group
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int ID
+    {
+        get;
+        set
         {
-            get => _autoloot;
-            set => SetProperty( ref _autoloot, value );
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( DisplayName ) );
         }
+    }
 
-        public ObservableCollection<AutolootConstraintEntry> Constraints
+    public string Name
+    {
+        get;
+        set
         {
-            get => _constraints;
-            set => SetProperty( ref _constraints, value );
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( DisplayName ) );
         }
+    }
 
-        public bool Enabled
-        {
-            get => _enabled;
-            set => SetProperty( ref _enabled, value );
-        }
+    /// <summary>
+    ///     "Name - 0x{id:x}" shown in the autoloot tree (WPF parity). The Any entry (-1) renders as
+    ///     0xffff, matching WPF's "Match Any ID".
+    /// </summary>
+    public string DisplayName => $"{Name} - 0x{( ID & 0xFFFF ).ToString( "x" )}";
 
-        public AutolootGroup Group
-        {
-            get => _group;
-            set => SetProperty( ref _group, value );
-        }
+    public AutolootPriority Priority
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = AutolootPriority.Normal;
 
-        public int ID
-        {
-            get => _id;
-            set
-            {
-                SetProperty( ref _id, value );
-                OnPropertyChanged( nameof( DisplayName ) );
-            }
-        }
+    public bool Rehue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public string Name
-        {
-            get => _name;
-            set
-            {
-                SetProperty( ref _name, value );
-                OnPropertyChanged( nameof( DisplayName ) );
-            }
-        }
+    public int RehueHue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = 1153;
 
-        /// <summary>
-        ///     "Name - 0x{id:x}" shown in the autoloot tree (WPF parity). The Any entry (-1) renders as
-        ///     0xffff, matching WPF's "Match Any ID".
-        /// </summary>
-        public string DisplayName => $"{Name} - 0x{( ID & 0xFFFF ).ToString( "x" )}";
+    public event PropertyChangedEventHandler PropertyChanged;
 
-        public AutolootPriority Priority
-        {
-            get => _priority;
-            set => SetProperty( ref _priority, value );
-        }
+    public override string ToString()
+    {
+        return $"{Name} - 0x{ID:x}";
+    }
 
-        public bool Rehue
-        {
-            get => _rehue;
-            set => SetProperty( ref _rehue, value );
-        }
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
 
-        public int RehueHue
-        {
-            get => _rehueHue;
-            set => SetProperty( ref _rehueHue, value );
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public override string ToString()
-        {
-            return $"{Name} - 0x{ID:x}";
-        }
-
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
-
-        // ReSharper disable once RedundantAssignment
-        public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
-        }
+    // ReSharper disable once RedundantAssignment
+    public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
     }
 }

@@ -20,35 +20,34 @@
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class ChangeStatLock : BasePacket, IMacroCommandParser
 {
-    public class ChangeStatLock : BasePacket, IMacroCommandParser
+    public ChangeStatLock()
     {
-        public ChangeStatLock()
+    }
+
+    public ChangeStatLock( StatType stat, LockStatus lockStatus )
+    {
+        _writer = new PacketWriter( 7 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 7 );
+        _writer.Write( (short) 0x1A );
+        _writer.Write( (byte) stat );
+        _writer.Write( (byte) lockStatus );
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( direction != PacketDirection.Outgoing || packet[0] != 0xBF || packet[4] != 0x1A )
         {
+            return null;
         }
 
-        public ChangeStatLock( StatType stat, LockStatus lockStatus )
-        {
-            _writer = new PacketWriter( 7 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 7 );
-            _writer.Write( (short) 0x1A );
-            _writer.Write( (byte) stat );
-            _writer.Write( (byte) lockStatus );
-        }
+        StatType stat = (StatType) packet[5];
+        LockStatus lockStatus = (LockStatus) packet[6];
 
-        public string Parse( byte[] packet, int length, PacketDirection direction )
-        {
-            if ( direction != PacketDirection.Outgoing || packet[0] != 0xBF || packet[4] != 0x1A )
-            {
-                return null;
-            }
-
-            StatType stat = (StatType) packet[5];
-            LockStatus lockStatus = (LockStatus) packet[6];
-
-            return $"SetStatus(\"{stat.ToString().ToLower()}\", \"{lockStatus.ToString().ToLower()}\")\r\n";
-        }
+        return $"SetStatus(\"{stat.ToString().ToLower()}\", \"{lockStatus.ToString().ToLower()}\")\r\n";
     }
 }

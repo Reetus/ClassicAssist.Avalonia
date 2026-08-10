@@ -2,119 +2,118 @@
 using System.Linq;
 using ClassicAssist.Shared.Resources;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class ListCommands
 {
-    public static class ListCommands
+    private static readonly Dictionary<string, List<object>> _lists = [];
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static void CreateList( string listName )
     {
-        private static readonly Dictionary<string, List<object>> _lists = new Dictionary<string, List<object>>();
-
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static void CreateList( string listName )
+        if ( ListExists( listName ) )
         {
-            if ( ListExists( listName ) )
-            {
-                RemoveList( listName );
-            }
-
-            _lists.Add( listName, new List<object>() );
+            RemoveList( listName );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static bool ListExists( string listName )
+        _lists.Add( listName, [] );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static bool ListExists( string listName )
+    {
+        return _lists.ContainsKey( listName );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static int List( string listName )
+    {
+        return ListExists( listName ) ? _lists[listName].Count : 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ),
+        Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.IntegerValue ) } )]
+    public static void PushList( string listName, object value )
+    {
+        if ( !ListExists( listName ) )
         {
-            return _lists.ContainsKey( listName );
+            CreateList( listName );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static int List( string listName )
+        _lists[listName].Add( value );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ),
+        Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.ElementValueFrontBack ) } )]
+    public static int PopList( string listName, object elementValue = null )
+    {
+        elementValue = elementValue ?? "back";
+
+        if ( !ListExists( listName ) )
         {
-            return ListExists( listName ) ? _lists[listName].Count : 0;
+            CreateList( listName );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ),
-            Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.IntegerValue ) } )]
-        public static void PushList( string listName, object value )
-        {
-            if ( !ListExists( listName ) )
-            {
-                CreateList( listName );
-            }
+        List<object> list = _lists[listName];
 
-            _lists[listName].Add( value );
+        if ( list.Count == 0 )
+        {
+            return 0;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ),
-            Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.ElementValueFrontBack ) } )]
-        public static int PopList( string listName, object elementValue = null )
+        switch ( elementValue.ToString().ToLower() )
         {
-            elementValue = elementValue ?? "back";
-
-            if ( !ListExists( listName ) )
-            {
-                CreateList( listName );
-            }
-
-            List<object> list = _lists[listName];
-
-            if ( list.Count == 0 )
-            {
-                return 0;
-            }
-
-            switch ( elementValue.ToString().ToLower() )
-            {
-                case "front":
+            case "front":
                 {
                     list.RemoveAt( 0 );
                     return 1;
                 }
-                case "back":
+            case "back":
                 {
                     list.RemoveAt( _lists[listName].Count - 1 );
                     return 1;
                 }
-                default:
+            default:
                 {
                     return list.RemoveAll( listItem => elementValue.Equals( listItem ) );
                 }
-            }
         }
+    }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static object[] GetList( string listName )
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static object[] GetList( string listName )
+    {
+        return [.. _lists[listName]];
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static void RemoveList( string listName )
+    {
+        _lists.Remove( listName );
+    }
+
+    public static Dictionary<string, List<object>> GetAllLists()
+    {
+        return _lists;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
+    public static void ClearList( string listName )
+    {
+        if ( !_lists.ContainsKey( listName ) )
         {
-            return _lists[listName].ToArray();
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static void RemoveList( string listName )
-        {
-            _lists.Remove( listName );
-        }
+        _lists[listName].Clear();
+    }
 
-        public static Dictionary<string, List<object>> GetAllLists()
-        {
-            return _lists;
-        }
+    [CommandsDisplay( Category = nameof( Strings.Lists ),
+        Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.IntegerValue ) } )]
+    public static bool InList( string listName, object value )
+    {
+        object[] list;
 
-        [CommandsDisplay( Category = nameof( Strings.Lists ), Parameters = new[] { nameof( ParameterType.ListName ) } )]
-        public static void ClearList( string listName )
-        {
-            if ( !_lists.ContainsKey( listName ) )
-            {
-                return;
-            }
-
-            _lists[listName].Clear();
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Lists ),
-            Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.IntegerValue ) } )]
-        public static bool InList( string listName, object value )
-        {
-            object[] list;
-
-            return ( list = GetList( listName ) ) != null && list.Contains( value );
-        }
+        return ( list = GetList( listName ) ) != null && list.Contains( value );
     }
 }

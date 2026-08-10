@@ -1,64 +1,61 @@
 ﻿using System;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/*
+ * https://brianlagunas.com/a-better-way-to-data-bind-enums-in-wpf/
+ */
+public class EnumBindingSourceExtension : MarkupExtension
 {
-    /*
-     * https://brianlagunas.com/a-better-way-to-data-bind-enums-in-wpf/
-     */
-    public class EnumBindingSourceExtension : MarkupExtension
+    public EnumBindingSourceExtension()
     {
-        private Type _enumType;
+    }
 
-        public EnumBindingSourceExtension()
-        {
-        }
+    public EnumBindingSourceExtension( Type enumType )
+    {
+        EnumType = enumType;
+    }
 
-        public EnumBindingSourceExtension( Type enumType )
+    public Type EnumType
+    {
+        get;
+        set
         {
-            EnumType = enumType;
-        }
-
-        public Type EnumType
-        {
-            get => _enumType;
-            set
+            if ( value != field )
             {
-                if ( value != _enumType )
+                if ( null != value )
                 {
-                    if ( null != value )
+                    Type enumType = Nullable.GetUnderlyingType( value ) ?? value;
+
+                    if ( !enumType.IsEnum )
                     {
-                        Type enumType = Nullable.GetUnderlyingType( value ) ?? value;
-
-                        if ( !enumType.IsEnum )
-                        {
-                            throw new ArgumentException( "Type must be for an Enum." );
-                        }
+                        throw new ArgumentException( "Type must be for an Enum." );
                     }
-
-                    _enumType = value;
                 }
+
+                field = value;
             }
         }
+    }
 
-        public override object ProvideValue( IServiceProvider serviceProvider )
+    public override object ProvideValue( IServiceProvider serviceProvider )
+    {
+        if ( null == EnumType )
         {
-            if ( null == _enumType )
-            {
-                throw new InvalidOperationException( "The EnumType must be specified." );
-            }
-
-            Type actualEnumType = Nullable.GetUnderlyingType( _enumType ) ?? _enumType;
-            Array enumValues = Enum.GetValues( actualEnumType );
-
-            if ( actualEnumType == _enumType )
-            {
-                return enumValues;
-            }
-
-            Array tempArray = Array.CreateInstance( actualEnumType, enumValues.Length + 1 );
-            enumValues.CopyTo( tempArray, 1 );
-            return tempArray;
+            throw new InvalidOperationException( "The EnumType must be specified." );
         }
+
+        Type actualEnumType = Nullable.GetUnderlyingType( EnumType ) ?? EnumType;
+        Array enumValues = Enum.GetValues( actualEnumType );
+
+        if ( actualEnumType == EnumType )
+        {
+            return enumValues;
+        }
+
+        Array tempArray = Array.CreateInstance( actualEnumType, enumValues.Length + 1 );
+        enumValues.CopyTo( tempArray, 1 );
+        return tempArray;
     }
 }

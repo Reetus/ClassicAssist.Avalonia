@@ -2,79 +2,78 @@
 using System.Text;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public class DisplayFormatAttribute : Attribute
 {
-    public class DisplayFormatAttribute : Attribute
+    private readonly Type _type;
+
+    public DisplayFormatAttribute( Type type )
     {
-        private readonly Type _type;
-
-        public DisplayFormatAttribute( Type type )
-        {
-            _type = type;
-        }
-
-        public string ToString( object value )
-        {
-            if ( _type.IsEnum )
-            {
-                return Enum.Parse( _type, value.ToString() ).ToString();
-            }
-
-            return typeof( IFormatProvider ).IsAssignableFrom( _type )
-                ? string.Format( (IFormatProvider) Activator.CreateInstance( _type ), "{0}", value )
-                : Convert.ChangeType( value, typeof( string ) ).ToString();
-        }
+        _type = type;
     }
 
-    internal class HexFormatProvider : IFormatProvider, ICustomFormatter
+    public string ToString( object value )
     {
-        public string Format( string format, object arg, IFormatProvider formatProvider )
+        if ( _type.IsEnum )
         {
-            return $"0x{arg:x}";
+            return Enum.Parse( _type, value.ToString() ).ToString();
         }
 
-        public object GetFormat( Type formatType )
-        {
-            return this;
-        }
+        return typeof( IFormatProvider ).IsAssignableFrom( _type )
+            ? string.Format( (IFormatProvider) Activator.CreateInstance( _type ), "{0}", value )
+            : Convert.ChangeType( value, typeof( string ) ).ToString();
+    }
+}
+
+internal class HexFormatProvider : IFormatProvider, ICustomFormatter
+{
+    public string Format( string format, object arg, IFormatProvider formatProvider )
+    {
+        return $"0x{arg:x}";
     }
 
-    public class PropertyArrayFormatProvider : IFormatProvider, ICustomFormatter
+    public object GetFormat( Type formatType )
     {
-        public string Format( string format, object arg, IFormatProvider formatProvider )
+        return this;
+    }
+}
+
+public class PropertyArrayFormatProvider : IFormatProvider, ICustomFormatter
+{
+    public string Format( string format, object arg, IFormatProvider formatProvider )
+    {
+        if ( arg == null )
         {
-            if ( arg == null )
-            {
-                return "null";
-            }
-
-            if ( !( arg is Property[] properties ) )
-            {
-                return arg.ToString();
-            }
-
-            StringBuilder sb = new StringBuilder();
-
-            for ( int index = 0; index < properties.Length; index++ )
-            {
-                Property property = properties[index];
-
-                if ( index != properties.Length - 1 )
-                {
-                    sb.AppendLine( property.Text );
-                }
-                else
-                {
-                    sb.Append( property.Text );
-                }
-            }
-
-            return sb.ToString();
+            return "null";
         }
 
-        public object GetFormat( Type formatType )
+        if ( arg is not Property[] properties )
         {
-            return this;
+            return arg.ToString();
         }
+
+        StringBuilder sb = new();
+
+        for ( int index = 0; index < properties.Length; index++ )
+        {
+            Property property = properties[index];
+
+            if ( index != properties.Length - 1 )
+            {
+                sb.AppendLine( property.Text );
+            }
+            else
+            {
+                sb.Append( property.Text );
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    public object GetFormat( Type formatType )
+    {
+        return this;
     }
 }

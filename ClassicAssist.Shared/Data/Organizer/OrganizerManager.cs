@@ -13,221 +13,112 @@ using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Organizer
+namespace ClassicAssist.Data.Organizer;
+
+public class OrganizerManager : INotifyPropertyChanged
 {
-    public class OrganizerManager : INotifyPropertyChanged
+    private static readonly Lock _lock = new();
+    private static OrganizerManager _instance;
+
+    private OrganizerManager()
     {
-        private static readonly object _lock = new object();
-        private static OrganizerManager _instance;
-        private ObservableCollectionEx<OrganizerEntry> _items = new ObservableCollectionEx<OrganizerEntry>();
+        Items.CollectionChanged += OnCollectionChanged;
+    }
 
-        private OrganizerManager()
+    public bool IsOrganizing { get; set; }
+
+    public ObservableCollectionEx<OrganizerEntry> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
+
+    public void Stop()
+    {
+        if ( IsOrganizing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
         {
-            Items.CollectionChanged += OnCollectionChanged;
+            _cancellationTokenSource?.Cancel();
+        }
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        OnPropertyChanged( nameof( Items ) );
+    }
+
+    public async Task Organize( OrganizerEntry entry, int sourceContainer = 0, int destinationContainer = 0 )
+    {
+        if ( IsOrganizing )
+        {
+            _cancellationTokenSource.Cancel();
+            return;
         }
 
-        public bool IsOrganizing { get; set; }
-
-        public ObservableCollectionEx<OrganizerEntry> Items
+        if ( sourceContainer == 0 )
         {
-            get => _items;
-            set => SetProperty( ref _items, value );
+            sourceContainer = entry.SourceContainer;
         }
 
-        private CancellationTokenSource _cancellationTokenSource { get; set; } = new CancellationTokenSource();
-
-        public void Stop()
+        if ( destinationContainer == 0 )
         {
-            if ( IsOrganizing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
-            {
-                _cancellationTokenSource?.Cancel();
-            }
+            destinationContainer = entry.DestinationContainer;
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+        if ( sourceContainer == 0 || destinationContainer == 0 )
         {
-            OnPropertyChanged( nameof( Items ) );
+            await SetContainers( entry );
+            return;
         }
 
-        public async Task Organize( OrganizerEntry entry, int sourceContainer = 0, int destinationContainer = 0 )
+        Item sourceContainerItem = Engine.Items.GetItem( sourceContainer );
+
+        if ( sourceContainerItem == null )
         {
-            if ( IsOrganizing )
-            {
-                _cancellationTokenSource.Cancel();
-                return;
-            }
-
-            if ( sourceContainer == 0 )
-            {
-                sourceContainer = entry.SourceContainer;
-            }
-
-            if ( destinationContainer == 0 )
-            {
-                destinationContainer = entry.DestinationContainer;
-            }
-
-            if ( sourceContainer == 0 || destinationContainer == 0 )
-            {
-                await SetContainers( entry );
-                return;
-            }
-
-            Item sourceContainerItem = Engine.Items.GetItem( sourceContainer );
-
-            if ( sourceContainerItem == null )
-            {
-                //TODO
-                UOC.SystemMessage( Strings.Cannot_find_container___ );
-                return;
-            }
-
-            PacketFilterInfo pfi = new PacketFilterInfo( 0x3C,
-                new[] { PacketFilterConditions.IntAtPositionCondition( sourceContainerItem.Serial, 19 ) } );
-
-            if ( UOC.WaitForIncomingPacket( pfi, 1000,
-                () => Engine.SendPacketToServer( new UseObject( sourceContainerItem.Serial ) ) ) )
-            {
-                await Task.Delay( Options.CurrentOptions.ActionDelayMS );
-            }
-
-            if ( sourceContainerItem.Container == null )
-            {
-                //TODO
-                UOC.SystemMessage( Strings.Cannot_find_container___ );
-                return;
-            }
-
-            Item destinationContainerItem = Engine.Items.GetItem( destinationContainer );
-
-            if ( destinationContainerItem == null )
-            {
-                //TODO
-                UOC.SystemMessage( Strings.Cannot_find_container___ );
-                return;
-            }
-
-            try
-            {
-                _cancellationTokenSource = new CancellationTokenSource();
-                IsOrganizing = true;
-
-                UOC.SystemMessage( string.Format( Strings.Organizer__0__running___, entry.Name ) );
-
-                foreach ( OrganizerItem entryItem in entry.Items )
-                {
-                    int itemDestinationContainer = destinationContainer;
-                    Item itemDestinationContainerItem = destinationContainerItem;
-
-                    if ( entryItem.DestinationContainer.HasValue )
-                    {
-                        itemDestinationContainer = entryItem.DestinationContainer.Value;
-
-                        itemDestinationContainerItem = Engine.Items.GetItem( itemDestinationContainer );
-
-                        if ( itemDestinationContainerItem == null )
-                        {
-                            UOC.SystemMessage( Strings.Invalid_container___ );
-                            continue;
-                        }
-                    }
-
-                    ItemCollection itemSourceContainer = sourceContainerItem.Container;
-                    int itemSourceContainerSerial = sourceContainer;
-
-                    if ( entryItem.SourceContainer.HasValue )
-                    {
-                        itemSourceContainer = Engine.Items.GetItem( entryItem.SourceContainer.Value )?.Container;
-                        itemSourceContainerSerial = entryItem.SourceContainer.Value;
-
-                        if ( itemSourceContainer == null )
-                        {
-                            UOC.SystemMessage( Strings.Invalid_container___ );
-                            continue;
-                        }
-                    }
-
-                    Item[] moveItems = itemSourceContainer?.SelectEntities( i =>
-                        entryItem.ID == i.ID && ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) &&
-                        !i.IsDescendantOf( itemDestinationContainer, -1, itemSourceContainerSerial ) );
-
-                    if ( moveItems == null )
-                    {
-                        continue;
-                    }
-
-                    bool limitAmount = entryItem.Amount != -1;
-                    int moveAmount = entryItem.Amount;
-                    int moved = 0;
-
-                    if ( entry.Complete )
-                    {
-                        int existingCount = itemDestinationContainerItem.Container
-                                                ?.SelectEntities( i =>
-                                                    entryItem.ID == i.ID &&
-                                                    ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) )
-                                                ?.Select( i => i.Count ).Sum() ?? 0;
-
-                        moved += existingCount;
-                    }
-
-                    foreach ( Item moveItem in moveItems )
-                    {
-                        if ( limitAmount && moved >= moveAmount )
-                        {
-                            break;
-                        }
-
-                        int amount = moveItem.Count;
-
-                        if ( limitAmount )
-                        {
-                            if ( moveItem.Count > moveAmount )
-                            {
-                                amount = moveAmount - moved;
-                            }
-
-                            moved += amount;
-                        }
-
-                        if ( entry.Stack )
-                        {
-                            await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount,
-                                itemDestinationContainerItem.Serial );
-                        }
-                        else
-                        {
-                            await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount,
-                                itemDestinationContainerItem.Serial, x: 0, y: 0 );
-                        }
-
-                        if ( _cancellationTokenSource.IsCancellationRequested )
-                        {
-                            break;
-                        }
-                    }
-                }
-
-                if ( entry.ReturnExcess )
-                {
-                    await ReturnExcess( entry, destinationContainer, sourceContainer );
-                }
-            }
-            finally
-            {
-                UOC.SystemMessage( string.Format( Strings.Organizer__0__finished___, entry.Name ) );
-                IsOrganizing = false;
-            }
+            //TODO
+            UOC.SystemMessage( Strings.Cannot_find_container___ );
+            return;
         }
 
-        private async Task ReturnExcess( OrganizerEntry entry, int destinationContainer, int sourceContainer )
+        PacketFilterInfo pfi = new( 0x3C,
+            [PacketFilterConditions.IntAtPositionCondition( sourceContainerItem.Serial, 19 )] );
+
+        if ( UOC.WaitForIncomingPacket( pfi, 1000,
+            () => Engine.SendPacketToServer( new UseObject( sourceContainerItem.Serial ) ) ) )
         {
+            await Task.Delay( Options.CurrentOptions.ActionDelayMS );
+        }
+
+        if ( sourceContainerItem.Container == null )
+        {
+            //TODO
+            UOC.SystemMessage( Strings.Cannot_find_container___ );
+            return;
+        }
+
+        Item destinationContainerItem = Engine.Items.GetItem( destinationContainer );
+
+        if ( destinationContainerItem == null )
+        {
+            //TODO
+            UOC.SystemMessage( Strings.Cannot_find_container___ );
+            return;
+        }
+
+        try
+        {
+            _cancellationTokenSource = new CancellationTokenSource();
+            IsOrganizing = true;
+
+            UOC.SystemMessage( string.Format( Strings.Organizer__0__running___, entry.Name ) );
+
             foreach ( OrganizerItem entryItem in entry.Items )
             {
                 int itemDestinationContainer = destinationContainer;
-                Item itemDestinationContainerItem = Engine.Items.GetItem( itemDestinationContainer );
+                Item itemDestinationContainerItem = destinationContainerItem;
 
                 if ( entryItem.DestinationContainer.HasValue )
                 {
@@ -242,131 +133,238 @@ namespace ClassicAssist.Data.Organizer
                     }
                 }
 
+                ItemCollection itemSourceContainer = sourceContainerItem.Container;
                 int itemSourceContainerSerial = sourceContainer;
 
                 if ( entryItem.SourceContainer.HasValue )
                 {
+                    itemSourceContainer = Engine.Items.GetItem( entryItem.SourceContainer.Value )?.Container;
                     itemSourceContainerSerial = entryItem.SourceContainer.Value;
+
+                    if ( itemSourceContainer == null )
+                    {
+                        UOC.SystemMessage( Strings.Invalid_container___ );
+                        continue;
+                    }
                 }
 
-                ItemCollection container = itemDestinationContainerItem?.Container;
-
-                if ( container == null )
-                {
-                    UOC.WaitForContainerContentsUse( itemDestinationContainer, 5000 );
-                    container = itemDestinationContainerItem?.Container;
-                }
-
-                if ( container == null )
-                {
-                    continue;
-                }
-
-                int currentCount =
-                    container?.SelectEntities( i =>
-                        entryItem.ID == i.ID && ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) )
-                        ?.Select( i => i.Count ).Sum() ?? 0;
-
-                if ( currentCount <= entryItem.Amount )
-                {
-                    continue;
-                }
-
-                int diffAmount = currentCount - entryItem.Amount;
-
-                Item[] moveItems = container?.SelectEntities( i =>
+                Item[] moveItems = itemSourceContainer?.SelectEntities( i =>
                     entryItem.ID == i.ID && ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) &&
-                    !i.IsDescendantOf( itemSourceContainerSerial, -1, itemDestinationContainer ) );
+                    !i.IsDescendantOf( itemDestinationContainer, -1, itemSourceContainerSerial ) );
 
                 if ( moveItems == null )
                 {
                     continue;
                 }
 
+                bool limitAmount = entryItem.Amount != -1;
+                int moveAmount = entryItem.Amount;
+                int moved = 0;
+
+                if ( entry.Complete )
+                {
+                    int existingCount = itemDestinationContainerItem.Container
+                                            ?.SelectEntities( i =>
+                                                entryItem.ID == i.ID &&
+                                                ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) )
+                                            ?.Select( i => i.Count ).Sum() ?? 0;
+
+                    moved += existingCount;
+                }
+
                 foreach ( Item moveItem in moveItems )
                 {
-                    int amount = moveItem.Count;
-
-                    if ( moveItem.Count > diffAmount )
+                    if ( limitAmount && moved >= moveAmount )
                     {
-                        amount = diffAmount;
+                        break;
                     }
 
-                    await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount, itemSourceContainerSerial );
+                    int amount = moveItem.Count;
 
-                    diffAmount -= amount;
+                    if ( limitAmount )
+                    {
+                        if ( moveItem.Count > moveAmount )
+                        {
+                            amount = moveAmount - moved;
+                        }
 
-                    if ( diffAmount <= 0 )
+                        moved += amount;
+                    }
+
+                    if ( entry.Stack )
+                    {
+                        await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount,
+                            itemDestinationContainerItem.Serial );
+                    }
+                    else
+                    {
+                        await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount,
+                            itemDestinationContainerItem.Serial, x: 0, y: 0 );
+                    }
+
+                    if ( _cancellationTokenSource.IsCancellationRequested )
                     {
                         break;
                     }
                 }
+            }
 
-                if ( _cancellationTokenSource.IsCancellationRequested )
+            if ( entry.ReturnExcess )
+            {
+                await ReturnExcess( entry, destinationContainer, sourceContainer );
+            }
+        }
+        finally
+        {
+            UOC.SystemMessage( string.Format( Strings.Organizer__0__finished___, entry.Name ) );
+            IsOrganizing = false;
+        }
+    }
+
+    private async Task ReturnExcess( OrganizerEntry entry, int destinationContainer, int sourceContainer )
+    {
+        foreach ( OrganizerItem entryItem in entry.Items )
+        {
+            int itemDestinationContainer = destinationContainer;
+            Item itemDestinationContainerItem = Engine.Items.GetItem( itemDestinationContainer );
+
+            if ( entryItem.DestinationContainer.HasValue )
+            {
+                itemDestinationContainer = entryItem.DestinationContainer.Value;
+
+                itemDestinationContainerItem = Engine.Items.GetItem( itemDestinationContainer );
+
+                if ( itemDestinationContainerItem == null )
+                {
+                    UOC.SystemMessage( Strings.Invalid_container___ );
+                    continue;
+                }
+            }
+
+            int itemSourceContainerSerial = sourceContainer;
+
+            if ( entryItem.SourceContainer.HasValue )
+            {
+                itemSourceContainerSerial = entryItem.SourceContainer.Value;
+            }
+
+            ItemCollection container = itemDestinationContainerItem?.Container;
+
+            if ( container == null )
+            {
+                UOC.WaitForContainerContentsUse( itemDestinationContainer, 5000 );
+                container = itemDestinationContainerItem?.Container;
+            }
+
+            if ( container == null )
+            {
+                continue;
+            }
+
+            int currentCount =
+                container?.SelectEntities( i =>
+                    entryItem.ID == i.ID && ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) )
+                    ?.Select( i => i.Count ).Sum() ?? 0;
+
+            if ( currentCount <= entryItem.Amount )
+            {
+                continue;
+            }
+
+            int diffAmount = currentCount - entryItem.Amount;
+
+            Item[] moveItems = container?.SelectEntities( i =>
+                entryItem.ID == i.ID && ( entryItem.Hue == -1 || i.Hue == entryItem.Hue ) &&
+                !i.IsDescendantOf( itemSourceContainerSerial, -1, itemDestinationContainer ) );
+
+            if ( moveItems == null )
+            {
+                continue;
+            }
+
+            foreach ( Item moveItem in moveItems )
+            {
+                int amount = moveItem.Count;
+
+                if ( moveItem.Count > diffAmount )
+                {
+                    amount = diffAmount;
+                }
+
+                await ActionPacketQueue.EnqueueDragDrop( moveItem.Serial, amount, itemSourceContainerSerial );
+
+                diffAmount -= amount;
+
+                if ( diffAmount <= 0 )
                 {
                     break;
                 }
             }
+
+            if ( _cancellationTokenSource.IsCancellationRequested )
+            {
+                break;
+            }
+        }
+    }
+
+    public async Task SetContainers( object obj )
+    {
+        if ( obj is not OrganizerEntry entry )
+        {
+            return;
         }
 
-        public async Task SetContainers( object obj )
+        int sourceContainer = await UOC.GetTargetSerialAsync( Strings.Select_source_container___ );
+
+        if ( sourceContainer <= 0 )
         {
-            if ( !( obj is OrganizerEntry entry ) )
-            {
-                return;
-            }
-
-            int sourceContainer = await UOC.GetTargetSerialAsync( Strings.Select_source_container___ );
-
-            if ( sourceContainer <= 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_source_container___ );
-                return;
-            }
-
-            int desintationContainer = await UOC.GetTargetSerialAsync( Strings.Select_destination_container___ );
-
-            if ( desintationContainer <= 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_destination_container___ );
-                return;
-            }
-
-            entry.SourceContainer = sourceContainer;
-            entry.DestinationContainer = desintationContainer;
-
-            UOC.SystemMessage( Strings.Organizer_containers_set___ );
+            UOC.SystemMessage( Strings.Invalid_source_container___ );
+            return;
         }
 
-        public static OrganizerManager GetInstance()
+        int desintationContainer = await UOC.GetTargetSerialAsync( Strings.Select_destination_container___ );
+
+        if ( desintationContainer <= 0 )
         {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
+            UOC.SystemMessage( Strings.Invalid_destination_container___ );
+            return;
+        }
+
+        entry.SourceContainer = sourceContainer;
+        entry.DestinationContainer = desintationContainer;
+
+        UOC.SystemMessage( Strings.Organizer_containers_set___ );
+    }
+
+    public static OrganizerManager GetInstance()
+    {
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
+        {
+            lock ( _lock )
             {
-                lock ( _lock )
+                if ( _instance != null )
                 {
-                    if ( _instance != null )
-                    {
-                        return _instance;
-                    }
-
-                    _instance = new OrganizerManager();
                     return _instance;
                 }
+
+                _instance = new OrganizerManager();
+                return _instance;
             }
-
-            return _instance;
         }
 
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
+        return _instance;
+    }
 
-        public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
-        }
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
     }
 }

@@ -26,40 +26,39 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class HueEntryToRectanglesValueConverter : IValueConverter
 {
-    public class HueEntryToRectanglesValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not HueEntry entry )
         {
-            if ( !( value is HueEntry entry ) )
-            {
-                return null;
-            }
-
-            StackPanel panel = new StackPanel { Orientation = Orientation.Horizontal };
-
-            for ( int i = 0; i < 32; i++ )
-            {
-                SolidColorBrush brush = new SolidColorBrush( Convert555ToARGB( entry.Colors[i] ) );
-
-                panel.Children.Add( new Rectangle { Fill = brush, Width = 10, Height = 10 } );
-            }
-
-            return panel;
+            return null;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        StackPanel panel = new() { Orientation = Orientation.Horizontal };
+
+        for ( int i = 0; i < 32; i++ )
         {
-            throw new NotImplementedException();
+            SolidColorBrush brush = new( Convert555ToARGB( entry.Colors[i] ) );
+
+            panel.Children.Add( new Rectangle { Fill = brush, Width = 10, Height = 10 } );
         }
 
-        protected static Color Convert555ToARGB( short Col )
-        {
-            int r = ( (short) ( Col >> 10 ) & 31 ) * 8;
-            int g = ( (short) ( Col >> 5 ) & 31 ) * 8;
-            int b = ( Col & 31 ) * 8;
-            return Color.FromArgb( 255, (byte) r, (byte) g, (byte) b );
-        }
+        return panel;
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
+    }
+
+    protected static Color Convert555ToARGB( short Col )
+    {
+        int r = ( (short) ( Col >> 10 ) & 31 ) * 8;
+        int g = ( (short) ( Col >> 5 ) & 31 ) * 8;
+        int b = ( Col & 31 ) * 8;
+        return Color.FromArgb( 255, (byte) r, (byte) g, (byte) b );
     }
 }

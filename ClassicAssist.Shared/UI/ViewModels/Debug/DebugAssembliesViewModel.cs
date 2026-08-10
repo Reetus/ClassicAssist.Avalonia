@@ -26,108 +26,99 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Macros;
-using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+/// <summary>
+///     Lets extra .dll assemblies be loaded so their public static classes with a parameterless
+///     static <c>Initialize()</c> method run, and so any classes under a <c>*.Macros.Commands</c>
+///     namespace they contain become importable from macros - see
+///     <see cref="AssistantOptions.Assemblies" /> and <see cref="MacroInvoker.InitializeImports" />.
+/// </summary>
+public class DebugAssembliesViewModel : BaseViewModel
 {
-    /// <summary>
-    ///     Lets extra .dll assemblies be loaded so their public static classes with a parameterless
-    ///     static <c>Initialize()</c> method run, and so any classes under a <c>*.Macros.Commands</c>
-    ///     namespace they contain become importable from macros - see
-    ///     <see cref="AssistantOptions.Assemblies" /> and <see cref="MacroInvoker.InitializeImports" />.
-    /// </summary>
-    public class DebugAssembliesViewModel : BaseViewModel
+    public DebugAssembliesViewModel()
     {
-        private ObservableCollection<Assembly> _items = new ObservableCollection<Assembly>();
-        private ICommand _loadCommand;
-        private ICommand _removeCommand;
-        private ICommand _saveCommand;
-        private Assembly _selectedItem;
-
-        public DebugAssembliesViewModel()
+        foreach ( string assemblyPath in AssistantOptions.Assemblies ?? [] )
         {
-            foreach ( string assemblyPath in AssistantOptions.Assemblies ?? Array.Empty<string>() )
-            {
-                Assembly assembly = LoadAssembly( assemblyPath );
-
-                if ( assembly != null )
-                {
-                    Items.Add( assembly );
-                }
-            }
-        }
-
-        public ObservableCollection<Assembly> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public ICommand LoadCommand => _loadCommand ?? ( _loadCommand = new RelayCommandAsync( Load, o => true ) );
-
-        public ICommand RemoveCommand =>
-            _removeCommand ?? ( _removeCommand = new RelayCommandAsync( Remove, o => SelectedItem != null ) );
-
-        public ICommand SaveCommand => _saveCommand ?? ( _saveCommand = new RelayCommandAsync( Save, o => true ) );
-
-        public Assembly SelectedItem
-        {
-            get => _selectedItem;
-            set => SetProperty( ref _selectedItem, value );
-        }
-
-        private async Task Load( object arg )
-        {
-            string fileName = await Engine.UIInvoker.ShowOpenFileDialogAsync( Strings.Additional_Assemblies,
-                "DLL Files", new[] { "*.dll" } );
-
-            if ( string.IsNullOrEmpty( fileName ) )
-            {
-                return;
-            }
-
-            try
-            {
-                Assembly assembly = LoadAssembly( fileName );
-
-                if ( assembly != null )
-                {
-                    _dispatcher.Invoke( () => Items.Add( assembly ) );
-                }
-            }
-            catch ( Exception e )
-            {
-                Engine.MessageBoxProvider?.Show( string.Format( Strings.Error_loading_assembly___0_, e.Message ) );
-            }
-        }
-
-        private static Assembly LoadAssembly( string fileName )
-        {
-            return File.Exists( fileName ) ? Assembly.LoadFile( fileName ) : null;
-        }
-
-        private Task Remove( object arg )
-        {
-            Assembly assembly = SelectedItem;
+            Assembly assembly = LoadAssembly( assemblyPath );
 
             if ( assembly != null )
             {
-                _dispatcher.Invoke( () => Items.Remove( assembly ) );
+                Items.Add( assembly );
             }
-
-            return Task.CompletedTask;
         }
+    }
 
-        private Task Save( object arg )
+    public ObservableCollection<Assembly> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public ICommand LoadCommand => field ??= new RelayCommandAsync( Load, o => true );
+
+    public ICommand RemoveCommand => field ??= new RelayCommandAsync( Remove, o => SelectedItem != null );
+
+    public ICommand SaveCommand => field ??= new RelayCommandAsync( Save, o => true );
+
+    public Assembly SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private async Task Load( object arg )
+    {
+        string fileName = await Engine.UIInvoker.ShowOpenFileDialogAsync( Strings.Additional_Assemblies,
+            "DLL Files", ["*.dll"] );
+
+        if ( string.IsNullOrEmpty( fileName ) )
         {
-            AssistantOptions.Assemblies = Items.Select( a => a.Location ).ToArray();
-            AssistantOptions.Save();
-
-            MacroInvoker.ResetImportCache();
-
-            return Task.CompletedTask;
+            return;
         }
+
+        try
+        {
+            Assembly assembly = LoadAssembly( fileName );
+
+            if ( assembly != null )
+            {
+                _dispatcher.Invoke( () => Items.Add( assembly ) );
+            }
+        }
+        catch ( Exception e )
+        {
+            Engine.MessageBoxProvider?.Show( string.Format( Strings.Error_loading_assembly___0_, e.Message ) );
+        }
+    }
+
+    private static Assembly LoadAssembly( string fileName )
+    {
+        return File.Exists( fileName ) ? Assembly.LoadFile( fileName ) : null;
+    }
+
+    private Task Remove( object arg )
+    {
+        Assembly assembly = SelectedItem;
+
+        if ( assembly != null )
+        {
+            _dispatcher.Invoke( () => Items.Remove( assembly ) );
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private Task Save( object arg )
+    {
+        AssistantOptions.Assemblies = [.. Items.Select( a => a.Location )];
+        AssistantOptions.Save();
+
+        MacroInvoker.ResetImportCache();
+
+        return Task.CompletedTask;
     }
 }

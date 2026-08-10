@@ -20,48 +20,47 @@
 // ReSharper disable once CheckNamespace
 using System.Threading.Tasks;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public enum WindowType
 {
-    public enum WindowType
-    {
-        WPF,
-        Avalonia
-    }
+    WPF,
+    Avalonia
+}
 
-    public struct SharedWindow
-    {
-        public object Window;
-        public WindowType Type;
-        public string Caption;
-        public string Text;
-        public MessageBoxButtons Buttons;
-        public MessageBoxImage? Icon;
-    }
+public struct SharedWindow
+{
+    public object Window;
+    public WindowType Type;
+    public string Caption;
+    public string Text;
+    public MessageBoxButtons Buttons;
+    public MessageBoxImage? Icon;
+}
 
-    public enum MessageBoxButtons
-    {
-        OK,
-        YesNo
-    }
+public enum MessageBoxButtons
+{
+    OK,
+    YesNo
+}
 
-    public enum MessageBoxResult
-    {
-        OK,
-        Yes,
-        No,
-        Cancel
-    }
+public enum MessageBoxResult
+{
+    OK,
+    Yes,
+    No,
+    Cancel
+}
 
-    public enum MessageBoxImage
-    {
-        Information,
-        Error,
-        Warning
-    }
+public enum MessageBoxImage
+{
+    Information,
+    Error,
+    Warning
+}
 
-    public interface IMessageBoxProvider
-    {
-        Task<MessageBoxResult> Show( string text, string caption = null,
-            MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxImage? icon = null );
-    }
+public interface IMessageBoxProvider
+{
+    Task<MessageBoxResult> Show( string text, string caption = null,
+        MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxImage? icon = null );
 }

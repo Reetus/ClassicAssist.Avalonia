@@ -20,7 +20,7 @@ namespace ClassicAssist.Data.Macros.Commands;
 
 public static class ActionCommands
 {
-    public static UseOnceList UseOnceList { get; set; } = new();
+    public static UseOnceList UseOnceList { get; set; } = [];
 
     [CommandsDisplay( Category = nameof( Strings.Actions ),
         Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Timeout ) } )]
@@ -135,7 +135,7 @@ public static class ActionCommands
     public static void ClearHands( string hand = "both" )
     {
         hand = hand.ToLower();
-        List<Layer> unequipLayers = new();
+        List<Layer> unequipLayers = [];
 
         switch ( hand )
         {
@@ -155,8 +155,7 @@ public static class ActionCommands
 
         PlayerMobile player = Engine.Player;
 
-        List<int> serials = unequipLayers.Select( unequipLayer => Engine.Player.GetLayer( unequipLayer ) )
-            .Where( serial => serial != 0 ).ToList();
+        List<int> serials = [.. unequipLayers.Select( unequipLayer => Engine.Player.GetLayer( unequipLayer ) ).Where( serial => serial != 0 )];
 
         foreach ( int serial in serials )
         {
@@ -263,7 +262,7 @@ public static class ActionCommands
     }
 
     [CommandsDisplay( Category = nameof( Strings.Actions ), Parameters = new[] { nameof( ParameterType.ShowType ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( ShowNamesType ) } )]
+    [CommandsDisplayStringSeeAlso( [nameof( ShowNamesType )] )]
     public static void ShowNames( string showType )
     {
         const int MAX_DISTANCE = 32;
@@ -310,7 +309,7 @@ public static class ActionCommands
 
     [CommandsDisplay( Category = nameof( Strings.Actions ),
         Parameters = new[] { nameof( ParameterType.ItemID ), nameof( ParameterType.Layer ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { null, nameof( Layer ) } )]
+    [CommandsDisplayStringSeeAlso( [null, nameof( Layer )] )]
     public static void EquipType( int id, object layer )
     {
         Layer layerValue = Layer.Invalid;
@@ -321,7 +320,7 @@ public static class ActionCommands
                 layerValue = Utility.GetEnumValueByName<Layer>( s );
                 break;
             case int i:
-                layerValue = (Layer)i;
+                layerValue = (Layer) i;
                 break;
             case Layer l:
                 layerValue = l;
@@ -339,7 +338,7 @@ public static class ActionCommands
 
     [CommandsDisplay( Category = nameof( Strings.Actions ),
         Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Layer ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { null, nameof( Layer ) } )]
+    [CommandsDisplayStringSeeAlso( [null, nameof( Layer )] )]
     public static void EquipItem( object obj, object layer )
     {
         int serial = AliasCommands.ResolveSerial( obj );
@@ -358,7 +357,7 @@ public static class ActionCommands
                 layerValue = Utility.GetEnumValueByName<Layer>( s );
                 break;
             case int i:
-                layerValue = (Layer)i;
+                layerValue = (Layer) i;
                 break;
             case Layer l:
                 layerValue = l;
@@ -384,13 +383,10 @@ public static class ActionCommands
 
     [CommandsDisplay( Category = nameof( Strings.Actions ),
         Parameters = new[] { nameof( ParameterType.Layer ), nameof( ParameterType.SerialOrAlias ) } )]
-    [CommandsDisplayStringSeeAlso( new[] { nameof( Layer ), null } )]
+    [CommandsDisplayStringSeeAlso( [nameof( Layer ), null] )]
     public static bool FindLayer( object layer, object obj = null )
     {
-        if ( obj == null )
-        {
-            obj = "self";
-        }
+        obj ??= "self";
 
         int serial = AliasCommands.ResolveSerial( obj );
 
@@ -408,7 +404,7 @@ public static class ActionCommands
                 layerValue = Utility.GetEnumValueByName<Layer>( s );
                 break;
             case int i:
-                layerValue = (Layer)i;
+                layerValue = (Layer) i;
                 break;
             case Layer l:
                 layerValue = l;
@@ -454,13 +450,13 @@ public static class ActionCommands
     {
         Random random = new();
 
-        byte value = (byte)random.Next( 1, byte.MaxValue );
+        byte value = (byte) random.Next( 1, byte.MaxValue );
 
         Stopwatch sw = new();
         sw.Start();
 
         PacketWaitEntry we = Engine.PacketWaitEntries.Add(
-            new PacketFilterInfo( 0x73, new[] { new PacketFilterCondition( 1, new[] { value }, 1 ) } ),
+            new PacketFilterInfo( 0x73, [new PacketFilterCondition( 1, [value], 1 )] ),
             PacketDirection.Incoming, true );
 
         Engine.SendPacketToServer( new Ping( value ) );
@@ -481,10 +477,7 @@ public static class ActionCommands
         Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.ContextMenuIndex ) } )]
     public static void ContextMenu( object obj, int entry )
     {
-        if ( obj == null )
-        {
-            obj = "self";
-        }
+        obj ??= "self";
 
         int serial = AliasCommands.ResolveSerial( obj );
 
@@ -515,18 +508,17 @@ public static class ActionCommands
             return false;
         }
 
-        AutoResetEvent are = new(false);
+        AutoResetEvent are = new( false );
 
-        PacketFilterInfo pfi = new(0xBF,
-            new[]
-            {
+        PacketFilterInfo pfi = new( 0xBF,
+            [
                 PacketFilterConditions.ShortAtPositionCondition( 0x14, 3 ),
                 PacketFilterConditions.IntAtPositionCondition( serial, 7 )
-            }, ( bytes, info ) =>
+            ], ( bytes, info ) =>
             {
                 Engine.SendPacketToServer( new ContextMenuClick( serial, entry ) );
                 are.Set();
-            });
+            } );
 
         Engine.AddReceiveFilter( pfi );
 
@@ -559,14 +551,13 @@ public static class ActionCommands
             return false;
         }
 
-        AutoResetEvent are = new(false);
+        AutoResetEvent are = new( false );
 
-        PacketFilterInfo pfi = new(0xBF,
-            new[]
-            {
+        PacketFilterInfo pfi = new( 0xBF,
+            [
                 PacketFilterConditions.ShortAtPositionCondition( 0x14, 3 ),
                 PacketFilterConditions.IntAtPositionCondition( serial, 7 )
-            }, ( bytes, info ) =>
+            ], ( bytes, info ) =>
             {
                 IEnumerable<ContextMenuEntry> entries = ParseContextMenuEntries( bytes );
 
@@ -581,7 +572,7 @@ public static class ActionCommands
 
                 Engine.SendPacketToServer( new ContextMenuClick( serial, entry.Index ) );
                 are.Set();
-            });
+            } );
 
         Engine.AddReceiveFilter( pfi );
 
@@ -601,16 +592,16 @@ public static class ActionCommands
 
     private static IEnumerable<ContextMenuEntry> ParseContextMenuEntries( byte[] packet )
     {
-        PacketReader reader = new(packet, packet.Length, false);
+        PacketReader reader = new( packet, packet.Length, false );
 
         reader.ReadInt16();
         int type = reader.ReadInt16();
-        int serial = reader.ReadInt32();
+        _ = reader.ReadInt32();
         int len = reader.ReadByte();
 
         int entry, cliloc, flags, hue;
 
-        List<ContextMenuEntry> entries = new();
+        List<ContextMenuEntry> entries = [];
 
         switch ( type )
         {
@@ -632,7 +623,7 @@ public static class ActionCommands
                     {
                         Index = entry,
                         Cliloc = cliloc,
-                        Flags = (ContextMenuFlags)flags,
+                        Flags = (ContextMenuFlags) flags,
                         Hue = hue,
                         Text = text
                     } );
@@ -658,7 +649,7 @@ public static class ActionCommands
                     {
                         Index = entry,
                         Cliloc = cliloc,
-                        Flags = (ContextMenuFlags)flags,
+                        Flags = (ContextMenuFlags) flags,
                         Hue = hue,
                         Text = text
                     } );

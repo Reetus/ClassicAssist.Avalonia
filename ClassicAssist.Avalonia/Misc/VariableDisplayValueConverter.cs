@@ -22,18 +22,17 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using ClassicAssist.Data.Macros;
 
-namespace ClassicAssist.Avalonia.Misc
-{
-    public class VariableDisplayValueConverter : IValueConverter
-    {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            return MacroInvoker.GetDisplayValue( value );
-        }
+namespace ClassicAssist.Avalonia.Misc;
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            throw new NotImplementedException();
-        }
+public class VariableDisplayValueConverter : IValueConverter
+{
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        return MacroInvoker.GetDisplayValue( value );
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

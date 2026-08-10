@@ -15,30 +15,29 @@
 using System;
 using System.Threading.Tasks;
 
-namespace ClassicAssist.Shared
+namespace ClassicAssist.Shared;
+
+/// <summary>
+///     Runs work on the calling thread. Used as the default for <see cref="Engine.Dispatcher" /> so that
+///     headless consumers - tests, tooling - don't have to stand up an Avalonia dispatcher, and so a view
+///     model constructed before the UI exists can't null-reference on <c>_dispatcher.Invoke</c>.
+/// </summary>
+public class InlineDispatcher : IDispatcher
 {
-    /// <summary>
-    ///     Runs work on the calling thread. Used as the default for <see cref="Engine.Dispatcher" /> so that
-    ///     headless consumers - tests, tooling - don't have to stand up an Avalonia dispatcher, and so a view
-    ///     model constructed before the UI exists can't null-reference on <c>_dispatcher.Invoke</c>.
-    /// </summary>
-    public class InlineDispatcher : IDispatcher
+    public void Invoke( Action action )
     {
-        public void Invoke( Action action )
-        {
-            action();
-        }
+        action();
+    }
 
-        public Task InvokeAsync( Action action )
-        {
-            action();
+    public Task InvokeAsync( Action action )
+    {
+        action();
 
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
+    }
 
-        public bool CheckAccess()
-        {
-            return true;
-        }
+    public bool CheckAccess()
+    {
+        return true;
     }
 }

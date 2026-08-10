@@ -16,11 +16,9 @@
 #endregion
 
 using Avalonia.Controls.Primitives;
-using Avalonia.Styling;
 
-namespace ClassicAssist.Avalonia.Controls
+namespace ClassicAssist.Avalonia.Controls;
+
+public class GroupBox : HeaderedContentControl
 {
-    public class GroupBox : HeaderedContentControl
-    {
-    }
 }

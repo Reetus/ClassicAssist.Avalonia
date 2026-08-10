@@ -5,66 +5,65 @@ using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Macros
+namespace ClassicAssist.Data.Macros;
+
+public class UseOnceList : IEnumerable<int>
 {
-    public class UseOnceList : IEnumerable<int>
+    private readonly List<int> _useOnce = [];
+
+    public IEnumerator<int> GetEnumerator()
     {
-        private readonly List<int> _useOnce = new List<int>();
+        return _useOnce.GetEnumerator();
+    }
 
-        public IEnumerator<int> GetEnumerator()
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    public void Add( int serial )
+    {
+        _useOnce.Add( serial );
+        Engine.RehueList.Add( serial, 766 );
+    }
+
+    public void Add( Item item )
+    {
+        Add( item.Serial );
+
+        int backpack = Engine.Player?.Backpack?.Serial ?? -1;
+
+        if ( item.IsDescendantOf( backpack ) )
         {
-            return _useOnce.GetEnumerator();
+            Engine.RehueList.CheckItem( item );
         }
+    }
 
-        IEnumerator IEnumerable.GetEnumerator()
+    public void Remove( Item item )
+    {
+        Engine.RehueList.Remove( item.Serial );
+
+        Engine.SendPacketToClient( new ContainerContentUpdate( item.Serial, item.ID, item.Direction, item.Count,
+            item.X, item.Y, item.Grid, item.Owner, item.Hue ) );
+
+        _useOnce.Remove( item.Serial );
+    }
+
+    public bool Contains( int serial )
+    {
+        return _useOnce.Any( i => i == serial );
+    }
+
+    public void Clear()
+    {
+        // ReSharper disable once ForCanBeConvertedToForeach
+        for ( int index = 0; index < _useOnce.Count; index++ )
         {
-            return GetEnumerator();
-        }
+            int serial = _useOnce[index];
 
-        public void Add( int serial )
-        {
-            _useOnce.Add( serial );
-            Engine.RehueList.Add( serial, 766 );
-        }
-
-        public void Add( Item item )
-        {
-            Add( item.Serial );
-
-            int backpack = Engine.Player?.Backpack?.Serial ?? -1;
-
-            if ( item.IsDescendantOf( backpack ) )
+            if ( Engine.Items.GetItem( serial, out Item item ) )
             {
-                Engine.RehueList.CheckItem( item );
-            }
-        }
-
-        public void Remove( Item item )
-        {
-            Engine.RehueList.Remove( item.Serial );
-
-            Engine.SendPacketToClient( new ContainerContentUpdate( item.Serial, item.ID, item.Direction, item.Count,
-                item.X, item.Y, item.Grid, item.Owner, item.Hue ) );
-
-            _useOnce.Remove( item.Serial );
-        }
-
-        public bool Contains( int serial )
-        {
-            return _useOnce.Any( i => i == serial );
-        }
-
-        public void Clear()
-        {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for ( int index = 0; index < _useOnce.Count; index++ )
-            {
-                int serial = _useOnce[index];
-
-                if ( Engine.Items.GetItem( serial, out Item item ) )
-                {
-                    Remove( item );
-                }
+                Remove( item );
             }
         }
     }

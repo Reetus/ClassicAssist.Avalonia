@@ -1,7 +1,6 @@
-namespace ClassicAssist.UI.Misc.DraggableTreeView
+namespace ClassicAssist.UI.Misc.DraggableTreeView;
+
+public interface IDraggable
 {
-    public interface IDraggable
-    {
-        string Name { get; set; }
-    }
+    string Name { get; set; }
 }

@@ -2,82 +2,76 @@
 using System.Runtime.CompilerServices;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Data.Skills
+namespace ClassicAssist.Data.Skills;
+
+public class SkillEntry : INotifyPropertyChanged
 {
-    public class SkillEntry : INotifyPropertyChanged
+    private Skill _skill;
+
+    public float Base
     {
-        private float _base;
-        private float _cap;
-        private double _delta;
-        private LockStatus _lockStatus;
-        private Skill _skill;
-        private float _value;
-
-        public float Base
+        get;
+        set
         {
-            get => _base;
-            set
-            {
-                _base = value;
-                OnPropertyChanged();
-            }
+            field = value;
+            OnPropertyChanged();
         }
+    }
 
-        public float Cap
+    public float Cap
+    {
+        get;
+        set
         {
-            get => _cap;
-            set
-            {
-                _cap = value;
-                OnPropertyChanged();
-            }
+            field = value;
+            OnPropertyChanged();
         }
+    }
 
-        public double Delta
+    public double Delta
+    {
+        get;
+        set
         {
-            get => _delta;
-            set
-            {
-                _delta = value;
-                OnPropertyChanged();
-            }
+            field = value;
+            OnPropertyChanged();
         }
+    }
 
-        public LockStatus LockStatus
+    public LockStatus LockStatus
+    {
+        get;
+        set
         {
-            get => _lockStatus;
-            set
-            {
-                _lockStatus = value;
-                OnPropertyChanged();
-            }
+            field = value;
+            OnPropertyChanged();
         }
+    }
 
-        public Skill Skill
+    public Skill Skill
+    {
+        get => _skill;
+        set
         {
-            get => _skill;
-            set
-            {
-                _skill = value;
-                OnPropertyChanged();
-            }
+            _skill = value;
+            OnPropertyChanged();
         }
+    }
 
-        public float Value
+    public float Value
+    {
+        get;
+        set
         {
-            get => _value;
-            set
-            {
-                _value = value;
-                OnPropertyChanged();
-            }
+            field = value;
+            OnPropertyChanged();
         }
+    }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler PropertyChanged;
 
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
     }
 }

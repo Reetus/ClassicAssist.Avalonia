@@ -19,18 +19,17 @@
 
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class TargetByResource : BasePacket
 {
-    public class TargetByResource : BasePacket
+    public TargetByResource( int serial, int resourceType )
     {
-        public TargetByResource( int serial, int resourceType )
-        {
-            _writer = new PacketWriter( 11 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 11 );
-            _writer.Write( (short) 0x30 );
-            _writer.Write( serial );
-            _writer.Write( (short) resourceType );
-        }
+        _writer = new PacketWriter( 11 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 11 );
+        _writer.Write( (short) 0x30 );
+        _writer.Write( serial );
+        _writer.Write( (short) resourceType );
     }
 }

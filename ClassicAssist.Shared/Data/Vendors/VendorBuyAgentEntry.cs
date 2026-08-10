@@ -20,42 +20,36 @@
 using System.Collections.ObjectModel;
 using ClassicAssist.Shared.UI;
 
-namespace ClassicAssist.Data.Vendors
+namespace ClassicAssist.Data.Vendors;
+
+public class VendorBuyAgentEntry : SetPropertyNotifyChanged
 {
-    public class VendorBuyAgentEntry : SetPropertyNotifyChanged
+    public bool Enabled
     {
-        private bool _enabled;
-        private bool _includeBackpackAmount;
-        private ObservableCollection<VendorBuyAgentItem> _items = new ObservableCollection<VendorBuyAgentItem>();
-        private string _name;
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public bool Enabled
-        {
-            get => _enabled;
-            set => SetProperty(ref _enabled, value);
-        }
+    public bool IncludeBackpackAmount
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public bool IncludeBackpackAmount
-        {
-            get => _includeBackpackAmount;
-            set => SetProperty(ref _includeBackpackAmount, value);
-        }
+    public ObservableCollection<VendorBuyAgentItem> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        public ObservableCollection<VendorBuyAgentItem> Items
-        {
-            get => _items;
-            set => SetProperty(ref _items, value);
-        }
+    public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public string Name
-        {
-            get => _name;
-            set => SetProperty(ref _name, value);
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
+    public override string ToString()
+    {
+        return Name;
     }
 }

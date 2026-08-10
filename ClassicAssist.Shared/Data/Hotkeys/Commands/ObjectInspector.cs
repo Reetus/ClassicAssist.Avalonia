@@ -1,11 +1,10 @@
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Object Inspector" )]
+public class ObjectInspector : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Object Inspector" )]
-    public class ObjectInspector : HotkeyCommand
+    public override async void Execute()
     {
-        public override async void Execute()
-        {
-            await Shared.UO.Commands.InspectObjectAsync();
-        }
+        await Shared.UO.Commands.InspectObjectAsync();
     }
 }

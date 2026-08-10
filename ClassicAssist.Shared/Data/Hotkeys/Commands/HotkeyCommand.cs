@@ -2,67 +2,64 @@
 using System.Threading.Tasks;
 using ClassicAssist.Shared.Resources;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+public class HotkeyCommand : HotkeyEntry, IComparable<HotkeyCommand>
 {
-    public class HotkeyCommand : HotkeyEntry, IComparable<HotkeyCommand>
+    public HotkeyCommand()
     {
-        private string _tooltip;
+        HotkeyCommandAttribute a =
+            (HotkeyCommandAttribute) Attribute.GetCustomAttribute( GetType(), typeof( HotkeyCommandAttribute ) );
 
-        public HotkeyCommand()
+        if ( a != null )
         {
-            HotkeyCommandAttribute a =
-                (HotkeyCommandAttribute) Attribute.GetCustomAttribute( GetType(), typeof( HotkeyCommandAttribute ) );
+            // if the attribute exists, the Name must be localizable.
+            string hotkeyName = Strings.ResourceManager.GetString(
+                a.Name ?? throw new ArgumentNullException( $"No localizable string for {a.Name}" ) );
 
-            if ( a != null )
-            {
-                // if the attribute exists, the Name must be localizable.
-                string hotkeyName = Strings.ResourceManager.GetString(
-                    a.Name ?? throw new ArgumentNullException( $"No localizable string for {a.Name}" ) );
+            string tooltipName = Strings.ResourceManager.GetString(
+                a.Tooltip ?? throw new ArgumentNullException( $"No localizable string for {a.Tooltip}" ) );
 
-                string tooltipName = Strings.ResourceManager.GetString(
-                    a.Tooltip ?? throw new ArgumentNullException( $"No localizable string for {a.Tooltip}" ) );
-
-                base.Name = string.IsNullOrEmpty( hotkeyName ) ? a.Name : hotkeyName;
-                Tooltip = string.IsNullOrEmpty( tooltipName ) ? a.Tooltip : tooltipName;
-            }
-
-            Action = ( hs, _ ) => Task.Run( Execute );
+            base.Name = string.IsNullOrEmpty( hotkeyName ) ? a.Name : hotkeyName;
+            Tooltip = string.IsNullOrEmpty( tooltipName ) ? a.Tooltip : tooltipName;
         }
 
-        public string Tooltip
+        Action = ( hs, _ ) => Task.Run( Execute );
+    }
+
+    public string Tooltip
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int CompareTo( HotkeyCommand other )
+    {
+        return string.Compare( Name, other.Name, StringComparison.Ordinal );
+    }
+
+    public virtual void Execute()
+    {
+        throw new NotImplementedException();
+    }
+
+    public override string ToString()
+    {
+        return Name;
+    }
+
+    public override bool Equals( object obj )
+    {
+        if ( obj is not HotkeyCommand hkc )
         {
-            get => _tooltip;
-            set => SetProperty( ref _tooltip, value );
+            return false;
         }
 
-        public int CompareTo( HotkeyCommand other )
-        {
-            return string.Compare( Name, other.Name, StringComparison.Ordinal );
-        }
+        return Name == hkc.Name;
+    }
 
-        public virtual void Execute()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
-
-        public override bool Equals( object obj )
-        {
-            if ( !( obj is HotkeyCommand hkc ) )
-            {
-                return false;
-            }
-
-            return Name == hkc.Name;
-        }
-
-        public override int GetHashCode()
-        {
-            return Name.GetHashCode();
-        }
+    public override int GetHashCode()
+    {
+        return Name.GetHashCode();
     }
 }

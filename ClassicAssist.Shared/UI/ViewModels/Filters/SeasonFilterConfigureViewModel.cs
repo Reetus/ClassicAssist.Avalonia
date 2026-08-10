@@ -20,25 +20,22 @@
 using ClassicAssist.Data.Filters;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Filters
+namespace ClassicAssist.Shared.UI.ViewModels.Filters;
+
+public class SeasonFilterConfigureViewModel : BaseViewModel
 {
-    public class SeasonFilterConfigureViewModel : BaseViewModel
+    public SeasonFilterConfigureViewModel()
     {
-        private Season _selectedSeason;
+    }
 
-        public SeasonFilterConfigureViewModel()
-        {
-        }
+    public SeasonFilterConfigureViewModel( Season selectedSeason )
+    {
+        SelectedSeason = selectedSeason;
+    }
 
-        public SeasonFilterConfigureViewModel( Season selectedSeason )
-        {
-            SelectedSeason = selectedSeason;
-        }
-
-        public Season SelectedSeason
-        {
-            get => _selectedSeason;
-            set => SetProperty( ref _selectedSeason, value );
-        }
+    public Season SelectedSeason
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

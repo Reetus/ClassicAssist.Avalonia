@@ -1,10 +1,9 @@
-﻿namespace ClassicAssist.Data.Autoloot
+﻿namespace ClassicAssist.Data.Autoloot;
+
+public enum PropertyType
 {
-    public enum PropertyType
-    {
-        Properties,
-        Object,
-        Predicate,
-        PredicateWithValue
-    }
+    Properties,
+    Object,
+    Predicate,
+    PredicateWithValue
 }

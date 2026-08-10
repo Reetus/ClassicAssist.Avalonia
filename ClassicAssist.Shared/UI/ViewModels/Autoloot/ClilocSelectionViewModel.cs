@@ -25,86 +25,78 @@ using ClassicAssist.Misc;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
+namespace ClassicAssist.Shared.UI.ViewModels.Autoloot;
+
+public class ClilocSelectionViewModel : BaseViewModel
 {
-    public class ClilocSelectionViewModel : BaseViewModel
+    public ClilocSelectionViewModel()
     {
-        private ObservableCollection<ClilocEntry> _allClilocs = new ObservableCollection<ClilocEntry>();
-        private MessageBoxResult _dialogResult = MessageBoxResult.Cancel;
-        private ObservableCollection<ClilocEntry> _filteredClilocs = new ObservableCollection<ClilocEntry>();
-        private string _filterText;
-        private ICommand _okCommand;
-        private ClilocEntry _selectedCliloc;
-
-        public ClilocSelectionViewModel()
+        foreach ( KeyValuePair<int, string> kvp in Cliloc.GetItems() )
         {
-            foreach ( KeyValuePair<int, string> kvp in Cliloc.GetItems() )
-            {
-                AllClilocs.Add( new ClilocEntry { Key = kvp.Key, Value = kvp.Value } );
-            }
-
-            UpdateEntries( _filterText );
+            AllClilocs.Add( new ClilocEntry { Key = kvp.Key, Value = kvp.Value } );
         }
 
-        public ObservableCollection<ClilocEntry> AllClilocs
+        UpdateEntries( FilterText );
+    }
+
+    public ObservableCollection<ClilocEntry> AllClilocs
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public MessageBoxResult DialogResult
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = MessageBoxResult.Cancel;
+
+    public ObservableCollection<ClilocEntry> FilteredClilocs
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public string FilterText
+    {
+        get;
+        set
         {
-            get => _allClilocs;
-            set => SetProperty( ref _allClilocs, value );
+            SetProperty( ref field, value );
+            UpdateEntries( value );
         }
+    }
 
-        public MessageBoxResult DialogResult
+    public ICommand OKCommand => field ??= new RelayCommand( OK, o => SelectedCliloc != null );
+
+    public ClilocEntry SelectedCliloc
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private void OK( object obj )
+    {
+        DialogResult = MessageBoxResult.OK;
+    }
+
+    private void UpdateEntries( string filterText )
+    {
+        IEnumerable<ClilocEntry> matches = AllClilocs.Where( m =>
+            string.IsNullOrEmpty( filterText ) || m.Key.ToString().Contains( filterText ) ||
+            m.Value.ToLower().Contains( filterText.ToLower() ) );
+
+        FilteredClilocs.Clear();
+
+        foreach ( ClilocEntry clilocEntry in matches )
         {
-            get => _dialogResult;
-            set => SetProperty( ref _dialogResult, value );
+            FilteredClilocs.Add( clilocEntry );
         }
+    }
 
-        public ObservableCollection<ClilocEntry> FilteredClilocs
-        {
-            get => _filteredClilocs;
-            set => SetProperty( ref _filteredClilocs, value );
-        }
-
-        public string FilterText
-        {
-            get => _filterText;
-            set
-            {
-                SetProperty( ref _filterText, value );
-                UpdateEntries( value );
-            }
-        }
-
-        public ICommand OKCommand => _okCommand ?? ( _okCommand = new RelayCommand( OK, o => SelectedCliloc != null ) );
-
-        public ClilocEntry SelectedCliloc
-        {
-            get => _selectedCliloc;
-            set => SetProperty( ref _selectedCliloc, value );
-        }
-
-        private void OK( object obj )
-        {
-            DialogResult = MessageBoxResult.OK;
-        }
-
-        private void UpdateEntries( string filterText )
-        {
-            IEnumerable<ClilocEntry> matches = AllClilocs.Where( m =>
-                string.IsNullOrEmpty( filterText ) || m.Key.ToString().Contains( filterText ) ||
-                m.Value.ToLower().Contains( filterText.ToLower() ) );
-
-            FilteredClilocs.Clear();
-
-            foreach ( ClilocEntry clilocEntry in matches )
-            {
-                FilteredClilocs.Add( clilocEntry );
-            }
-        }
-
-        public class ClilocEntry
-        {
-            public int Key { get; set; }
-            public string Value { get; set; }
-        }
+    public class ClilocEntry
+    {
+        public int Key { get; set; }
+        public string Value { get; set; }
     }
 }

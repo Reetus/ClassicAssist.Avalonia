@@ -4,32 +4,31 @@ using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using ClassicAssist.UI.Models;
 
-namespace ClassicAssist.Avalonia.Views
+namespace ClassicAssist.Avalonia.Views;
+
+public partial class ObjectInspectorWindow : Window
 {
-    public partial class ObjectInspectorWindow : Window
+    public ObjectInspectorWindow()
     {
-        public ObjectInspectorWindow()
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
+    }
+
+    private void OnItemDoubleTapped( object sender, TappedEventArgs e )
+    {
+        // The tap lands on whatever part of the row was hit, so walk up to the row it belongs to
+        // rather than trusting the sender.
+        ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
+
+        if ( item?.DataContext is not ObjectInspectorData data )
         {
-            InitializeComponent();
+            return;
         }
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
-
-        private void OnItemDoubleTapped( object sender, TappedEventArgs e )
-        {
-            // The tap lands on whatever part of the row was hit, so walk up to the row it belongs to
-            // rather than trusting the sender.
-            ListBoxItem item = ( e.Source as Control )?.FindAncestorOfType<ListBoxItem>( true );
-
-            if ( !( item?.DataContext is ObjectInspectorData data ) )
-            {
-                return;
-            }
-
-            data.OnDoubleClick?.Invoke( data );
-        }
+        data.OnDoubleClick?.Invoke( data );
     }
 }

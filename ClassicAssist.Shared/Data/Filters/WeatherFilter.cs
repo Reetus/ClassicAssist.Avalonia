@@ -1,25 +1,24 @@
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+[FilterOptions( Name = "Weather", DefaultEnabled = true )]
+public class WeatherFilter : DynamicFilterEntry
 {
-    [FilterOptions( Name = "Weather", DefaultEnabled = true )]
-    public class WeatherFilter : DynamicFilterEntry
+    public static bool IsEnabled { get; set; }
+
+    protected override void OnChanged( bool enabled )
     {
-        public static bool IsEnabled { get; set; }
+        IsEnabled = enabled;
+    }
 
-        protected override void OnChanged( bool enabled )
+    public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+    {
+        if ( !IsEnabled || direction != PacketDirection.Incoming )
         {
-            IsEnabled = enabled;
+            return false;
         }
 
-        public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
-        {
-            if ( !IsEnabled || direction != PacketDirection.Incoming )
-            {
-                return false;
-            }
-
-            return packet[0] == 0x65;
-        }
+        return packet[0] == 0x65;
     }
 }

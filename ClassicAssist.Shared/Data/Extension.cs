@@ -15,10 +15,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #endregion
 
-namespace ClassicAssist.Data
+namespace ClassicAssist.Data;
+
+public interface IExtension
 {
-    public interface IExtension
-    {
-        void Initialize();
-    }
+    void Initialize();
 }

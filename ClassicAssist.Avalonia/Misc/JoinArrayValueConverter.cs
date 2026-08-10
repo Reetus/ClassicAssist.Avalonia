@@ -21,23 +21,22 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class JoinArrayValueConverter : IValueConverter
 {
-    public class JoinArrayValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not string[] array )
         {
-            if ( !( value is string[] array ) )
-            {
-                return null;
-            }
-
-            return string.Join( (string) parameter ?? ", ", array );
+            return null;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            return value;
-        }
+        return string.Join( (string) parameter ?? ", ", array );
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        return value;
     }
 }

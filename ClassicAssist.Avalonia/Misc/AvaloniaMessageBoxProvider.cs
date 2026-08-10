@@ -5,39 +5,38 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
 using SEngine = ClassicAssist.Shared.Engine;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+internal class AvaloniaMessageBoxProvider : IMessageBoxProvider
 {
-    internal class AvaloniaMessageBoxProvider : IMessageBoxProvider
+    public Task<MessageBoxResult> Show( string text, string caption = null,
+        MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxImage? icon = null )
     {
-        public Task<MessageBoxResult> Show( string text, string caption = null,
-            MessageBoxButtons buttons = MessageBoxButtons.OK, MessageBoxImage? icon = null )
+        if ( string.IsNullOrEmpty( caption ) )
         {
-            if ( string.IsNullOrEmpty( caption ) )
-            {
-                caption = Strings.Error;
-            }
-
-            TaskCompletionSource<MessageBoxResult> promise = new TaskCompletionSource<MessageBoxResult>();
-
-            SEngine.Dispatcher.Invoke( async () =>
-            {
-                DialogWindow window = new DialogWindow();
-                DialogWindowViewModel model = new DialogWindowViewModel( new SharedWindow
-                {
-                    Window = window,
-                    Type = WindowType.Avalonia,
-                    Caption = caption,
-                    Text = text,
-                    Buttons = buttons,
-                    Icon = icon
-                } );
-                window.DataContext = model;
-
-                await window.ShowDialog( Engine.MainWindow );
-                promise.TrySetResult( model.Result );
-            } );
-
-            return promise.Task;
+            caption = Strings.Error;
         }
+
+        TaskCompletionSource<MessageBoxResult> promise = new();
+
+        SEngine.Dispatcher.Invoke( async () =>
+        {
+            DialogWindow window = new();
+            DialogWindowViewModel model = new( new SharedWindow
+            {
+                Window = window,
+                Type = WindowType.Avalonia,
+                Caption = caption,
+                Text = text,
+                Buttons = buttons,
+                Icon = icon
+            } );
+            window.DataContext = model;
+
+            await window.ShowDialog( Engine.MainWindow );
+            promise.TrySetResult( model.Result );
+        } );
+
+        return promise.Task;
     }
 }

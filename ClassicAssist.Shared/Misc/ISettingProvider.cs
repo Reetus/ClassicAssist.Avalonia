@@ -1,11 +1,10 @@
 ﻿using ClassicAssist.Data;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public interface ISettingProvider
 {
-    public interface ISettingProvider
-    {
-        void Serialize( JObject json );
-        void Deserialize( JObject json, Options options );
-    }
+    void Serialize( JObject json );
+    void Deserialize( JObject json, Options options );
 }

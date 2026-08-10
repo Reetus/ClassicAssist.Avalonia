@@ -14,226 +14,218 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Dress
+namespace ClassicAssist.Data.Dress;
+
+public class DressManager : INotifyPropertyChanged
 {
-    public class DressManager : INotifyPropertyChanged
+    private static DressManager _instance;
+    private static readonly Lock _instanceLock = new();
+
+    private readonly Layer[] _validLayers =
+    [
+        Layer.Arms, Layer.Bracelet, Layer.Cloak, Layer.Earrings, Layer.Gloves, Layer.Helm, Layer.InnerLegs,
+        Layer.InnerTorso, Layer.MiddleTorso, Layer.Neck, Layer.OneHanded, Layer.OuterLegs, Layer.OuterTorso,
+        Layer.Pants, Layer.Ring, Layer.Shirt, Layer.Shoes, Layer.Talisman, Layer.TwoHanded, Layer.Waist
+    ];
+    private CancellationTokenSource _cancellationTokenSource;
+
+    private DressManager()
     {
-        private static DressManager _instance;
-        private static readonly object _instanceLock = new object();
+        Items.CollectionChanged += OnCollectionChanged;
+    }
 
-        private readonly Layer[] _validLayers =
+    public bool IsDressing { get; set; }
+
+    public ObservableCollectionEx<DressAgentEntry> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public DressAgentEntry TemporaryDress
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool UseUO3DPackets
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        OnPropertyChanged( nameof( Items ) );
+    }
+
+    public static DressManager GetInstance()
+    {
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-            Layer.Arms, Layer.Bracelet, Layer.Cloak, Layer.Earrings, Layer.Gloves, Layer.Helm, Layer.InnerLegs,
-            Layer.InnerTorso, Layer.MiddleTorso, Layer.Neck, Layer.OneHanded, Layer.OuterLegs, Layer.OuterTorso,
-            Layer.Pants, Layer.Ring, Layer.Shirt, Layer.Shoes, Layer.Talisman, Layer.TwoHanded, Layer.Waist
-        };
-
-        private ObservableCollectionEx<DressAgentEntry> _items = new ObservableCollectionEx<DressAgentEntry>();
-        private DressAgentEntry _temporaryDress;
-        private bool _useUo3DPackets;
-        private CancellationTokenSource _cancellationTokenSource;
-
-        private DressManager()
-        {
-            Items.CollectionChanged += OnCollectionChanged;
-        }
-
-        public bool IsDressing { get; set; }
-
-        public ObservableCollectionEx<DressAgentEntry> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
-
-        public DressAgentEntry TemporaryDress
-        {
-            get => _temporaryDress;
-            set => SetProperty( ref _temporaryDress, value );
-        }
-
-        public bool UseUO3DPackets
-        {
-            get => _useUo3DPackets;
-            set => SetProperty( ref _useUo3DPackets, value );
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
-        {
-            OnPropertyChanged( nameof( Items ) );
-        }
-
-        public static DressManager GetInstance()
-        {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
+            lock ( _instanceLock )
             {
-                lock ( _instanceLock )
-                {
-                    if ( _instance == null )
-                    {
-                        _instance = new DressManager();
-                    }
-                }
-            }
-
-            return _instance;
-        }
-
-        // ReSharper disable once RedundantAssignment
-        public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
-        }
-
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
-
-        public async Task UndressAll( CancellationToken cancellationToken = default )
-        {
-            try
-            {
-                if ( IsDressing )
-                {
-                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
-                        (int) SystemMessageHues.Red );
-                    return;
-                }
-
-                IsDressing = true;
-                _cancellationTokenSource = new CancellationTokenSource();
-                cancellationToken = _cancellationTokenSource.Token;
-
-                PlayerMobile player = Engine.Player;
-
-                if ( player == null )
-                {
-                    return;
-                }
-
-                int backpack = player.Backpack.Serial;
-
-                if ( backpack == 0 || backpack == -1 )
-                {
-                    return;
-                }
-
-                if ( _useUo3DPackets )
-                {
-                    int[] layers = player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) )
-                        .Select( i => (int) i.Layer ).ToArray();
-
-                    Shared.UO.Commands.UO3DUnequipItems( layers );
-                }
-                else
-                {
-                    int[] items = player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) )
-                        .Select( i => i.Serial ).ToArray();
-
-                    foreach ( int item in items )
-                    {
-                        if ( cancellationToken.IsCancellationRequested )
-                        {
-                            return;
-                        }
-
-                        await ActionPacketQueue.EnqueueDragDrop( item, 1, backpack, QueuePriority.Medium );
-                    }
-                }
-            }
-            finally
-            {
-                IsDressing = false;
+                _instance ??= new DressManager();
             }
         }
 
-        public bool IsValidLayer( Layer layer )
-        {
-            return _validLayers.Any( l => l == layer );
-        }
+        return _instance;
+    }
 
-        public int GetUndressContainer( int undressContainer )
-        {
-            int container = undressContainer;
+    // ReSharper disable once RedundantAssignment
+    public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
+    }
 
-            if ( container != 0 && ( Engine.Items.GetItem( container )?.Distance ?? byte.MaxValue ) > 3 ||
-                 container == 0 )
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    public async Task UndressAll( CancellationToken cancellationToken = default )
+    {
+        try
+        {
+            if ( IsDressing )
             {
-                container = Engine.Player?.Backpack?.Serial ?? 0;
+                Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                    (int) SystemMessageHues.Red );
+                return;
             }
 
-            return container;
-        }
+            IsDressing = true;
+            _cancellationTokenSource = new CancellationTokenSource();
+            cancellationToken = _cancellationTokenSource.Token;
 
-        public void ImportItems( DressAgentEntry dae )
-        {
             PlayerMobile player = Engine.Player;
 
-            List<DressAgentItem> items = player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) ).Select( i =>
-                    new DressAgentItem
-                        {
-                            Serial = i.Serial, Layer = i.Layer, ID = i.ID, Type = DressAgentItemType.Serial
-                        } )
-                .ToList();
-
-            dae.Items = items;
-        }
-
-        public async Task DressAllItems( DressAgentEntry dae, bool moveConflictingItems )
-        {
-            try
+            if ( player == null )
             {
-                if ( IsDressing )
+                return;
+            }
+
+            int backpack = player.Backpack.Serial;
+
+            if ( backpack is 0 or ( -1 ) )
+            {
+                return;
+            }
+
+            if ( UseUO3DPackets )
+            {
+                int[] layers = [.. player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) ).Select( i => (int) i.Layer )];
+
+                Shared.UO.Commands.UO3DUnequipItems( layers );
+            }
+            else
+            {
+                int[] items = [.. player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) ).Select( i => i.Serial )];
+
+                foreach ( int item in items )
                 {
-                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
-                        (int) SystemMessageHues.Red );
-                    return;
+                    if ( cancellationToken.IsCancellationRequested )
+                    {
+                        return;
+                    }
+
+                    await ActionPacketQueue.EnqueueDragDrop( item, 1, backpack, QueuePriority.Medium );
                 }
-
-                IsDressing = true;
-                _cancellationTokenSource = new CancellationTokenSource();
-
-                await dae.Dress( _cancellationTokenSource.Token, moveConflictingItems );
-            }
-            finally
-            {
-                IsDressing = false;
             }
         }
-
-        public async Task Undress( DressAgentEntry dae )
+        finally
         {
-            try
-            {
-                if ( IsDressing )
+            IsDressing = false;
+        }
+    }
+
+    public bool IsValidLayer( Layer layer )
+    {
+        return _validLayers.Any( l => l == layer );
+    }
+
+    public int GetUndressContainer( int undressContainer )
+    {
+        int container = undressContainer;
+
+        if ( container != 0 && ( Engine.Items.GetItem( container )?.Distance ?? byte.MaxValue ) > 3 ||
+             container == 0 )
+        {
+            container = Engine.Player?.Backpack?.Serial ?? 0;
+        }
+
+        return container;
+    }
+
+    public void ImportItems( DressAgentEntry dae )
+    {
+        PlayerMobile player = Engine.Player;
+
+        List<DressAgentItem> items = [.. player.GetEquippedItems().Where( i => IsValidLayer( i.Layer ) ).Select( i =>
+                new DressAgentItem
                 {
-                    Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
-                        (int) SystemMessageHues.Red );
-                    return;
-                }
+                    Serial = i.Serial,
+                    Layer = i.Layer,
+                    ID = i.ID,
+                    Type = DressAgentItemType.Serial
+                } )];
 
-                IsDressing = true;
-                _cancellationTokenSource = new CancellationTokenSource();
+        dae.Items = items;
+    }
 
-                await dae.Undress( _cancellationTokenSource.Token );
-            }
-            finally
-            {
-                IsDressing = false;
-            }
-        }
-
-        public void Stop()
+    public async Task DressAllItems( DressAgentEntry dae, bool moveConflictingItems )
+    {
+        try
         {
-            if ( IsDressing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
+            if ( IsDressing )
             {
-                _cancellationTokenSource?.Cancel();
+                Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                    (int) SystemMessageHues.Red );
+                return;
             }
+
+            IsDressing = true;
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            await dae.Dress( _cancellationTokenSource.Token, moveConflictingItems );
+        }
+        finally
+        {
+            IsDressing = false;
+        }
+    }
+
+    public async Task Undress( DressAgentEntry dae )
+    {
+        try
+        {
+            if ( IsDressing )
+            {
+                Shared.UO.Commands.SystemMessage( Strings.Dress_already_in_progress___,
+                    (int) SystemMessageHues.Red );
+                return;
+            }
+
+            IsDressing = true;
+            _cancellationTokenSource = new CancellationTokenSource();
+
+            await dae.Undress( _cancellationTokenSource.Token );
+        }
+        finally
+        {
+            IsDressing = false;
+        }
+    }
+
+    public void Stop()
+    {
+        if ( IsDressing && !( _cancellationTokenSource?.IsCancellationRequested ?? false ) )
+        {
+            _cancellationTokenSource?.Cancel();
         }
     }
 }

@@ -9,297 +9,295 @@ using ClassicAssist.Data.Vendors;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
-using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class AgentCommands
 {
-    public static class AgentCommands
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
+    public static void Dress( string name = null )
     {
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
-        public static void Dress( string name = null )
+        DressManager manager = DressManager.GetInstance();
+
+        DressAgentEntry dressAgentEntry;
+
+        if ( string.IsNullOrEmpty( name ) )
         {
-            DressManager manager = DressManager.GetInstance();
-
-            DressAgentEntry dressAgentEntry;
-
-            if ( string.IsNullOrEmpty( name ) )
+            if ( manager.TemporaryDress == null )
             {
-                if ( manager.TemporaryDress == null )
-                {
-                    UOC.SystemMessage( Strings.No_temporary_dress_layout_configured___ );
-                    return;
-                }
-
-                dressAgentEntry = manager.TemporaryDress;
-            }
-            else
-            {
-                dressAgentEntry = manager.Items.FirstOrDefault( dae => dae.Name == name );
-            }
-
-            if ( dressAgentEntry == null )
-            {
-                UOC.SystemMessage( string.Format( Strings.Unknown_dress_agent___0___, name ) );
+                UOC.SystemMessage( Strings.No_temporary_dress_layout_configured___ );
                 return;
             }
 
-            dressAgentEntry.Action( dressAgentEntry, null );
+            dressAgentEntry = manager.TemporaryDress;
         }
-
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
-        public static void Undress( string name )
+        else
         {
-            DressManager manager = DressManager.GetInstance();
-
-            DressAgentEntry dressAgentEntry = manager.Items.FirstOrDefault( dae => dae.Name == name );
-
-            if ( dressAgentEntry == null )
-            {
-                UOC.SystemMessage( string.Format( Strings.Unknown_dress_agent___0___, name ) );
-                return;
-            }
-
-            dressAgentEntry.Undress().Wait();
+            dressAgentEntry = manager.Items.FirstOrDefault( dae => dae.Name == name );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
-        public static bool Dressing()
+        if ( dressAgentEntry == null )
         {
-            DressManager manager = DressManager.GetInstance();
-
-            return manager.IsDressing;
+            UOC.SystemMessage( string.Format( Strings.Unknown_dress_agent___0___, name ) );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
-        public static void DressConfig()
+        dressAgentEntry.Action( dressAgentEntry, null );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
+    public static void Undress( string name )
+    {
+        DressManager manager = DressManager.GetInstance();
+
+        DressAgentEntry dressAgentEntry = manager.Items.FirstOrDefault( dae => dae.Name == name );
+
+        if ( dressAgentEntry == null )
         {
-            DressManager manager = DressManager.GetInstance();
-            manager.TemporaryDress = new DressAgentEntry();
-            manager.TemporaryDress.Action = async ( hks, _ ) => await manager.DressAllItems( manager.TemporaryDress, false );
-            manager.ImportItems( manager.TemporaryDress );
+            UOC.SystemMessage( string.Format( Strings.Unknown_dress_agent___0___, name ) );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
-        public static int Counter( string name )
+        dressAgentEntry.Undress().Wait();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+    public static bool Dressing()
+    {
+        DressManager manager = DressManager.GetInstance();
+
+        return manager.IsDressing;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+    public static void DressConfig()
+    {
+        DressManager manager = DressManager.GetInstance();
+        manager.TemporaryDress = new DressAgentEntry();
+        manager.TemporaryDress.Action = async ( hks, _ ) => await manager.DressAllItems( manager.TemporaryDress, false );
+        manager.ImportItems( manager.TemporaryDress );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.AgentEntryName ) } )]
+    public static int Counter( string name )
+    {
+        CountersManager manager = CountersManager.GetInstance();
+
+        CountersAgentEntry entry = manager.Items.FirstOrDefault( cae => cae.Name.ToLower() == name.ToLower() );
+
+        if ( entry != null )
         {
-            CountersManager manager = CountersManager.GetInstance();
-
-            CountersAgentEntry entry = manager.Items.FirstOrDefault( cae => cae.Name.ToLower() == name.ToLower() );
-
-            if ( entry != null )
-            {
-                return entry.Count;
-            }
-
-            UOC.SystemMessage( Strings.Invalid_counter_agent_name___ );
-            return 0;
+            return entry.Count;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static void SetAutolootContainer( object obj )
+        UOC.SystemMessage( Strings.Invalid_counter_agent_name___ );
+        return 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static void SetAutolootContainer( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        AutolootHelpers.SetAutolootContainer?.Invoke( serial );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static void Autoloot( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            AutolootHelpers.SetAutolootContainer?.Invoke( serial );
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static void Autoloot( object obj )
+        AutolootManager.GetInstance().CheckContainer?.Invoke( serial, true );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+    public static bool Autolooting()
+    {
+        return AutolootManager.GetInstance().IsRunning?.Invoke() ?? false;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.OnOff ) } )]
+    public static void SetAutoloot( string onOff = "toggle" )
+    {
+        AutolootManager manager = AutolootManager.GetInstance();
+
+        switch ( onOff.Trim().ToLower() )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-            }
-
-            AutolootManager.GetInstance().CheckContainer?.Invoke( serial, true );
+            case "on":
+                manager.SetEnabled?.Invoke( true );
+                break;
+            case "off":
+                manager.SetEnabled?.Invoke( false );
+                break;
+            case "toggle":
+                manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
+                break;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
-        public static bool Autolooting()
+        UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Autoloot,
+            ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
+            SystemMessageHues.Yellow );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.OnOff ) } )]
+    public static void SetScavenger( string onOff = "toggle" )
+    {
+        ScavengerManager manager = ScavengerManager.GetInstance();
+
+        switch ( onOff.Trim().ToLower() )
         {
-            return AutolootManager.GetInstance().IsRunning?.Invoke() ?? false;
+            case "on":
+                manager.SetEnabled?.Invoke( true );
+                break;
+            case "off":
+                manager.SetEnabled?.Invoke( false );
+                break;
+            case "toggle":
+                manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
+                break;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.OnOff ) } )]
-        public static void SetAutoloot( string onOff = "toggle" )
+        UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Scavenger,
+            ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
+            SystemMessageHues.Yellow );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[]
         {
-            AutolootManager manager = AutolootManager.GetInstance();
+            nameof( ParameterType.AgentEntryName ), nameof( ParameterType.SerialOrAlias ),
+            nameof( ParameterType.SerialOrAlias )
+        } )]
+    public static void SetOrganizerContainers( string entryName, object sourceContainer = null,
+        object destinationContainer = null )
+    {
+        int sourceSerial = AliasCommands.ResolveSerial( sourceContainer );
+        int destinationSerial = AliasCommands.ResolveSerial( destinationContainer );
 
-            switch ( onOff.Trim().ToLower() )
-            {
-                case "on":
-                    manager.SetEnabled?.Invoke( true );
-                    break;
-                case "off":
-                    manager.SetEnabled?.Invoke( false );
-                    break;
-                case "toggle":
-                    manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
-                    break;
-            }
+        OrganizerManager manager = OrganizerManager.GetInstance();
 
-            UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Autoloot,
-                ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
-                SystemMessageHues.Yellow );
-        }
+        OrganizerEntry entry = manager.Items.FirstOrDefault( e => e.Name.ToLower().Equals( entryName.ToLower() ) );
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.OnOff ) } )]
-        public static void SetScavenger( string onOff = "toggle" )
+        if ( entry == null )
         {
-            ScavengerManager manager = ScavengerManager.GetInstance();
-
-            switch ( onOff.Trim().ToLower() )
-            {
-                case "on":
-                    manager.SetEnabled?.Invoke( true );
-                    break;
-                case "off":
-                    manager.SetEnabled?.Invoke( false );
-                    break;
-                case "toggle":
-                    manager.SetEnabled?.Invoke( !( manager.IsEnabled?.Invoke() ?? false ) );
-                    break;
-            }
-
-            UOC.SystemMessage( string.Format( Strings._0__agent_is_now__1_, Strings.Scavenger,
-                ( manager.IsEnabled?.Invoke() ?? false ) ? Strings.Enabled : Strings.Disabled ),
-                SystemMessageHues.Yellow );
+            UOC.SystemMessage( Strings.Invalid_organizer_agent_name___ );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.AgentEntryName ), nameof( ParameterType.SerialOrAlias ),
-                nameof( ParameterType.SerialOrAlias )
-            } )]
-        public static void SetOrganizerContainers( string entryName, object sourceContainer = null,
-            object destinationContainer = null )
+        entry.SourceContainer = sourceSerial;
+        entry.DestinationContainer = destinationSerial;
+
+        UOC.SystemMessage( Strings.Organizer_containers_set___ );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ) )]
+    public static void StopDress()
+    {
+        DressManager manager = DressManager.GetInstance();
+
+        manager.Stop();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Trade ),
+        Parameters = new[] { nameof( ParameterType.Timeout ) } )]
+    public static bool WaitForTradeWindow( int timeout = -1 )
+    {
+        PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x6F,
+            [PacketFilterConditions.ByteAtPositionCondition( 0, 3 )] ), PacketDirection.Incoming, true );
+
+        return pwe.Lock.WaitOne( timeout );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Agents ),
+        Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.OnOff ) } )]
+    public static void SetVendorBuyAutoBuy( string listName, string onOff = "toggle" )
+    {
+        VendorBuyManager manager = VendorBuyManager.GetInstance();
+
+        VendorBuyAgentEntry entry = manager.Items.FirstOrDefault( e => e.Name.Trim().ToLower().Equals( listName.Trim().ToLower() ) );
+
+        if ( entry == null )
         {
-            int sourceSerial = AliasCommands.ResolveSerial( sourceContainer );
-            int destinationSerial = AliasCommands.ResolveSerial( destinationContainer );
-
-            OrganizerManager manager = OrganizerManager.GetInstance();
-
-            OrganizerEntry entry = manager.Items.FirstOrDefault( e => e.Name.ToLower().Equals( entryName.ToLower() ) );
-
-            if ( entry == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_organizer_agent_name___ );
-                return;
-            }
-
-            entry.SourceContainer = sourceSerial;
-            entry.DestinationContainer = destinationSerial;
-
-            UOC.SystemMessage( Strings.Organizer_containers_set___ );
+            UOC.SystemMessage( Strings.Invalid_VendorBuy_list_name___, (int) SystemMessageHues.Red );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ) )]
-        public static void StopDress()
+        switch ( onOff.Trim().ToLower() )
         {
-            DressManager manager = DressManager.GetInstance();
-
-            manager.Stop();
+            case "on":
+                entry.Enabled = true;
+                break;
+            case "off":
+                entry.Enabled = false;
+                break;
+            case "toggle":
+                entry.Enabled = !entry.Enabled;
+                break;
+            default:
+                UOC.SystemMessage( Strings.Invalid_state_name___on____off___or__toggle____ );
+                break;
         }
+    }
 
-        [CommandsDisplay( Category = nameof( Strings.Trade ),
-            Parameters = new[] { nameof( ParameterType.Timeout ) } )]
-        public static bool WaitForTradeWindow( int timeout = -1 )
-        {
-            PacketWaitEntry pwe = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x6F,
-                new[] { PacketFilterConditions.ByteAtPositionCondition( 0, 3 ) } ), PacketDirection.Incoming, true );
+    [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+    public static void TradeAccept()
+    {
+        PacketWriter writer = new( 12 );
+        writer.Write( (byte) 0x6F );
+        writer.Write( (short) 12 );
+        writer.Write( (byte) TradeAction.Update );
+        writer.Write( Engine.Trade.Serial );
+        writer.Write( 1 );
+        Engine.SendPacketToServer( writer );
+    }
 
-            return pwe.Lock.WaitOne( timeout );
-        }
+    [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+    public static void TradeReject()
+    {
+        PacketWriter writer = new( 12 );
+        writer.Write( (byte) 0x6F );
+        writer.Write( (short) 12 );
+        writer.Write( (byte) TradeAction.Update );
+        writer.Write( Engine.Trade.Serial );
+        writer.Write( 0 );
+        Engine.SendPacketToServer( writer );
+    }
 
-        [CommandsDisplay( Category = nameof( Strings.Agents ),
-            Parameters = new[] { nameof( ParameterType.ListName ), nameof( ParameterType.OnOff ) } )]
-        public static void SetVendorBuyAutoBuy( string listName, string onOff = "toggle" )
-        {
-            VendorBuyManager manager = VendorBuyManager.GetInstance();
+    [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+    public static void TradeClose()
+    {
+        PacketWriter writer = new( 12 );
+        writer.Write( (byte) 0x6F );
+        writer.Write( (short) 8 );
+        writer.Write( (byte) TradeAction.Cancel );
+        writer.Write( Engine.Trade.Serial );
+        Engine.SendPacketToServer( writer );
+    }
 
-            VendorBuyAgentEntry entry = manager.Items.FirstOrDefault( e => e.Name.Trim().ToLower().Equals( listName.Trim().ToLower() ) );
-
-            if ( entry == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_VendorBuy_list_name___, (int) SystemMessageHues.Red );
-                return;
-            }
-
-            switch ( onOff.Trim().ToLower() )
-            {
-                case "on":
-                    entry.Enabled = true;
-                    break;
-                case "off":
-                    entry.Enabled = false;
-                    break;
-                case "toggle":
-                    entry.Enabled = !entry.Enabled;
-                    break;
-                default:
-                    UOC.SystemMessage( Strings.Invalid_state_name___on____off___or__toggle____ );
-                    break;
-            }
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
-        public static void TradeAccept()
-        {
-            PacketWriter writer = new PacketWriter( 12 );
-            writer.Write( (byte) 0x6F );
-            writer.Write( (short) 12 );
-            writer.Write( (byte) TradeAction.Update );
-            writer.Write( Engine.Trade.Serial );
-            writer.Write( 1 );
-            Engine.SendPacketToServer( writer );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
-        public static void TradeReject()
-        {
-            PacketWriter writer = new PacketWriter( 12 );
-            writer.Write( (byte) 0x6F );
-            writer.Write( (short) 12 );
-            writer.Write( (byte) TradeAction.Update );
-            writer.Write( Engine.Trade.Serial );
-            writer.Write( 0 );
-            Engine.SendPacketToServer( writer );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
-        public static void TradeClose()
-        {
-            PacketWriter writer = new PacketWriter( 12 );
-            writer.Write( (byte) 0x6F );
-            writer.Write( (short) 8 );
-            writer.Write( (byte) TradeAction.Cancel );
-            writer.Write( Engine.Trade.Serial );
-            Engine.SendPacketToServer( writer );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Trade ) )]
-        public static void TradeCurrency( int gold, int platinum = 0 )
-        {
-            PacketWriter writer = new PacketWriter( 12 );
-            writer.Write( (byte) 0x6F );
-            writer.Write( (short) 16 );
-            writer.Write( (byte) TradeAction.Gold );
-            writer.Write( Engine.Trade.ContainerLocal );
-            writer.Write( gold );
-            writer.Write( platinum );
-            Engine.SendPacketToServer( writer );
-        }
+    [CommandsDisplay( Category = nameof( Strings.Trade ) )]
+    public static void TradeCurrency( int gold, int platinum = 0 )
+    {
+        PacketWriter writer = new( 12 );
+        writer.Write( (byte) 0x6F );
+        writer.Write( (short) 16 );
+        writer.Write( (byte) TradeAction.Gold );
+        writer.Write( Engine.Trade.ContainerLocal );
+        writer.Write( gold );
+        writer.Write( platinum );
+        Engine.SendPacketToServer( writer );
     }
 }

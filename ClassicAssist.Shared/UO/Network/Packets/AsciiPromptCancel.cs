@@ -20,33 +20,32 @@
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class AsciiPromptCancel : BasePacket, IMacroCommandParser
 {
-    public class AsciiPromptCancel : BasePacket, IMacroCommandParser
+    public AsciiPromptCancel()
     {
-        public AsciiPromptCancel()
+    }
+
+    public AsciiPromptCancel( int senderSerial, int promptId )
+    {
+        _writer = new PacketWriter( 15 );
+        _writer.Write( (byte) 0x9A );
+        _writer.Write( (short) 15 );
+        _writer.Write( senderSerial );
+        _writer.Write( promptId );
+        _writer.Write( 0 );
+        _writer.Fill();
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( packet[0] != 0x9A || direction != PacketDirection.Outgoing )
         {
+            return null;
         }
 
-        public AsciiPromptCancel( int senderSerial, int promptId )
-        {
-            _writer = new PacketWriter( 15 );
-            _writer.Write( (byte) 0x9A );
-            _writer.Write( (short) 15 );
-            _writer.Write( senderSerial );
-            _writer.Write( promptId );
-            _writer.Write( 0 );
-            _writer.Fill();
-        }
-
-        public string Parse( byte[] packet, int length, PacketDirection direction )
-        {
-            if ( packet[0] != 0x9A || direction != PacketDirection.Outgoing )
-            {
-                return null;
-            }
-
-            return packet[14] != 0x00 ? null : "CancelPrompt()\r\n";
-        }
+        return packet[14] != 0x00 ? null : "CancelPrompt()\r\n";
     }
 }

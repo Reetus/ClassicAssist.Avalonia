@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +17,7 @@ public static class ExtensionMethods
     {
         byte[] hash = System.Security.Cryptography.SHA1.HashData( Encoding.UTF8.GetBytes( str ) );
 
-        StringBuilder formatted = new StringBuilder( 2 * hash.Length );
+        StringBuilder formatted = new( 2 * hash.Length );
 
         foreach ( byte b in hash )
         {
@@ -34,11 +33,11 @@ public static class ExtensionMethods
 
         byte[] buffer = new byte[size];
 
-        stream.Read( buffer, 0, size );
+        stream.ReadExactly( buffer, 0, size );
 
         GCHandle pinnedBuffer = GCHandle.Alloc( buffer, GCHandleType.Pinned );
 
-        T structure = ( T )Marshal.PtrToStructure( pinnedBuffer.AddrOfPinnedObject(), typeof( T ) );
+        T structure = (T) Marshal.PtrToStructure( pinnedBuffer.AddrOfPinnedObject(), typeof( T ) );
 
         pinnedBuffer.Free();
 
@@ -66,10 +65,7 @@ public static class ExtensionMethods
 
     public static void AddSorted<T>( this IList<T> list, T item, IComparer<T> comparer = null )
     {
-        if ( comparer == null )
-        {
-            comparer = Comparer<T>.Default;
-        }
+        comparer ??= Comparer<T>.Default;
 
         int i = 0;
 
@@ -90,19 +86,14 @@ public static class ExtensionMethods
 
     public static JArray ToJArray( this int[] arr )
     {
-        JArray jArray = new();
-
-        foreach ( int i in arr )
-        {
-            jArray.Add( i );
-        }
+        JArray jArray = [.. arr];
 
         return jArray;
     }
 
     public static int[] ToIntArray( this JToken jToken )
     {
-        return jToken.Select( token => token.ToObject<int>() ).ToArray();
+        return [.. jToken.Select( token => token.ToObject<int>() )];
     }
 
     // https://docs.microsoft.com/en-us/dotnet/standard/asynchronous-programming-patterns/interop-with-other-asynchronous-patterns-and-types?redirectedfrom=MSDN#WHToTap
@@ -126,7 +117,7 @@ public static class ExtensionMethods
 
     public static Task ToTask( this IEnumerable<EventWaitHandle> waitHandles )
     {
-        List<Task<bool>> tasks = waitHandles.Select( waitHandle => waitHandle.ToTask() ).ToList();
+        List<Task<bool>> tasks = [.. waitHandles.Select( waitHandle => waitHandle.ToTask() )];
 
         return Task.WhenAll( tasks );
     }

@@ -2,86 +2,85 @@
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Category = "Abilities", Name = "Set Primary Ability" )]
+public class SetPrimaryAbility : HotkeyCommand
 {
-    [HotkeyCommand( Category = "Abilities", Name = "Set Primary Ability" )]
-    public class SetPrimaryAbility : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "primary", "on" );
-        }
+        AbilitiesCommands.SetAbility( "primary", "on" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Unset Primary Ability" )]
-    public class UnsetPrimaryAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Unset Primary Ability" )]
+public class UnsetPrimaryAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "primary", "off" );
-        }
+        AbilitiesCommands.SetAbility( "primary", "off" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Set Secondary Ability" )]
-    public class SetSecondaryAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Set Secondary Ability" )]
+public class SetSecondaryAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "secondary", "on" );
-        }
+        AbilitiesCommands.SetAbility( "secondary", "on" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Unset Secondary Ability" )]
-    public class UnsetSecondaryAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Unset Secondary Ability" )]
+public class UnsetSecondaryAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "secondary", "off" );
-        }
+        AbilitiesCommands.SetAbility( "secondary", "off" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Toggle Primary Ability" )]
-    public class TogglePrimaryAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Toggle Primary Ability" )]
+public class TogglePrimaryAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "primary" );
-        }
+        AbilitiesCommands.SetAbility( "primary" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Toggle Secondary Ability" )]
-    public class ToggleSecondaryAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Toggle Secondary Ability" )]
+public class ToggleSecondaryAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.SetAbility( "secondary" );
-        }
+        AbilitiesCommands.SetAbility( "secondary" );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Clear Weapon Ability" )]
-    public class ClearWeaponAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Clear Weapon Ability" )]
+public class ClearWeaponAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            AbilitiesCommands.ClearAbility();
-        }
+        AbilitiesCommands.ClearAbility();
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Stun" )]
-    public class StunAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Stun" )]
+public class StunAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            Engine.SendPacketToServer( new StunRequest() );
-        }
+        Engine.SendPacketToServer( new StunRequest() );
     }
+}
 
-    [HotkeyCommand( Category = "Abilities", Name = "Disarm" )]
-    public class DisarmAbility : HotkeyCommand
+[HotkeyCommand( Category = "Abilities", Name = "Disarm" )]
+public class DisarmAbility : HotkeyCommand
+{
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            Engine.SendPacketToServer( new DisarmRequest() );
-        }
+        Engine.SendPacketToServer( new DisarmRequest() );
     }
 }

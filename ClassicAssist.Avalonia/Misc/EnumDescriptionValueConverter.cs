@@ -23,41 +23,40 @@ using System.Globalization;
 using System.Reflection;
 using Avalonia.Data.Converters;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     WPF resolves an enum's [TypeConverter(typeof(EnumDescriptionTypeConverter))] automatically
+///     wherever the value is bound to display text (see AutolootOperator, SkillBonusSkills); Avalonia's
+///     binding engine doesn't consult TypeConverterAttribute, so that attribute is inert here and
+///     every binding has to opt in to this converter explicitly instead.
+/// </summary>
+public class EnumDescriptionValueConverter : IValueConverter
 {
-    /// <summary>
-    ///     WPF resolves an enum's [TypeConverter(typeof(EnumDescriptionTypeConverter))] automatically
-    ///     wherever the value is bound to display text (see AutolootOperator, SkillBonusSkills); Avalonia's
-    ///     binding engine doesn't consult TypeConverterAttribute, so that attribute is inert here and
-    ///     every binding has to opt in to this converter explicitly instead.
-    /// </summary>
-    public class EnumDescriptionValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value == null )
         {
-            if ( value == null )
-            {
-                return string.Empty;
-            }
-
-            FieldInfo fi = value.GetType().GetField( value.ToString() );
-
-            if ( fi == null )
-            {
-                return value.ToString();
-            }
-
-            DescriptionAttribute[] attributes =
-                (DescriptionAttribute[]) fi.GetCustomAttributes( typeof( DescriptionAttribute ), false );
-
-            return attributes.Length > 0 && !string.IsNullOrEmpty( attributes[0].Description )
-                ? attributes[0].Description
-                : value.ToString();
+            return string.Empty;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        FieldInfo fi = value.GetType().GetField( value.ToString() );
+
+        if ( fi == null )
         {
-            throw new NotSupportedException();
+            return value.ToString();
         }
+
+        DescriptionAttribute[] attributes =
+            (DescriptionAttribute[]) fi.GetCustomAttributes( typeof( DescriptionAttribute ), false );
+
+        return attributes.Length > 0 && !string.IsNullOrEmpty( attributes[0].Description )
+            ? attributes[0].Description
+            : value.ToString();
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotSupportedException();
     }
 }

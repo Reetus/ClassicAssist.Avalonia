@@ -32,104 +32,100 @@ using ClassicAssist.Shared.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
+namespace ClassicAssist.Avalonia.Views.Autoloot;
+
+/// <summary>
+///     A <see cref="MultiValueSelector" /> for clilocs: entries show their localized text and are
+///     added by choosing from the cliloc list or picking a property off a targeted item.
+/// </summary>
+public partial class MultiClilocSelector : UserControl
 {
-    /// <summary>
-    ///     A <see cref="MultiValueSelector" /> for clilocs: entries show their localized text and are
-    ///     added by choosing from the cliloc list or picking a property off a targeted item.
-    /// </summary>
-    public partial class MultiClilocSelector : UserControl
+    public static readonly StyledProperty<ObservableCollection<int>> ValuesProperty =
+        AvaloniaProperty.Register<MultiClilocSelector, ObservableCollection<int>>( nameof( Values ),
+            [] );
+
+    public MultiClilocSelector()
     {
-        public static readonly StyledProperty<ObservableCollection<int>> ValuesProperty =
-            AvaloniaProperty.Register<MultiClilocSelector, ObservableCollection<int>>( nameof( Values ),
-                new ObservableCollection<int>() );
+        InitializeComponent();
 
-        public MultiClilocSelector()
+        MultiValueSelector selector = this.FindControl<MultiValueSelector>( "selector" );
+        selector.Bind( MultiValueSelector.ValuesProperty, this.GetObservable( ValuesProperty ) );
+        selector.ItemDisplayFactory = v => $"{v} ({Cliloc.GetProperty( v )})";
+    }
+
+    public ObservableCollection<int> Values
+    {
+        get => GetValue( ValuesProperty );
+        set => SetValue( ValuesProperty, value );
+    }
+
+    private async void OnChooseFromItemClick( object sender, RoutedEventArgs e )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___, 90000 );
+
+        if ( serial == 0 )
         {
-            InitializeComponent();
-
-            MultiValueSelector selector = this.FindControl<MultiValueSelector>( "selector" );
-            selector.Bind( MultiValueSelector.ValuesProperty, this.GetObservable( ValuesProperty ) );
-            selector.ItemDisplayFactory = v => $"{v} ({Cliloc.GetProperty( v )})";
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        public ObservableCollection<int> Values
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
         {
-            get => GetValue( ValuesProperty );
-            set => SetValue( ValuesProperty, value );
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        private async void OnChooseFromItemClick( object sender, RoutedEventArgs e )
+        if ( item.Properties == null )
         {
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___, 90000 );
-
-            if ( serial == 0 )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            if ( item.Properties == null )
-            {
-                Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
-                return;
-            }
-
-            PropertySelectionViewModel vm = new PropertySelectionViewModel( item.Properties );
-            await Engine.UIInvoker.InvokeDialog( "PropertySelectionWindow", dataContext: vm );
-
-            if ( vm.DialogResult != MessageBoxResult.OK )
-            {
-                return;
-            }
-
-            foreach ( SelectProperties property in vm.Properties.Where( p => p.Selected ) )
-            {
-                Add( property.Property.Cliloc );
-            }
+            Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
+            return;
         }
 
-        private async void OnChooseClilocClick( object sender, RoutedEventArgs e )
+        PropertySelectionViewModel vm = new( item.Properties );
+        await Engine.UIInvoker.InvokeDialog( "PropertySelectionWindow", dataContext: vm );
+
+        if ( vm.DialogResult != MessageBoxResult.OK )
         {
-            ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
-
-            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
-            // DialogResult check below runs before the user has even seen the window and always
-            // takes the early return.
-            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
-
-            if ( vm.DialogResult != MessageBoxResult.OK )
-            {
-                return;
-            }
-
-            Add( vm.SelectedCliloc.Key );
+            return;
         }
 
-        private void Add( int value )
+        foreach ( SelectProperties property in vm.Properties.Where( p => p.Selected ) )
         {
-            if ( Values == null )
-            {
-                Values = new ObservableCollection<int>();
-            }
+            Add( property.Property.Cliloc );
+        }
+    }
 
-            if ( !Values.Contains( value ) )
-            {
-                Values.Add( value );
-            }
+    private async void OnChooseClilocClick( object sender, RoutedEventArgs e )
+    {
+        ClilocSelectionViewModel vm = new();
+
+        // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+        // DialogResult check below runs before the user has even seen the window and always
+        // takes the early return.
+        await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+        if ( vm.DialogResult != MessageBoxResult.OK )
+        {
+            return;
         }
 
-        private void InitializeComponent()
+        Add( vm.SelectedCliloc.Key );
+    }
+
+    private void Add( int value )
+    {
+        Values ??= [];
+
+        if ( !Values.Contains( value ) )
         {
-            AvaloniaXamlLoader.Load( this );
+            Values.Add( value );
         }
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

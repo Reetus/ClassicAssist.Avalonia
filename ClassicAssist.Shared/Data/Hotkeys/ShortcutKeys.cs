@@ -2,111 +2,110 @@
 using ClassicAssist.Misc;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Data.Hotkeys
+namespace ClassicAssist.Data.Hotkeys;
+
+public enum MouseOptions
 {
-    public enum MouseOptions
+    LeftButton,
+    MiddleButton,
+    RightButton,
+    XButton1,
+    XButton2,
+    MouseWheelDown,
+    MouseWheelUp,
+    None
+}
+
+public class ShortcutKeys
+{
+    public ShortcutKeys()
     {
-        LeftButton,
-        MiddleButton,
-        RightButton,
-        XButton1,
-        XButton2,
-        MouseWheelDown,
-        MouseWheelUp,
-        None
     }
 
-    public class ShortcutKeys
+    public ShortcutKeys( Key modifier, Key key )
     {
-        public ShortcutKeys()
+        Modifier = modifier;
+        Key = key;
+    }
+
+    public ShortcutKeys( JToken token )
+    {
+        if ( token == null )
         {
+            return;
         }
 
-        public ShortcutKeys( Key modifier, Key key )
+        Key = token["Keys"]?.ToObject<Key>() ?? Key.None;
+        Modifier = ReadModifier( token );
+        Mouse = token["Mouse"]?.ToObject<MouseOptions>() ?? MouseOptions.None;
+    }
+
+    private static Key ReadModifier( JToken token )
+    {
+        JToken legacyModifier = token["Modifier"];
+
+        if ( legacyModifier != null )
         {
-            Modifier = modifier;
-            Key = key;
+            return legacyModifier.ToObject<Key>();
         }
 
-        public ShortcutKeys( JToken token )
-        {
-            if ( token == null )
-            {
-                return;
-            }
+        int sdlModifier = token["SDLModifier"]?.ToObject<int>() ?? 0;
 
-            Key = token["Keys"]?.ToObject<Key>() ?? Key.None;
-            Modifier = ReadModifier( token );
-            Mouse = token["Mouse"]?.ToObject<MouseOptions>() ?? MouseOptions.None;
+        return SDLKeys.SDLKeymodToKey( sdlModifier );
+    }
+
+    public static ShortcutKeys Default => new( Key.None, Key.None ) { Mouse = MouseOptions.None };
+    public Key Key { get; set; } = Key.None;
+    public Key Modifier { get; set; } = Key.None;
+    public MouseOptions Mouse { get; set; } = MouseOptions.None;
+
+    public Keys[] ToArray()
+    {
+        //TODO
+        //Keys modifier = (Keys) KeyInterop.VirtualKeyFromKey( Modifier );
+        //Keys key = (Keys) KeyInterop.VirtualKeyFromKey( Key );
+
+        //if ( modifier == Keys.LControlKey || modifier == Keys.RControlKey )
+        //{
+        //    modifier = Keys.ControlKey;
+        //}
+
+        //return modifier == Keys.None ? new[] { key } : new[] { modifier, key };
+        throw new NotImplementedException();
+    }
+
+    public override string ToString()
+    {
+        if ( Mouse != MouseOptions.None )
+        {
+            return Modifier != Key.None ? $"{Modifier} + {Mouse}" : Mouse.ToString();
         }
 
-        private static Key ReadModifier( JToken token )
+        return Modifier != Key.None ? $"{Modifier} + {Key}" : Key.ToString();
+    }
+
+    public override bool Equals( object obj )
+    {
+        return obj is ShortcutKeys keys && Key == keys.Key && Modifier == keys.Modifier && Mouse == keys.Mouse;
+    }
+
+    public override int GetHashCode()
+    {
+        int hashCode = 572187996;
+        hashCode = hashCode * -1521134295 + Key.GetHashCode();
+        hashCode = hashCode * -1521134295 + Modifier.GetHashCode();
+        hashCode = hashCode * -1521134295 + Mouse.GetHashCode();
+        return hashCode;
+    }
+
+    public JObject ToJObject()
+    {
+        // SDLModifier matches what the WPF tree writes, so profiles round-trip between the two.
+        JObject keys = new()
         {
-            JToken legacyModifier = token["Modifier"];
+            { "Keys", (int) Key }, { "SDLModifier", SDLKeys.KeyToSDLKeymod( Modifier ) }, { "Mouse", (int) Mouse }
+        };
 
-            if ( legacyModifier != null )
-            {
-                return legacyModifier.ToObject<Key>();
-            }
-
-            int sdlModifier = token["SDLModifier"]?.ToObject<int>() ?? 0;
-
-            return SDLKeys.SDLKeymodToKey( sdlModifier );
-        }
-
-        public static ShortcutKeys Default => new ShortcutKeys( Key.None, Key.None ) { Mouse = MouseOptions.None };
-        public Key Key { get; set; } = Key.None;
-        public Key Modifier { get; set; } = Key.None;
-        public MouseOptions Mouse { get; set; } = MouseOptions.None;
-
-        public Keys[] ToArray()
-        {
-            //TODO
-            //Keys modifier = (Keys) KeyInterop.VirtualKeyFromKey( Modifier );
-            //Keys key = (Keys) KeyInterop.VirtualKeyFromKey( Key );
-
-            //if ( modifier == Keys.LControlKey || modifier == Keys.RControlKey )
-            //{
-            //    modifier = Keys.ControlKey;
-            //}
-
-            //return modifier == Keys.None ? new[] { key } : new[] { modifier, key };
-            throw new NotImplementedException();
-        }
-
-        public override string ToString()
-        {
-            if ( Mouse != MouseOptions.None )
-            {
-                return Modifier != Key.None ? $"{Modifier} + {Mouse}" : Mouse.ToString();
-            }
-
-            return Modifier != Key.None ? $"{Modifier} + {Key}" : Key.ToString();
-        }
-
-        public override bool Equals( object obj )
-        {
-            return obj is ShortcutKeys keys && Key == keys.Key && Modifier == keys.Modifier && Mouse == keys.Mouse;
-        }
-
-        public override int GetHashCode()
-        {
-            int hashCode = 572187996;
-            hashCode = hashCode * -1521134295 + Key.GetHashCode();
-            hashCode = hashCode * -1521134295 + Modifier.GetHashCode();
-            hashCode = hashCode * -1521134295 + Mouse.GetHashCode();
-            return hashCode;
-        }
-
-        public JObject ToJObject()
-        {
-            // SDLModifier matches what the WPF tree writes, so profiles round-trip between the two.
-            JObject keys = new JObject
-            {
-                { "Keys", (int) Key }, { "SDLModifier", SDLKeys.KeyToSDLKeymod( Modifier ) }, { "Mouse", (int) Mouse }
-            };
-
-            return keys;
-        }
+        return keys;
     }
 }

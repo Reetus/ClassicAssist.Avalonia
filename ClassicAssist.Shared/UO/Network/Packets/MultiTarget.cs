@@ -19,18 +19,17 @@
 
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
-{
-    public class MultiTarget : BasePacket, IMacroCommandParser
-    {
-        public string Parse( byte[] packet, int length, PacketDirection direction )
-        {
-            if ( packet[0] != 0x99 )
-            {
-                return null;
-            }
+namespace ClassicAssist.UO.Network.Packets;
 
-            return direction == PacketDirection.Incoming ? "WaitForTarget(5000)\r\n" : null;
+public class MultiTarget : BasePacket, IMacroCommandParser
+{
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( packet[0] != 0x99 )
+        {
+            return null;
         }
+
+        return direction == PacketDirection.Incoming ? "WaitForTarget(5000)\r\n" : null;
     }
 }

@@ -1,9 +1,8 @@
 using System.Collections.ObjectModel;
 
-namespace ClassicAssist.UI.Misc.DraggableTreeView
+namespace ClassicAssist.UI.Misc.DraggableTreeView;
+
+public interface IDraggableGroup : IDraggable
 {
-    public interface IDraggableGroup : IDraggable
-    {
-        ObservableCollection<IDraggable> Children { get; set; }
-    }
+    ObservableCollection<IDraggable> Children { get; set; }
 }

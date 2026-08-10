@@ -24,34 +24,33 @@ using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     Binds a <see cref="Pixmap" /> straight onto an Image.
+/// </summary>
+public class PixmapValueConverter : IValueConverter
 {
     /// <summary>
-    ///     Binds a <see cref="Pixmap" /> straight onto an Image.
+    ///     Bitmaps keyed on the pixel buffer they were built from, so that scrolling a virtualised list
+    ///     back and forth does not re-upload the same tile over and over. The table holds neither key nor
+    ///     value alive, so a bitmap goes away with the pixmap that produced it.
     /// </summary>
-    public class PixmapValueConverter : IValueConverter
+    private static readonly ConditionalWeakTable<uint[], Bitmap> _cache =
+        [];
+
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        /// <summary>
-        ///     Bitmaps keyed on the pixel buffer they were built from, so that scrolling a virtualised list
-        ///     back and forth does not re-upload the same tile over and over. The table holds neither key nor
-        ///     value alive, so a bitmap goes away with the pixmap that produced it.
-        /// </summary>
-        private static readonly ConditionalWeakTable<uint[], Bitmap> _cache =
-            new ConditionalWeakTable<uint[], Bitmap>();
-
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not Pixmap pixmap || pixmap.IsEmpty )
         {
-            if ( !( value is Pixmap pixmap ) || pixmap.IsEmpty )
-            {
-                return null;
-            }
-
-            return _cache.GetValue( pixmap.Pixels, _ => pixmap.ToBitmap() );
+            return null;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            throw new NotImplementedException();
-        }
+        return _cache.GetValue( pixmap.Pixels, _ => pixmap.ToBitmap() );
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

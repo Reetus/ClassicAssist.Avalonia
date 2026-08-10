@@ -34,257 +34,238 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
+namespace ClassicAssist.Shared.UI.ViewModels.Autoloot;
+
+public class CustomPropertiesViewModel : BaseViewModel
 {
-    public class CustomPropertiesViewModel : BaseViewModel
+    private readonly string _propertiesFileCustom =
+        Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
+
+    /// <summary>
+    ///     Raised after <see cref="SaveCustomProperties" /> writes <c>Properties.Custom.json</c>, so
+    ///     long-lived consumers (an already-open EntityCollectionViewer window) can reload their
+    ///     constraint list instead of waiting for the next time they're constructed.
+    /// </summary>
+    public static event EventHandler Saved;
+
+    public CustomPropertiesViewModel()
     {
-        private readonly string _propertiesFileCustom =
-            Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
+        LoadCustomProperties();
+    }
 
-        private ICommand _chooseFromClilocCommand;
-        private ICommand _chooseFromItemCommand;
-        private ObservableCollection<CustomProperty> _properties = new ObservableCollection<CustomProperty>();
-        private ICommand _removeCommand;
-        private ICommand _saveCommand;
-        private CustomProperty _selectedProperty;
+    public ICommand ChooseFromClilocCommand => field ??= new RelayCommandAsync( ChooseFromCliloc, o => true );
 
-        /// <summary>
-        ///     Raised after <see cref="SaveCustomProperties" /> writes <c>Properties.Custom.json</c>, so
-        ///     long-lived consumers (an already-open EntityCollectionViewer window) can reload their
-        ///     constraint list instead of waiting for the next time they're constructed.
-        /// </summary>
-        public static event EventHandler Saved;
+    public ICommand ChooseFromItemCommand => field ??= new RelayCommandAsync( ChooseFromItem, o => true );
 
-        public CustomPropertiesViewModel()
+    public ObservableCollection<CustomProperty> Properties
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public ICommand RemoveCommand => field ??= new RelayCommand( Remove, o => SelectedProperty != null );
+
+    public ICommand SaveCommand => field ??= new RelayCommand( Save, o => true );
+
+    public CustomProperty SelectedProperty
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private async Task ChooseFromCliloc( object obj )
+    {
+        ClilocSelectionViewModel vm = new();
+
+        // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+        // DialogResult check below runs before the user has even seen the window and always
+        // takes the early return.
+        await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+        if ( vm.DialogResult != MessageBoxResult.OK )
         {
-            LoadCustomProperties();
+            return;
         }
 
-        public ICommand ChooseFromClilocCommand =>
-            _chooseFromClilocCommand ??
-            ( _chooseFromClilocCommand = new RelayCommandAsync( ChooseFromCliloc, o => true ) );
-
-        public ICommand ChooseFromItemCommand =>
-            _chooseFromItemCommand ?? ( _chooseFromItemCommand = new RelayCommandAsync( ChooseFromItem, o => true ) );
-
-        public ObservableCollection<CustomProperty> Properties
+        if ( Properties.Any( p => p.Cliloc == vm.SelectedCliloc.Key ) )
         {
-            get => _properties;
-            set => SetProperty( ref _properties, value );
+            return;
         }
 
-        public ICommand RemoveCommand =>
-            _removeCommand ?? ( _removeCommand = new RelayCommand( Remove, o => SelectedProperty != null ) );
-
-        public ICommand SaveCommand => _saveCommand ?? ( _saveCommand = new RelayCommand( Save, o => true ) );
-
-        public CustomProperty SelectedProperty
+        Properties.AddSorted( new CustomProperty
         {
-            get => _selectedProperty;
-            set => SetProperty( ref _selectedProperty, value );
+            Cliloc = vm.SelectedCliloc.Key,
+            Name = vm.SelectedCliloc.Value,
+            Arguments = vm.SelectedCliloc.Value.Contains( "~" )
+        } );
+    }
+
+    private async Task ChooseFromItem( object obj )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___, 90000 );
+
+        if ( serial == 0 )
+        {
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        private async Task ChooseFromCliloc( object obj )
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
         {
-            ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
+        }
 
-            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
-            // DialogResult check below runs before the user has even seen the window and always
-            // takes the early return.
-            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+        if ( item.Properties == null )
+        {
+            Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
+            return;
+        }
 
-            if ( vm.DialogResult != MessageBoxResult.OK )
+        PropertySelectionViewModel vm = new( item.Properties );
+        await Engine.UIInvoker.InvokeDialog( "PropertySelectionWindow", dataContext: vm );
+
+        if ( vm.DialogResult != MessageBoxResult.OK )
+        {
+            return;
+        }
+
+        IEnumerable<SelectProperties> selectedProperties = vm.Properties.Where( p => p.Selected );
+
+        foreach ( SelectProperties property in selectedProperties )
+        {
+            if ( Properties.Any( p => p.Cliloc == property.Property.Cliloc ) )
             {
-                return;
-            }
-
-            if ( Properties.Any( p => p.Cliloc == vm.SelectedCliloc.Key ) )
-            {
-                return;
+                continue;
             }
 
             Properties.AddSorted( new CustomProperty
             {
-                Cliloc = vm.SelectedCliloc.Key,
-                Name = vm.SelectedCliloc.Value,
-                Arguments = vm.SelectedCliloc.Value.Contains( "~" )
+                Name = property.Name,
+                Cliloc = property.Property.Cliloc,
+                Arguments = property.Property.Arguments != null && property.Property.Arguments.Length > 0,
+                ArgumentIndex = property.Property.Arguments != null ? 0 : -1
             } );
-        }
-
-        private async Task ChooseFromItem( object obj )
-        {
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___, 90000 );
-
-            if ( serial == 0 )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null )
-            {
-                Commands.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            if ( item.Properties == null )
-            {
-                Commands.SystemMessage( Strings.Item_properties_null_or_not_loaded___ );
-                return;
-            }
-
-            PropertySelectionViewModel vm = new PropertySelectionViewModel( item.Properties );
-            await Engine.UIInvoker.InvokeDialog( "PropertySelectionWindow", dataContext: vm );
-
-            if ( vm.DialogResult != MessageBoxResult.OK )
-            {
-                return;
-            }
-
-            IEnumerable<SelectProperties> selectedProperties = vm.Properties.Where( p => p.Selected );
-
-            foreach ( SelectProperties property in selectedProperties )
-            {
-                if ( Properties.Any( p => p.Cliloc == property.Property.Cliloc ) )
-                {
-                    continue;
-                }
-
-                Properties.AddSorted( new CustomProperty
-                {
-                    Name = property.Name,
-                    Cliloc = property.Property.Cliloc,
-                    Arguments = property.Property.Arguments != null && property.Property.Arguments.Length > 0,
-                    ArgumentIndex = property.Property.Arguments != null ? 0 : -1
-                } );
-            }
-        }
-
-        private void Remove( object obj )
-        {
-            if ( SelectedProperty == null )
-            {
-                return;
-            }
-
-            Properties.Remove( SelectedProperty );
-        }
-
-        private void Save( object obj )
-        {
-            SaveCustomProperties();
-            Saved?.Invoke( this, EventArgs.Empty );
-        }
-
-        private void SaveCustomProperties()
-        {
-            List<PropertyEntry> properties = Properties.Select( property => new PropertyEntry
-            {
-                ClilocIndex = property.ArgumentIndex,
-                Clilocs = new[] { property.Cliloc },
-                ConstraintType = 0,
-                Name = property.Name
-            } ).ToList();
-
-            File.WriteAllText( _propertiesFileCustom, JsonConvert.SerializeObject( properties ) );
-        }
-
-        private void LoadCustomProperties()
-        {
-            if ( !File.Exists( _propertiesFileCustom ) )
-            {
-                return;
-            }
-
-            JsonSerializer serializer = new JsonSerializer();
-
-            using ( StreamReader sr = new StreamReader( _propertiesFileCustom ) )
-            {
-                using ( JsonTextReader reader = new JsonTextReader( sr ) )
-                {
-                    PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
-
-                    foreach ( PropertyEntry constraint in constraints )
-                    {
-                        CustomProperty customProperty = new CustomProperty
-                        {
-                            Name = constraint.Name,
-                            Cliloc = constraint.Clilocs[0],
-                            Arguments = constraint.ClilocIndex >= 0,
-                            ArgumentIndex = constraint.ClilocIndex
-                        };
-
-                        Properties.AddSorted( customProperty );
-                    }
-                }
-            }
         }
     }
 
-    public class CustomProperty : IComparable<CustomProperty>, INotifyPropertyChanged
+    private void Remove( object obj )
     {
-        private int _argumentIndex = -1;
-        private bool _arguments;
-
-        public int ArgumentIndex
+        if ( SelectedProperty == null )
         {
-            get => _argumentIndex;
-            set => SetField( ref _argumentIndex, value );
+            return;
         }
 
-        public bool Arguments
+        Properties.Remove( SelectedProperty );
+    }
+
+    private void Save( object obj )
+    {
+        SaveCustomProperties();
+        Saved?.Invoke( this, EventArgs.Empty );
+    }
+
+    private void SaveCustomProperties()
+    {
+        List<PropertyEntry> properties = [.. Properties.Select( property => new PropertyEntry
         {
-            get => _arguments;
-            set
+            ClilocIndex = property.ArgumentIndex,
+            Clilocs = [property.Cliloc],
+            ConstraintType = 0,
+            Name = property.Name
+        } )];
+
+        File.WriteAllText( _propertiesFileCustom, JsonConvert.SerializeObject( properties ) );
+    }
+
+    private void LoadCustomProperties()
+    {
+        if ( !File.Exists( _propertiesFileCustom ) )
+        {
+            return;
+        }
+
+        JsonSerializer serializer = new();
+
+        using StreamReader sr = new( _propertiesFileCustom );
+        using JsonTextReader reader = new( sr );
+        PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
+
+        foreach ( PropertyEntry constraint in constraints )
+        {
+            CustomProperty customProperty = new()
             {
-                switch ( value )
-                {
-                    case false when ArgumentIndex != -1:
-                        ArgumentIndex = -1;
-                        break;
-                    case true when ArgumentIndex < 0:
-                        ArgumentIndex = 0;
-                        break;
-                }
+                Name = constraint.Name,
+                Cliloc = constraint.Clilocs[0],
+                Arguments = constraint.ClilocIndex >= 0,
+                ArgumentIndex = constraint.ClilocIndex
+            };
 
-                SetField( ref _arguments, value );
-            }
+            Properties.AddSorted( customProperty );
         }
+    }
+}
 
-        public int Cliloc { get; set; }
-        public string Name { get; set; }
+public class CustomProperty : IComparable<CustomProperty>, INotifyPropertyChanged
+{
+    public int ArgumentIndex
+    {
+        get;
+        set => SetField( ref field, value );
+    } = -1;
 
-        public int CompareTo( CustomProperty other )
+    public bool Arguments
+    {
+        get;
+        set
         {
-            if ( ReferenceEquals( this, other ) )
+            switch ( value )
             {
-                return 0;
+                case false when ArgumentIndex != -1:
+                    ArgumentIndex = -1;
+                    break;
+                case true when ArgumentIndex < 0:
+                    ArgumentIndex = 0;
+                    break;
             }
 
-            return ReferenceEquals( null, other )
-                ? 1
-                : string.Compare( Name, other.Name, StringComparison.InvariantCultureIgnoreCase );
+            SetField( ref field, value );
         }
+    }
 
-        public event PropertyChangedEventHandler PropertyChanged;
+    public int Cliloc { get; set; }
+    public string Name { get; set; }
 
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    public int CompareTo( CustomProperty other )
+    {
+        if ( ReferenceEquals( this, other ) )
         {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+            return 0;
         }
 
-        protected bool SetField<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
+        return other is null
+            ? 1
+            : string.Compare( Name, other.Name, StringComparison.InvariantCultureIgnoreCase );
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    protected bool SetField<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
+    {
+        if ( EqualityComparer<T>.Default.Equals( field, value ) )
         {
-            if ( EqualityComparer<T>.Default.Equals( field, value ) )
-            {
-                return false;
-            }
-
-            field = value;
-            OnPropertyChanged( propertyName );
-            return true;
+            return false;
         }
+
+        field = value;
+        OnPropertyChanged( propertyName );
+        return true;
     }
 }

@@ -1,33 +1,30 @@
 using System.Collections.Generic;
+using System.Threading;
 
-namespace ClassicAssist.Data.Vendors
+namespace ClassicAssist.Data.Vendors;
+
+public class VendorBuyManager
 {
-    public class VendorBuyManager
+    private static readonly Lock _instanceLock = new();
+    private static VendorBuyManager _instance;
+
+    private VendorBuyManager()
     {
-        private static readonly object _instanceLock = new object();
-        private static VendorBuyManager _instance;
+    }
 
-        private VendorBuyManager()
+    public IEnumerable<VendorBuyAgentEntry> Items { get; set; }
+
+    public static VendorBuyManager GetInstance()
+    {
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-        }
-
-        public IEnumerable<VendorBuyAgentEntry> Items { get; set; }
-
-        public static VendorBuyManager GetInstance()
-        {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
+            lock ( _instanceLock )
             {
-                lock ( _instanceLock )
-                {
-                    if ( _instance == null )
-                    {
-                        _instance = new VendorBuyManager();
-                    }
-                }
+                _instance ??= new VendorBuyManager();
             }
-
-            return _instance;
         }
+
+        return _instance;
     }
 }

@@ -1,6 +1,5 @@
-namespace ClassicAssist.UI.Misc.DraggableTreeView
+namespace ClassicAssist.UI.Misc.DraggableTreeView;
+
+public interface IDraggableEntry : IDraggable
 {
-    public interface IDraggableEntry : IDraggable
-    {
-    }
 }

@@ -17,158 +17,157 @@ using System.Drawing;
 using ClassicAssist.Plugin.Shared.Reflection;
 using ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects;
 
-namespace ClassicAssist.Shared
+namespace ClassicAssist.Shared;
+
+/// <summary>
+///     Bridges macro commands to the client, routing through <see cref="Engine.Host" /> RPC to the
+///     plugin process with a <see cref="ReflectionImpl" /> fallback for when the host is
+///     unavailable. The plugin process is the one with reflection access into the client, so the
+///     fallback only works when this process itself is the plugin (e.g. tests, or a future
+///     in-process mode) - against a normal out-of-process TazUO/ClassicUO session it is expected
+///     to fail quietly rather than throw.
+/// </summary>
+public static class ReflectionCommands
 {
-    /// <summary>
-    ///     Bridges macro commands to the client, routing through <see cref="Engine.Host" /> RPC to the
-    ///     plugin process with a <see cref="ReflectionImpl" /> fallback for when the host is
-    ///     unavailable. The plugin process is the one with reflection access into the client, so the
-    ///     fallback only works when this process itself is the plugin (e.g. tests, or a future
-    ///     in-process mode) - against a normal out-of-process TazUO/ClassicUO session it is expected
-    ///     to fail quietly rather than throw.
-    /// </summary>
-    public static class ReflectionCommands
+    private static readonly TimeSpan PATHFINDING_FALLBACK_WINDOW = TimeSpan.FromSeconds( 1 );
+
+    public static void PlayCUOMacro( string name )
     {
-        private static readonly TimeSpan PATHFINDING_FALLBACK_WINDOW = TimeSpan.FromSeconds( 1 );
-
-        public static void PlayCUOMacro( string name )
+        if ( Engine.Host != null )
         {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.PlayCUOMacro( name );
-            }
-            else
-            {
-                ReflectionImpl.PlayCUOMacro( name );
-            }
+            Engine.Host.PlayCUOMacro( name );
+        }
+        else
+        {
+            ReflectionImpl.PlayCUOMacro( name );
+        }
+    }
+
+    public static void CreateMacroButton( string name, string value )
+    {
+        if ( Engine.Host != null )
+        {
+            Engine.Host.CreateMacroButton( name, value );
+        }
+        else
+        {
+            ReflectionImpl.CreateMacroButton( name, value );
+        }
+    }
+
+    public static void Logout()
+    {
+        if ( Engine.Host != null )
+        {
+            Engine.Host.Logout();
+        }
+        else
+        {
+            ReflectionImpl.Logout();
+        }
+    }
+
+    public static void Quit()
+    {
+        if ( Engine.Host != null )
+        {
+            Engine.Host.Quit();
+        }
+        else
+        {
+            ReflectionImpl.Quit();
+        }
+    }
+
+    public static void AddMapMarker( string name, int x, int y, int facet, int zoomLevel, string iconName )
+    {
+        if ( Engine.Host != null )
+        {
+            Engine.Host.AddMapMarker( name, x, y, facet, zoomLevel, iconName );
+        }
+        else
+        {
+            ReflectionImpl.AddMapMarker( name, x, y, facet, zoomLevel, iconName );
+        }
+    }
+
+    public static bool Following()
+    {
+        return Engine.Host != null ? Engine.Host.Following().Result : ReflectionImpl.Following();
+    }
+
+    public static bool Follow( int serial )
+    {
+        return Engine.Host != null ? Engine.Host.Follow( serial ).Result : ReflectionImpl.Follow( serial );
+    }
+
+    public static bool WalkTo( int x, int y, int z, int desiredDistance )
+    {
+        return Engine.Host != null
+            ? Engine.Host.WalkTo( x, y, z, desiredDistance ).Result
+            : ReflectionImpl.WalkTo( x, y, z, desiredDistance );
+    }
+
+    public static bool CancelPathfinding()
+    {
+        if ( Engine.Host != null )
+        {
+            Engine.Host.CancelPathfinding();
+        }
+        else
+        {
+            ReflectionImpl.CancelPathfinding();
         }
 
-        public static void CreateMacroButton( string name, string value )
+        return true;
+    }
+
+    /// <summary>
+    ///     Falls back to whether a move packet was sent in the last second rather than
+    ///     <see cref="ReflectionImpl.Pathfinding" />, since this fork's UI process is never the one
+    ///     with reflection access into the client - unlike upstream, where the two can coincide. Also
+    ///     used when <see cref="Engine.Host" /> is up but <see cref="Engine.ReflectionAvailable" /> is
+    ///     false (plugin loaded via the native DNNE export) - in that case the client-side
+    ///     `AutoWalking` reflection would just read back false regardless of actual state, and this
+    ///     heuristic is a better signal.
+    /// </summary>
+    public static bool Pathfinding()
+    {
+        if ( Engine.Host != null && Engine.ReflectionAvailable )
         {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.CreateMacroButton( name, value );
-            }
-            else
-            {
-                ReflectionImpl.CreateMacroButton( name, value );
-            }
+            return Engine.Host.Pathfinding().Result;
         }
 
-        public static void Logout()
-        {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.Logout();
-            }
-            else
-            {
-                ReflectionImpl.Logout();
-            }
-        }
+        return DateTime.Now - Engine.LastMoveRequested < PATHFINDING_FALLBACK_WINDOW;
+    }
 
-        public static void Quit()
-        {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.Quit();
-            }
-            else
-            {
-                ReflectionImpl.Quit();
-            }
-        }
+    public static (int x, int y) GetGumpPosition( uint id )
+    {
+        return Engine.Host != null ? Engine.Host.GetGumpPosition( id ).Result : ReflectionImpl.GetGumpPosition( id );
+    }
 
-        public static void AddMapMarker( string name, int x, int y, int facet, int zoomLevel, string iconName )
-        {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.AddMapMarker( name, x, y, facet, zoomLevel, iconName );
-            }
-            else
-            {
-                ReflectionImpl.AddMapMarker( name, x, y, facet, zoomLevel, iconName );
-            }
-        }
+    public static Point GetGameWindowCenter()
+    {
+        return Engine.Host != null ? Engine.Host.GetGameWindowCenter().Result : ReflectionImpl.GetGameWindowCenter();
+    }
 
-        public static bool Following()
-        {
-            return Engine.Host != null ? Engine.Host.Following().Result : ReflectionImpl.Following();
-        }
+    public static Size GetGameWindowSize()
+    {
+        return Engine.Host != null ? Engine.Host.GetGameWindowSize().Result : ReflectionImpl.GetGameWindowSize();
+    }
 
-        public static bool Follow( int serial )
-        {
-            return Engine.Host != null ? Engine.Host.Follow( serial ).Result : ReflectionImpl.Follow( serial );
-        }
+    public static bool UsePrimaryAbility()
+    {
+        return Engine.Host != null ? Engine.Host.UsePrimaryAbility().Result : GameActions.UsePrimaryAbility();
+    }
 
-        public static bool WalkTo( int x, int y, int z, int desiredDistance )
-        {
-            return Engine.Host != null
-                ? Engine.Host.WalkTo( x, y, z, desiredDistance ).Result
-                : ReflectionImpl.WalkTo( x, y, z, desiredDistance );
-        }
+    public static bool UseSecondaryAbility()
+    {
+        return Engine.Host != null ? Engine.Host.UseSecondaryAbility().Result : GameActions.UseSecondaryAbility();
+    }
 
-        public static bool CancelPathfinding()
-        {
-            if ( Engine.Host != null )
-            {
-                Engine.Host.CancelPathfinding();
-            }
-            else
-            {
-                ReflectionImpl.CancelPathfinding();
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        ///     Falls back to whether a move packet was sent in the last second rather than
-        ///     <see cref="ReflectionImpl.Pathfinding" />, since this fork's UI process is never the one
-        ///     with reflection access into the client - unlike upstream, where the two can coincide. Also
-        ///     used when <see cref="Engine.Host" /> is up but <see cref="Engine.ReflectionAvailable" /> is
-        ///     false (plugin loaded via the native DNNE export) - in that case the client-side
-        ///     `AutoWalking` reflection would just read back false regardless of actual state, and this
-        ///     heuristic is a better signal.
-        /// </summary>
-        public static bool Pathfinding()
-        {
-            if ( Engine.Host != null && Engine.ReflectionAvailable )
-            {
-                return Engine.Host.Pathfinding().Result;
-            }
-
-            return DateTime.Now - Engine.LastMoveRequested < PATHFINDING_FALLBACK_WINDOW;
-        }
-
-        public static (int x, int y) GetGumpPosition( uint id )
-        {
-            return Engine.Host != null ? Engine.Host.GetGumpPosition( id ).Result : ReflectionImpl.GetGumpPosition( id );
-        }
-
-        public static Point GetGameWindowCenter()
-        {
-            return Engine.Host != null ? Engine.Host.GetGameWindowCenter().Result : ReflectionImpl.GetGameWindowCenter();
-        }
-
-        public static Size GetGameWindowSize()
-        {
-            return Engine.Host != null ? Engine.Host.GetGameWindowSize().Result : ReflectionImpl.GetGameWindowSize();
-        }
-
-        public static bool UsePrimaryAbility()
-        {
-            return Engine.Host != null ? Engine.Host.UsePrimaryAbility().Result : GameActions.UsePrimaryAbility();
-        }
-
-        public static bool UseSecondaryAbility()
-        {
-            return Engine.Host != null ? Engine.Host.UseSecondaryAbility().Result : GameActions.UseSecondaryAbility();
-        }
-
-        public static bool HasConnectionLostGump()
-        {
-            return Engine.Host != null ? Engine.Host.HasDisconnectedGump().Result : ReflectionImpl.HasDisconnectedGump();
-        }
+    public static bool HasConnectionLostGump()
+    {
+        return Engine.Host != null ? Engine.Host.HasDisconnectedGump().Result : ReflectionImpl.HasDisconnectedGump();
     }
 }

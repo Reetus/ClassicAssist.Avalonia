@@ -1,110 +1,97 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Linq;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.UI.Misc;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.UI.ViewModels
+namespace ClassicAssist.UI.ViewModels;
+
+public abstract class HotkeyEntryViewModel<T> : BaseViewModel where T : HotkeyEntry
 {
-    public abstract class HotkeyEntryViewModel<T> : BaseViewModel where T : HotkeyEntry
+    private readonly HotkeyCommand _category;
+    protected List<HotkeyCommand> _staticOptions = [];
+
+    protected HotkeyEntryViewModel( string name )
     {
-        private readonly HotkeyCommand _category;
-        private ObservableCollectionEx<T> _items = new ObservableCollectionEx<T>();
-        protected List<HotkeyCommand> _staticOptions = new List<HotkeyCommand>();
+        _category = new HotkeyCommand { Name = name, IsCategory = true };
 
-        protected HotkeyEntryViewModel( string name )
+        HotkeyManager hotkey = HotkeyManager.GetInstance();
+
+        hotkey.AddCategory( _category );
+
+        Items.CollectionChanged += OnCollectionChanged;
+
+        _category.Children = [];
+    }
+
+    public ObservableCollectionEx<T> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    ~HotkeyEntryViewModel()
+    {
+        Items.CollectionChanged -= OnCollectionChanged;
+    }
+
+    protected virtual void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        _category.Children = [.. _staticOptions, .. Items];
+    }
+
+    protected void SetJsonValue( JToken json, string name, JToken value )
+    {
+        json[name] = value;
+    }
+
+    protected T2 GetJsonValue<T2>( JToken json, string name, T2 defaultValue )
+    {
+        if ( json == null )
         {
-            _category = new HotkeyCommand { Name = name, IsCategory = true };
-
-            HotkeyManager hotkey = HotkeyManager.GetInstance();
-
-            hotkey.AddCategory( _category );
-
-            Items.CollectionChanged += OnCollectionChanged;
-
-            _category.Children = new ObservableCollectionEx<HotkeyEntry>();
+            return defaultValue;
         }
 
-        public ObservableCollectionEx<T> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
-        }
+        return json[name] == null ? defaultValue : json[name].ToObject<T2>();
+    }
 
-        ~HotkeyEntryViewModel()
-        {
-            Items.CollectionChanged -= OnCollectionChanged;
-        }
+    protected void SerializeStatic( JObject organizer )
+    {
+        JObject staticHotkeys = [];
 
-        protected virtual void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+        foreach ( HotkeyCommand option in _staticOptions )
         {
-            _category.Children = new ObservableCollectionEx<HotkeyEntry>();
-
-            foreach ( HotkeyCommand hotkey in _staticOptions )
+            JObject obj = new()
             {
-                _category.Children.Add( hotkey );
+                { "Keys", option.Hotkey.ToJObject() },
+                { "PassToUO", option.PassToUO },
+                { "Disableable", option.Disableable }
+            };
+
+            staticHotkeys.Add( option.Name, obj );
+        }
+
+        organizer.Add( "Static", staticHotkeys );
+    }
+
+    protected void DeserializeStatic( JObject obj )
+    {
+        if ( obj?["Static"] is not JObject )
+        {
+            return;
+        }
+
+        foreach ( HotkeyCommand option in _staticOptions )
+        {
+            if ( obj["Static"][option.Name] is not JObject json )
+            {
+                continue;
             }
 
-            foreach ( T item in Items )
-            {
-                _category.Children.Add( item );
-            }
-        }
-
-        protected void SetJsonValue( JToken json, string name, JToken value )
-        {
-            json[name] = value;
-        }
-
-        protected T2 GetJsonValue<T2>( JToken json, string name, T2 defaultValue )
-        {
-            if ( json == null )
-            {
-                return defaultValue;
-            }
-
-            return json[name] == null ? defaultValue : json[name].ToObject<T2>();
-        }
-
-        protected void SerializeStatic( JObject organizer )
-        {
-            JObject staticHotkeys = new JObject();
-
-            foreach ( HotkeyCommand option in _staticOptions )
-            {
-                JObject obj = new JObject
-                {
-                    { "Keys", option.Hotkey.ToJObject() },
-                    { "PassToUO", option.PassToUO },
-                    { "Disableable", option.Disableable }
-                };
-
-                staticHotkeys.Add( option.Name, obj );
-            }
-
-            organizer.Add( "Static", staticHotkeys );
-        }
-
-        protected void DeserializeStatic( JObject obj )
-        {
-            if ( !( obj?["Static"] is JObject ) )
-            {
-                return;
-            }
-
-            foreach ( HotkeyCommand option in _staticOptions )
-            {
-                if ( !( obj["Static"][option.Name] is JObject json ) )
-                {
-                    continue;
-                }
-
-                option.Hotkey = new ShortcutKeys( json["Keys"] );
-                option.PassToUO = GetJsonValue( json, "PassToUO", option.PassToUO );
-                option.Disableable = GetJsonValue( json, "Disableable", option.Disableable );
-            }
+            option.Hotkey = new ShortcutKeys( json["Keys"] );
+            option.PassToUO = GetJsonValue( json, "PassToUO", option.PassToUO );
+            option.Disableable = GetJsonValue( json, "Disableable", option.Disableable );
         }
     }
 }

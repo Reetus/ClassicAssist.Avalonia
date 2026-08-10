@@ -28,121 +28,111 @@ using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Debug
+namespace ClassicAssist.Shared.UI.ViewModels.Debug;
+
+public class DebugAutolootViewModel : BaseViewModel
 {
-    public class DebugAutolootViewModel : BaseViewModel
+    public ICommand ClearResultsCommand => field ??= new RelayCommand( ClearResults, o => true );
+
+    public int ContainerSerial
     {
-        private ICommand _clearResultsCommand;
-        private int _containerSerial;
-        private ICommand _retestContainerCommand;
-        private ICommand _testContainerCommand;
-        private string _testResults;
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public ICommand ClearResultsCommand =>
-            _clearResultsCommand ?? ( _clearResultsCommand = new RelayCommand( ClearResults, o => true ) );
+    public ICommand RetestContainerCommand => field ??= new RelayCommand( RetestContainer, o => true );
 
-        public int ContainerSerial
+    public ICommand TestContainerCommand => field ??= new RelayCommandAsync( TestContainerAsync, o => true );
+
+    public string TestResults
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    private void ClearResults( object obj )
+    {
+        TestResults = string.Empty;
+    }
+
+    private void RetestContainer( object obj )
+    {
+        TestContainer( ContainerSerial );
+    }
+
+    private async Task TestContainerAsync( object arg )
+    {
+        int serial = await Commands.GetTargetSerialAsync( "Choose container...", 60000 );
+
+        if ( serial == 0 )
         {
-            get => _containerSerial;
-            set => SetProperty( ref _containerSerial, value );
+            Commands.SystemMessage( Strings.Invalid_container___ );
         }
 
-        public ICommand RetestContainerCommand =>
-            _retestContainerCommand ?? ( _retestContainerCommand = new RelayCommand( RetestContainer, o => true ) );
+        ContainerSerial = serial;
+        TestContainer( serial );
+    }
 
-        public ICommand TestContainerCommand =>
-            _testContainerCommand ?? ( _testContainerCommand = new RelayCommandAsync( TestContainerAsync, o => true ) );
+    private void TestContainer( int serial )
+    {
+        Item[] items = Engine.Items.GetItem( serial )?.Container?.GetItems();
 
-        public string TestResults
+        if ( items == null )
         {
-            get => _testResults;
-            set => SetProperty( ref _testResults, value );
+            TestResults += $"{Strings.Cannot_find_container___}\n";
+            Commands.SystemMessage( Strings.Cannot_find_container___ );
+            return;
         }
 
-        private void ClearResults( object obj )
-        {
-            TestResults = string.Empty;
-        }
+        Engine.SendPacketToServer( new BatchQueryProperties( items.Select( i => i.Serial ).ToArray() ) );
 
-        private void RetestContainer( object obj )
+        foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries()
+                     .OrderByDescending( x => x.Priority ) )
         {
-            TestContainer( ContainerSerial );
-        }
-
-        private async Task TestContainerAsync( object arg )
-        {
-            int serial = await Commands.GetTargetSerialAsync( "Choose container...", 60000 );
-
-            if ( serial == 0 )
+            if ( !entry.Enabled )
             {
-                Commands.SystemMessage( Strings.Invalid_container___ );
+                TestResults += $"Entry {entry.Name} disabled...\n";
+                continue;
             }
 
-            ContainerSerial = serial;
-            TestContainer( serial );
-        }
-
-        private void TestContainer( int serial )
-        {
-            Item[] items = Engine.Items.GetItem( serial )?.Container?.GetItems();
-
-            if ( items == null )
+            if ( entry.Group != null && !entry.Group.Enabled )
             {
-                TestResults += $"{Strings.Cannot_find_container___}\n";
-                Commands.SystemMessage( Strings.Cannot_find_container___ );
-                return;
+                TestResults += $"Group {entry.Group.Name} containing {entry.Name} disabled...\n";
+                continue;
             }
 
-            Engine.SendPacketToServer( new BatchQueryProperties( items.Select( i => i.Serial ).ToArray() ) );
+            TestResults += $"Entry {entry.Name}...\n\n";
 
-            foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries()
-                         .OrderByDescending( x => x.Priority ) )
+            IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( items, entry );
+
+            if ( matchItems == null )
             {
-                if ( !entry.Enabled )
+                TestResults += "No items matched...\n";
+                continue;
+            }
+
+            int count = 0;
+
+            foreach ( Item matchItem in matchItems )
+            {
+                count++;
+
+                TestResults += matchItem.ToString();
+
+                if ( matchItem.Properties != null )
                 {
-                    TestResults += $"Entry {entry.Name} disabled...\n";
-                    continue;
-                }
+                    TestResults += "\nProperties...\n\n";
 
-                if ( entry.Group != null && !entry.Group.Enabled )
-                {
-                    TestResults += $"Group {entry.Group.Name} containing {entry.Name} disabled...\n";
-                    continue;
-                }
-
-                TestResults += $"Entry {entry.Name}...\n\n";
-
-                IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( items, entry );
-
-                if ( matchItems == null )
-                {
-                    TestResults += "No items matched...\n";
-                    continue;
-                }
-
-                int count = 0;
-
-                foreach ( Item matchItem in matchItems )
-                {
-                    count++;
-
-                    TestResults += matchItem.ToString();
-
-                    if ( matchItem.Properties != null )
+                    foreach ( Property property in matchItem.Properties )
                     {
-                        TestResults += "\nProperties...\n\n";
-
-                        foreach ( Property property in matchItem.Properties )
-                        {
-                            TestResults += $"{property.Text}\n";
-                        }
+                        TestResults += $"{property.Text}\n";
                     }
-
-                    TestResults += "\n";
                 }
 
-                TestResults += $"{count} matches...\n\n";
+                TestResults += "\n";
             }
+
+            TestResults += $"{count} matches...\n\n";
         }
     }
 }

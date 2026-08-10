@@ -19,15 +19,14 @@
 
 using System;
 
-namespace ClassicAssist.Data.Macros
-{
-    public class CommandsDisplayStringSeeAlsoAttribute : Attribute
-    {
-        public CommandsDisplayStringSeeAlsoAttribute( string[] enums )
-        {
-            Enums = enums;
-        }
+namespace ClassicAssist.Data.Macros;
 
-        public string[] Enums { get; set; }
+public class CommandsDisplayStringSeeAlsoAttribute : Attribute
+{
+    public CommandsDisplayStringSeeAlsoAttribute( string[] enums )
+    {
+        Enums = enums;
     }
+
+    public string[] Enums { get; set; }
 }

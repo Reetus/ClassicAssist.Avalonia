@@ -5,90 +5,89 @@ using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.UO.Network.PacketFilter;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+[FilterOptions( Name = "Seasons", DefaultEnabled = false )]
+public class SeasonFilter : DynamicFilterEntry, IConfigurableFilter
 {
-    [FilterOptions( Name = "Seasons", DefaultEnabled = false )]
-    public class SeasonFilter : DynamicFilterEntry, IConfigurableFilter
+    public static bool IsEnabled { get; set; }
+    public Season SelectedSeason { get; set; } = Season.Spring;
+
+    public async Task Configure()
     {
-        public static bool IsEnabled { get; set; }
-        public Season SelectedSeason { get; set; } = Season.Spring;
+        SeasonFilterConfigureViewModel vm = new( SelectedSeason );
 
-        public async Task Configure()
+        await Engine.UIInvoker.InvokeDialog( "SeasonFilterConfigureWindow", dataContext: vm );
+
+        SelectedSeason = vm.SelectedSeason;
+
+        SendSeason();
+    }
+
+    public void Deserialize( JToken token )
+    {
+        if ( token == null )
         {
-            SeasonFilterConfigureViewModel vm = new SeasonFilterConfigureViewModel( SelectedSeason );
-
-            await Engine.UIInvoker.InvokeDialog( "SeasonFilterConfigureWindow", dataContext: vm );
-
-            SelectedSeason = vm.SelectedSeason;
-
-            SendSeason();
+            return;
         }
 
-        public void Deserialize( JToken token )
+        JObject config = (JObject) token;
+
+        if ( Enum.TryParse( config["Season"]?.ToString(), out Season season ) )
         {
-            if ( token == null )
-            {
-                return;
-            }
-
-            JObject config = (JObject) token;
-
-            if ( Enum.TryParse( config["Season"]?.ToString(), out Season season ) )
-            {
-                SelectedSeason = season;
-            }
+            SelectedSeason = season;
         }
+    }
 
-        public JObject Serialize()
+    public JObject Serialize()
+    {
+        JObject config = new() { { "Season", SelectedSeason.ToString() } };
+
+        return config;
+    }
+
+    public void ResetOptions()
+    {
+        SelectedSeason = Season.Spring;
+    }
+
+    protected override void OnChanged( bool enabled )
+    {
+        IsEnabled = enabled;
+    }
+
+    public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
+    {
+        if ( packet == null || !IsEnabled )
         {
-            JObject config = new JObject { { "Season", SelectedSeason.ToString() } };
-
-            return config;
-        }
-
-        public void ResetOptions()
-        {
-            SelectedSeason = Season.Spring;
-        }
-
-        protected override void OnChanged( bool enabled )
-        {
-            IsEnabled = enabled;
-        }
-
-        public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
-        {
-            if ( packet == null || !IsEnabled )
-            {
-                return false;
-            }
-
-            // Not the "map change" subcommand: block the server's own season packets (0xBC) so the
-            // selected season sticks.
-            if ( packet[0] != 0xBF || packet[4] != 0x08 || direction != PacketDirection.Incoming )
-            {
-                return packet[0] == 0xBC && direction == PacketDirection.Incoming;
-            }
-
-            SendSeason();
-
             return false;
         }
 
-        private void SendSeason()
+        // Not the "map change" subcommand: block the server's own season packets (0xBC) so the
+        // selected season sticks.
+        if ( packet[0] != 0xBF || packet[4] != 0x08 || direction != PacketDirection.Incoming )
         {
-            byte[] season = { 0xBC, (byte) SelectedSeason, 0x00 };
-
-            Engine.SendPacketToClient( season, season.Length, false );
+            return packet[0] == 0xBC && direction == PacketDirection.Incoming;
         }
+
+        SendSeason();
+
+        return false;
     }
 
-    public enum Season : byte
+    private void SendSeason()
     {
-        Spring,
-        Summer,
-        Fall,
-        Winter,
-        Desolation
+        byte[] season = [0xBC, (byte) SelectedSeason, 0x00];
+
+        Engine.SendPacketToClient( season, season.Length, false );
     }
+}
+
+public enum Season : byte
+{
+    Spring,
+    Summer,
+    Fall,
+    Winter,
+    Desolation
 }

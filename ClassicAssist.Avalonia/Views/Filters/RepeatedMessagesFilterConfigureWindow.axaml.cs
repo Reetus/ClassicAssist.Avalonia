@@ -20,18 +20,17 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views.Filters
-{
-    public partial class RepeatedMessagesFilterConfigureWindow : Window
-    {
-        public RepeatedMessagesFilterConfigureWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views.Filters;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+public partial class RepeatedMessagesFilterConfigureWindow : Window
+{
+    public RepeatedMessagesFilterConfigureWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

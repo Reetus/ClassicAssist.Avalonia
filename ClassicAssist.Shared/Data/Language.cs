@@ -1,13 +1,12 @@
-﻿namespace ClassicAssist.Data
+﻿namespace ClassicAssist.Data;
+
+public enum Language
 {
-    public enum Language
-    {
-        Default,
-        English,
-        Korean,
-        Chinese,
-        Italian,
-        Polish,
-        Czech
-    }
+    Default,
+    English,
+    Korean,
+    Chinese,
+    Italian,
+    Polish,
+    Czech
 }

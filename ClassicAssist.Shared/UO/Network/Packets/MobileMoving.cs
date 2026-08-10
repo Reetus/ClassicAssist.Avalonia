@@ -20,23 +20,22 @@
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class MobileMoving : BasePacket
 {
-    public class MobileMoving : BasePacket
+    public MobileMoving( Mobile mobile, int hueOverride = 0 )
     {
-        public MobileMoving( Mobile mobile, int hueOverride = 0 )
-        {
-            _writer = new PacketWriter( 17 );
-            _writer.Write( (byte) 0x77 );
-            _writer.Write( mobile.Serial );
-            _writer.Write( (short) mobile.ID );
-            _writer.Write( (short) mobile.X );
-            _writer.Write( (short) mobile.Y );
-            _writer.Write( (sbyte) mobile.Z );
-            _writer.Write( (byte) mobile.Direction );
-            _writer.Write( (short) ( hueOverride > 0 ? hueOverride : mobile.Hue ) );
-            _writer.Write( (byte) mobile.Status );
-            _writer.Write( (byte) mobile.Notoriety );
-        }
+        _writer = new PacketWriter( 17 );
+        _writer.Write( (byte) 0x77 );
+        _writer.Write( mobile.Serial );
+        _writer.Write( (short) mobile.ID );
+        _writer.Write( (short) mobile.X );
+        _writer.Write( (short) mobile.Y );
+        _writer.Write( (sbyte) mobile.Z );
+        _writer.Write( (byte) mobile.Direction );
+        _writer.Write( (short) ( hueOverride > 0 ? hueOverride : mobile.Hue ) );
+        _writer.Write( (byte) mobile.Status );
+        _writer.Write( (byte) mobile.Notoriety );
     }
 }

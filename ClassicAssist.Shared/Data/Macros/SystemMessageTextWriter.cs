@@ -20,29 +20,28 @@
 using System.IO;
 using System.Text;
 
-namespace ClassicAssist.Data.Macros
+namespace ClassicAssist.Data.Macros;
+
+public class SystemMessageTextWriter : TextWriter
 {
-    public class SystemMessageTextWriter : TextWriter
+    // Kept in sync with the encoding MacroInvoker hands TextStream, so either construction path
+    // (explicit, or the new TextStream(writer) overload that pulls this) decodes output correctly.
+    public override Encoding Encoding => MacroOutputEncoding.Current;
+
+    public override void Write( string value )
     {
-        // Kept in sync with the encoding MacroInvoker hands TextStream, so either construction path
-        // (explicit, or the new TextStream(writer) overload that pulls this) decodes output correctly.
-        public override Encoding Encoding => MacroOutputEncoding.Current;
+        value = value.TrimEnd( '\r', '\n' );
 
-        public override void Write( string value )
+        if ( string.IsNullOrEmpty( value ) )
         {
-            value = value.TrimEnd( '\r', '\n' );
-
-            if ( string.IsNullOrEmpty( value ) )
-            {
-                return;
-            }
-
-            Shared.UO.Commands.SystemMessage( value );
+            return;
         }
 
-        public override void Write( char[] buffer, int index, int count )
-        {
-            Write( new string( buffer, index, count ) );
-        }
+        Shared.UO.Commands.SystemMessage( value );
+    }
+
+    public override void Write( char[] buffer, int index, int count )
+    {
+        Write( new string( buffer, index, count ) );
     }
 }

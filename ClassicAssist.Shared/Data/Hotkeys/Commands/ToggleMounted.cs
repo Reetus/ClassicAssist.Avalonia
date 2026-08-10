@@ -19,14 +19,13 @@
 
 using ClassicAssist.Data.Macros.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Toggle mounted" )]
+public class ToggleMounted : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Toggle mounted" )]
-    public class ToggleMounted : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
-        {
-            ActionCommands.ToggleMounted();
-        }
+        ActionCommands.ToggleMounted();
     }
 }

@@ -14,14 +14,13 @@
 
 using System.ComponentModel;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
-{
-    public enum CureType
-    {
-        [Description( "Cure" )]
-        Cure,
+namespace ClassicAssist.Data.Hotkeys.Commands;
 
-        [Description( "Arch Cure" )]
-        ArchCure
-    }
+public enum CureType
+{
+    [Description( "Cure" )]
+    Cure,
+
+    [Description( "Arch Cure" )]
+    ArchCure
 }

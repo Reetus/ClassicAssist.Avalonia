@@ -19,29 +19,28 @@
 
 using System;
 
-namespace ClassicAssist.Data.Chat
+namespace ClassicAssist.Data.Chat;
+
+public class ChatUser : IComparable<ChatUser>
 {
-    public class ChatUser : IComparable<ChatUser>
+    //TODO2
+    //public SolidColorBrush Colour { get; set; }
+    public string Username { get; set; }
+
+    public int CompareTo( ChatUser other )
     {
-        //TODO2
-        //public SolidColorBrush Colour { get; set; }
-        public string Username { get; set; }
-
-        public int CompareTo( ChatUser other )
+        if ( ReferenceEquals( this, other ) )
         {
-            if ( ReferenceEquals( this, other ) )
-            {
-                return 0;
-            }
-
-            return ReferenceEquals( null, other )
-                ? 1
-                : string.Compare( Username, other.Username, StringComparison.Ordinal );
+            return 0;
         }
 
-        public override string ToString()
-        {
-            return Username;
-        }
+        return other is null
+            ? 1
+            : string.Compare( Username, other.Username, StringComparison.Ordinal );
+    }
+
+    public override string ToString()
+    {
+        return Username;
     }
 }

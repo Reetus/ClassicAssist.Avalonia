@@ -14,22 +14,21 @@
 
 using System;
 
-namespace ClassicAssist.Data.Hotkeys
+namespace ClassicAssist.Data.Hotkeys;
+
+/// <summary>
+///     Marks a property on a <see cref="Commands.HotkeyCommand" /> as user-configurable. The property is
+///     surfaced as a control in the hotkey Options dialog and round-tripped through the profile's
+///     Hotkeys/Options array.
+///     <para>
+///         <see cref="BaseType" /> selects which control the dialog builds - only <see cref="Enum" /> is
+///         handled today, matching upstream. <see cref="Type" /> is the concrete property type, used both
+///         to enumerate the choices and to deserialize the stored value back.
+///     </para>
+/// </summary>
+public class HotkeyConfigurationAttribute : Attribute
 {
-    /// <summary>
-    ///     Marks a property on a <see cref="Commands.HotkeyCommand" /> as user-configurable. The property is
-    ///     surfaced as a control in the hotkey Options dialog and round-tripped through the profile's
-    ///     Hotkeys/Options array.
-    ///     <para>
-    ///         <see cref="BaseType" /> selects which control the dialog builds - only <see cref="Enum" /> is
-    ///         handled today, matching upstream. <see cref="Type" /> is the concrete property type, used both
-    ///         to enumerate the choices and to deserialize the stored value back.
-    ///     </para>
-    /// </summary>
-    public class HotkeyConfigurationAttribute : Attribute
-    {
-        public Type BaseType { get; set; }
-        public string Name { get; set; }
-        public Type Type { get; set; }
-    }
+    public Type BaseType { get; set; }
+    public string Name { get; set; }
+    public Type Type { get; set; }
 }

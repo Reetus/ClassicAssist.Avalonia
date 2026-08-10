@@ -1,8 +1,7 @@
-﻿namespace ClassicAssist.UO.Objects.Gumps
+﻿namespace ClassicAssist.UO.Objects.Gumps;
+
+public enum GumpButtonType
 {
-    public enum GumpButtonType
-    {
-        Page = 0,
-        Reply = 1
-    }
+    Page = 0,
+    Reply = 1
 }

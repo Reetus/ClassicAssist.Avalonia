@@ -17,21 +17,20 @@
 
 #endregion
 
-namespace ClassicAssist.UO.Objects
-{
-    public class Menu
-    {
-        public MenuEntry[] Entries { get; set; }
-        public int ID { get; set; }
-        public int Serial { get; set; }
-        public string Title { get; set; }
-    }
+namespace ClassicAssist.UO.Objects;
 
-    public class MenuEntry
-    {
-        public int Hue { get; set; }
-        public int ID { get; set; }
-        public int Index { get; set; }
-        public string Title { get; set; }
-    }
+public class Menu
+{
+    public MenuEntry[] Entries { get; set; }
+    public int ID { get; set; }
+    public int Serial { get; set; }
+    public string Title { get; set; }
+}
+
+public class MenuEntry
+{
+    public int Hue { get; set; }
+    public int ID { get; set; }
+    public int Index { get; set; }
+    public string Title { get; set; }
 }

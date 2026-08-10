@@ -1,15 +1,14 @@
-﻿namespace ClassicAssist.UO.Data
+﻿namespace ClassicAssist.UO.Data;
+
+public enum Direction : byte
 {
-    public enum Direction : byte
-    {
-        North,
-        Northeast,
-        East,
-        Southeast,
-        South,
-        Southwest,
-        West,
-        Northwest,
-        Invalid
-    }
+    North,
+    Northeast,
+    East,
+    Southeast,
+    South,
+    Southwest,
+    West,
+    Northwest,
+    Invalid
 }

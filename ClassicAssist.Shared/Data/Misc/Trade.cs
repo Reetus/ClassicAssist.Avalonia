@@ -13,21 +13,19 @@
 #endregion
 
 using ClassicAssist.Shared.UO.Data;
-using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.Data.Misc
+namespace ClassicAssist.Data.Misc;
+
+public class Trade
 {
-    public class Trade
-    {
-        public int AcceptLocal { get; set; }
-        public int AcceptRemote { get; set; }
-        public TradeAction Action { get; set; }
-        public int ContainerLocal { get; set; }
-        public int ContainerRemote { get; set; }
-        public int GoldLocal { get; set; }
-        public int GoldRemote { get; set; }
-        public int PlatinumLocal { get; set; }
-        public int PlatinumRemote { get; set; }
-        public int Serial { get; set; }
-    }
+    public int AcceptLocal { get; set; }
+    public int AcceptRemote { get; set; }
+    public TradeAction Action { get; set; }
+    public int ContainerLocal { get; set; }
+    public int ContainerRemote { get; set; }
+    public int GoldLocal { get; set; }
+    public int GoldRemote { get; set; }
+    public int PlatinumLocal { get; set; }
+    public int PlatinumRemote { get; set; }
+    public int Serial { get; set; }
 }

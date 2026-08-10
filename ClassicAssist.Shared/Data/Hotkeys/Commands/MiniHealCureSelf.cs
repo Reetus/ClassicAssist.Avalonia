@@ -15,26 +15,25 @@
 using System;
 using ClassicAssist.Data.Macros.Commands;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Mini Heal / Cure Self", Category = "Healing" )]
+public class MiniHealCureSelf : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Mini Heal / Cure Self", Category = "Healing" )]
-    public class MiniHealCureSelf : HotkeyCommand
+    public override bool Configurable => true;
+
+    [HotkeyConfiguration( BaseType = typeof( Enum ), Type = typeof( CureType ), Name = "Cure Type" )]
+    public CureType CureType { get; set; }
+
+    public override void Execute()
     {
-        public override bool Configurable => true;
-
-        [HotkeyConfiguration( BaseType = typeof( Enum ), Type = typeof( CureType ), Name = "Cure Type" )]
-        public CureType CureType { get; set; }
-
-        public override void Execute()
+        if ( MobileCommands.Poisoned( "self" ) )
         {
-            if ( MobileCommands.Poisoned( "self" ) )
-            {
-                SpellCommands.Cast( CureType == CureType.ArchCure ? "Arch Cure" : "Cure", "self" );
-            }
-            else
-            {
-                SpellCommands.Cast( "Heal", "self" );
-            }
+            SpellCommands.Cast( CureType == CureType.ArchCure ? "Arch Cure" : "Cure", "self" );
+        }
+        else
+        {
+            SpellCommands.Cast( "Heal", "self" );
         }
     }
 }

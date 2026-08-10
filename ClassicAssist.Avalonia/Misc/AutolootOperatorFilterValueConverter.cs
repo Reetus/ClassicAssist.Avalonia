@@ -24,57 +24,56 @@ using System.Linq;
 using Avalonia.Data.Converters;
 using ClassicAssist.Data.Autoloot;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     Narrows the operator ComboBox to the operators a <see cref="PropertyEntry" /> allows
+///     (<see cref="PropertyEntry.AllowedOperators" />); shows all when unrestricted.
+/// </summary>
+public class AutolootOperatorFilterValueConverter : IValueConverter
 {
-    /// <summary>
-    ///     Narrows the operator ComboBox to the operators a <see cref="PropertyEntry" /> allows
-    ///     (<see cref="PropertyEntry.AllowedOperators" />); shows all when unrestricted.
-    /// </summary>
-    public class AutolootOperatorFilterValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        List<AutolootOperator> allOperators = [.. Enum.GetValues( typeof( AutolootOperator ) ).Cast<AutolootOperator>()];
+
+        if ( value is not PropertyEntry entry || entry.AllowedOperators == AutolootAllowedOperators.All ||
+             entry.AllowedOperators == 0 )
         {
-            List<AutolootOperator> allOperators = Enum.GetValues( typeof( AutolootOperator ) ).Cast<AutolootOperator>().ToList();
-
-            if ( !( value is PropertyEntry entry ) || entry.AllowedOperators == AutolootAllowedOperators.All ||
-                 entry.AllowedOperators == 0 )
-            {
-                return allOperators;
-            }
-
-            List<AutolootOperator> filtered = new List<AutolootOperator>();
-
-            if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.Equal ) )
-            {
-                filtered.Add( AutolootOperator.Equal );
-            }
-
-            if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.NotEqual ) )
-            {
-                filtered.Add( AutolootOperator.NotEqual );
-            }
-
-            if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.LessThan ) )
-            {
-                filtered.Add( AutolootOperator.LessThan );
-            }
-
-            if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.GreaterThan ) )
-            {
-                filtered.Add( AutolootOperator.GreaterThan );
-            }
-
-            if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.NotPresent ) )
-            {
-                filtered.Add( AutolootOperator.NotPresent );
-            }
-
-            return filtered;
+            return allOperators;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        List<AutolootOperator> filtered = [];
+
+        if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.Equal ) )
         {
-            throw new NotImplementedException();
+            filtered.Add( AutolootOperator.Equal );
         }
+
+        if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.NotEqual ) )
+        {
+            filtered.Add( AutolootOperator.NotEqual );
+        }
+
+        if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.LessThan ) )
+        {
+            filtered.Add( AutolootOperator.LessThan );
+        }
+
+        if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.GreaterThan ) )
+        {
+            filtered.Add( AutolootOperator.GreaterThan );
+        }
+
+        if ( entry.AllowedOperators.HasFlag( AutolootAllowedOperators.NotPresent ) )
+        {
+            filtered.Add( AutolootOperator.NotPresent );
+        }
+
+        return filtered;
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

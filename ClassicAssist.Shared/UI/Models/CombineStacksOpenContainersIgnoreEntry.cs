@@ -1,29 +1,24 @@
 using ClassicAssist.Shared.UI;
 
-namespace ClassicAssist.UI.Models
+namespace ClassicAssist.UI.Models;
+
+public class CombineStacksOpenContainersIgnoreEntry : SetPropertyNotifyChanged
 {
-    public class CombineStacksOpenContainersIgnoreEntry : SetPropertyNotifyChanged
+    public int Cliloc
     {
-        private int _cliloc = -1;
-        private int _hue;
-        private int _id;
+        get;
+        set => SetProperty( ref field, value );
+    } = -1;
 
-        public int Cliloc
-        {
-            get => _cliloc;
-            set => SetProperty( ref _cliloc, value );
-        }
+    public int Hue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public int Hue
-        {
-            get => _hue;
-            set => SetProperty( ref _hue, value );
-        }
-
-        public int ID
-        {
-            get => _id;
-            set => SetProperty( ref _id, value );
-        }
+    public int ID
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

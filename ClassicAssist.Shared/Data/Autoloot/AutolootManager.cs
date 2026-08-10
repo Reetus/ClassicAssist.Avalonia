@@ -19,51 +19,51 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+public class AutolootManager
 {
-    public class AutolootManager
+    private static AutolootManager _instance;
+    private static readonly Lock _lock = new();
+
+    /// <summary>
+    ///     Trigger autoloot on a container/corpse serial. Wired by the UI (AutolootViewModel).
+    /// </summary>
+    public Action<int, bool> CheckContainer { get; set; }
+
+    public Func<List<AutolootEntry>> GetEntries { get; set; } = () => [];
+
+    public Func<bool> IsEnabled { get; set; }
+
+    public Func<bool> IsRunning { get; set; }
+
+    /// <summary>
+    ///     When true, cliloc constraints also match on the property's text value instead of only the
+    ///     cliloc number (UOAlive-style). Wired by the UI (AutolootViewModel).
+    /// </summary>
+    public Func<bool> MatchTextValue { get; set; }
+
+    public Action<bool> SetEnabled { get; set; }
+
+    public static AutolootManager GetInstance()
     {
-        private static AutolootManager _instance;
-        private static readonly object _lock = new object();
-
-        /// <summary>
-        ///     Trigger autoloot on a container/corpse serial. Wired by the UI (AutolootViewModel).
-        /// </summary>
-        public Action<int, bool> CheckContainer { get; set; }
-
-        public Func<List<AutolootEntry>> GetEntries { get; set; } = () => new List<AutolootEntry>();
-
-        public Func<bool> IsEnabled { get; set; }
-
-        public Func<bool> IsRunning { get; set; }
-
-        /// <summary>
-        ///     When true, cliloc constraints also match on the property's text value instead of only the
-        ///     cliloc number (UOAlive-style). Wired by the UI (AutolootViewModel).
-        /// </summary>
-        public Func<bool> MatchTextValue { get; set; }
-
-        public Action<bool> SetEnabled { get; set; }
-
-        public static AutolootManager GetInstance()
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
+            lock ( _lock )
             {
-                lock ( _lock )
+                if ( _instance != null )
                 {
-                    if ( _instance != null )
-                    {
-                        return _instance;
-                    }
-
-                    _instance = new AutolootManager();
                     return _instance;
                 }
-            }
 
-            return _instance;
+                _instance = new AutolootManager();
+                return _instance;
+            }
         }
+
+        return _instance;
     }
 }

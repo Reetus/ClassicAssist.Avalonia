@@ -18,40 +18,38 @@
 #endregion
 
 using System.Collections.Specialized;
-using System.Linq;
 using Avalonia.Controls;
 using Avalonia.VisualTree;
 using Avalonia.Xaml.Interactivity;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class ListBoxAutoScrollBehaviour : Behavior<ListBox>
 {
-    public class ListBoxAutoScrollBehaviour : Behavior<ListBox>
+    protected override void OnAttached()
     {
-        protected override void OnAttached()
-        {
-            base.OnAttached();
+        base.OnAttached();
 
-            if ( AssociatedObject != null )
-            {
-                ( (INotifyCollectionChanged) AssociatedObject.Items ).CollectionChanged += OnCollectionChanged;
-            }
+        if ( AssociatedObject != null )
+        {
+            ( (INotifyCollectionChanged) AssociatedObject.Items ).CollectionChanged += OnCollectionChanged;
         }
+    }
 
-        private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    private void OnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        ScrollViewer scrollViewer = AssociatedObject.FindDescendantOfType<ScrollViewer>();
+
+        scrollViewer?.ScrollToEnd();
+    }
+
+    protected override void OnDetaching()
+    {
+        base.OnDetaching();
+
+        if ( AssociatedObject != null )
         {
-            ScrollViewer scrollViewer = AssociatedObject.FindDescendantOfType<ScrollViewer>();
-
-            scrollViewer?.ScrollToEnd();
-        }
-
-        protected override void OnDetaching()
-        {
-            base.OnDetaching();
-
-            if ( AssociatedObject != null )
-            {
-                ( (INotifyCollectionChanged) AssociatedObject.Items ).CollectionChanged -= OnCollectionChanged;
-            }
+            ( (INotifyCollectionChanged) AssociatedObject.Items ).CollectionChanged -= OnCollectionChanged;
         }
     }
 }

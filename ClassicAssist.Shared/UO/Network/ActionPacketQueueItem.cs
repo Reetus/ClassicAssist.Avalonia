@@ -20,51 +20,50 @@
 using System;
 using System.Threading;
 
-namespace ClassicAssist.UO.Network
+namespace ClassicAssist.UO.Network;
+
+public abstract class BaseQueueItem
 {
-    public abstract class BaseQueueItem
+    protected BaseQueueItem()
     {
-        protected BaseQueueItem()
-        {
-            WaitHandle = new AutoResetEvent( false );
-        }
-
-        public DateTime DateTime { get; set; }
-        public string Caller { get; set; }
-        public bool DelaySend { get; set; }
-        public bool Result { get; set; }
-
-        public string UUID { get; } = Guid.NewGuid().ToString();
-        public CancellationToken Token { get; set; } = CancellationToken.None;
-        public EventWaitHandle WaitHandle { get; set; }
-        public TimeSpan? TimeSpan { get; set; }
+        WaitHandle = new AutoResetEvent( false );
     }
 
-    public class PacketQueueItem : BaseQueueItem
-    {
-        public PacketQueueItem( byte[] packet, int length, bool delaySend, string caller )
-        {
-            Packet = packet;
-            Length = length;
-            DelaySend = delaySend;
-            Caller = caller;
-        }
+    public DateTime DateTime { get; set; }
+    public string Caller { get; set; }
+    public bool DelaySend { get; set; }
+    public bool Result { get; set; }
 
-        public int Length { get; set; }
-        public byte[] Packet { get; set; }
+    public string UUID { get; } = Guid.NewGuid().ToString();
+    public CancellationToken Token { get; set; } = CancellationToken.None;
+    public EventWaitHandle WaitHandle { get; set; }
+    public TimeSpan? TimeSpan { get; set; }
+}
+
+public class PacketQueueItem : BaseQueueItem
+{
+    public PacketQueueItem( byte[] packet, int length, bool delaySend, string caller )
+    {
+        Packet = packet;
+        Length = length;
+        DelaySend = delaySend;
+        Caller = caller;
     }
 
-    public class ActionQueueItem : BaseQueueItem
-    {
-        public ActionQueueItem( Func<object, bool> action )
-        {
-            Action = action;
-        }
+    public int Length { get; set; }
+    public byte[] Packet { get; set; }
+}
 
-        public Func<object, bool> Action { get; set; }
-        public object Arguments { get; set; }
-        public bool CheckRange { get; set; }
-        public int Serial { get; set; }
-        public DragDropOptions Options { get; set; }
+public class ActionQueueItem : BaseQueueItem
+{
+    public ActionQueueItem( Func<object, bool> action )
+    {
+        Action = action;
     }
+
+    public Func<object, bool> Action { get; set; }
+    public object Arguments { get; set; }
+    public bool CheckRange { get; set; }
+    public int Serial { get; set; }
+    public DragDropOptions Options { get; set; }
 }

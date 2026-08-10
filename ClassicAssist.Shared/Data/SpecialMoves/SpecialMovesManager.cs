@@ -5,98 +5,98 @@ using ClassicAssist.Data.Spells;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO.Network;
 using UOC = ClassicAssist.Shared.UO.Commands;
+using System.Threading;
 
-namespace ClassicAssist.Data.SpecialMoves
+namespace ClassicAssist.Data.SpecialMoves;
+
+public class SpecialMovesManager
 {
-    public class SpecialMovesManager
+    public delegate void dSpecialMovesChanged( string name, bool enabled );
+
+    private static SpecialMovesManager _instance;
+    private static readonly Lock _lock = new();
+    private bool[] _enabledIds = new bool[ushort.MaxValue];
+
+    private SpecialMovesManager()
     {
-        public delegate void dSpecialMovesChanged( string name, bool enabled );
+        IncomingPacketHandlers.ToggleSpecialMoveEvent += SetID;
+        Engine.PlayerInitializedEvent += p => Clear();
+    }
 
-        private static SpecialMovesManager _instance;
-        private static readonly object _lock = new object();
-        private bool[] _enabledIds = new bool[ushort.MaxValue];
+    public event dSpecialMovesChanged SpecialMovesChanged;
 
-        private SpecialMovesManager()
+    private void SetID( int spellid, bool enabled )
+    {
+        _enabledIds[spellid] = enabled;
+
+        OnSpecialMovesChanged( spellid, enabled );
+    }
+
+    private void OnSpecialMovesChanged( int spellid, bool enabled )
+    {
+        SpellManager manager = SpellManager.GetInstance();
+
+        SpellData spellData = manager.GetSpellData( spellid );
+
+        SpecialMovesChanged?.Invoke( spellData?.Name ?? string.Empty, enabled );
+    }
+
+    private void Clear()
+    {
+        _enabledIds = new bool[ushort.MaxValue];
+    }
+
+    public bool SpecialMoveExists( string name )
+    {
+        name = name.ToLower();
+
+        SpellData data = SpellManager.GetInstance().GetSpellData( name );
+
+        if ( data != null )
         {
-            IncomingPacketHandlers.ToggleSpecialMoveEvent += SetID;
-            Engine.PlayerInitializedEvent += p => Clear();
+            return _enabledIds[data.ID];
         }
 
-        public event dSpecialMovesChanged SpecialMovesChanged;
+        UOC.SystemMessage( Strings.Unknown_buff_name___ );
 
-        private void SetID( int spellid, bool enabled )
+        return false;
+    }
+
+    public string[] GetEnabledNames()
+    {
+        List<int> enabled = [];
+
+        for ( int i = 0; i < _enabledIds.Length; i++ )
         {
-            _enabledIds[spellid] = enabled;
-
-            OnSpecialMovesChanged( spellid, enabled );
-        }
-
-        private void OnSpecialMovesChanged( int spellid, bool enabled )
-        {
-            SpellManager manager = SpellManager.GetInstance();
-
-            SpellData spellData = manager.GetSpellData( spellid );
-
-            SpecialMovesChanged?.Invoke( spellData?.Name ?? string.Empty, enabled );
-        }
-
-        private void Clear()
-        {
-            _enabledIds = new bool[ushort.MaxValue];
-        }
-
-        public bool SpecialMoveExists( string name )
-        {
-            name = name.ToLower();
-
-            SpellData data = SpellManager.GetInstance().GetSpellData( name );
-
-            if ( data != null )
+            if ( _enabledIds[i] )
             {
-                return _enabledIds[data.ID];
+                enabled.Add( i );
             }
-
-            UOC.SystemMessage( Strings.Unknown_buff_name___ );
-
-            return false;
         }
 
-        public string[] GetEnabledNames()
+        SpellManager manager = SpellManager.GetInstance();
+
+        return [.. enabled.Select( manager.GetSpellData ).Select( data => data?.Name )];
+    }
+
+    public static SpecialMovesManager GetInstance()
+    {
+        // ReSharper disable once InvertIf
+        if ( _instance == null )
         {
-            List<int> enabled = new List<int>();
-
-            for ( int i = 0; i < _enabledIds.Length; i++ )
+            lock ( _lock )
             {
-                if ( _enabledIds[i] )
+                if ( _instance != null )
                 {
-                    enabled.Add( i );
-                }
-            }
-
-            SpellManager manager = SpellManager.GetInstance();
-
-            return enabled.Select( manager.GetSpellData ).Select( data => data?.Name ).ToArray();
-        }
-
-        public static SpecialMovesManager GetInstance()
-        {
-            // ReSharper disable once InvertIf
-            if ( _instance == null )
-            {
-                lock ( _lock )
-                {
-                    if ( _instance != null )
-                    {
-                        return _instance;
-                    }
-
-                    _instance = new SpecialMovesManager();
-
                     return _instance;
                 }
-            }
 
-            return _instance;
+                _instance = new SpecialMovesManager();
+
+                return _instance;
+            }
         }
+
+        return _instance;
     }
 }

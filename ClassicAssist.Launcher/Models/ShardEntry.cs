@@ -3,156 +3,144 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 
-namespace ClassicAssist.Launcher.Models
+namespace ClassicAssist.Launcher.Models;
+
+public class ShardEntry : INotifyPropertyChanged, IEquatable<ShardEntry>
 {
-    public class ShardEntry : INotifyPropertyChanged, IEquatable<ShardEntry>
+    private const string RUNUO_REGEX = @".*Clients=(\d+),.*";
+
+    [JsonProperty( "address" )]
+    public string Address
     {
-        private const string RUNUO_REGEX = @".*Clients=(\d+),.*";
-        private string _address;
-        private bool _deleted;
-        private bool _encryption;
-        private DateTime _lastPlayed;
-        private string _name;
-        private string _ping;
-        private int _port;
-        private int _shardType;
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        private string _status;
-        private string _website;
+    [JsonIgnore]
+    public bool Deleted
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        [JsonProperty( "address" )]
-        public string Address
+    [JsonProperty( "encryption" )]
+    public bool Encryption
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonProperty( "has_status_protocol" )]
+    public bool HasStatusProtocol { get; set; } = true;
+
+    [JsonIgnore]
+    public bool IsPreset { get; set; }
+
+    [JsonProperty( "last_played" )]
+    public DateTime LastPlayed
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonProperty( "name" )]
+    public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonIgnore]
+    public string Ping
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonProperty( "port" )]
+    public int Port
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonProperty( "shard_type" )]
+    public int ShardType
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonIgnore]
+    public string Status
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    [JsonIgnore]
+    public string StatusRegex { get; set; } = RUNUO_REGEX;
+
+    [JsonProperty( "website" )]
+    public string Website
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool Equals( ShardEntry other )
+    {
+        if ( other is null )
         {
-            get => _address;
-            set => SetProperty( ref _address, value );
+            return false;
         }
 
-        [JsonIgnore]
-        public bool Deleted
+        if ( ReferenceEquals( this, other ) )
         {
-            get => _deleted;
-            set => SetProperty( ref _deleted, value );
+            return true;
         }
 
-        [JsonProperty( "encryption" )]
-        public bool Encryption
+        return Name == other.Name && IsPreset == other.IsPreset;
+    }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
+    }
+
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    public override bool Equals( object obj )
+    {
+        if ( obj is null )
         {
-            get => _encryption;
-            set => SetProperty( ref _encryption, value );
+            return false;
         }
 
-        [JsonProperty( "has_status_protocol" )]
-        public bool HasStatusProtocol { get; set; } = true;
-
-        [JsonIgnore]
-        public bool IsPreset { get; set; }
-
-        [JsonProperty( "last_played" )]
-        public DateTime LastPlayed
+        if ( ReferenceEquals( this, obj ) )
         {
-            get => _lastPlayed;
-            set => SetProperty( ref _lastPlayed, value );
+            return true;
         }
 
-        [JsonProperty( "name" )]
-        public string Name
+        if ( obj.GetType() != GetType() )
         {
-            get => _name;
-            set => SetProperty( ref _name, value );
+            return false;
         }
 
-        [JsonIgnore]
-        public string Ping
+        return Equals( (ShardEntry) obj );
+    }
+
+    public override int GetHashCode()
+    {
+        unchecked
         {
-            get => _ping;
-            set => SetProperty( ref _ping, value );
-        }
-
-        [JsonProperty( "port" )]
-        public int Port
-        {
-            get => _port;
-            set => SetProperty( ref _port, value );
-        }
-
-        [JsonProperty( "shard_type" )]
-        public int ShardType
-        {
-            get => _shardType;
-            set => SetProperty( ref _shardType, value );
-        }
-
-        [JsonIgnore]
-        public string Status
-        {
-            get => _status;
-            set => SetProperty( ref _status, value );
-        }
-
-        [JsonIgnore]
-        public string StatusRegex { get; set; } = RUNUO_REGEX;
-
-        [JsonProperty( "website" )]
-        public string Website
-        {
-            get => _website;
-            set => SetProperty( ref _website, value );
-        }
-
-        public bool Equals( ShardEntry other )
-        {
-            if ( ReferenceEquals( null, other ) )
-            {
-                return false;
-            }
-
-            if ( ReferenceEquals( this, other ) )
-            {
-                return true;
-            }
-
-            return _name == other._name && IsPreset == other.IsPreset;
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
-        }
-
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
-
-        public override bool Equals( object obj )
-        {
-            if ( ReferenceEquals( null, obj ) )
-            {
-                return false;
-            }
-
-            if ( ReferenceEquals( this, obj ) )
-            {
-                return true;
-            }
-
-            if ( obj.GetType() != GetType() )
-            {
-                return false;
-            }
-
-            return Equals( (ShardEntry) obj );
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return ( ( _name != null ? _name.GetHashCode() : 0 ) * 397 ) ^ IsPreset.GetHashCode();
-            }
+            return ( ( Name != null ? Name.GetHashCode() : 0 ) * 397 ) ^ IsPreset.GetHashCode();
         }
     }
 }

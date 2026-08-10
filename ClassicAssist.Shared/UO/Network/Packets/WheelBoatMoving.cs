@@ -20,27 +20,26 @@
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
-{
-    public enum BoatSpeed : byte
-    {
-        Stop,
-        OneTile,
-        Normal
-    }
+namespace ClassicAssist.UO.Network.Packets;
 
-    public class WheelBoatMoving : BasePacket
+public enum BoatSpeed : byte
+{
+    Stop,
+    OneTile,
+    Normal
+}
+
+public class WheelBoatMoving : BasePacket
+{
+    public WheelBoatMoving( Direction direction, BoatSpeed speed )
     {
-        public WheelBoatMoving( Direction direction, BoatSpeed speed )
-        {
-            _writer = new PacketWriter( 12 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 12 );
-            _writer.Write( (short) 0x33 );
-            _writer.Write( Engine.Player.Serial );
-            _writer.Write( (byte) direction );
-            _writer.Write( (byte) direction );
-            _writer.Write( (byte) speed );
-        }
+        _writer = new PacketWriter( 12 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 12 );
+        _writer.Write( (short) 0x33 );
+        _writer.Write( Engine.Player.Serial );
+        _writer.Write( (byte) direction );
+        _writer.Write( (byte) direction );
+        _writer.Write( (byte) speed );
     }
 }

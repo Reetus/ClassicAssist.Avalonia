@@ -22,23 +22,22 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Avalonia.Misc
-{
-    /// <summary>
-    ///     Whether a frame variable's value is worth showing the "open in Object Inspector" pointer
-    ///     icon for, in the debugger overlay's variable list. Avalonia has no <c>Visibility</c> enum -
-    ///     <c>IsVisible</c> binds straight to a bool.
-    /// </summary>
-    public class ObjectInspectableVisiblyValueConverter : IValueConverter
-    {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            return value is Item;
-        }
+namespace ClassicAssist.Avalonia.Misc;
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            throw new NotImplementedException();
-        }
+/// <summary>
+///     Whether a frame variable's value is worth showing the "open in Object Inspector" pointer
+///     icon for, in the debugger overlay's variable list. Avalonia has no <c>Visibility</c> enum -
+///     <c>IsVisible</c> binds straight to a bool.
+/// </summary>
+public class ObjectInspectableVisiblyValueConverter : IValueConverter
+{
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        return value is Item;
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

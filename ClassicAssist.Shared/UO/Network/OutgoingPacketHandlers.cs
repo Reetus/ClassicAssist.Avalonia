@@ -13,193 +13,193 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using ClassicAssist.UO.Objects.Gumps;
 
-namespace ClassicAssist.UO.Network
+namespace ClassicAssist.UO.Network;
+
+public static class OutgoingPacketHandlers
 {
-    public static class OutgoingPacketHandlers
+    public delegate void dGump( uint gumpId, int serial, Gump gump );
+
+    public delegate void dMenuClick( int serial, int gumpId, int index, int id, int hue );
+
+    public delegate void dTargetSentEvent( TargetType targetType, int senderSerial, int flags, int serial, int x,
+        int y, int z, int id );
+
+    private static PacketHandler[] _handlers;
+    private static PacketHandler[] _extendedHandlers;
+    public static event dTargetSentEvent TargetSentEvent;
+    public static event dGump GumpEvent;
+
+    public static event dMenuClick MenuClickedEvent;
+
+    public static void Initialize()
     {
-        public delegate void dGump( uint gumpId, int serial, Gump gump );
+        _handlers = new PacketHandler[0x100];
+        _extendedHandlers = new PacketHandler[0x100];
 
-        public delegate void dMenuClick( int serial, int gumpId, int index, int id, int hue );
+        Register( 0x02, 7, OnMoveRequested );
+        Register( 0x06, 5, OnUseRequest );
+        Register( 0x07, 7, OnLiftRequest );
+        Register( 0x08, 15, OnDropRequest );
+        Register( 0x12, 0, OnUseSkillOrLegacySpell );
+        Register( 0x13, 10, OnEquipRequest );
+        Register( 0x6C, 19, OnTargetSent );
+        Register( 0x7D, 13, OnMenuResponse );
+        Register( 0xA0, 3, OnPlayServer );
+        Register( 0xB1, 0, OnGumpButtonPressed );
+        Register( 0xBD, 0, OnClientVersion );
+        Register( 0xBF, 0, OnExtendedCommand );
+        Register( 0x6F, 0, OnSecureTrade );
+        Register( 0xD7, 0, OnEncodedCommand );
+        Register( 0xEF, 31, OnNewClientVersion );
+        RegisterExtended( 0x1C, 0, OnSpellCast );
+    }
 
-        public delegate void dTargetSentEvent( TargetType targetType, int senderSerial, int flags, int serial, int x,
-            int y, int z, int id );
+    private static void OnSecureTrade( PacketReader reader )
+    {
+        byte action = reader.ReadByte();
+        reader.ReadInt32();
+        int value1 = reader.ReadInt32();
+        int value2 = reader.ReadInt32();
 
-        private static PacketHandler[] _handlers;
-        private static PacketHandler[] _extendedHandlers;
-        public static event dTargetSentEvent TargetSentEvent;
-        public static event dGump GumpEvent;
-
-        public static event dMenuClick MenuClickedEvent;
-
-        public static void Initialize()
+        if ( (TradeAction) action != TradeAction.Gold )
         {
-            _handlers = new PacketHandler[0x100];
-            _extendedHandlers = new PacketHandler[0x100];
-
-            Register( 0x02, 7, OnMoveRequested );
-            Register( 0x06, 5, OnUseRequest );
-            Register( 0x07, 7, OnLiftRequest );
-            Register( 0x08, 15, OnDropRequest );
-            Register( 0x12, 0, OnUseSkillOrLegacySpell );
-            Register( 0x13, 10, OnEquipRequest );
-            Register( 0x6C, 19, OnTargetSent );
-            Register( 0x7D, 13, OnMenuResponse );
-            Register( 0xA0, 3, OnPlayServer );
-            Register( 0xB1, 0, OnGumpButtonPressed );
-            Register( 0xBD, 0, OnClientVersion );
-            Register( 0xBF, 0, OnExtendedCommand );
-            Register( 0x6F, 0, OnSecureTrade );
-            Register( 0xD7, 0, OnEncodedCommand );
-            Register( 0xEF, 31, OnNewClientVersion );
-            RegisterExtended( 0x1C, 0, OnSpellCast );
+            return;
         }
 
-        private static void OnSecureTrade( PacketReader reader )
+        Engine.Trade.GoldLocal = value1;
+        Engine.Trade.PlatinumLocal = value2;
+    }
+
+    /// <summary>
+    ///     0x12 is the generic client command; the sub-command says what it actually is.
+    /// </summary>
+    private static void OnUseSkillOrLegacySpell( PacketReader reader )
+    {
+        int command = reader.ReadByte();
+
+        switch ( command )
         {
-            byte action = reader.ReadByte();
-            reader.ReadInt32();
-            int value1 = reader.ReadInt32();
-            int value2 = reader.ReadInt32();
+            case 0x24:
 
-            if ( (TradeAction) action != TradeAction.Gold )
-            {
-                return;
-            }
+                if ( ReadIdAsString( reader, out int skillId ) )
+                {
+                    Engine.LastSkillID = skillId;
+                }
 
-            Engine.Trade.GoldLocal = value1;
-            Engine.Trade.PlatinumLocal = value2;
+                break;
+            case 0x56:
+
+                // The extended 0xBF 0x1C path below covers modern clients; this is the same
+                // information from a client old enough to still send the text command.
+                if ( ReadIdAsString( reader, out int spellId ) )
+                {
+                    Engine.LastSpellID = spellId;
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    ///     0x12's payload is ASCII text of the form "<c>id arg</c>", not a binary id.
+    /// </summary>
+    private static bool ReadIdAsString( PacketReader reader, out int id )
+    {
+        id = 0;
+
+        byte[] data = reader.GetData();
+        int start = (int) reader.Index;
+        int length = (int) reader.Size - start;
+
+        if ( length <= 0 )
+        {
+            return false;
         }
 
-        /// <summary>
-        ///     0x12 is the generic client command; the sub-command says what it actually is.
-        /// </summary>
-        private static void OnUseSkillOrLegacySpell( PacketReader reader )
+        string text = Encoding.ASCII.GetString( data, start, length );
+
+        int separator = text.IndexOf( ' ' );
+
+        // Guard the separator: upstream substrings on the result of IndexOf unchecked, which
+        // throws on a malformed packet rather than ignoring it.
+        return separator > 0 && int.TryParse( text[..separator], out id );
+    }
+
+    private static void OnSpellCast( PacketReader reader )
+    {
+        int type = reader.ReadInt16();
+
+        if ( type == 0 )
         {
-            int command = reader.ReadByte();
-
-            switch ( command )
-            {
-                case 0x24:
-
-                    if ( ReadIdAsString( reader, out int skillId ) )
-                    {
-                        Engine.LastSkillID = skillId;
-                    }
-
-                    break;
-                case 0x56:
-
-                    // The extended 0xBF 0x1C path below covers modern clients; this is the same
-                    // information from a client old enough to still send the text command.
-                    if ( ReadIdAsString( reader, out int spellId ) )
-                    {
-                        Engine.LastSpellID = spellId;
-                    }
-
-                    break;
-            }
+            reader.Seek( 4, SeekOrigin.Current );
         }
 
-        /// <summary>
-        ///     0x12's payload is ASCII text of the form "<c>id arg</c>", not a binary id.
-        /// </summary>
-        private static bool ReadIdAsString( PacketReader reader, out int id )
+        Engine.LastSpellID = reader.ReadInt16();
+    }
+
+    private static void OnExtendedCommand( PacketReader reader )
+    {
+        int command = reader.ReadInt16();
+
+        PacketHandler handler = GetExtendedHandler( command );
+        handler?.OnReceive( reader );
+    }
+
+    private static void OnMenuResponse( PacketReader reader )
+    {
+        int serial = reader.ReadInt32();
+        int gumpId = reader.ReadInt16();
+        int index = reader.ReadInt16();
+        int id = reader.ReadInt16();
+        int hue = reader.ReadInt16();
+
+        Engine.Menus.Remove( gumpId );
+
+        MenuClickedEvent?.Invoke( serial, gumpId, index, id, hue );
+    }
+
+    private static void OnPlayServer( PacketReader reader )
+    {
+        int index = reader.ReadInt16();
+
+        Engine.CurrentShard = Engine.Shards.FirstOrDefault( i => i.Index == index );
+    }
+
+    private static void OnClientVersion( PacketReader reader )
+    {
+        string version = reader.ReadString();
+
+        Engine.ClientVersion = Version.Parse( version );
+    }
+
+    private static void OnEquipRequest( PacketReader reader )
+    {
+        AbilitiesManager manager = AbilitiesManager.GetInstance();
+        manager.ResendGump( manager.Enabled );
+    }
+
+    private static void OnLiftRequest( PacketReader reader )
+    {
+        Engine.LastActionPacket = DateTime.Now;
+        Engine.Player.Holding = reader.ReadInt32();
+        Engine.Player.HoldingAmount = reader.ReadUInt16();
+        CountersManager.GetInstance().RecountAll?.Invoke();
+    }
+
+    private static void OnDropRequest( PacketReader reader )
+    {
+        Engine.LastActionPacket = DateTime.Now;
+    }
+
+    private static void OnEncodedCommand( PacketReader reader )
+    {
+        _ = reader.ReadInt32();
+
+        int command = reader.ReadInt16();
+
+        switch ( command )
         {
-            id = 0;
-
-            byte[] data = reader.GetData();
-            int start = (int) reader.Index;
-            int length = (int) reader.Size - start;
-
-            if ( length <= 0 )
-            {
-                return false;
-            }
-
-            string text = Encoding.ASCII.GetString( data, start, length );
-
-            int separator = text.IndexOf( ' ' );
-
-            // Guard the separator: upstream substrings on the result of IndexOf unchecked, which
-            // throws on a malformed packet rather than ignoring it.
-            return separator > 0 && int.TryParse( text.Substring( 0, separator ), out id );
-        }
-
-        private static void OnSpellCast( PacketReader reader )
-        {
-            int type = reader.ReadInt16();
-
-            if ( type == 0 )
-            {
-                reader.Seek( 4, SeekOrigin.Current );
-            }
-
-            Engine.LastSpellID = reader.ReadInt16();
-        }
-
-        private static void OnExtendedCommand( PacketReader reader )
-        {
-            int command = reader.ReadInt16();
-
-            PacketHandler handler = GetExtendedHandler( command );
-            handler?.OnReceive( reader );
-        }
-
-        private static void OnMenuResponse( PacketReader reader )
-        {
-            int serial = reader.ReadInt32();
-            int gumpId = reader.ReadInt16();
-            int index = reader.ReadInt16();
-            int id = reader.ReadInt16();
-            int hue = reader.ReadInt16();
-
-            Engine.Menus.Remove( gumpId );
-
-            MenuClickedEvent?.Invoke( serial, gumpId, index, id, hue );
-        }
-
-        private static void OnPlayServer( PacketReader reader )
-        {
-            int index = reader.ReadInt16();
-
-            Engine.CurrentShard = Engine.Shards.FirstOrDefault( i => i.Index == index );
-        }
-
-        private static void OnClientVersion( PacketReader reader )
-        {
-            string version = reader.ReadString();
-
-            Engine.ClientVersion = Version.Parse( version );
-        }
-
-        private static void OnEquipRequest( PacketReader reader )
-        {
-            AbilitiesManager manager = AbilitiesManager.GetInstance();
-            manager.ResendGump( manager.Enabled );
-        }
-
-        private static void OnLiftRequest( PacketReader reader )
-        {
-            Engine.LastActionPacket = DateTime.Now;
-            Engine.Player.Holding = reader.ReadInt32();
-            Engine.Player.HoldingAmount = reader.ReadUInt16();
-            CountersManager.GetInstance().RecountAll?.Invoke();
-        }
-
-        private static void OnDropRequest( PacketReader reader )
-        {
-            Engine.LastActionPacket = DateTime.Now;
-        }
-
-        private static void OnEncodedCommand( PacketReader reader )
-        {
-            int serial = reader.ReadInt32();
-
-            int command = reader.ReadInt16();
-
-            switch ( command )
-            {
-                case 0x19:
+            case 0x19:
                 {
                     reader.ReadByte();
 
@@ -209,139 +209,132 @@ namespace ClassicAssist.UO.Network
 
                     break;
                 }
-            }
+        }
+    }
+
+    private static void OnUseRequest( PacketReader reader )
+    {
+        Engine.LastActionPacket = DateTime.Now;
+
+        int serial = reader.ReadInt32();
+
+        Engine.Player?.LastObjectSerial = serial;
+    }
+
+    private static void OnMoveRequested( PacketReader reader )
+    {
+        Direction direction = (Direction) ( reader.ReadByte() & 0x07 );
+        int sequence = reader.ReadByte();
+
+        Engine.LastMoveRequested = DateTime.Now;
+
+        Engine.SetSequence( sequence, direction );
+    }
+
+    private static void OnGumpButtonPressed( PacketReader reader )
+    {
+        int senderSerial = reader.ReadInt32();
+        uint gumpId = reader.ReadUInt32();
+        int buttonId = reader.ReadInt32();
+        int switchesCount = reader.ReadInt32();
+
+        int[] switches = null;
+
+        for ( int i = 0; i < switchesCount; i++ )
+        {
+            switches ??= new int[switchesCount];
+
+            switches[i] = reader.ReadInt32();
         }
 
-        private static void OnUseRequest( PacketReader reader )
+        int textEntryCount = reader.ReadInt32();
+        List<(int Key, string Value)> textEntries = [];
+
+        for ( int i = 0; i < textEntryCount; i++ )
         {
-            Engine.LastActionPacket = DateTime.Now;
+            int id = reader.ReadInt16();
+            int length = reader.ReadInt16();
 
-            int serial = reader.ReadInt32();
-
-            if ( Engine.Player != null )
-            {
-                Engine.Player.LastObjectSerial = serial;
-            }
+            textEntries.Add( (id, reader.ReadUnicodeStringBE( length )) );
         }
 
-        private static void OnMoveRequested( PacketReader reader )
+        Engine.GumpList.TryRemove( gumpId, out _ );
+
+        if ( Engine.Gumps.GetGump( gumpId, out Gump gump ) )
         {
-            Direction direction = (Direction) ( reader.ReadByte() & 0x07 );
-            int sequence = reader.ReadByte();
-
-            Engine.LastMoveRequested = DateTime.Now;
-
-            Engine.SetSequence( sequence, direction );
+            GumpEvent?.Invoke( gumpId, senderSerial, gump );
         }
 
-        private static void OnGumpButtonPressed( PacketReader reader )
+        Engine.Gumps.Remove( gumpId, buttonId, switches, textEntries );
+    }
+
+    private static void OnTargetSent( PacketReader reader )
+    {
+        if ( Engine.Player == null )
         {
-            int senderSerial = reader.ReadInt32();
-            uint gumpId = reader.ReadUInt32();
-            int buttonId = reader.ReadInt32();
-            int switchesCount = reader.ReadInt32();
-
-            int[] switches = null;
-
-            for ( int i = 0; i < switchesCount; i++ )
-            {
-                if ( switches == null )
-                {
-                    switches = new int[switchesCount];
-                }
-
-                switches[i] = reader.ReadInt32();
-            }
-
-            int textEntryCount = reader.ReadInt32();
-            List<(int Key, string Value)> textEntries = new List<(int Key, string Value)>();
-
-            for ( int i = 0; i < textEntryCount; i++ )
-            {
-                int id = reader.ReadInt16();
-                int length = reader.ReadInt16();
-
-                textEntries.Add( ( id, reader.ReadUnicodeStringBE( length ) ) );
-            }
-
-            Engine.GumpList.TryRemove( gumpId, out _ );
-
-            if ( Engine.Gumps.GetGump( gumpId, out Gump gump ) )
-            {
-                GumpEvent?.Invoke( gumpId, senderSerial, gump );
-            }
-
-            Engine.Gumps.Remove( gumpId, buttonId, switches, textEntries );
+            return;
         }
 
-        private static void OnTargetSent( PacketReader reader )
+        TargetType targetType = (TargetType) reader.ReadByte();
+
+        Engine.Player.LastTargetType = targetType;
+
+        int senderSerial = reader.ReadInt32(); // sender serial
+        int flags = reader.ReadByte();
+        int serial = reader.ReadInt32();
+        int x = reader.ReadInt16();
+        int y = reader.ReadInt16();
+        int z = reader.ReadInt16();
+        int id = reader.ReadInt16();
+
+        if ( targetType == TargetType.Object && flags != 0x03 && serial != 0 )
         {
-            if ( Engine.Player == null )
-            {
-                return;
-            }
-
-            TargetType targetType = (TargetType) reader.ReadByte();
-
+            Engine.Player.LastTargetSerial = serial;
             Engine.Player.LastTargetType = targetType;
 
-            int senderSerial = reader.ReadInt32(); // sender serial
-            int flags = reader.ReadByte();
-            int serial = reader.ReadInt32();
-            int x = reader.ReadInt16();
-            int y = reader.ReadInt16();
-            int z = reader.ReadInt16();
-            int id = reader.ReadInt16();
-
-            if ( targetType == TargetType.Object && flags != 0x03 && serial != 0 )
+            switch ( (TargetFlags) flags )
             {
-                Engine.Player.LastTargetSerial = serial;
-                Engine.Player.LastTargetType = targetType;
-
-                switch ( (TargetFlags) flags )
-                {
-                    case TargetFlags.Harmful when Engine.Mobiles.GetMobile( serial, out Mobile enemyMobile ) &&
-                                                  AliasCommands.GetAlias( "enemy" ) != serial:
-                        TargetManager.GetInstance().SetEnemy( enemyMobile );
-                        break;
-                    case TargetFlags.Beneficial when Engine.Mobiles.GetMobile( serial, out Mobile friendMobile ) &&
-                                                     MobileCommands.InFriendList( serial ) &&
-                                                     AliasCommands.GetAlias( "friend" ) != serial:
-                        TargetManager.GetInstance().SetFriend( friendMobile );
-                        break;
-                }
+                case TargetFlags.Harmful when Engine.Mobiles.GetMobile( serial, out Mobile enemyMobile ) &&
+                                              AliasCommands.GetAlias( "enemy" ) != serial:
+                    TargetManager.GetInstance().SetEnemy( enemyMobile );
+                    break;
+                case TargetFlags.Beneficial when Engine.Mobiles.GetMobile( serial, out Mobile friendMobile ) &&
+                                                 MobileCommands.InFriendList( serial ) &&
+                                                 AliasCommands.GetAlias( "friend" ) != serial:
+                    TargetManager.GetInstance().SetFriend( friendMobile );
+                    break;
             }
-
-            Engine.TargetExists = false;
-
-            TargetSentEvent?.Invoke( targetType, senderSerial, flags, serial, x, y, z, id );
         }
 
-        private static void OnNewClientVersion( PacketReader reader )
-        {
-            reader.ReadInt32();
-            Engine.ClientVersion = new Version( reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
-                reader.ReadInt32() );
-        }
+        Engine.TargetExists = false;
 
-        private static void Register( int packetId, int length, OnPacketReceive onReceive )
-        {
-            _handlers[packetId] = new PacketHandler( packetId, length, onReceive );
-        }
+        TargetSentEvent?.Invoke( targetType, senderSerial, flags, serial, x, y, z, id );
+    }
 
-        private static void RegisterExtended( int packetId, int length, OnPacketReceive onReceive )
-        {
-            _extendedHandlers[packetId] = new PacketHandler( packetId, length, onReceive );
-        }
+    private static void OnNewClientVersion( PacketReader reader )
+    {
+        reader.ReadInt32();
+        Engine.ClientVersion = new Version( reader.ReadInt32(), reader.ReadInt32(), reader.ReadInt32(),
+            reader.ReadInt32() );
+    }
 
-        internal static PacketHandler GetHandler( int packetId )
-        {
-            return _handlers[packetId];
-        }
+    private static void Register( int packetId, int length, OnPacketReceive onReceive )
+    {
+        _handlers[packetId] = new PacketHandler( packetId, length, onReceive );
+    }
 
-        private static PacketHandler GetExtendedHandler( int packetId )
-        {
-            return _extendedHandlers[packetId];
-        }
+    private static void RegisterExtended( int packetId, int length, OnPacketReceive onReceive )
+    {
+        _extendedHandlers[packetId] = new PacketHandler( packetId, length, onReceive );
+    }
+
+    internal static PacketHandler GetHandler( int packetId )
+    {
+        return _handlers[packetId];
+    }
+
+    private static PacketHandler GetExtendedHandler( int packetId )
+    {
+        return _extendedHandlers[packetId];
     }
 }

@@ -24,70 +24,69 @@ using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class MenuCommands
 {
-    public static class MenuCommands
+    [CommandsDisplay( Category = nameof( Strings.Menus ),
+        Parameters = new[] { nameof( ParameterType.ItemID ), nameof( ParameterType.Timeout ) } )]
+    public static bool WaitForMenu( int gumpId = 0, int timeout = 30000 )
     {
-        [CommandsDisplay( Category = nameof( Strings.Menus ),
-            Parameters = new[] { nameof( ParameterType.ItemID ), nameof( ParameterType.Timeout ) } )]
-        public static bool WaitForMenu( int gumpId = 0, int timeout = 30000 )
+        bool result = UOC.WaitForMenu( gumpId, timeout );
+
+        if ( !result )
         {
-            bool result = UOC.WaitForMenu( gumpId, timeout );
-
-            if ( !result )
-            {
-                UOC.SystemMessage( Strings.Timeout___ );
-            }
-
-            return result;
+            UOC.SystemMessage( Strings.Timeout___ );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Menus ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.GumpButtonIndex ),
-                nameof( ParameterType.ItemID ), nameof( ParameterType.Hue )
-            } )]
-        public static void ReplyMenu( int gumpId, int buttonId, int itemId = 0, int hue = 0 )
+        return result;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Menus ),
+        Parameters = new[]
         {
-            Engine.SendPacketToServer( new MenuButtonClick( gumpId, -1, buttonId, itemId, hue ) );
-            Engine.SendPacketToClient( new CloseClientGump( (uint) gumpId ) );
+            nameof( ParameterType.ItemID ), nameof( ParameterType.GumpButtonIndex ),
+            nameof( ParameterType.ItemID ), nameof( ParameterType.Hue )
+        } )]
+    public static void ReplyMenu( int gumpId, int buttonId, int itemId = 0, int hue = 0 )
+    {
+        Engine.SendPacketToServer( new MenuButtonClick( gumpId, -1, buttonId, itemId, hue ) );
+        Engine.SendPacketToClient( new CloseClientGump( (uint) gumpId ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Menu ), Parameters = new[] { nameof( ParameterType.ItemID ) } )]
+    public static void CloseMenu( int gumpId )
+    {
+        if ( Engine.Menus.GetMenu( gumpId, out Menu menu ) )
+        {
+            Engine.SendPacketToServer( new MenuButtonClick( gumpId, menu.Serial, 0 ) );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Menu ), Parameters = new[] { nameof( ParameterType.ItemID ) } )]
-        public static void CloseMenu( int gumpId )
-        {
-            if ( Engine.Menus.GetMenu( gumpId, out Menu menu ) )
-            {
-                Engine.SendPacketToServer( new MenuButtonClick( gumpId, menu.Serial, 0 ) );
-            }
+        Engine.SendPacketToClient( new CloseClientGump( (uint) gumpId ) );
+    }
 
-            Engine.SendPacketToClient( new CloseClientGump( (uint) gumpId ) );
+    [CommandsDisplay( Category = nameof( Strings.Menus ),
+        Parameters = new[] { nameof( ParameterType.ItemID ), nameof( ParameterType.String ) } )]
+    public static bool InMenu( int gumpId, string text )
+    {
+        text = text.ToLower();
+
+        if ( !Engine.Menus.GetMenu( gumpId, out Menu menu ) )
+        {
+            return false;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Menus ),
-            Parameters = new[] { nameof( ParameterType.ItemID ), nameof( ParameterType.String ) } )]
-        public static bool InMenu( int gumpId, string text )
+        if ( menu.Title.ToLower().Contains( text ) )
         {
-            text = text.ToLower();
-
-            if ( !Engine.Menus.GetMenu( gumpId, out Menu menu ) )
-            {
-                return false;
-            }
-
-            if ( menu.Title.ToLower().Contains( text ) )
-            {
-                return true;
-            }
-
-            return menu.Entries.Any( l => l.Title.ToLower().Contains( text ) );
+            return true;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Menus ) )]
-        public static bool MenuExists( int gumpId )
-        {
-            return Engine.Menus.GetMenu( gumpId, out _ );
-        }
+        return menu.Entries.Any( l => l.Title.ToLower().Contains( text ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Menus ) )]
+    public static bool MenuExists( int gumpId )
+    {
+        return Engine.Menus.GetMenu( gumpId, out _ );
     }
 }

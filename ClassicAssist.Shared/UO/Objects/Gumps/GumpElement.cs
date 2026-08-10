@@ -17,92 +17,91 @@
 
 using System;
 
-namespace ClassicAssist.UO.Objects.Gumps
+namespace ClassicAssist.UO.Objects.Gumps;
+
+public class GumpElement
 {
-    public class GumpElement
+    public int ActiveID { get; set; }
+    public string Args { get; set; }
+    public bool Background { get; set; }
+    public int ButtonType { get; set; }
+    public int Cliloc { get; set; }
+    public int ElementID { get; set; }
+    public int Group { get; set; }
+    public int Height { get; set; }
+    public int Hue { get; set; }
+    public int InactiveID { get; set; }
+    public bool InitialState { get; set; }
+    public int ItemID { get; set; }
+    public int PageNumber { get; set; }
+    public int Param { get; set; }
+
+    public Gump ParentGump
     {
-        private Gump _parentGump;
-        public int ActiveID { get; set; }
-        public string Args { get; set; }
-        public bool Background { get; set; }
-        public int ButtonType { get; set; }
-        public int Cliloc { get; set; }
-        public int ElementID { get; set; }
-        public int Group { get; set; }
-        public int Height { get; set; }
-        public int Hue { get; set; }
-        public int InactiveID { get; set; }
-        public bool InitialState { get; set; }
-        public int ItemID { get; set; }
-        public int PageNumber { get; set; }
-        public int Param { get; set; }
+        get => field ?? ParentPage?.ParentGump;
+        set;
+    }
 
-        public Gump ParentGump
+    public GumpPage ParentPage { get; set; }
+    public bool ScrollBar { get; set; }
+    public int Serial { get; set; }
+    public int Size { get; set; }
+    public string Text { get; set; }
+    public int Tooltip { get; set; }
+    public ElementType Type { get; set; }
+    public int Width { get; set; }
+    public int X { get; set; }
+    public int Y { get; set; }
+
+    /// <summary>
+    ///     Get nearest GumpElement.
+    /// </summary>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( out GumpElement element )
+    {
+        if ( ParentPage != null )
         {
-            get => _parentGump ?? ParentPage?.ParentGump;
-            set => _parentGump = value;
+            return ParentPage.GetNearestElement( this, out element );
         }
 
-        public GumpPage ParentPage { get; set; }
-        public bool ScrollBar { get; set; }
-        public int Serial { get; set; }
-        public int Size { get; set; }
-        public string Text { get; set; }
-        public int Tooltip { get; set; }
-        public ElementType Type { get; set; }
-        public int Width { get; set; }
-        public int X { get; set; }
-        public int Y { get; set; }
+        element = null;
+        return false;
+    }
 
-        /// <summary>
-        ///     Get nearest GumpElement.
-        /// </summary>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( out GumpElement element )
+    /// <summary>
+    ///     Get nearest GumpElement, but only if it's ElementType is contained in the include list.
+    /// </summary>
+    /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
+    /// <param name="element">GumpElement (out).</param>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( ElementType[] includeTypes, out GumpElement element )
+    {
+        if ( ParentPage != null )
         {
-            if ( ParentPage != null )
-            {
-                return ParentPage.GetNearestElement( this, out element );
-            }
-
-            element = null;
-            return false;
+            return ParentPage.GetNearestElement( this, includeTypes, out element );
         }
 
-        /// <summary>
-        ///     Get nearest GumpElement, but only if it's ElementType is contained in the include list.
-        /// </summary>
-        /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
-        /// <param name="element">GumpElement (out).</param>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( ElementType[] includeTypes, out GumpElement element )
-        {
-            if ( ParentPage != null )
-            {
-                return ParentPage.GetNearestElement( this, includeTypes, out element );
-            }
+        element = null;
+        return false;
+    }
 
-            element = null;
-            return false;
+    public void Click()
+    {
+        Gump g = ParentGump;
+
+        if ( g != null && g.ID != 461 && Type == ElementType.button )
+        {
+            //TODO
+            //Macros.MacroEx.CloseClientGump( g.Client, g.ID );
+            //Macros.MacroEx.GumpButtonClick( g.Client, g.ID, g.Serial, this.ElementID );
         }
+    }
 
-        public void Click()
+    internal void AppendTo( Gump.IGumpWriter disp )
+    {
+        switch ( Type )
         {
-            Gump g = ParentGump;
-
-            if ( g != null && g.ID != 461 && Type == ElementType.button )
-            {
-                //TODO
-                //Macros.MacroEx.CloseClientGump( g.Client, g.ID );
-                //Macros.MacroEx.GumpButtonClick( g.Client, g.ID, g.Serial, this.ElementID );
-            }
-        }
-
-        internal void AppendTo( Gump.IGumpWriter disp )
-        {
-            switch ( Type )
-            {
-                case ElementType.textentrylimited:
+            case ElementType.textentrylimited:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "textentrylimited" ) );
                     disp.AppendLayout( X );
@@ -116,7 +115,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.TextEntries++;
                     break;
                 }
-                case ElementType.textentry:
+            case ElementType.textentry:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "textentry" ) );
                     disp.AppendLayout( X );
@@ -129,7 +128,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.TextEntries++;
                     break;
                 }
-                case ElementType.radio:
+            case ElementType.radio:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "radio" ) );
                     disp.AppendLayout( X );
@@ -141,7 +140,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.Switches++;
                     break;
                 }
-                case ElementType.croppedtext:
+            case ElementType.croppedtext:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "croppedtext" ) );
                     disp.AppendLayout( X );
@@ -152,7 +151,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ParentGump.Intern( Text ) );
                     break;
                 }
-                case ElementType.buttontileart:
+            case ElementType.buttontileart:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "buttontileart" ) );
                     disp.AppendLayout( X );
@@ -175,8 +174,8 @@ namespace ClassicAssist.UO.Objects.Gumps
 
                     break;
                 }
-                case ElementType.tilepic:
-                case ElementType.tilepichue:
+            case ElementType.tilepic:
+            case ElementType.tilepichue:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( Hue == 0 ? "tilepic" : "tilepichue" ) );
                     disp.AppendLayout( X );
@@ -190,13 +189,13 @@ namespace ClassicAssist.UO.Objects.Gumps
 
                     break;
                 }
-                case ElementType.itemproperty:
+            case ElementType.itemproperty:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "itemproperty" ) );
                     disp.AppendLayout( Serial );
                     break;
                 }
-                case ElementType.gumppictiled:
+            case ElementType.gumppictiled:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "gumppictiled" ) );
                     disp.AppendLayout( X );
@@ -206,7 +205,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ElementID );
                     break;
                 }
-                case ElementType.gumppic:
+            case ElementType.gumppic:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "gumppic" ) );
                     disp.AppendLayout( X );
@@ -221,7 +220,7 @@ namespace ClassicAssist.UO.Objects.Gumps
 
                     break;
                 }
-                case ElementType.xmfhtmlgump:
+            case ElementType.xmfhtmlgump:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "xmfhtmlgump" ) );
                     disp.AppendLayout( X );
@@ -233,7 +232,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ScrollBar );
                     break;
                 }
-                case ElementType.xmfhtmlgumpcolor:
+            case ElementType.xmfhtmlgumpcolor:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "xmfhtmlgumpcolor" ) );
                     disp.AppendLayout( X );
@@ -246,7 +245,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( Hue );
                     break;
                 }
-                case ElementType.xmfhtmltok:
+            case ElementType.xmfhtmltok:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "xmfhtmltok" ) );
                     disp.AppendLayout( X );
@@ -260,7 +259,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( Args );
                     break;
                 }
-                case ElementType.htmlgump:
+            case ElementType.htmlgump:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "htmlgump" ) );
                     disp.AppendLayout( X );
@@ -272,19 +271,19 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ScrollBar );
                     break;
                 }
-                case ElementType.tooltip:
+            case ElementType.tooltip:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "tooltip" ) );
                     disp.AppendLayout( Cliloc );
                     break;
                 }
-                case ElementType.group:
+            case ElementType.group:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "group" ) );
                     disp.AppendLayout( Group );
                     break;
                 }
-                case ElementType.resizepic:
+            case ElementType.resizepic:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "resizepic" ) );
                     disp.AppendLayout( X );
@@ -294,7 +293,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( Height );
                     break;
                 }
-                case ElementType.checkertrans:
+            case ElementType.checkertrans:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "checkertrans" ) );
                     disp.AppendLayout( X );
@@ -303,13 +302,13 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( Height );
                     break;
                 }
-                case ElementType.page:
+            case ElementType.page:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "page" ) );
                     disp.AppendLayout( PageNumber );
                     break;
                 }
-                case ElementType.button:
+            case ElementType.button:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "button" ) );
                     disp.AppendLayout( X );
@@ -321,7 +320,7 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ElementID );
                     break;
                 }
-                case ElementType.text:
+            case ElementType.text:
                 {
                     disp.AppendLayout( Gump.StringToBuffer( "text" ) );
                     disp.AppendLayout( X );
@@ -330,17 +329,16 @@ namespace ClassicAssist.UO.Objects.Gumps
                     disp.AppendLayout( ParentGump.Intern( Text ) );
                     break;
                 }
-                case ElementType.invalid:
-                    break;
-                case ElementType.checkbox:
-                    break;
-                case ElementType.kr_xmfhtmlgump:
-                    break;
-                case ElementType.mastergump:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            case ElementType.invalid:
+                break;
+            case ElementType.checkbox:
+                break;
+            case ElementType.kr_xmfhtmlgump:
+                break;
+            case ElementType.mastergump:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
         }
     }
 }

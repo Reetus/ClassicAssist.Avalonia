@@ -26,170 +26,167 @@ using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     Highlights the currently-paused line in the macro editor (translucent yellow) and scrolls it
+///     into view. Ported from the WPF tree's <c>AvalonEditPausedLineBehaviour</c>.
+/// </summary>
+public class AvalonEditPausedLineBehaviour : Behavior<TextEditor>
 {
-    /// <summary>
-    ///     Highlights the currently-paused line in the macro editor (translucent yellow) and scrolls it
-    ///     into view. Ported from the WPF tree's <c>AvalonEditPausedLineBehaviour</c>.
-    /// </summary>
-    public class AvalonEditPausedLineBehaviour : Behavior<TextEditor>
+    public static readonly StyledProperty<bool> IsPausedProperty =
+        AvaloniaProperty.Register<AvalonEditPausedLineBehaviour, bool>( nameof( IsPaused ) );
+
+    public static readonly StyledProperty<int> PausedLineNumberProperty =
+        AvaloniaProperty.Register<AvalonEditPausedLineBehaviour, int>( nameof( PausedLineNumber ) );
+
+    private TextEditor _textEditor;
+
+    public bool IsPaused
     {
-        public static readonly StyledProperty<bool> IsPausedProperty =
-            AvaloniaProperty.Register<AvalonEditPausedLineBehaviour, bool>( nameof( IsPaused ) );
+        get => GetValue( IsPausedProperty );
+        set => SetValue( IsPausedProperty, value );
+    }
 
-        public static readonly StyledProperty<int> PausedLineNumberProperty =
-            AvaloniaProperty.Register<AvalonEditPausedLineBehaviour, int>( nameof( PausedLineNumber ) );
+    public int PausedLineNumber
+    {
+        get => GetValue( PausedLineNumberProperty );
+        set => SetValue( PausedLineNumberProperty, value );
+    }
 
-        private TextEditor _textEditor;
+    protected override void OnAttached()
+    {
+        base.OnAttached();
 
-        public bool IsPaused
+        _textEditor = AssociatedObject;
+    }
+
+    protected override void OnPropertyChanged( AvaloniaPropertyChangedEventArgs change )
+    {
+        base.OnPropertyChanged( change );
+
+        if ( change.Property != IsPausedProperty && change.Property != PausedLineNumberProperty )
         {
-            get => GetValue( IsPausedProperty );
-            set => SetValue( IsPausedProperty, value );
+            return;
         }
 
-        public int PausedLineNumber
+        if ( _textEditor == null )
         {
-            get => GetValue( PausedLineNumberProperty );
-            set => SetValue( PausedLineNumberProperty, value );
+            return;
         }
 
-        protected override void OnAttached()
+        if ( IsPaused )
         {
-            base.OnAttached();
-
-            _textEditor = AssociatedObject;
+            AddHighlighter();
         }
-
-        protected override void OnPropertyChanged( AvaloniaPropertyChangedEventArgs change )
+        else
         {
-            base.OnPropertyChanged( change );
-
-            if ( change.Property != IsPausedProperty && change.Property != PausedLineNumberProperty )
-            {
-                return;
-            }
-
-            if ( _textEditor == null )
-            {
-                return;
-            }
-
-            if ( IsPaused )
-            {
-                AddHighlighter();
-            }
-            else
-            {
-                RemoveHighlighter();
-            }
-        }
-
-        private void RemoveHighlighter()
-        {
-            PausedLineHighlighter existing =
-                _textEditor.TextArea.TextView.BackgroundRenderers.OfType<PausedLineHighlighter>().FirstOrDefault();
-
-            if ( existing == null )
-            {
-                return;
-            }
-
-            _textEditor.TextArea.TextView.BackgroundRenderers.Remove( existing );
-        }
-
-        private void AddHighlighter()
-        {
-            PausedLineHighlighter highlighter = GetOrCreateHighlighter( _textEditor );
-            highlighter.IsPaused = true;
-            highlighter.PausedLine = PausedLineNumber;
-        }
-
-        private static PausedLineHighlighter GetOrCreateHighlighter( TextEditor editor )
-        {
-            PausedLineHighlighter existing =
-                editor.TextArea.TextView.BackgroundRenderers.OfType<PausedLineHighlighter>().FirstOrDefault();
-
-            if ( existing != null )
-            {
-                return existing;
-            }
-
-            PausedLineHighlighter h = new PausedLineHighlighter( editor );
-            editor.TextArea.TextView.BackgroundRenderers.Add( h );
-            return h;
+            RemoveHighlighter();
         }
     }
 
-    internal class PausedLineHighlighter : IBackgroundRenderer
+    private void RemoveHighlighter()
     {
-        private readonly TextEditor _editor;
-        private bool _isPaused;
-        private int _pausedLine;
+        PausedLineHighlighter existing =
+            _textEditor.TextArea.TextView.BackgroundRenderers.OfType<PausedLineHighlighter>().FirstOrDefault();
 
-        public PausedLineHighlighter( TextEditor editor )
+        if ( existing == null )
         {
-            _editor = editor;
+            return;
         }
 
-        public bool IsPaused
-        {
-            get => _isPaused;
-            set
-            {
-                if ( _isPaused == value )
-                {
-                    return;
-                }
+        _textEditor.TextArea.TextView.BackgroundRenderers.Remove( existing );
+    }
 
-                _isPaused = value;
-                _editor.TextArea.TextView.InvalidateLayer( KnownLayer.Background );
-                ScrollToLineIfPaused();
-            }
+    private void AddHighlighter()
+    {
+        PausedLineHighlighter highlighter = GetOrCreateHighlighter( _textEditor );
+        highlighter.IsPaused = true;
+        highlighter.PausedLine = PausedLineNumber;
+    }
+
+    private static PausedLineHighlighter GetOrCreateHighlighter( TextEditor editor )
+    {
+        PausedLineHighlighter existing =
+            editor.TextArea.TextView.BackgroundRenderers.OfType<PausedLineHighlighter>().FirstOrDefault();
+
+        if ( existing != null )
+        {
+            return existing;
         }
 
-        public int PausedLine
+        PausedLineHighlighter h = new( editor );
+        editor.TextArea.TextView.BackgroundRenderers.Add( h );
+        return h;
+    }
+}
+
+internal class PausedLineHighlighter : IBackgroundRenderer
+{
+    private readonly TextEditor _editor;
+
+    public PausedLineHighlighter( TextEditor editor )
+    {
+        _editor = editor;
+    }
+
+    public bool IsPaused
+    {
+        get;
+        set
         {
-            get => _pausedLine;
-            set
-            {
-                if ( _pausedLine == value )
-                {
-                    return;
-                }
-
-                _pausedLine = value;
-                _editor.TextArea.TextView.InvalidateLayer( KnownLayer.Background );
-                ScrollToLineIfPaused();
-            }
-        }
-
-        public KnownLayer Layer => KnownLayer.Background;
-
-        public void Draw( TextView textView, DrawingContext drawingContext )
-        {
-            if ( !_isPaused || _pausedLine <= 0 || _pausedLine > _editor.Document.LineCount )
+            if ( field == value )
             {
                 return;
             }
 
-            textView.EnsureVisualLines();
-            DocumentLine line = _editor.Document.GetLineByNumber( _pausedLine );
-            IEnumerable<Rect> rects = BackgroundGeometryBuilder.GetRectsForSegment( textView, line );
+            field = value;
+            _editor.TextArea.TextView.InvalidateLayer( KnownLayer.Background );
+            ScrollToLineIfPaused();
+        }
+    }
 
-            foreach ( Rect r in rects )
+    public int PausedLine
+    {
+        get;
+        set
+        {
+            if ( field == value )
             {
-                drawingContext.DrawRectangle( new SolidColorBrush( Color.FromArgb( 80, 255, 255, 0 ) ),
-                    null, new Rect( r.Position, new Size( textView.Bounds.Width, r.Height ) ) );
+                return;
             }
+
+            field = value;
+            _editor.TextArea.TextView.InvalidateLayer( KnownLayer.Background );
+            ScrollToLineIfPaused();
+        }
+    }
+
+    public KnownLayer Layer => KnownLayer.Background;
+
+    public void Draw( TextView textView, DrawingContext drawingContext )
+    {
+        if ( !IsPaused || PausedLine <= 0 || PausedLine > _editor.Document.LineCount )
+        {
+            return;
         }
 
-        private void ScrollToLineIfPaused()
+        textView.EnsureVisualLines();
+        DocumentLine line = _editor.Document.GetLineByNumber( PausedLine );
+        IEnumerable<Rect> rects = BackgroundGeometryBuilder.GetRectsForSegment( textView, line );
+
+        foreach ( Rect r in rects )
         {
-            if ( _isPaused && _pausedLine > 0 && _pausedLine <= _editor.Document.LineCount )
-            {
-                _editor.ScrollTo( _pausedLine, 0 );
-            }
+            drawingContext.DrawRectangle( new SolidColorBrush( Color.FromArgb( 80, 255, 255, 0 ) ),
+                null, new Rect( r.Position, new Size( textView.Bounds.Width, r.Height ) ) );
+        }
+    }
+
+    private void ScrollToLineIfPaused()
+    {
+        if ( IsPaused && PausedLine > 0 && PausedLine <= _editor.Document.LineCount )
+        {
+            _editor.ScrollTo( PausedLine, 0 );
         }
     }
 }

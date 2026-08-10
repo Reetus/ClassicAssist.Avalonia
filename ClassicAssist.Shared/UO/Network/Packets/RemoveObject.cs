@@ -19,15 +19,14 @@
 
 using ClassicAssist.UO.Data;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class RemoveObject : BasePacket
 {
-    public class RemoveObject : BasePacket
+    public RemoveObject( int serial )
     {
-        public RemoveObject( int serial )
-        {
-            _writer = new PacketWriter( 5 );
-            _writer.Write( (byte) 0x1D );
-            _writer.Write( serial );
-        }
+        _writer = new PacketWriter( 5 );
+        _writer.Write( (byte) 0x1D );
+        _writer.Write( serial );
     }
 }

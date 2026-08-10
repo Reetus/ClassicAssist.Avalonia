@@ -24,92 +24,88 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 using Commands = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Avalonia.Controls
+namespace ClassicAssist.Avalonia.Controls;
+
+/// <summary>
+///     A graphic-ID-valued <see cref="EditTextBlock" />: shows the hex ID plus a resolved tile name (or
+///     "Any" for -1), and lets it be set either by typing the hex/decimal ID directly or targeting an
+///     item/tile. Ported from WPF's
+///     <c>UI/Views/ECV/Settings/Controls/EditTextBlocks/GraphicEditTextBlock</c>, minus the WPF
+///     version's cross-wiring to sibling Cliloc/Hue columns - each field here is set independently.
+/// </summary>
+public partial class GraphicEditTextBlock : UserControl
 {
-    /// <summary>
-    ///     A graphic-ID-valued <see cref="EditTextBlock" />: shows the hex ID plus a resolved tile name (or
-    ///     "Any" for -1), and lets it be set either by typing the hex/decimal ID directly or targeting an
-    ///     item/tile. Ported from WPF's
-    ///     <c>UI/Views/ECV/Settings/Controls/EditTextBlocks/GraphicEditTextBlock</c>, minus the WPF
-    ///     version's cross-wiring to sibling Cliloc/Hue columns - each field here is set independently.
-    /// </summary>
-    public partial class GraphicEditTextBlock : UserControl
+    public static readonly DirectProperty<GraphicEditTextBlock, int> IDProperty =
+        AvaloniaProperty.RegisterDirect<GraphicEditTextBlock, int>( nameof( ID ), o => o.ID,
+            ( o, v ) => o.ID = v, -1, BindingMode.TwoWay );
+
+    public static readonly DirectProperty<GraphicEditTextBlock, string> LabelProperty =
+        AvaloniaProperty.RegisterDirect<GraphicEditTextBlock, string>( nameof( Label ), o => o.Label );
+
+    public GraphicEditTextBlock()
     {
-        public static readonly DirectProperty<GraphicEditTextBlock, int> IDProperty =
-            AvaloniaProperty.RegisterDirect<GraphicEditTextBlock, int>( nameof( ID ), o => o.ID,
-                ( o, v ) => o.ID = v, -1, BindingMode.TwoWay );
+        InitializeComponent();
 
-        public static readonly DirectProperty<GraphicEditTextBlock, string> LabelProperty =
-            AvaloniaProperty.RegisterDirect<GraphicEditTextBlock, string>( nameof( Label ), o => o.Label );
+        UpdateLabel();
+    }
 
-        private int _id = -1;
-        private string _label;
-
-        public GraphicEditTextBlock()
+    public int ID
+    {
+        get;
+        set
         {
-            InitializeComponent();
-
+            SetAndRaise( IDProperty, ref field, value );
             UpdateLabel();
         }
+    } = -1;
 
-        public int ID
+    public string Label
+    {
+        get;
+        private set => SetAndRaise( LabelProperty, ref field, value );
+    }
+
+    private void UpdateLabel()
+    {
+        if ( ID == -1 )
         {
-            get => _id;
-            set
-            {
-                SetAndRaise( IDProperty, ref _id, value );
-                UpdateLabel();
-            }
+            Label = "Any";
+
+            return;
         }
 
-        public string Label
+        string name = TileData.GetStaticTile( ID ).Name;
+
+        Label = string.IsNullOrEmpty( name ) ? $"0x{ID:x8}" : $"0x{ID:x8} ({name})";
+    }
+
+    private async void OnTargetClick( object sender, RoutedEventArgs e )
+    {
+        (TargetType _, TargetFlags _, int serial, int _, int _, int _, int itemId) =
+            await Commands.GetTargetInfoAsync( Strings.Target_object___ );
+
+        if ( serial <= 0 )
         {
-            get => _label;
-            private set => SetAndRaise( LabelProperty, ref _label, value );
+            return;
         }
 
-        private void UpdateLabel()
+        if ( itemId != 0 )
         {
-            if ( _id == -1 )
-            {
-                Label = "Any";
+            ID = itemId;
 
-                return;
-            }
-
-            string name = TileData.GetStaticTile( _id ).Name;
-
-            Label = string.IsNullOrEmpty( name ) ? $"0x{_id:x8}" : $"0x{_id:x8} ({name})";
+            return;
         }
 
-        private async void OnTargetClick( object sender, RoutedEventArgs e )
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item != null )
         {
-            ( TargetType _, TargetFlags _, int serial, int _, int _, int _, int itemId ) =
-                await Commands.GetTargetInfoAsync( Strings.Target_object___ );
-
-            if ( serial <= 0 )
-            {
-                return;
-            }
-
-            if ( itemId != 0 )
-            {
-                ID = itemId;
-
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item != null )
-            {
-                ID = item.ID;
-            }
+            ID = item.ID;
         }
+    }
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

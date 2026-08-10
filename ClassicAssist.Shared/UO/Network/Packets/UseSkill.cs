@@ -23,54 +23,53 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 using static System.Text.Encoding;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class UseSkill : BasePacket, IMacroCommandParser
 {
-    public class UseSkill : BasePacket, IMacroCommandParser
+    public UseSkill()
     {
-        public UseSkill()
+    }
+
+    public UseSkill( int index )
+    {
+        string args = $"{index} 0";
+
+        _writer = new PacketWriter( 5 + args.Length );
+        _writer.Write( (byte) 0x12 );
+        _writer.Write( (short) ( 5 + args.Length ) );
+        _writer.Write( (byte) 0x24 );
+        _writer.WriteAsciiFixed( args, args.Length );
+        _writer.Write( (byte) 0 );
+
+        Engine.LastSkillID = index;
+        Engine.LastSkillTime = DateTime.Now;
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( packet[0] != 0x12 || packet[3] != 0x24 || direction != PacketDirection.Outgoing )
         {
+            return null;
         }
 
-        public UseSkill( int index )
+        int len = packet.Length - 4;
+        byte[] skillPart = new byte[len];
+        Buffer.BlockCopy( packet, 4, skillPart, 0, len );
+        string skill = ASCII.GetString( skillPart );
+
+        if ( !int.TryParse( skill[..skill.IndexOf( ' ' )], out int id ) )
         {
-            string args = $"{index} 0";
-
-            _writer = new PacketWriter( 5 + args.Length );
-            _writer.Write( (byte) 0x12 );
-            _writer.Write( (short) ( 5 + args.Length ) );
-            _writer.Write( (byte) 0x24 );
-            _writer.WriteAsciiFixed( args, args.Length );
-            _writer.Write( (byte) 0 );
-
-            Engine.LastSkillID = index;
-            Engine.LastSkillTime = DateTime.Now;
+            return null;
         }
 
-        public string Parse( byte[] packet, int length, PacketDirection direction )
+        if ( id == 0 )
         {
-            if ( packet[0] != 0x12 || packet[3] != 0x24 || direction != PacketDirection.Outgoing )
-            {
-                return null;
-            }
-
-            int len = packet.Length - 4;
-            byte[] skillPart = new byte[len];
-            Buffer.BlockCopy( packet, 4, skillPart, 0, len );
-            string skill = ASCII.GetString( skillPart );
-
-            if ( !int.TryParse( skill.Substring( 0, skill.IndexOf( ' ' ) ), out int id ) )
-            {
-                return null;
-            }
-
-            if ( id == 0 )
-            {
-                return "UseLastSkill()\r\n";
-            }
-
-            string skillName = Skills.GetSkillName( id );
-
-            return string.IsNullOrEmpty( skillName ) ? null : $"UseSkill(\"{skillName}\")\r\n";
+            return "UseLastSkill()\r\n";
         }
+
+        string skillName = Skills.GetSkillName( id );
+
+        return string.IsNullOrEmpty( skillName ) ? null : $"UseSkill(\"{skillName}\")\r\n";
     }
 }

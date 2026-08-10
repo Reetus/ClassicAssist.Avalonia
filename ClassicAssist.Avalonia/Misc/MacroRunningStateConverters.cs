@@ -23,37 +23,36 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     Bold while a macro is running in the foreground. A background run gets
+///     <see cref="FontStyle.Italic" /> instead (see <see cref="MacroRunningToFontStyleConverter" />) -
+///     the two flags together pick one of three mutually exclusive display states, which a single
+///     <c>IValueConverter</c> bound to either flag alone can't express.
+/// </summary>
+public class MacroRunningToFontWeightConverter : IMultiValueConverter
 {
-    /// <summary>
-    ///     Bold while a macro is running in the foreground. A background run gets
-    ///     <see cref="FontStyle.Italic" /> instead (see <see cref="MacroRunningToFontStyleConverter" />) -
-    ///     the two flags together pick one of three mutually exclusive display states, which a single
-    ///     <c>IValueConverter</c> bound to either flag alone can't express.
-    /// </summary>
-    public class MacroRunningToFontWeightConverter : IMultiValueConverter
+    public object Convert( IList<object> values, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( IList<object> values, Type targetType, object parameter, CultureInfo culture )
-        {
-            bool isRunning = values.Count > 0 && values[0] is true;
-            bool isBackground = values.Count > 1 && values[1] is true;
+        bool isRunning = values.Count > 0 && values[0] is true;
+        bool isBackground = values.Count > 1 && values[1] is true;
 
-            return isRunning && !isBackground ? FontWeight.Bold : FontWeight.Normal;
-        }
+        return isRunning && !isBackground ? FontWeight.Bold : FontWeight.Normal;
     }
+}
 
-    /// <summary>
-    ///     Italic while a macro is running with "Run in background" enabled - see
-    ///     <see cref="MacroRunningToFontWeightConverter" /> for the foreground/bold counterpart.
-    /// </summary>
-    public class MacroRunningToFontStyleConverter : IMultiValueConverter
+/// <summary>
+///     Italic while a macro is running with "Run in background" enabled - see
+///     <see cref="MacroRunningToFontWeightConverter" /> for the foreground/bold counterpart.
+/// </summary>
+public class MacroRunningToFontStyleConverter : IMultiValueConverter
+{
+    public object Convert( IList<object> values, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( IList<object> values, Type targetType, object parameter, CultureInfo culture )
-        {
-            bool isRunning = values.Count > 0 && values[0] is true;
-            bool isBackground = values.Count > 1 && values[1] is true;
+        bool isRunning = values.Count > 0 && values[0] is true;
+        bool isBackground = values.Count > 1 && values[1] is true;
 
-            return isRunning && isBackground ? FontStyle.Italic : FontStyle.Normal;
-        }
+        return isRunning && isBackground ? FontStyle.Italic : FontStyle.Normal;
     }
 }

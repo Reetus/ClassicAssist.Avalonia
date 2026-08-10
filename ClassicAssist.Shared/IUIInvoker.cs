@@ -20,17 +20,16 @@
 using System;
 using System.Threading.Tasks;
 
-namespace ClassicAssist.Shared
-{
-    public interface IUIInvoker
-    {
-        Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
-            object[] dataContextParam = null );
-        Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default ) where T: class;
+namespace ClassicAssist.Shared;
 
-        Task<int> GetHueAsync();
-        Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions );
-        void SetClipboardText( string text );
-        string GetClipboardText();
-    }
+public interface IUIInvoker
+{
+    Task Invoke( string typeName, object[] ctorParam = null, Type dataContextType = null,
+        object[] dataContextParam = null );
+    Task InvokeDialog<T>( string typeName, object[] ctorParam = null, T dataContext = default ) where T : class;
+
+    Task<int> GetHueAsync();
+    Task<string> ShowOpenFileDialogAsync( string title, string filterName, string[] extensions );
+    void SetClipboardText( string text );
+    string GetClipboardText();
 }

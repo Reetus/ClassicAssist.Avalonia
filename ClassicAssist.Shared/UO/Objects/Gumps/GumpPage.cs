@@ -17,161 +17,160 @@
 
 using System.Linq;
 
-namespace ClassicAssist.UO.Objects.Gumps
+namespace ClassicAssist.UO.Objects.Gumps;
+
+public sealed class GumpPage
 {
-    public sealed class GumpPage
+    public GumpElement[] GumpElements { get; internal set; }
+    public int Page { get; internal set; }
+    public Gump ParentGump { get; internal set; }
+
+    /// <summary>
+    ///     Get array of GumpElements which match the specified ElementType.
+    /// </summary>
+    public GumpElement[] GetElementsByType( ElementType type )
     {
-        public GumpElement[] GumpElements { get; internal set; }
-        public int Page { get; internal set; }
-        public Gump ParentGump { get; internal set; }
+        return [.. GumpElements.Where( ge => ge.Type == type )];
+    }
 
-        /// <summary>
-        ///     Get array of GumpElements which match the specified ElementType.
-        /// </summary>
-        public GumpElement[] GetElementsByType( ElementType type )
+    /// <summary>
+    ///     Get nearest GumpElement to source, but only if it's ElementType is contained in the include list.
+    /// </summary>
+    /// <param name="source">Source element.</param>
+    /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
+    /// <param name="element">GumpElement (out).</param>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( GumpElement source, ElementType[] includeTypes, out GumpElement element )
+    {
+        GumpElement nearest = null;
+        double closest = 0;
+
+        foreach ( GumpElement ge in GumpElements )
         {
-            return GumpElements.Where( ge => ge.Type == type ).ToArray();
-        }
-
-        /// <summary>
-        ///     Get nearest GumpElement to source, but only if it's ElementType is contained in the include list.
-        /// </summary>
-        /// <param name="source">Source element.</param>
-        /// <param name="includeTypes">Array of ElementTypes which specifies valid GumpElements to search.</param>
-        /// <param name="element">GumpElement (out).</param>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( GumpElement source, ElementType[] includeTypes, out GumpElement element )
-        {
-            GumpElement nearest = null;
-            double closest = 0;
-
-            foreach ( GumpElement ge in GumpElements )
+            if ( ge == source )
             {
-                if ( ge == source )
+                continue;
+            }
+
+            bool found = includeTypes.Any( et => ge.Type == et );
+
+            if ( !found )
+            {
+                continue;
+            }
+
+            double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
+
+            if ( nearest == null )
+            {
+                closest = distance;
+                nearest = ge;
+            }
+            else
+            {
+                if ( !( distance < closest ) )
                 {
                     continue;
                 }
 
-                bool found = includeTypes.Any( et => ge.Type == et );
+                closest = distance;
+                nearest = ge;
+            }
+        }
 
-                if ( !found )
+        element = nearest;
+        return nearest != null;
+    }
+
+    /// <summary>
+    ///     Get nearest GumpElement from source.
+    /// </summary>
+    /// <returns>True on success.</returns>
+    public bool GetNearestElement( GumpElement source, out GumpElement element )
+    {
+        GumpElement nearest = null;
+        double closest = 0;
+
+        foreach ( GumpElement ge in GumpElements )
+        {
+            if ( ge == source )
+            {
+                continue;
+            }
+
+            double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
+
+            if ( nearest == null )
+            {
+                closest = distance;
+                nearest = ge;
+            }
+            else
+            {
+                if ( !( distance < closest ) )
                 {
                     continue;
                 }
 
-                double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
-
-                if ( nearest == null )
-                {
-                    closest = distance;
-                    nearest = ge;
-                }
-                else
-                {
-                    if ( !( distance < closest ) )
-                    {
-                        continue;
-                    }
-
-                    closest = distance;
-                    nearest = ge;
-                }
+                closest = distance;
+                nearest = ge;
             }
-
-            element = nearest;
-            return nearest != null;
         }
 
-        /// <summary>
-        ///     Get nearest GumpElement from source.
-        /// </summary>
-        /// <returns>True on success.</returns>
-        public bool GetNearestElement( GumpElement source, out GumpElement element )
+        element = nearest;
+        return nearest != null;
+    }
+
+    public bool GetElementByXY( int x, int y, out GumpElement gumpElement )
+    {
+        gumpElement = null;
+
+        if ( GumpElements == null )
         {
-            GumpElement nearest = null;
-            double closest = 0;
-
-            foreach ( GumpElement ge in GumpElements )
-            {
-                if ( ge == source )
-                {
-                    continue;
-                }
-
-                double distance = UOMath.Distance( source.X, source.Y, ge.X, ge.Y );
-
-                if ( nearest == null )
-                {
-                    closest = distance;
-                    nearest = ge;
-                }
-                else
-                {
-                    if ( !( distance < closest ) )
-                    {
-                        continue;
-                    }
-
-                    closest = distance;
-                    nearest = ge;
-                }
-            }
-
-            element = nearest;
-            return nearest != null;
+            return false;
         }
 
-        public bool GetElementByXY( int x, int y, out GumpElement gumpElement )
+        GumpElement element = GumpElements.FirstOrDefault( m => m.X == x && m.Y == y );
+
+        if ( element != null )
         {
-            gumpElement = null;
-
-            if ( GumpElements == null )
-            {
-                return false;
-            }
-
-            GumpElement element = GumpElements.FirstOrDefault( m => m.X == x && m.Y == y );
-
-            if ( element != null )
-            {
-                gumpElement = element;
-            }
-
-            return gumpElement != null;
+            gumpElement = element;
         }
 
-        public GumpElement GetElementByXY( int x, int y )
+        return gumpElement != null;
+    }
+
+    public GumpElement GetElementByXY( int x, int y )
+    {
+        if ( GetElementByXY( x, y, out GumpElement element ) )
         {
-            if ( GetElementByXY( x, y, out GumpElement element ) )
-            {
-                return element;
-            }
-
-            return null;
+            return element;
         }
 
-        public bool GetElementByCliloc( int cliloc, out GumpElement gumpElement )
+        return null;
+    }
+
+    public bool GetElementByCliloc( int cliloc, out GumpElement gumpElement )
+    {
+        gumpElement = null;
+
+        if ( GumpElements == null )
         {
-            gumpElement = null;
-
-            if ( GumpElements == null )
-            {
-                return false;
-            }
-
-            GumpElement element = GumpElements.FirstOrDefault( m => m.Cliloc == cliloc );
-
-            if ( element != null )
-            {
-                gumpElement = element;
-            }
-
-            return gumpElement != null;
+            return false;
         }
 
-        public GumpElement GetElementByCliloc( int cliloc )
+        GumpElement element = GumpElements.FirstOrDefault( m => m.Cliloc == cliloc );
+
+        if ( element != null )
         {
-            return GetElementByCliloc( cliloc, out GumpElement element ) ? element : null;
+            gumpElement = element;
         }
+
+        return gumpElement != null;
+    }
+
+    public GumpElement GetElementByCliloc( int cliloc )
+    {
+        return GetElementByCliloc( cliloc, out GumpElement element ) ? element : null;
     }
 }

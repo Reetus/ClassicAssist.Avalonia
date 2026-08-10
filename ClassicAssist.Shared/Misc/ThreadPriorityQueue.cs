@@ -22,129 +22,128 @@ using System.Linq;
 using System.Threading;
 using Priority_Queue;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public enum QueuePriority
 {
-    public enum QueuePriority
+    Immediate,
+    High,
+    Medium,
+    Low
+}
+
+public class ThreadPriorityQueue<T> : IDisposable
+{
+    private readonly Lock _lock = new();
+    private readonly Action<T> _onAction;
+    private readonly SimplePriorityQueue<T> _queue = new();
+    private readonly EventWaitHandle _wh = new AutoResetEvent( false );
+    private readonly Thread _workerThread;
+
+    public ThreadPriorityQueue( Action<T> onAction )
     {
-        Immediate,
-        High,
-        Medium,
-        Low
+        _onAction = onAction;
+        _workerThread = new Thread( ProcessQueue ) { IsBackground = true };
+        _workerThread.Start();
     }
 
-    public class ThreadPriorityQueue<T> : IDisposable
+    public void Dispose()
     {
-        private readonly object _lock = new object();
-        private readonly Action<T> _onAction;
-        private readonly SimplePriorityQueue<T> _queue = new SimplePriorityQueue<T>();
-        private readonly EventWaitHandle _wh = new AutoResetEvent( false );
-        private readonly Thread _workerThread;
+        StopThread();
+    }
 
-        public ThreadPriorityQueue( Action<T> onAction )
+    public int Count()
+    {
+        lock ( _lock )
         {
-            _onAction = onAction;
-            _workerThread = new Thread( ProcessQueue ) { IsBackground = true };
-            _workerThread.Start();
+            return _queue.Count;
         }
+    }
 
-        public void Dispose()
+    public int Count( Predicate<T> predicate )
+    {
+        lock ( _lock )
         {
-            StopThread();
+            return _queue.Count( predicate.Invoke );
         }
+    }
 
-        public int Count()
+    public void Clear()
+    {
+        lock ( _lock )
         {
+            _queue.Clear();
+        }
+    }
+
+    private void ProcessQueue()
+    {
+        while ( _workerThread.IsAlive )
+        {
+            bool result;
+            T queueItem;
+
             lock ( _lock )
             {
-                return _queue.Count;
+                result = _queue.TryDequeue( out queueItem );
             }
-        }
 
-        public int Count( Predicate<T> predicate )
-        {
-            lock ( _lock )
+            if ( result )
             {
-                return _queue.Count( predicate.Invoke );
-            }
-        }
-
-        public void Clear()
-        {
-            lock ( _lock )
-            {
-                _queue.Clear();
-            }
-        }
-
-        private void ProcessQueue()
-        {
-            while ( _workerThread.IsAlive )
-            {
-                bool result;
-                T queueItem;
-
-                lock ( _lock )
+                if ( queueItem == null )
                 {
-                    result = _queue.TryDequeue( out queueItem );
+                    return;
                 }
 
-                if ( result )
-                {
-                    if ( queueItem == null )
-                    {
-                        return;
-                    }
-
-                    _onAction( queueItem );
-                }
-                else
-                {
-                    _wh.WaitOne();
-                }
+                _onAction( queueItem );
+            }
+            else
+            {
+                _wh.WaitOne();
             }
         }
+    }
 
-        public void Enqueue( T queueItem, QueuePriority priority )
+    public void Enqueue( T queueItem, QueuePriority priority )
+    {
+        lock ( _lock )
         {
-            lock ( _lock )
-            {
-                _queue.Enqueue( queueItem, (float) priority );
-            }
-
-            try
-            {
-                _wh.Set();
-            }
-            catch ( ObjectDisposedException )
-            {
-            }
+            _queue.Enqueue( queueItem, (float) priority );
         }
 
-        public bool Contains( Predicate<T> predicate )
+        try
         {
-            lock ( _lock )
-            {
-                return _queue.Any( predicate.Invoke );
-            }
+            _wh.Set();
         }
-
-        private void StopThread()
+        catch ( ObjectDisposedException )
         {
-            lock ( _lock )
-            {
-                _queue.Enqueue( default, (float) QueuePriority.Immediate );
-            }
-
-            try
-            {
-                _wh.Set();
-            }
-            catch ( ObjectDisposedException )
-            {
-            }
-
-            _workerThread.Join();
-            _wh.Close();
         }
+    }
+
+    public bool Contains( Predicate<T> predicate )
+    {
+        lock ( _lock )
+        {
+            return _queue.Any( predicate.Invoke );
+        }
+    }
+
+    private void StopThread()
+    {
+        lock ( _lock )
+        {
+            _queue.Enqueue( default, (float) QueuePriority.Immediate );
+        }
+
+        try
+        {
+            _wh.Set();
+        }
+        catch ( ObjectDisposedException )
+        {
+        }
+
+        _workerThread.Join();
+        _wh.Close();
     }
 }

@@ -21,47 +21,46 @@ using System.Text;
 using Avalonia.Data.Converters;
 using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class PacketEntryBinaryValueConverter : IValueConverter
 {
-    public class PacketEntryBinaryValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not PacketEntry packetEntry )
         {
-            if ( !( value is PacketEntry packetEntry ) )
-            {
-                return string.Empty;
-            }
-
-            if (packetEntry?.Data == null)
-            {
-                return string.Empty;
-            }
-
-            StringBuilder binaryBuilder = new StringBuilder();
-
-            for (int i = 0; i < packetEntry.Length; i++)
-            {
-                byte b1 = (byte)(packetEntry.Data[i] >> 4);
-                byte b2 = (byte)(packetEntry.Data[i] & 0xF);
-                binaryBuilder.Append( (char)(b1 > 9 ? b1 + 0x37 : b1 + 0x30) );
-                binaryBuilder.Append( (char)(b2 > 9 ? b2 + 0x37 : b2 + 0x30) );
-                binaryBuilder.Append( ' ' );
-
-                if ((i + 1) % 16 != 0)
-                {
-                    continue;
-                }
-
-                binaryBuilder.Remove( binaryBuilder.Length - 1, 1 );
-                binaryBuilder.AppendLine();
-            }
-
-            return binaryBuilder.ToString();
+            return string.Empty;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( packetEntry?.Data == null )
         {
-            throw new NotImplementedException();
+            return string.Empty;
         }
+
+        StringBuilder binaryBuilder = new();
+
+        for ( int i = 0; i < packetEntry.Length; i++ )
+        {
+            byte b1 = (byte) ( packetEntry.Data[i] >> 4 );
+            byte b2 = (byte) ( packetEntry.Data[i] & 0xF );
+            binaryBuilder.Append( (char) ( b1 > 9 ? b1 + 0x37 : b1 + 0x30 ) );
+            binaryBuilder.Append( (char) ( b2 > 9 ? b2 + 0x37 : b2 + 0x30 ) );
+            binaryBuilder.Append( ' ' );
+
+            if ( ( i + 1 ) % 16 != 0 )
+            {
+                continue;
+            }
+
+            binaryBuilder.Remove( binaryBuilder.Length - 1, 1 );
+            binaryBuilder.AppendLine();
+        }
+
+        return binaryBuilder.ToString();
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

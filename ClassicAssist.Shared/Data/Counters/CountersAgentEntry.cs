@@ -4,63 +4,59 @@ using System.Runtime.CompilerServices;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Counters
+namespace ClassicAssist.Data.Counters;
+
+public class CountersAgentEntry : INotifyPropertyChanged
 {
-    public class CountersAgentEntry : INotifyPropertyChanged
+    public int Color
     {
-        private int _color;
-        private int _count;
-
-        public int Color
+        get;
+        set
         {
-            get => _color;
-            set
-            {
-                SetProperty( ref _color, value );
-                Recount();
-            }
+            SetProperty( ref field, value );
+            Recount();
+        }
+    }
+
+    public int Count
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int Graphic { get; set; }
+    public string Name { get; set; }
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    public void Recount()
+    {
+        if ( Engine.Player == null )
+        {
+            return;
         }
 
-        public int Count
+        if ( Engine.Player.Backpack?.Container == null )
         {
-            get => _count;
-            set => SetProperty( ref _count, value );
+            Count = 0;
+            return;
         }
 
-        public int Graphic { get; set; }
-        public string Name { get; set; }
+        Item[] matches =
+            Engine.Player.Backpack.Container.SelectEntities( i =>
+                i.ID == Graphic && ( Color == -1 || Color == i.Hue ) );
 
-        public event PropertyChangedEventHandler PropertyChanged;
+        Count = matches?.Sum( i => i.Count ) ?? 0;
+    }
 
-        public void Recount()
-        {
-            if ( Engine.Player == null )
-            {
-                return;
-            }
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
 
-            if ( Engine.Player.Backpack?.Container == null )
-            {
-                Count = 0;
-                return;
-            }
-
-            Item[] matches =
-                Engine.Player.Backpack.Container.SelectEntities( i =>
-                    i.ID == Graphic && ( Color == -1 || Color == i.Hue ) );
-
-            Count = matches?.Sum( i => i.Count ) ?? 0;
-        }
-
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
-
-        public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
-        }
+    public void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
     }
 }

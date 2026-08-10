@@ -1,11 +1,10 @@
 using System.IO;
 
-namespace ClassicAssist.Launcher.Models
+namespace ClassicAssist.Launcher.Models;
+
+public class PluginEntry
 {
-    public class PluginEntry
-    {
-        public string FullPath { get; set; }
-        public bool IsValid => File.Exists( FullPath );
-        public string Name { get; set; }
-    }
+    public string FullPath { get; set; }
+    public bool IsValid => File.Exists( FullPath );
+    public string Name { get; set; }
 }

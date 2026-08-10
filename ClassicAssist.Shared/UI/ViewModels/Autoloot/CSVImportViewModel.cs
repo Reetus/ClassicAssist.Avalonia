@@ -22,252 +22,235 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Misc;
-using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
-using ClassicAssist.UI.Misc;
 using ClassicAssist.UI.ViewModels;
 using Newtonsoft.Json;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Autoloot
+namespace ClassicAssist.Shared.UI.ViewModels.Autoloot;
+
+public class CSVImportViewModel : BaseViewModel
 {
-    public class CSVImportViewModel : BaseViewModel
+    private readonly string[] _operators = ["==", "!=", ">=", "<=", "X"];
+    private readonly string _propertiesFile =
+        Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.json" );
+
+    public CSVImportViewModel()
     {
-        private readonly string[] _operators = { "==", "!=", ">=", "<=", "X" };
-        private readonly string _propertiesFile =
-            Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.json" );
+        LoadProperties();
+    }
 
-        private ObservableCollection<PropertyEntry> _constraints = new ObservableCollection<PropertyEntry>();
-        private ObservableCollection<AutolootEntry> _entries = new ObservableCollection<AutolootEntry>();
-        private bool _ignoreDuplicateEntries;
-        private AutolootEntry _selectedEntry;
-        private ICommand _selectFileCommand;
-        private ICommand _setImportCommand;
+    public ObservableCollection<PropertyEntry> Constraints
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        public CSVImportViewModel()
+    public ObservableCollection<AutolootEntry> Entries
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public bool IgnoreDuplicateEntries
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public bool Import { get; set; }
+
+    public AutolootEntry SelectedEntry
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ICommand SelectFileCommand => field ??= new RelayCommandAsync( SelectFile, o => true );
+
+    public ICommand SetImportCommand => field ??= new RelayCommand( SetImport, o => true );
+
+    private async Task SelectFile( object obj )
+    {
+        string fileName = await Engine.UIInvoker.ShowOpenFileDialogAsync( Strings.CSV_Import, "CSV files",
+            ["*.csv"] );
+
+        if ( string.IsNullOrEmpty( fileName ) )
         {
-            LoadProperties();
+            return;
         }
 
-        public ObservableCollection<PropertyEntry> Constraints
+        LoadFile( fileName );
+    }
+
+    private void SetImport( object obj )
+    {
+        Import = true;
+    }
+
+    private void LoadFile( string fileName )
+    {
+        try
         {
-            get => _constraints;
-            set => SetProperty( ref _constraints, value );
-        }
+            using StreamReader reader = new( fileName );
+            CsvReader csv = new( reader );
+            csv.ReadHeader();
 
-        public ObservableCollection<AutolootEntry> Entries
-        {
-            get => _entries;
-            set => SetProperty( ref _entries, value );
-        }
-
-        public bool IgnoreDuplicateEntries
-        {
-            get => _ignoreDuplicateEntries;
-            set => SetProperty( ref _ignoreDuplicateEntries, value );
-        }
-
-        public bool Import { get; set; }
-
-        public AutolootEntry SelectedEntry
-        {
-            get => _selectedEntry;
-            set => SetProperty( ref _selectedEntry, value );
-        }
-
-        public ICommand SelectFileCommand =>
-            _selectFileCommand ?? ( _selectFileCommand = new RelayCommandAsync( SelectFile, o => true ) );
-
-        public ICommand SetImportCommand =>
-            _setImportCommand ?? ( _setImportCommand = new RelayCommand( SetImport, o => true ) );
-
-        private async Task SelectFile( object obj )
-        {
-            string fileName = await Engine.UIInvoker.ShowOpenFileDialogAsync( Strings.CSV_Import, "CSV files",
-                new[] { "*.csv" } );
-
-            if ( string.IsNullOrEmpty( fileName ) )
+            while ( csv.Read() )
             {
-                return;
-            }
-
-            LoadFile( fileName );
-        }
-
-        private void SetImport( object obj )
-        {
-            Import = true;
-        }
-
-        private void LoadFile( string fileName )
-        {
-            try
-            {
-                using ( StreamReader reader = new StreamReader( fileName ) )
+                if ( !csv.TryGetField( "ID", out string idString ) )
                 {
-                    CsvReader csv = new CsvReader( reader );
-                    csv.ReadHeader();
+                    continue;
+                }
 
-                    while ( csv.Read() )
+                try
+                {
+                    int id = ParseId( idString );
+
+                    string name = $"0x{id:x}";
+
+                    if ( csv.TryGetField( "Name", out string nameString ) )
                     {
-                        if ( !csv.TryGetField( "ID", out string idString ) )
+                        name = nameString;
+                    }
+
+                    AutolootEntry autolootEntry = new()
+                    {
+                        ID = id,
+                        Autoloot = true,
+                        Enabled = true,
+                        Priority = AutolootPriority.Normal,
+                        Name = name,
+                        Constraints = [],
+                        Rehue = false
+                    };
+
+                    List<string> columns = [.. csv.HeaderRecord.Where( value => value.StartsWith( "Property" ) )];
+
+                    if ( columns.Any() )
+                    {
+                        foreach ( string column in columns )
                         {
-                            continue;
-                        }
-
-                        try
-                        {
-                            int id = ParseId( idString );
-
-                            string name = $"0x{id:x}";
-
-                            if ( csv.TryGetField( "Name", out string nameString ) )
+                            if ( !csv.TryGetField( column, out string fieldValue ) )
                             {
-                                name = nameString;
+                                continue;
                             }
 
-                            AutolootEntry autolootEntry = new AutolootEntry
+                            if ( string.IsNullOrEmpty( fieldValue ) )
                             {
-                                ID = id,
-                                Autoloot = true,
-                                Enabled = true,
-                                Priority = AutolootPriority.Normal,
-                                Name = name,
-                                Constraints = new ObservableCollection<AutolootConstraintEntry>(),
-                                Rehue = false
-                            };
+                                continue;
+                            }
 
-                            List<string> columns = csv.HeaderRecord.Where( value => value.StartsWith( "Property" ) )
-                                .ToList();
+                            PropertyEntry entry = Constraints.FirstOrDefault( e =>
+                                fieldValue.Contains( e.ShortName ) );
 
-                            if ( columns.Any() )
+                            if ( entry == null )
                             {
-                                foreach ( string column in columns )
+                                continue;
+                            }
+
+                            AutolootOperator operation = AutolootOperator.Equal;
+
+                            string remaining = fieldValue[entry.ShortName.Length..];
+
+                            foreach ( string @operator in _operators )
+                            {
+                                if ( !remaining.StartsWith( @operator ) )
                                 {
-                                    if ( !csv.TryGetField( column, out string fieldValue ) )
-                                    {
-                                        continue;
-                                    }
-
-                                    if ( string.IsNullOrEmpty( fieldValue ) )
-                                    {
-                                        continue;
-                                    }
-
-                                    PropertyEntry entry = Constraints.FirstOrDefault( e =>
-                                        fieldValue.Contains( e.ShortName ) );
-
-                                    if ( entry == null )
-                                    {
-                                        continue;
-                                    }
-
-                                    AutolootOperator operation = AutolootOperator.Equal;
-
-                                    string remaining = fieldValue.Substring( entry.ShortName.Length );
-
-                                    foreach ( string @operator in _operators )
-                                    {
-                                        if ( !remaining.StartsWith( @operator ) )
-                                        {
-                                            continue;
-                                        }
-
-                                        operation = GetOperator( @operator );
-                                        remaining = remaining.Substring( @operator.Length );
-
-                                        break;
-                                    }
-
-                                    int value = remaining.Length > 0
-                                        ? Convert.ToInt32( remaining.Trim(), CultureInfo.InvariantCulture )
-                                        : 0;
-
-                                    autolootEntry.Constraints.Add( new AutolootConstraintEntry
-                                    {
-                                        Property = entry,
-                                        Operator = operation,
-                                        Value = value
-                                    } );
+                                    continue;
                                 }
+
+                                operation = GetOperator( @operator );
+                                remaining = remaining[@operator.Length..];
+
+                                break;
                             }
 
-                            Entries.Add( autolootEntry );
-                        }
-                        catch ( Exception )
-                        {
-                            // We tried
+                            int value = remaining.Length > 0
+                                ? Convert.ToInt32( remaining.Trim(), CultureInfo.InvariantCulture )
+                                : 0;
+
+                            autolootEntry.Constraints.Add( new AutolootConstraintEntry
+                            {
+                                Property = entry,
+                                Operator = operation,
+                                Value = value
+                            } );
                         }
                     }
+
+                    Entries.Add( autolootEntry );
+                }
+                catch ( Exception )
+                {
+                    // We tried
                 }
             }
-            catch ( Exception )
-            {
-                Engine.MessageBoxProvider.Show( Strings.Error_loading_file__ensure_it_isn_t_currently_in_use,
-                    Strings.Error, MessageBoxButtons.OK, MessageBoxImage.Error );
-            }
+        }
+        catch ( Exception )
+        {
+            Engine.MessageBoxProvider.Show( Strings.Error_loading_file__ensure_it_isn_t_currently_in_use,
+                Strings.Error, MessageBoxButtons.OK, MessageBoxImage.Error );
+        }
+    }
+
+    private static int ParseId( string idString )
+    {
+        string trimmed = idString.Trim();
+
+        if ( trimmed.StartsWith( "0x", StringComparison.CurrentCultureIgnoreCase ) )
+        {
+            return Convert.ToInt32( trimmed[2..], 16 );
         }
 
-        private static int ParseId( string idString )
+        return Convert.ToInt32( trimmed, CultureInfo.InvariantCulture );
+    }
+
+    private void LoadProperties()
+    {
+        if ( !File.Exists( _propertiesFile ) )
         {
-            string trimmed = idString.Trim();
-
-            if ( trimmed.StartsWith( "0x", StringComparison.CurrentCultureIgnoreCase ) )
-            {
-                return Convert.ToInt32( trimmed.Substring( 2 ), 16 );
-            }
-
-            return Convert.ToInt32( trimmed, CultureInfo.InvariantCulture );
+            return;
         }
 
-        private void LoadProperties()
+        JsonSerializer serializer = new();
+        List<PropertyEntry> list = [];
+
+        using ( StreamReader sr = new( _propertiesFile ) )
         {
-            if ( !File.Exists( _propertiesFile ) )
+            using JsonTextReader reader = new( sr );
+            PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
+
+            if ( constraints == null )
             {
                 return;
             }
 
-            JsonSerializer serializer = new JsonSerializer();
-            List<PropertyEntry> list = new List<PropertyEntry>();
-
-            using ( StreamReader sr = new StreamReader( _propertiesFile ) )
-            {
-                using ( JsonTextReader reader = new JsonTextReader( sr ) )
-                {
-                    PropertyEntry[] constraints = serializer.Deserialize<PropertyEntry[]>( reader );
-
-                    if ( constraints == null )
-                    {
-                        return;
-                    }
-
-                    list.AddRange( constraints );
-                }
-            }
-
-            foreach ( PropertyEntry entry in list.Where( e => !string.IsNullOrEmpty( e.ShortName ) )
-                         .OrderByDescending( e => e.ShortName.Length ) )
-            {
-                Constraints.Add( entry );
-            }
+            list.AddRange( constraints );
         }
 
-        private static AutolootOperator GetOperator( string @operator )
+        foreach ( PropertyEntry entry in list.Where( e => !string.IsNullOrEmpty( e.ShortName ) )
+                     .OrderByDescending( e => e.ShortName.Length ) )
         {
-            switch ( @operator )
-            {
-                case "==":
-                    return AutolootOperator.Equal;
-                case "!=":
-                    return AutolootOperator.NotEqual;
-                case ">=":
-                    return AutolootOperator.GreaterThan;
-                case "<=":
-                    return AutolootOperator.LessThan;
-                case "X":
-                    return AutolootOperator.NotPresent;
-            }
-
-            return AutolootOperator.Equal;
+            Constraints.Add( entry );
         }
+    }
+
+    private static AutolootOperator GetOperator( string @operator )
+    {
+        switch ( @operator )
+        {
+            case "==":
+                return AutolootOperator.Equal;
+            case "!=":
+                return AutolootOperator.NotEqual;
+            case ">=":
+                return AutolootOperator.GreaterThan;
+            case "<=":
+                return AutolootOperator.LessThan;
+            case "X":
+                return AutolootOperator.NotPresent;
+        }
+
+        return AutolootOperator.Equal;
     }
 }

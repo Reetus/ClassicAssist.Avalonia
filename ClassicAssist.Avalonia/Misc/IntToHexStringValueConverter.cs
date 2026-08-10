@@ -17,38 +17,37 @@ using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+/// <summary>
+///     Displays an int as a zero-padded hex literal and parses it back, hex or decimal. Ported from
+///     WPF's <c>UI/Misc/ValueConverters/IntToHexStringValueConverter</c> for <see cref="Controls.GraphicEditTextBlock" />.
+/// </summary>
+public class IntToHexStringValueConverter : IValueConverter
 {
-    /// <summary>
-    ///     Displays an int as a zero-padded hex literal and parses it back, hex or decimal. Ported from
-    ///     WPF's <c>UI/Misc/ValueConverters/IntToHexStringValueConverter</c> for <see cref="Controls.GraphicEditTextBlock" />.
-    /// </summary>
-    public class IntToHexStringValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        return value is int val ? $"0x{val:x8}" : value;
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        if ( value is not string val )
         {
-            return value is int val ? $"0x{val:x8}" : value;
+            return value;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        try
         {
-            if ( !( value is string val ) )
-            {
-                return value;
-            }
-
-            try
-            {
-                return val.StartsWith( "0x", StringComparison.OrdinalIgnoreCase )
-                    ? System.Convert.ToInt32( val.Substring( 2 ), 16 )
-                    : int.Parse( val, NumberStyles.Integer, culture );
-            }
-            catch ( Exception )
-            {
-                // Whatever was typed doesn't parse as a graphic ID - leave the bound value unchanged
-                // rather than throwing out of the binding engine.
-                return BindingOperations.DoNothing;
-            }
+            return val.StartsWith( "0x", StringComparison.OrdinalIgnoreCase )
+                ? System.Convert.ToInt32( val[2..], 16 )
+                : int.Parse( val, NumberStyles.Integer, culture );
+        }
+        catch ( Exception )
+        {
+            // Whatever was typed doesn't parse as a graphic ID - leave the bound value unchanged
+            // rather than throwing out of the binding engine.
+            return BindingOperations.DoNothing;
         }
     }
 }

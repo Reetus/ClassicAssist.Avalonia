@@ -20,26 +20,25 @@
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class DisarmRequest : BasePacket, IMacroCommandParser
 {
-    public class DisarmRequest : BasePacket, IMacroCommandParser
+    public DisarmRequest()
     {
-        public DisarmRequest()
+        _writer = new PacketWriter( 5 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 5 );
+        _writer.Write( (short) 0x09 );
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( direction == PacketDirection.Outgoing && packet[0] == 0xBF && packet[4] == 0x09 )
         {
-            _writer = new PacketWriter( 5 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 5 );
-            _writer.Write( (short) 0x09 );
+            return "SetAbility(\"Disarm\")\r\n";
         }
 
-        public string Parse( byte[] packet, int length, PacketDirection direction )
-        {
-            if ( direction == PacketDirection.Outgoing && packet[0] == 0xBF && packet[4] == 0x09 )
-            {
-                return "SetAbility(\"Disarm\")\r\n";
-            }
-
-            return null;
-        }
+        return null;
     }
 }

@@ -19,133 +19,133 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
-namespace ClassicAssist.Data.Targeting
+namespace ClassicAssist.Data.Targeting;
+
+public class TargetQueue<T>
 {
-    public class TargetQueue<T>
+    private readonly Lock _lock = new();
+    private Queue<T> _queue = new();
+
+    public int Count
     {
-        private readonly object _lock = new object();
-        private Queue<T> _queue = new Queue<T>();
-
-        public int Count
+        get
         {
-            get
+            lock ( _lock )
             {
-                lock (_lock)
-                {
-                    RemoveExpired();
+                RemoveExpired();
 
-                    return _queue.Count;
-                }
+                return _queue.Count;
             }
         }
+    }
 
-        public void Enqueue(T obj)
+    public void Enqueue( T obj )
+    {
+        lock ( _lock )
         {
-            lock (_lock)
+            // If queue is full, pop n-1 entries off the queue and make a new queue
+            if ( _queue.Count >= Options.CurrentOptions.MaxTargetQueueLength )
             {
-                // If queue is full, pop n-1 entries off the queue and make a new queue
-                if (_queue.Count >= Options.CurrentOptions.MaxTargetQueueLength)
-                {
-                    List<T> list = new List<T>();
+                List<T> list = [];
 
-                    for (int i = 0; i < Options.CurrentOptions.MaxTargetQueueLength - 1; i++)
+                for ( int i = 0; i < Options.CurrentOptions.MaxTargetQueueLength - 1; i++ )
+                {
+                    list.Add( _queue.Dequeue() );
+                }
+
+                _queue = new Queue<T>( list );
+            }
+
+            _queue.Enqueue( obj );
+        }
+    }
+
+    public T Peek()
+    {
+        lock ( _lock )
+        {
+            try
+            {
+                RemoveExpired();
+
+                return _queue.Peek();
+            }
+            catch ( InvalidOperationException )
+            {
+                return default;
+            }
+        }
+    }
+
+    public T Dequeue()
+    {
+        lock ( _lock )
+        {
+            try
+            {
+                RemoveExpired();
+
+                return _queue.Dequeue();
+            }
+            catch ( InvalidOperationException )
+            {
+                return default;
+            }
+        }
+    }
+
+    public void Clear()
+    {
+        lock ( _lock )
+        {
+            _queue.Clear();
+        }
+    }
+
+    private void RemoveExpired()
+    {
+        if ( Options.CurrentOptions.ExpireTargetsMS < 0 )
+        {
+            return;
+        }
+
+        lock ( _lock )
+        {
+            try
+            {
+                bool expired;
+
+                do
+                {
+                    T obj = _queue.Peek();
+
+                    expired = Expired( obj );
+
+                    if ( expired )
                     {
-                        list.Add(_queue.Dequeue());
+                        _queue.Dequeue();
                     }
-
-                    _queue = new Queue<T>(list);
                 }
-
-                _queue.Enqueue(obj);
+                while ( expired );
+            }
+            catch ( InvalidOperationException )
+            {
             }
         }
+    }
 
-        public T Peek()
+    private static bool Expired( T obj )
+    {
+        bool expired = false;
+
+        if ( obj is TargetQueueObject targetQueueObject )
         {
-            lock (_lock)
-            {
-                try
-                {
-                    RemoveExpired();
-
-                    return _queue.Peek();
-                }
-                catch (InvalidOperationException)
-                {
-                    return default;
-                }
-            }
+            expired = targetQueueObject.DateTime +
+                TimeSpan.FromMilliseconds( Options.CurrentOptions.ExpireTargetsMS ) < DateTime.Now;
         }
 
-        public T Dequeue()
-        {
-            lock (_lock)
-            {
-                try
-                {
-                    RemoveExpired();
-
-                    return _queue.Dequeue();
-                }
-                catch (InvalidOperationException)
-                {
-                    return default;
-                }
-            }
-        }
-
-        public void Clear()
-        {
-            lock (_lock)
-            {
-                _queue.Clear();
-            }
-        }
-
-        private void RemoveExpired()
-        {
-            if (Options.CurrentOptions.ExpireTargetsMS < 0)
-            {
-                return;
-            }
-
-            lock (_lock)
-            {
-                try
-                {
-                    bool expired;
-
-                    do
-                    {
-                        T obj = _queue.Peek();
-
-                        expired = Expired(obj);
-
-                        if (expired)
-                        {
-                            _queue.Dequeue();
-                        }
-                    }
-                    while (expired);
-                }
-                catch (InvalidOperationException)
-                {
-                }
-            }
-        }
-
-        private static bool Expired(T obj)
-        {
-            bool expired = false;
-
-            if (obj is TargetQueueObject targetQueueObject)
-            {
-                expired = targetQueueObject.DateTime +
-                    TimeSpan.FromMilliseconds(Options.CurrentOptions.ExpireTargetsMS) < DateTime.Now;
-            }
-
-            return expired;
-        }
+        return expired;
     }
 }

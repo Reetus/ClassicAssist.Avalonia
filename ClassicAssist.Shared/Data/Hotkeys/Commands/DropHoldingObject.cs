@@ -20,18 +20,17 @@
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 
-namespace ClassicAssist.Data.Hotkeys.Commands
+namespace ClassicAssist.Data.Hotkeys.Commands;
+
+[HotkeyCommand( Name = "Drop Holding Object" )]
+public class DropHoldingObject : HotkeyCommand
 {
-    [HotkeyCommand( Name = "Drop Holding Object" )]
-    public class DropHoldingObject : HotkeyCommand
+    public override void Execute()
     {
-        public override void Execute()
+        if ( Engine.Player != null && Engine.Player.Holding != 0 )
         {
-            if ( Engine.Player != null && Engine.Player.Holding != 0 )
-            {
-                Engine.SendPacketToServer( new DropItem( Engine.Player.Holding, Engine.Player.Backpack.Serial, -1, -1,
-                    0 ) );
-            }
+            Engine.SendPacketToServer( new DropItem( Engine.Player.Holding, Engine.Player.Backpack.Serial, -1, -1,
+                0 ) );
         }
     }
 }

@@ -6,158 +6,157 @@ using System.Text.RegularExpressions;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+public static class AutolootHelpers
 {
-    public static class AutolootHelpers
+    public static Action<int> SetAutolootContainer { get; set; }
+
+    private static readonly Regex _textValueRegex =
+        new( "<BASEFONT[^>]*>(.*)(<\\/BASEFONT>)?", RegexOptions.Compiled | RegexOptions.IgnoreCase );
+
+    public static IEnumerable<Item> AutolootFilter( IEnumerable<Item> items, AutolootEntry entry )
     {
-        public static Action<int> SetAutolootContainer { get; set; }
+        return items == null
+            ? null
+            : ( from item in items
+                where entry.ID == -1 || item.ID == entry.ID
+                let predicates = ConstraintsToPredicates( entry.Constraints )
+                where !predicates.Any() || CheckPredicates( item, predicates )
+                select item ).ToList();
+    }
 
-        private static readonly Regex _textValueRegex =
-            new Regex( "<BASEFONT[^>]*>(.*)(<\\/BASEFONT>)?", RegexOptions.Compiled | RegexOptions.IgnoreCase );
+    private static bool CheckPredicates( Item item, IEnumerable<Predicate<Item>> predicates )
+    {
+        return predicates.All( predicate => predicate( item ) );
+    }
 
-        public static IEnumerable<Item> AutolootFilter( IEnumerable<Item> items, AutolootEntry entry )
+    public static IEnumerable<Predicate<Item>> ConstraintsToPredicates(
+        IEnumerable<AutolootConstraintEntry> constraints )
+    {
+        List<Predicate<Item>> predicates = [];
+
+        foreach ( AutolootConstraintEntry constraint in constraints )
         {
-            return items == null
-                ? null
-                : ( from item in items
-                    where entry.ID == -1 || item.ID == entry.ID
-                    let predicates = ConstraintsToPredicates( entry.Constraints )
-                    where !predicates.Any() || CheckPredicates( item, predicates )
-                    select item ).ToList();
-        }
-
-        private static bool CheckPredicates( Item item, IEnumerable<Predicate<Item>> predicates )
-        {
-            return predicates.All( predicate => predicate( item ) );
-        }
-
-        public static IEnumerable<Predicate<Item>> ConstraintsToPredicates(
-            IEnumerable<AutolootConstraintEntry> constraints )
-        {
-            List<Predicate<Item>> predicates = new List<Predicate<Item>>();
-
-            foreach ( AutolootConstraintEntry constraint in constraints )
+            switch ( constraint.Property.ConstraintType )
             {
-                switch ( constraint.Property.ConstraintType )
-                {
-                    case PropertyType.Properties:
-                        if ( constraint.Operator != AutolootOperator.NotPresent )
-                        {
-                            predicates.Add( i => i.Properties != null && constraint.Property.Clilocs.Any( cliloc =>
-                                                     i.Properties.Any( p => MatchProperty( p, cliloc,
-                                                         constraint.Property, constraint.Operator,
-                                                         constraint.Value ) ) ) );
-                        }
-                        else
-                        {
-                            predicates.Add( i =>
-                                i.Properties != null && !constraint.Property.Clilocs.Any( cliloc =>
-                                    i.Properties.Any( p => p.Cliloc == cliloc ) ) );
-                        }
-
-                        break;
-                    case PropertyType.Object:
-
+                case PropertyType.Properties:
+                    if ( constraint.Operator != AutolootOperator.NotPresent )
+                    {
+                        predicates.Add( i => i.Properties != null && constraint.Property.Clilocs.Any( cliloc =>
+                                                 i.Properties.Any( p => MatchProperty( p, cliloc,
+                                                     constraint.Property, constraint.Operator,
+                                                     constraint.Value ) ) ) );
+                    }
+                    else
+                    {
                         predicates.Add( i =>
-                            ItemHasObjectProperty( i, constraint.Property.Name ) && Operation( constraint.Operator,
-                                GetItemObjectPropertyValue<int>( i, constraint.Property.Name ), constraint.Value ) );
+                            i.Properties != null && !constraint.Property.Clilocs.Any( cliloc =>
+                                i.Properties.Any( p => p.Cliloc == cliloc ) ) );
+                    }
 
-                        break;
-                    case PropertyType.Predicate:
-                    case PropertyType.PredicateWithValue:
+                    break;
+                case PropertyType.Object:
 
-                        predicates.Add( i =>
-                            constraint.Property.Predicate != null &&
-                            constraint.Property.Predicate.Invoke( i, constraint ) );
+                    predicates.Add( i =>
+                        ItemHasObjectProperty( i, constraint.Property.Name ) && Operation( constraint.Operator,
+                            GetItemObjectPropertyValue<int>( i, constraint.Property.Name ), constraint.Value ) );
 
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-            }
+                    break;
+                case PropertyType.Predicate:
+                case PropertyType.PredicateWithValue:
 
-            return predicates;
-        }
+                    predicates.Add( i =>
+                        constraint.Property.Predicate != null &&
+                        constraint.Property.Predicate.Invoke( i, constraint ) );
 
-        public static bool ItemHasObjectProperty( Item item, string propertyName )
-        {
-            PropertyInfo propertyInfo = item.GetType().GetProperty( propertyName );
-
-            if ( propertyInfo == null )
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        public static T GetItemObjectPropertyValue<T>( Item item, string propertyName )
-        {
-            PropertyInfo propertyInfo = item.GetType().GetProperty( propertyName );
-
-            if ( propertyInfo == null )
-            {
-                return default;
-            }
-
-            T val = (T) propertyInfo.GetValue( item );
-
-            return val;
-        }
-
-        public static bool Operation( AutolootOperator @operator, int x, int y )
-        {
-            switch ( @operator )
-            {
-                case AutolootOperator.GreaterThan:
-                    return x >= y;
-                case AutolootOperator.LessThan:
-                    return x <= y;
-                case AutolootOperator.Equal:
-                    return x == y;
-                case AutolootOperator.NotEqual:
-                    return x != y;
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException( nameof( @operator ), @operator, null );
+                    throw new ArgumentOutOfRangeException();
             }
         }
 
-        public static bool MatchProperty( Property property, int cliloc, PropertyEntry constraint,
-            AutolootOperator @operator, int value )
+        return predicates;
+    }
+
+    public static bool ItemHasObjectProperty( Item item, string propertyName )
+    {
+        PropertyInfo propertyInfo = item.GetType().GetProperty( propertyName );
+
+        if ( propertyInfo == null )
         {
-            try
+            return false;
+        }
+
+        return true;
+    }
+
+    public static T GetItemObjectPropertyValue<T>( Item item, string propertyName )
+    {
+        PropertyInfo propertyInfo = item.GetType().GetProperty( propertyName );
+
+        if ( propertyInfo == null )
+        {
+            return default;
+        }
+
+        T val = (T) propertyInfo.GetValue( item );
+
+        return val;
+    }
+
+    public static bool Operation( AutolootOperator @operator, int x, int y )
+    {
+        switch ( @operator )
+        {
+            case AutolootOperator.GreaterThan:
+                return x >= y;
+            case AutolootOperator.LessThan:
+                return x <= y;
+            case AutolootOperator.Equal:
+                return x == y;
+            case AutolootOperator.NotEqual:
+                return x != y;
+            default:
+                throw new ArgumentOutOfRangeException( nameof( @operator ), @operator, null );
+        }
+    }
+
+    public static bool MatchProperty( Property property, int cliloc, PropertyEntry constraint,
+        AutolootOperator @operator, int value )
+    {
+        try
+        {
+            bool result = property.Cliloc == cliloc && ( constraint.ClilocIndex == -1 || Operation( @operator,
+                                                            int.Parse( property.Arguments[constraint.ClilocIndex] ),
+                                                            value ) );
+
+            if ( result )
             {
-                bool result = property.Cliloc == cliloc && ( constraint.ClilocIndex == -1 || Operation( @operator,
-                                                                int.Parse( property.Arguments[constraint.ClilocIndex] ),
-                                                                value ) );
-
-                if ( result )
-                {
-                    return true;
-                }
-
-                bool matchTextValue = AutolootManager.GetInstance().MatchTextValue?.Invoke() ?? false;
-
-                if ( !matchTextValue )
-                {
-                    return false;
-                }
-
-                string clilocString = Cliloc.GetProperty( cliloc );
-
-                if ( property.Text != null && property.Text.Equals( clilocString ) )
-                {
-                    return true;
-                }
-
-                Match matches = _textValueRegex.Match( property.Text ?? string.Empty );
-
-                return matches.Success && matches.Groups[1].Value.Equals( clilocString );
+                return true;
             }
-            catch ( IndexOutOfRangeException )
+
+            bool matchTextValue = AutolootManager.GetInstance().MatchTextValue?.Invoke() ?? false;
+
+            if ( !matchTextValue )
             {
                 return false;
             }
+
+            string clilocString = Cliloc.GetProperty( cliloc );
+
+            if ( property.Text != null && property.Text.Equals( clilocString ) )
+            {
+                return true;
+            }
+
+            Match matches = _textValueRegex.Match( property.Text ?? string.Empty );
+
+            return matches.Success && matches.Groups[1].Value.Equals( clilocString );
+        }
+        catch ( IndexOutOfRangeException )
+        {
+            return false;
         }
     }
 }

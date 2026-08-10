@@ -17,14 +17,13 @@
 
 #endregion
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+public enum AutolootPriority
 {
-    public enum AutolootPriority
-    {
-        Low,
-        Normal,
-        Medium,
-        High,
-        Top
-    }
+    Low,
+    Normal,
+    Medium,
+    High,
+    Top
 }

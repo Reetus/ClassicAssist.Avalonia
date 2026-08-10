@@ -2,83 +2,82 @@
 using System.Collections.Concurrent;
 using System.Threading;
 
-namespace ClassicAssist.Misc
+namespace ClassicAssist.Misc;
+
+public class ThreadQueue<T> : IDisposable
 {
-    public class ThreadQueue<T> : IDisposable
+    private readonly Action<T> _onAction;
+    private readonly ConcurrentQueue<T> _queue = new();
+    private readonly EventWaitHandle _wh = new AutoResetEvent( false );
+    private readonly Thread _workerThread;
+
+    public ThreadQueue( Action<T> onAction )
     {
-        private readonly Action<T> _onAction;
-        private readonly ConcurrentQueue<T> _queue = new ConcurrentQueue<T>();
-        private readonly EventWaitHandle _wh = new AutoResetEvent( false );
-        private readonly Thread _workerThread;
+        _onAction = onAction;
+        _workerThread = new Thread( ProcessQueue ) { IsBackground = true };
+        _workerThread.Start();
+    }
 
-        public ThreadQueue( Action<T> onAction )
+    public int Count => _queue.Count;
+
+    public void Dispose()
+    {
+        StopThread();
+    }
+
+    public void Clear()
+    {
+        while ( _queue.TryDequeue( out _ ) )
         {
-            _onAction = onAction;
-            _workerThread = new Thread( ProcessQueue ) { IsBackground = true };
-            _workerThread.Start();
         }
+    }
 
-        public int Count => _queue.Count;
-
-        public void Dispose()
+    private void ProcessQueue()
+    {
+        while ( _workerThread.IsAlive )
         {
-            StopThread();
-        }
-
-        public void Clear()
-        {
-            while ( _queue.TryDequeue( out T item ) )
+            if ( _queue.TryDequeue( out T queueItem ) )
             {
-            }
-        }
-
-        private void ProcessQueue()
-        {
-            while ( _workerThread.IsAlive )
-            {
-                if ( _queue.TryDequeue( out T queueItem ) )
+                if ( queueItem == null )
                 {
-                    if ( queueItem == null )
-                    {
-                        return;
-                    }
-
-                    _onAction( queueItem );
+                    return;
                 }
-                else
-                {
-                    _wh.WaitOne();
-                }
+
+                _onAction( queueItem );
+            }
+            else
+            {
+                _wh.WaitOne();
             }
         }
+    }
 
-        public void Enqueue( T queueItem )
+    public void Enqueue( T queueItem )
+    {
+        _queue.Enqueue( queueItem );
+
+        try
         {
-            _queue.Enqueue( queueItem );
-
-            try
-            {
-                _wh.Set();
-            }
-            catch ( ObjectDisposedException )
-            {
-            }
+            _wh.Set();
         }
-
-        private void StopThread()
+        catch ( ObjectDisposedException )
         {
-            _queue.Enqueue( default );
-
-            try
-            {
-                _wh.Set();
-            }
-            catch ( ObjectDisposedException )
-            {
-            }
-
-            _workerThread.Join();
-            _wh.Close();
         }
+    }
+
+    private void StopThread()
+    {
+        _queue.Enqueue( default );
+
+        try
+        {
+            _wh.Set();
+        }
+        catch ( ObjectDisposedException )
+        {
+        }
+
+        _workerThread.Join();
+        _wh.Close();
     }
 }

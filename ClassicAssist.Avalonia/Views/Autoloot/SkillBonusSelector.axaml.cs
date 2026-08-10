@@ -29,115 +29,113 @@ using Avalonia.Markup.Xaml;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
+namespace ClassicAssist.Avalonia.Views.Autoloot;
+
+/// <summary>
+///     Picks the skill for a skill-bonus constraint, which the predicate matches by name out of
+///     <see cref="AutolootConstraintEntry.Additional" /> while Value carries the numeric bonus.
+///     <para>
+///         Sits under the Property ComboBox rather than in the Value column, because those constraints
+///         need both fields at once and the Value column only has room for one editor - the same place
+///         old puts it.
+///     </para>
+/// </summary>
+public partial class SkillBonusSelector : UserControl
 {
-    /// <summary>
-    ///     Picks the skill for a skill-bonus constraint, which the predicate matches by name out of
-    ///     <see cref="AutolootConstraintEntry.Additional" /> while Value carries the numeric bonus.
-    ///     <para>
-    ///         Sits under the Property ComboBox rather than in the Value column, because those constraints
-    ///         need both fields at once and the Value column only has room for one editor - the same place
-    ///         old puts it.
-    ///     </para>
-    /// </summary>
-    public partial class SkillBonusSelector : UserControl
+    private static readonly Lazy<List<string>> _skills = new( BuildSkillNames );
+
+    private AutolootConstraintEntry _entry;
+
+    public SkillBonusSelector()
     {
-        private static readonly Lazy<List<string>> _skills = new Lazy<List<string>>( BuildSkillNames );
+        InitializeComponent();
 
-        private AutolootConstraintEntry _entry;
+        ComboBox comboBox = this.FindControl<ComboBox>( "skills" );
 
-        public SkillBonusSelector()
+        comboBox?.ItemsSource = _skills.Value;
+
+        IsVisible = false;
+        DataContextChanged += OnDataContextChanged;
+    }
+
+    /// <summary>
+    ///     Enum names, preferring <see cref="DescriptionAttribute" /> where one is present, so the list
+    ///     reads "Animal Lore" rather than "AnimalLore". These strings are what gets stored in
+    ///     Additional, and what the predicate compares against the property text.
+    /// </summary>
+    private static List<string> BuildSkillNames()
+    {
+        List<string> names = [];
+
+        foreach ( object value in Enum.GetValues( typeof( SkillBonusSkills ) ) )
         {
-            InitializeComponent();
+            FieldInfo fieldInfo = typeof( SkillBonusSkills ).GetField( value.ToString() );
 
-            ComboBox comboBox = this.FindControl<ComboBox>( "skills" );
+            DescriptionAttribute description = fieldInfo
+                ?.GetCustomAttributes( typeof( DescriptionAttribute ), false ).FirstOrDefault() as
+                DescriptionAttribute;
 
-            if ( comboBox != null )
-            {
-                comboBox.ItemsSource = _skills.Value;
-            }
-
-            IsVisible = false;
-            DataContextChanged += OnDataContextChanged;
+            names.Add( description?.Description ?? value.ToString() );
         }
 
-        /// <summary>
-        ///     Enum names, preferring <see cref="DescriptionAttribute" /> where one is present, so the list
-        ///     reads "Animal Lore" rather than "AnimalLore". These strings are what gets stored in
-        ///     Additional, and what the predicate compares against the property text.
-        /// </summary>
-        private static List<string> BuildSkillNames()
+        return names;
+    }
+
+    private void OnDataContextChanged( object sender, EventArgs e )
+    {
+        if ( _entry != null )
         {
-            List<string> names = new List<string>();
-
-            foreach ( object value in Enum.GetValues( typeof( SkillBonusSkills ) ) )
-            {
-                FieldInfo fieldInfo = typeof( SkillBonusSkills ).GetField( value.ToString() );
-
-                DescriptionAttribute description = fieldInfo
-                    ?.GetCustomAttributes( typeof( DescriptionAttribute ), false ).FirstOrDefault() as
-                    DescriptionAttribute;
-
-                names.Add( description?.Description ?? value.ToString() );
-            }
-
-            return names;
+            _entry.PropertyChanged -= OnEntryPropertyChanged;
         }
 
-        private void OnDataContextChanged( object sender, EventArgs e )
+        _entry = DataContext as AutolootConstraintEntry;
+
+        if ( _entry != null )
         {
-            if ( _entry != null )
-            {
-                _entry.PropertyChanged -= OnEntryPropertyChanged;
-            }
+            _entry.PropertyChanged += OnEntryPropertyChanged;
+        }
 
-            _entry = DataContext as AutolootConstraintEntry;
+        Rebuild();
+    }
 
-            if ( _entry != null )
-            {
-                _entry.PropertyChanged += OnEntryPropertyChanged;
-            }
-
+    private void OnEntryPropertyChanged( object sender, PropertyChangedEventArgs e )
+    {
+        if ( e.PropertyName == nameof( AutolootConstraintEntry.Property ) )
+        {
             Rebuild();
         }
+    }
 
-        private void OnEntryPropertyChanged( object sender, PropertyChangedEventArgs e )
+    private void Rebuild()
+    {
+        // Re-evaluated on every property change, not just when the DataContext is swapped: the row
+        // stays put while the user picks a different constraint from the Property ComboBox.
+        IsVisible = _entry?.Property?.AllowedValuesEnum == typeof( SkillBonusSkills );
+
+        ComboBox comboBox = this.FindControl<ComboBox>( "skills" );
+
+        if ( comboBox == null )
         {
-            if ( e.PropertyName == nameof( AutolootConstraintEntry.Property ) )
-            {
-                Rebuild();
-            }
+            return;
         }
 
-        private void Rebuild()
+        if ( !IsVisible || _entry == null )
         {
-            // Re-evaluated on every property change, not just when the DataContext is swapped: the row
-            // stays put while the user picks a different constraint from the Property ComboBox.
-            IsVisible = _entry?.Property?.AllowedValuesEnum == typeof( SkillBonusSkills );
+            comboBox.ClearValue( SelectingItemsControl.SelectedItemProperty );
 
-            ComboBox comboBox = this.FindControl<ComboBox>( "skills" );
-
-            if ( comboBox == null )
-            {
-                return;
-            }
-
-            if ( !IsVisible || _entry == null )
-            {
-                comboBox.ClearValue( SelectingItemsControl.SelectedItemProperty );
-
-                return;
-            }
-
-            comboBox.Bind( SelectingItemsControl.SelectedItemProperty, new Binding
-            {
-                Source = _entry, Path = nameof( AutolootConstraintEntry.Additional ), Mode = BindingMode.TwoWay
-            } );
+            return;
         }
 
-        private void InitializeComponent()
+        comboBox.Bind( SelectingItemsControl.SelectedItemProperty, new Binding
         {
-            AvaloniaXamlLoader.Load( this );
-        }
+            Source = _entry,
+            Path = nameof( AutolootConstraintEntry.Additional ),
+            Mode = BindingMode.TwoWay
+        } );
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

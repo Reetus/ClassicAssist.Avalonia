@@ -11,438 +11,415 @@ using IronPython.Runtime;
 using IronPython.Runtime.Exceptions;
 using Microsoft.Scripting.Hosting;
 
-namespace ClassicAssist.DebugAdapter
+namespace ClassicAssist.DebugAdapter;
+
+public sealed class BreakpointInfo
 {
-    public sealed class BreakpointInfo
+    public int Line { get; set; }
+    public string Condition { get; set; }
+    public string LogMessage { get; set; }
+}
+
+public sealed class DebugManager
+{
+    private readonly ConcurrentDictionary<string, Dictionary<int, BreakpointInfo>> _breakpoints =
+        new( StringComparer.OrdinalIgnoreCase );
+
+    private readonly ConcurrentDictionary<int, MacroDebugState> _threadStates =
+        new();
+
+    private readonly ConcurrentDictionary<int, MacroEntry> _threadMacros =
+        new();
+
+    private readonly Lock _breakpointLock = new();
+
+    public volatile bool IsActive;
+    public volatile bool BreakOnAllExceptions;
+    public volatile bool BreakOnUncaughtExceptions = true;
+
+    public static DebugManager Instance { get; private set; }
+
+    public event Action<DapEvent> SendEvent;
+
+    public static DebugManager GetInstance()
     {
-        public int Line { get; set; }
-        public string Condition { get; set; }
-        public string LogMessage { get; set; }
+        return Instance ??= new DebugManager();
     }
 
-    public sealed class DebugManager
+    public void SetBreakpoints( string filePath, BreakpointInfo[] breakpoints )
     {
-        private static DebugManager _instance;
+        string key = NormalizePath( filePath );
 
-        private readonly ConcurrentDictionary<string, Dictionary<int, BreakpointInfo>> _breakpoints =
-            new ConcurrentDictionary<string, Dictionary<int, BreakpointInfo>>( StringComparer.OrdinalIgnoreCase );
-
-        private readonly ConcurrentDictionary<int, MacroDebugState> _threadStates =
-            new ConcurrentDictionary<int, MacroDebugState>();
-
-        private readonly ConcurrentDictionary<int, MacroEntry> _threadMacros =
-            new ConcurrentDictionary<int, MacroEntry>();
-
-        private readonly object _breakpointLock = new object();
-
-        public volatile bool IsActive;
-        public volatile bool BreakOnAllExceptions;
-        public volatile bool BreakOnUncaughtExceptions = true;
-
-        public static DebugManager Instance => _instance;
-
-        public event Action<DapEvent> SendEvent;
-
-        public static DebugManager GetInstance()
+        if ( breakpoints.Length == 0 )
         {
-            return _instance ?? ( _instance = new DebugManager() );
+            _breakpoints.TryRemove( key, out Dictionary<int, BreakpointInfo> removed );
+            return;
         }
 
-        public void SetBreakpoints( string filePath, BreakpointInfo[] breakpoints )
+        lock ( _breakpointLock )
         {
-            string key = NormalizePath( filePath );
+            _breakpoints[key] = breakpoints.ToDictionary( b => b.Line );
+        }
+    }
 
-            if ( breakpoints.Length == 0 )
-            {
-                Dictionary<int, BreakpointInfo> removed;
-                _breakpoints.TryRemove( key, out removed );
-                return;
-            }
+    public void SetExceptionBreakpoints( string[] filters )
+    {
+        BreakOnAllExceptions = filters.Contains( "all" );
+        BreakOnUncaughtExceptions = filters.Contains( "uncaught" );
+    }
 
-            lock ( _breakpointLock )
+    /// <summary>
+    ///     Called from OnTrace for "line" events. Returns true if execution should pause.
+    /// </summary>
+    public bool ShouldBreak( string file, int line, int threadId, TraceBackFrame frame )
+    {
+        if ( string.IsNullOrEmpty( file ) )
+        {
+            return false;
+        }
+
+        // Check stepping state first
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            switch ( state.StepMode )
             {
-                _breakpoints[key] = breakpoints.ToDictionary( b => b.Line );
+                case StepMode.StepInto:
+                    return true;
+                case StepMode.StepOver:
+                    return GetCallDepth( frame ) <= state.StepDepth;
+                case StepMode.StepOut:
+                    return GetCallDepth( frame ) < state.StepDepth;
             }
         }
 
-        public void SetExceptionBreakpoints( string[] filters )
+        // Check breakpoints
+        string key = NormalizePath( file );
+
+
+        if ( !_breakpoints.TryGetValue( key, out Dictionary<int, BreakpointInfo> bps ) )
         {
-            BreakOnAllExceptions = filters.Contains( "all" );
-            BreakOnUncaughtExceptions = filters.Contains( "uncaught" );
+            return false;
         }
 
-        /// <summary>
-        ///     Called from OnTrace for "line" events. Returns true if execution should pause.
-        /// </summary>
-        public bool ShouldBreak( string file, int line, int threadId, TraceBackFrame frame )
+
+        if ( !bps.TryGetValue( line, out BreakpointInfo bp ) )
         {
-            if ( string.IsNullOrEmpty( file ) )
-            {
-                return false;
-            }
-
-            // Check stepping state first
-            MacroDebugState state;
-
-            if ( _threadStates.TryGetValue( threadId, out state ) )
-            {
-                switch ( state.StepMode )
-                {
-                    case StepMode.StepInto:
-                        return true;
-                    case StepMode.StepOver:
-                        return GetCallDepth( frame ) <= state.StepDepth;
-                    case StepMode.StepOut:
-                        return GetCallDepth( frame ) < state.StepDepth;
-                }
-            }
-
-            // Check breakpoints
-            string key = NormalizePath( file );
-
-            Dictionary<int, BreakpointInfo> bps;
-
-            if ( !_breakpoints.TryGetValue( key, out bps ) )
-            {
-                return false;
-            }
-
-            BreakpointInfo bp;
-
-            if ( !bps.TryGetValue( line, out bp ) )
-            {
-                return false;
-            }
-
-            // Log point — output message instead of breaking
-            if ( !string.IsNullOrEmpty( bp.LogMessage ) )
-            {
-                string msg = InterpolateLogMessage( bp.LogMessage, frame );
-                Action<DapEvent> handler = SendEvent;
-                handler?.Invoke( DapEvent.Output( msg + "\n", "console" ) );
-                return false;
-            }
-
-            // Conditional breakpoint — eval condition in frame scope
-            if ( !string.IsNullOrEmpty( bp.Condition ) )
-            {
-                return EvalCondition( bp.Condition, frame );
-            }
-
-            return true;
+            return false;
         }
 
-        /// <summary>
-        ///     Called from OnTrace for "exception" events. Returns true if execution should pause.
-        /// </summary>
-        public bool ShouldBreakOnException( int threadId, object payload )
+        // Log point — output message instead of breaking
+        if ( !string.IsNullOrEmpty( bp.LogMessage ) )
         {
-            return BreakOnAllExceptions;
+            string msg = InterpolateLogMessage( bp.LogMessage, frame );
+            Action<DapEvent> handler = SendEvent;
+            handler?.Invoke( DapEvent.Output( msg + "\n", "console" ) );
+            return false;
         }
 
-        public void OnBreakpoint( int threadId, TraceBackFrame frame, string reason = "breakpoint" )
+        // Conditional breakpoint — eval condition in frame scope
+        if ( !string.IsNullOrEmpty( bp.Condition ) )
         {
-            MacroDebugState state;
+            return EvalCondition( bp.Condition, frame );
+        }
 
-            if ( !_threadStates.TryGetValue( threadId, out state ) )
-            {
-                return;
-            }
+        return true;
+    }
 
-            state.CurrentFrame = frame;
-            state.StoppedFile = frame.f_code.co_filename;
-            state.StoppedLine = (int) frame.f_lineno;
-            state.StoppedReason = reason;
+    /// <summary>
+    ///     Called from OnTrace for "exception" events. Returns true if execution should pause.
+    /// </summary>
+    public bool ShouldBreakOnException( int threadId, object payload )
+    {
+        return BreakOnAllExceptions;
+    }
+
+    public void OnBreakpoint( int threadId, TraceBackFrame frame, string reason = "breakpoint" )
+    {
+
+        if ( !_threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            return;
+        }
+
+        state.CurrentFrame = frame;
+        state.StoppedFile = frame.f_code.co_filename;
+        state.StoppedLine = (int) frame.f_lineno;
+        state.StoppedReason = reason;
+        state.StepMode = StepMode.None;
+        state.Pause();
+
+        Action<DapEvent> handler = SendEvent;
+        handler?.Invoke( DapEvent.Stopped( threadId, reason, state.StoppedFile, state.StoppedLine ) );
+    }
+
+    public void WaitForResume( int threadId, CancellationToken token )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            state.Wait( token );
+        }
+    }
+
+    public void Continue( int threadId )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
             state.StepMode = StepMode.None;
-            state.Pause();
+            state.Resume();
 
             Action<DapEvent> handler = SendEvent;
-            handler?.Invoke( DapEvent.Stopped( threadId, reason, state.StoppedFile, state.StoppedLine ) );
+            handler?.Invoke( DapEvent.Continued( threadId ) );
+        }
+    }
+
+    public void StepOver( int threadId )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            state.StepMode = StepMode.StepOver;
+            state.StepDepth = GetCallDepth( state );
+            state.Resume();
+        }
+    }
+
+    public void StepInto( int threadId )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            state.StepMode = StepMode.StepInto;
+            state.Resume();
+        }
+    }
+
+    public void StepOut( int threadId )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) )
+        {
+            state.StepMode = StepMode.StepOut;
+            state.StepDepth = GetCallDepth( state );
+            state.Resume();
+        }
+    }
+
+    public void ForcePause( int threadId )
+    {
+
+        if ( _threadStates.TryGetValue( threadId, out MacroDebugState state ) && !state.IsPaused )
+        {
+            state.StepMode = StepMode.StepInto;
+        }
+    }
+
+    public void OnMacroStarted( MacroEntry macro )
+    {
+        Thread thread = macro.MacroInvoker?.Thread;
+
+        if ( thread == null )
+        {
+            return;
         }
 
-        public void WaitForResume( int threadId, CancellationToken token )
-        {
-            MacroDebugState state;
+        int threadId = thread.ManagedThreadId;
+        MacroDebugState state = new( threadId, macro.Name );
+        _threadStates[threadId] = state;
+        _threadMacros[threadId] = macro;
 
-            if ( _threadStates.TryGetValue( threadId, out state ) )
-            {
-                state.Wait( token );
-            }
+        if ( IsActive )
+        {
+            Action<DapEvent> handler = SendEvent;
+            handler?.Invoke( DapEvent.Thread( threadId, "started" ) );
+        }
+    }
+
+    public void OnMacroStopped( MacroEntry macro )
+    {
+        Thread thread = macro.MacroInvoker?.Thread;
+
+        if ( thread == null )
+        {
+            return;
         }
 
-        public void Continue( int threadId )
-        {
-            MacroDebugState state;
+        int threadId = thread.ManagedThreadId;
 
-            if ( _threadStates.TryGetValue( threadId, out state ) )
+
+        if ( _threadStates.TryRemove( threadId, out MacroDebugState state ) )
+        {
+            state.Resume();
+            state.Dispose();
+        }
+
+        _threadMacros.TryRemove( threadId, out MacroEntry removed );
+
+        if ( IsActive )
+        {
+            Action<DapEvent> handler = SendEvent;
+            handler?.Invoke( DapEvent.Thread( threadId, "exited" ) );
+        }
+    }
+
+    public Tuple<int, string>[] GetThreads()
+    {
+        return [.. _threadStates.Values.Select( s => Tuple.Create( s.ThreadId, s.MacroName ) )];
+    }
+
+    public MacroDebugState GetThreadState( int threadId )
+    {
+        return _threadStates.TryGetValue( threadId, out MacroDebugState state ) ? state : null;
+    }
+
+    public void ResumeAll()
+    {
+        foreach ( MacroDebugState state in _threadStates.Values )
+        {
+            if ( state.IsPaused )
             {
                 state.StepMode = StepMode.None;
                 state.Resume();
+            }
+        }
+    }
 
-                Action<DapEvent> handler = SendEvent;
-                handler?.Invoke( DapEvent.Continued( threadId ) );
+    public void ClearAllBreakpoints()
+    {
+        _breakpoints.Clear();
+    }
+
+    private static int GetCallDepth( MacroDebugState state )
+    {
+        return GetCallDepth( state.CurrentFrame );
+    }
+
+    private static int GetCallDepth( TraceBackFrame frame )
+    {
+        int depth = 0;
+        TraceBackFrame f = frame;
+
+        while ( f != null )
+        {
+            depth++;
+
+            try
+            {
+                f = (TraceBackFrame) f.f_back;
+            }
+            catch
+            {
+                break;
             }
         }
 
-        public void StepOver( int threadId )
+        return depth;
+    }
+
+    private static void PopulateScope( ScriptScope scope, TraceBackFrame frame )
+    {
+        // Globals first, then locals so same-named locals shadow globals. Loading globals is
+        // what lets conditions/logpoints reference module globals, imported macro commands and
+        // args — not just locals — matching VariableInspector.Evaluate.
+        if ( frame.f_globals is PythonDictionary globals )
         {
-            MacroDebugState state;
-
-            if ( _threadStates.TryGetValue( threadId, out state ) )
+            foreach ( KeyValuePair<object, object> kvp in globals )
             {
-                state.StepMode = StepMode.StepOver;
-                state.StepDepth = GetCallDepth( state );
-                state.Resume();
-            }
-        }
-
-        public void StepInto( int threadId )
-        {
-            MacroDebugState state;
-
-            if ( _threadStates.TryGetValue( threadId, out state ) )
-            {
-                state.StepMode = StepMode.StepInto;
-                state.Resume();
-            }
-        }
-
-        public void StepOut( int threadId )
-        {
-            MacroDebugState state;
-
-            if ( _threadStates.TryGetValue( threadId, out state ) )
-            {
-                state.StepMode = StepMode.StepOut;
-                state.StepDepth = GetCallDepth( state );
-                state.Resume();
-            }
-        }
-
-        public void ForcePause( int threadId )
-        {
-            MacroDebugState state;
-
-            if ( _threadStates.TryGetValue( threadId, out state ) && !state.IsPaused )
-            {
-                state.StepMode = StepMode.StepInto;
-            }
-        }
-
-        public void OnMacroStarted( MacroEntry macro )
-        {
-            Thread thread = macro.MacroInvoker?.Thread;
-
-            if ( thread == null )
-            {
-                return;
-            }
-
-            int threadId = thread.ManagedThreadId;
-            MacroDebugState state = new MacroDebugState( threadId, macro.Name );
-            _threadStates[threadId] = state;
-            _threadMacros[threadId] = macro;
-
-            if ( IsActive )
-            {
-                Action<DapEvent> handler = SendEvent;
-                handler?.Invoke( DapEvent.Thread( threadId, "started" ) );
-            }
-        }
-
-        public void OnMacroStopped( MacroEntry macro )
-        {
-            Thread thread = macro.MacroInvoker?.Thread;
-
-            if ( thread == null )
-            {
-                return;
-            }
-
-            int threadId = thread.ManagedThreadId;
-
-            MacroDebugState state;
-
-            if ( _threadStates.TryRemove( threadId, out state ) )
-            {
-                state.Resume();
-                state.Dispose();
-            }
-
-            MacroEntry removed;
-            _threadMacros.TryRemove( threadId, out removed );
-
-            if ( IsActive )
-            {
-                Action<DapEvent> handler = SendEvent;
-                handler?.Invoke( DapEvent.Thread( threadId, "exited" ) );
-            }
-        }
-
-        public Tuple<int, string>[] GetThreads()
-        {
-            return _threadStates.Values
-                .Select( s => Tuple.Create( s.ThreadId, s.MacroName ) )
-                .ToArray();
-        }
-
-        public MacroDebugState GetThreadState( int threadId )
-        {
-            MacroDebugState state;
-            return _threadStates.TryGetValue( threadId, out state ) ? state : null;
-        }
-
-        public void ResumeAll()
-        {
-            foreach ( MacroDebugState state in _threadStates.Values )
-            {
-                if ( state.IsPaused )
+                if ( kvp.Key is string key )
                 {
-                    state.StepMode = StepMode.None;
-                    state.Resume();
+                    scope.SetVariable( key, kvp.Value );
                 }
             }
         }
 
-        public void ClearAllBreakpoints()
+        if ( frame.f_locals is PythonDictionary locals )
         {
-            _breakpoints.Clear();
-        }
-
-        private static int GetCallDepth( MacroDebugState state )
-        {
-            return GetCallDepth( state.CurrentFrame );
-        }
-
-        private static int GetCallDepth( TraceBackFrame frame )
-        {
-            int depth = 0;
-            TraceBackFrame f = frame;
-
-            while ( f != null )
+            foreach ( KeyValuePair<object, object> kvp in locals )
             {
-                depth++;
+                if ( kvp.Key is string key )
+                {
+                    scope.SetVariable( key, kvp.Value );
+                }
+            }
+        }
+    }
 
+    private static bool IsTruthy( object value )
+    {
+        if ( value == null )
+        {
+            return false;
+        }
+
+        if ( value is bool b )
+        {
+            return b;
+        }
+
+        if ( value is int i )
+        {
+            return i != 0;
+        }
+
+        return true;
+    }
+
+    private static bool EvalCondition( string condition, TraceBackFrame frame )
+    {
+        try
+        {
+            ScriptEngine engine = Python.CreateEngine();
+            ScriptScope scope = engine.CreateScope();
+
+            PopulateScope( scope, frame );
+
+            object result = engine.Execute( condition, scope );
+            return IsTruthy( result );
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static string InterpolateLogMessage( string message, TraceBackFrame frame )
+    {
+        // DAP log messages use {expression} for interpolation
+        if ( !message.Contains( "{" ) )
+        {
+            return message;
+        }
+
+        try
+        {
+            ScriptEngine engine = Python.CreateEngine();
+            ScriptScope scope = engine.CreateScope();
+
+            PopulateScope( scope, frame );
+
+            return Regex.Replace( message, @"\{(.+?)\}", m =>
+            {
                 try
                 {
-                    f = (TraceBackFrame) f.f_back;
+                    object val = engine.Execute( m.Groups[1].Value, scope );
+                    return val?.ToString() ?? "None";
                 }
                 catch
                 {
-                    break;
+                    return m.Value;
                 }
-            }
-
-            return depth;
+            } );
         }
-
-        private static void PopulateScope( ScriptScope scope, TraceBackFrame frame )
+        catch
         {
-            // Globals first, then locals so same-named locals shadow globals. Loading globals is
-            // what lets conditions/logpoints reference module globals, imported macro commands and
-            // args — not just locals — matching VariableInspector.Evaluate.
-            if ( frame.f_globals is PythonDictionary globals )
-            {
-                foreach ( KeyValuePair<object, object> kvp in globals )
-                {
-                    string key = kvp.Key as string;
-
-                    if ( key != null )
-                    {
-                        scope.SetVariable( key, kvp.Value );
-                    }
-                }
-            }
-
-            if ( frame.f_locals is PythonDictionary locals )
-            {
-                foreach ( KeyValuePair<object, object> kvp in locals )
-                {
-                    string key = kvp.Key as string;
-
-                    if ( key != null )
-                    {
-                        scope.SetVariable( key, kvp.Value );
-                    }
-                }
-            }
+            return message;
         }
+    }
 
-        private static bool IsTruthy( object value )
-        {
-            if ( value == null )
-            {
-                return false;
-            }
-
-            if ( value is bool b )
-            {
-                return b;
-            }
-
-            if ( value is int i )
-            {
-                return i != 0;
-            }
-
-            return true;
-        }
-
-        private static bool EvalCondition( string condition, TraceBackFrame frame )
-        {
-            try
-            {
-                ScriptEngine engine = Python.CreateEngine();
-                ScriptScope scope = engine.CreateScope();
-
-                PopulateScope( scope, frame );
-
-                object result = engine.Execute( condition, scope );
-                return IsTruthy( result );
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static string InterpolateLogMessage( string message, TraceBackFrame frame )
-        {
-            // DAP log messages use {expression} for interpolation
-            if ( !message.Contains( "{" ) )
-            {
-                return message;
-            }
-
-            try
-            {
-                ScriptEngine engine = Python.CreateEngine();
-                ScriptScope scope = engine.CreateScope();
-
-                PopulateScope( scope, frame );
-
-                return Regex.Replace( message, @"\{(.+?)\}", m =>
-                {
-                    try
-                    {
-                        object val = engine.Execute( m.Groups[1].Value, scope );
-                        return val?.ToString() ?? "None";
-                    }
-                    catch
-                    {
-                        return m.Value;
-                    }
-                } );
-            }
-            catch
-            {
-                return message;
-            }
-        }
-
-        internal static string NormalizePath( string path )
-        {
-            return path.Replace( '\\', '/' ).TrimEnd( '/' );
-        }
+    internal static string NormalizePath( string path )
+    {
+        return path.Replace( '\\', '/' ).TrimEnd( '/' );
     }
 }

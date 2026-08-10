@@ -1,9 +1,8 @@
-﻿namespace ClassicAssist.UO.Network.PacketFilter
+﻿namespace ClassicAssist.UO.Network.PacketFilter;
+
+public enum PacketDirection : byte
 {
-    public enum PacketDirection : byte
-    {
-        Incoming,
-        Outgoing,
-        Any
-    }
+    Incoming,
+    Outgoing,
+    Any
 }

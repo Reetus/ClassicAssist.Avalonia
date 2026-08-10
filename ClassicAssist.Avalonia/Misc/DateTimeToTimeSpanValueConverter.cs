@@ -21,23 +21,22 @@ using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class DateTimeToTimeSpanValueConverter : IValueConverter
 {
-    public class DateTimeToTimeSpanValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is DateTime dateTime && dateTime == DateTime.MinValue )
         {
-            if ( value is DateTime dateTime && dateTime == DateTime.MinValue )
-            {
-                return TimeSpan.Zero;
-            }
-
-            return !( value is DateTime dt ) ? null : ( DateTime.Now - dt ).ToString();
+            return TimeSpan.Zero;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            throw new NotImplementedException();
-        }
+        return value is not DateTime dt ? null : ( DateTime.Now - dt ).ToString();
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

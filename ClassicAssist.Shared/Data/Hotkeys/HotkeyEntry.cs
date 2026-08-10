@@ -1,154 +1,143 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using ClassicAssist.UI.Misc;
 using Newtonsoft.Json;
 
-namespace ClassicAssist.Data.Hotkeys
+namespace ClassicAssist.Data.Hotkeys;
+
+public abstract class HotkeyEntry : INotifyPropertyChanged, IComparable<HotkeyEntry>
 {
-    public abstract class HotkeyEntry : INotifyPropertyChanged, IComparable<HotkeyEntry>
+    public delegate void HotkeyChangedEventHandler( object sender, HotkeyChangedEventArgs e );
+
+    private readonly Lock _childrenLock = new();
+    private string _name;
+
+    [JsonIgnore]
+    public Action<HotkeyEntry, object[]> Action { get; set; }
+
+    public bool CanGlobal
     {
-        public delegate void HotkeyChangedEventHandler( object sender, HotkeyChangedEventArgs e );
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
 
-        private readonly object _childrenLock = new object();
-
-        private bool _canGlobal = true;
-
-        private ObservableCollectionEx<HotkeyEntry> _children = new ObservableCollectionEx<HotkeyEntry>();
-
-        private ShortcutKeys _hotkey = new ShortcutKeys();
-        private bool _isCategory;
-
-        private bool _isGlobal;
-
-        private string _name;
-        private bool _passToUo = true;
-
-        [JsonIgnore]
-        public Action<HotkeyEntry, object[]> Action { get; set; }
-
-        public bool CanGlobal
+    [JsonIgnore]
+    public ObservableCollectionEx<HotkeyEntry> Children
+    {
+        get
         {
-            get => _canGlobal;
-            set => SetProperty( ref _canGlobal, value );
-        }
-
-        [JsonIgnore]
-        public ObservableCollectionEx<HotkeyEntry> Children
-        {
-            get
+            lock ( _childrenLock )
             {
-                lock ( _childrenLock )
-                {
-                    return _children;
-                }
-            }
-            set
-            {
-                lock ( _childrenLock )
-                {
-                    SetProperty( ref _children, value );
-                }
+                return field;
             }
         }
-
-        /// <summary>
-        ///     Whether this entry has [HotkeyConfiguration] properties worth showing an Options dialog for.
-        ///     Overridden to true by the commands that have them; gates the Options button on the tab.
-        /// </summary>
-        public virtual bool Configurable { get; set; } = false;
-
-        public virtual bool Disableable { get; set; } = true;
-
-        public ShortcutKeys Hotkey
+        set
         {
-            get => _hotkey;
-            set
+            lock ( _childrenLock )
             {
-                if ( !Equals( value, ShortcutKeys.Default ) )
-                {
-                    HotkeyManager manager = HotkeyManager.GetInstance();
-                    manager.ClearPreviousHotkey( value );
-                }
-
-                SetProperty( ref _hotkey, value );
-                OnPropertyChanged( nameof(Image) );
-                HotkeyChanged?.Invoke( this, new HotkeyChangedEventArgs( _hotkey, value ) );
+                SetProperty( ref field, value );
             }
         }
+    } = [];
 
-        [JsonIgnore]
-        public string Image => Equals( Hotkey, ShortcutKeys.Default ) ? "red-circle.png" : "green-circle.png";
+    /// <summary>
+    ///     Whether this entry has [HotkeyConfiguration] properties worth showing an Options dialog for.
+    ///     Overridden to true by the commands that have them; gates the Options button on the tab.
+    /// </summary>
+    public virtual bool Configurable { get; set; } = false;
 
-        public bool IsCategory
+    public virtual bool Disableable { get; set; } = true;
+
+    public ShortcutKeys Hotkey
+    {
+        get;
+        set
         {
-            get => _isCategory;
-            set => SetProperty( ref _isCategory, value );
-        }
-
-        public bool IsGlobal
-        {
-            get => _isGlobal;
-            set => SetProperty( ref _isGlobal, value );
-        }
-
-        public virtual string Name
-        {
-            get => _name;
-            set => SetProperty( ref _name, value );
-        }
-
-        public bool PassToUO
-        {
-            get => _passToUo;
-            set => SetProperty( ref _passToUo, value );
-        }
-
-        public int CompareTo( HotkeyEntry other )
-        {
-            if ( ReferenceEquals( this, other ) )
+            if ( !Equals( value, ShortcutKeys.Default ) )
             {
-                return 0;
+                HotkeyManager manager = HotkeyManager.GetInstance();
+                manager.ClearPreviousHotkey( value );
             }
 
-            if ( ReferenceEquals( null, other ) )
-            {
-                return 1;
-            }
-
-            int isCategoryComparison = _isCategory.CompareTo( other._isCategory );
-
-            if ( isCategoryComparison != 0 )
-            {
-                return isCategoryComparison;
-            }
-
-            return string.Compare( _name, other._name, StringComparison.Ordinal );
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( Image ) );
+            HotkeyChanged?.Invoke( this, new HotkeyChangedEventArgs( field, value ) );
         }
+    } = new ShortcutKeys();
 
-        public event HotkeyChangedEventHandler HotkeyChanged;
+    [JsonIgnore]
+    public string Image => Equals( Hotkey, ShortcutKeys.Default ) ? "red-circle.png" : "green-circle.png";
 
-        public override string ToString()
-        {
-            return Name;
-        }
-
-        #region INotifyPropertyChanged
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
-        {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
-
-        // ReSharper disable once RedundantAssignment
-        public void SetProperty<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
-        {
-            field = value;
-            OnPropertyChanged( propertyName );
-        }
-
-        #endregion
+    public bool IsCategory
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
+
+    public bool IsGlobal
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public virtual string Name
+    {
+        get => _name;
+        set => SetProperty( ref _name, value );
+    }
+
+    public bool PassToUO
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
+
+    public int CompareTo( HotkeyEntry other )
+    {
+        if ( ReferenceEquals( this, other ) )
+        {
+            return 0;
+        }
+
+        if ( other is null )
+        {
+            return 1;
+        }
+
+        int isCategoryComparison = IsCategory.CompareTo( other.IsCategory );
+
+        if ( isCategoryComparison != 0 )
+        {
+            return isCategoryComparison;
+        }
+
+        return string.Compare( _name, other._name, StringComparison.Ordinal );
+    }
+
+    public event HotkeyChangedEventHandler HotkeyChanged;
+
+    public override string ToString()
+    {
+        return Name;
+    }
+
+    #region INotifyPropertyChanged
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    // ReSharper disable once RedundantAssignment
+    public void SetProperty<T>( ref T field, T value, [CallerMemberName] string propertyName = null )
+    {
+        field = value;
+        OnPropertyChanged( propertyName );
+    }
+
+    #endregion
 }

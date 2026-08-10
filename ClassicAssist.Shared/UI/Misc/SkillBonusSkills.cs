@@ -18,63 +18,61 @@
 #endregion
 
 using System.ComponentModel;
-using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.UI.Misc
+namespace ClassicAssist.UI.Misc;
+
+[TypeConverter( typeof( EnumDescriptionTypeConverter ) )]
+public enum SkillBonusSkills
 {
-    [TypeConverter( typeof( EnumDescriptionTypeConverter ) )]
-    public enum SkillBonusSkills
-    {
-        Any = -1,
-        Alchemy,
-        Anatomy,
-        [Description( "Animal Lore" )]
-        AnimalLore,
-        [Description( "Animal Taming" )]
-        AnimalTaming,
-        Archery,
-        Blacksmithing,
-        Bushido,
-        Carpentry,
-        Cartography,
-        Chivalry,
-        Cooking,
-        Discordance,
-        [Description( "Evaluating Intelligence" )]
-        EvaluatingIntelligence,
-        Fencing,
-        Fletching,
-        Focus,
-        Glassblowing,
-        Healing,
-        Inscription,
-        Lumberjacking,
-        [Description( "Mace Fighting" )]
-        MaceFighting,
-        Magery,
-        Masonry,
-        Meditation,
-        Mining,
-        Musicianship,
-        Mysticism,
-        Necromancy,
-        Ninjitsu,
-        Parrying,
-        Peacemaking,
-        Provocation,
-        [Description( "Resisting Spells" )]
-        ResistingSpells,
-        Snooping,
-        [Description( "Spirit Speak" )]
-        SpiritSpeak,
-        Stealth,
-        Stealing,
-        Swordsmanship,
-        Tactics,
-        Tailoring,
-        Throwing,
-        Tinkering,
-        Veterinary,
-        Wrestling
-    }
+    Any = -1,
+    Alchemy,
+    Anatomy,
+    [Description( "Animal Lore" )]
+    AnimalLore,
+    [Description( "Animal Taming" )]
+    AnimalTaming,
+    Archery,
+    Blacksmithing,
+    Bushido,
+    Carpentry,
+    Cartography,
+    Chivalry,
+    Cooking,
+    Discordance,
+    [Description( "Evaluating Intelligence" )]
+    EvaluatingIntelligence,
+    Fencing,
+    Fletching,
+    Focus,
+    Glassblowing,
+    Healing,
+    Inscription,
+    Lumberjacking,
+    [Description( "Mace Fighting" )]
+    MaceFighting,
+    Magery,
+    Masonry,
+    Meditation,
+    Mining,
+    Musicianship,
+    Mysticism,
+    Necromancy,
+    Ninjitsu,
+    Parrying,
+    Peacemaking,
+    Provocation,
+    [Description( "Resisting Spells" )]
+    ResistingSpells,
+    Snooping,
+    [Description( "Spirit Speak" )]
+    SpiritSpeak,
+    Stealth,
+    Stealing,
+    Swordsmanship,
+    Tactics,
+    Tailoring,
+    Throwing,
+    Tinkering,
+    Veterinary,
+    Wrestling
 }

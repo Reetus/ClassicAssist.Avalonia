@@ -18,19 +18,18 @@
 #endregion
 
 
-namespace ClassicAssist.Data.Chat
-{
-    public class ChatMessage
-    {
-        public string Channel { get; set; }
-        //TODO2
-        //public SolidColorBrush Colour { get; set; }
-        public string Text { get; set; }
-        public string Username { get; set; }
+namespace ClassicAssist.Data.Chat;
 
-        public override string ToString()
-        {
-            return $"{Username}: {Text}";
-        }
+public class ChatMessage
+{
+    public string Channel { get; set; }
+    //TODO2
+    //public SolidColorBrush Colour { get; set; }
+    public string Text { get; set; }
+    public string Username { get; set; }
+
+    public override string ToString()
+    {
+        return $"{Username}: {Text}";
     }
 }

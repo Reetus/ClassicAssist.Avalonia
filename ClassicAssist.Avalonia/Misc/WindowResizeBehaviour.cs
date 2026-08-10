@@ -24,57 +24,56 @@ using Avalonia.Reactive;
 using Avalonia.Xaml.Interactivity;
 using ClassicAssist.Data;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class WindowResizeBehaviour : Behavior<Window>
 {
-    public class WindowResizeBehaviour : Behavior<Window>
+    private IDisposable _subscription;
+
+    protected override void OnAttached()
     {
-        private IDisposable _subscription;
-
-        protected override void OnAttached()
-        {
-            base.OnAttached();
+        base.OnAttached();
 
 #if !DEVELOP
-            if ( AssociatedObject != null )
-            {
-                AssociatedObject.Width = AssistantOptions.WindowWidth;
-                AssociatedObject.Height = AssistantOptions.WindowHeight;
-            }
-#endif
-
-            _subscription = AssociatedObject.GetObservable( TopLevel.ClientSizeProperty )
-                .Subscribe( new AnonymousObserver<Size>( SetSize ) );
-
-            AssistantOptions.OptionsLoaded += OnOptionsLoaded;
-        }
-
-        private static void SetSize( Size size )
+        if ( AssociatedObject != null )
         {
-#if !DEVELOP
-            AssistantOptions.WindowHeight = size.Height;
-            AssistantOptions.WindowWidth = size.Width;
-#endif
-        }
-
-        private void OnOptionsLoaded( object sender, EventArgs e )
-        {
-            if ( AssociatedObject == null )
-            {
-                return;
-            }
-
-#if !DEVELOP
             AssociatedObject.Width = AssistantOptions.WindowWidth;
             AssociatedObject.Height = AssistantOptions.WindowHeight;
+        }
 #endif
-        }
 
-        protected override void OnDetaching()
+        _subscription = AssociatedObject.GetObservable( TopLevel.ClientSizeProperty )
+            .Subscribe( new AnonymousObserver<Size>( SetSize ) );
+
+        AssistantOptions.OptionsLoaded += OnOptionsLoaded;
+    }
+
+    private static void SetSize( Size size )
+    {
+#if !DEVELOP
+        AssistantOptions.WindowHeight = size.Height;
+        AssistantOptions.WindowWidth = size.Width;
+#endif
+    }
+
+    private void OnOptionsLoaded( object sender, EventArgs e )
+    {
+        if ( AssociatedObject == null )
         {
-            base.OnDetaching();
-
-            _subscription?.Dispose();
-            AssistantOptions.OptionsLoaded -= OnOptionsLoaded;
+            return;
         }
+
+#if !DEVELOP
+        AssociatedObject.Width = AssistantOptions.WindowWidth;
+        AssociatedObject.Height = AssistantOptions.WindowHeight;
+#endif
+    }
+
+    protected override void OnDetaching()
+    {
+        base.OnDetaching();
+
+        _subscription?.Dispose();
+        AssistantOptions.OptionsLoaded -= OnOptionsLoaded;
     }
 }

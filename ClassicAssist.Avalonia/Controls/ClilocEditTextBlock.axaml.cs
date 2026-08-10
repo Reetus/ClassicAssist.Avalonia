@@ -26,90 +26,86 @@ using ClassicAssist.UO.Objects;
 using Commands = ClassicAssist.Shared.UO.Commands;
 using UOCliloc = ClassicAssist.UO.Data.Cliloc;
 
-namespace ClassicAssist.Avalonia.Controls
+namespace ClassicAssist.Avalonia.Controls;
+
+/// <summary>
+///     A cliloc-valued <see cref="EditTextBlock" />: shows the resolved cliloc text (or "Any" for -1),
+///     and lets it be set either by typing the numeric ID directly, searching by name (
+///     <see cref="ClilocSelectionViewModel" />/<c>ClilocSelectionWindow</c>), or targeting an item and
+///     reading its first property's cliloc. Ported from WPF's
+///     <c>UI/Views/ECV/Settings/Controls/EditTextBlocks/ClilocEditTextBlock</c>, minus the WPF version's
+///     cross-wiring to sibling ID/Hue columns - each field here is set independently.
+/// </summary>
+public partial class ClilocEditTextBlock : UserControl
 {
-    /// <summary>
-    ///     A cliloc-valued <see cref="EditTextBlock" />: shows the resolved cliloc text (or "Any" for -1),
-    ///     and lets it be set either by typing the numeric ID directly, searching by name (
-    ///     <see cref="ClilocSelectionViewModel" />/<c>ClilocSelectionWindow</c>), or targeting an item and
-    ///     reading its first property's cliloc. Ported from WPF's
-    ///     <c>UI/Views/ECV/Settings/Controls/EditTextBlocks/ClilocEditTextBlock</c>, minus the WPF version's
-    ///     cross-wiring to sibling ID/Hue columns - each field here is set independently.
-    /// </summary>
-    public partial class ClilocEditTextBlock : UserControl
+    public static readonly DirectProperty<ClilocEditTextBlock, int> ClilocProperty =
+        AvaloniaProperty.RegisterDirect<ClilocEditTextBlock, int>( nameof( Cliloc ), o => o.Cliloc,
+            ( o, v ) => o.Cliloc = v, -1, BindingMode.TwoWay );
+
+    public static readonly DirectProperty<ClilocEditTextBlock, string> LabelProperty =
+        AvaloniaProperty.RegisterDirect<ClilocEditTextBlock, string>( nameof( Label ), o => o.Label );
+
+    public ClilocEditTextBlock()
     {
-        public static readonly DirectProperty<ClilocEditTextBlock, int> ClilocProperty =
-            AvaloniaProperty.RegisterDirect<ClilocEditTextBlock, int>( nameof( Cliloc ), o => o.Cliloc,
-                ( o, v ) => o.Cliloc = v, -1, BindingMode.TwoWay );
+        InitializeComponent();
 
-        public static readonly DirectProperty<ClilocEditTextBlock, string> LabelProperty =
-            AvaloniaProperty.RegisterDirect<ClilocEditTextBlock, string>( nameof( Label ), o => o.Label );
+        UpdateLabel();
+    }
 
-        private int _cliloc = -1;
-        private string _label;
-
-        public ClilocEditTextBlock()
+    public int Cliloc
+    {
+        get;
+        set
         {
-            InitializeComponent();
-
+            SetAndRaise( ClilocProperty, ref field, value );
             UpdateLabel();
         }
+    } = -1;
 
-        public int Cliloc
+    public string Label
+    {
+        get;
+        private set => SetAndRaise( LabelProperty, ref field, value );
+    }
+
+    private void UpdateLabel()
+    {
+        Label = Cliloc == -1 ? "Any" : UOCliloc.GetProperty( Cliloc );
+    }
+
+    private async void OnChooseClick( object sender, RoutedEventArgs e )
+    {
+        ClilocSelectionViewModel vm = new();
+
+        // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
+        // DialogResult check below runs before the user has even seen the window and always takes
+        // the early return.
+        await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
+
+        if ( vm.DialogResult != MessageBoxResult.OK )
         {
-            get => _cliloc;
-            set
-            {
-                SetAndRaise( ClilocProperty, ref _cliloc, value );
-                UpdateLabel();
-            }
+            return;
         }
 
-        public string Label
+        Cliloc = vm.SelectedCliloc.Key;
+    }
+
+    private async void OnTargetClick( object sender, RoutedEventArgs e )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
+
+        if ( serial == 0 )
         {
-            get => _label;
-            private set => SetAndRaise( LabelProperty, ref _label, value );
+            return;
         }
 
-        private void UpdateLabel()
-        {
-            Label = _cliloc == -1 ? "Any" : UOCliloc.GetProperty( _cliloc );
-        }
+        Item item = Engine.Items.GetItem( serial );
 
-        private async void OnChooseClick( object sender, RoutedEventArgs e )
-        {
-            ClilocSelectionViewModel vm = new ClilocSelectionViewModel();
+        Cliloc = item?.Properties?.Select( p => p.Cliloc ).FirstOrDefault() ?? -1;
+    }
 
-            // Must be awaited: InvokeDialog completes when the dialog closes, so without this the
-            // DialogResult check below runs before the user has even seen the window and always takes
-            // the early return.
-            await Engine.UIInvoker.InvokeDialog( "ClilocSelectionWindow", dataContext: vm );
-
-            if ( vm.DialogResult != MessageBoxResult.OK )
-            {
-                return;
-            }
-
-            Cliloc = vm.SelectedCliloc.Key;
-        }
-
-        private async void OnTargetClick( object sender, RoutedEventArgs e )
-        {
-            int serial = await Commands.GetTargetSerialAsync( Strings.Target_object___ );
-
-            if ( serial == 0 )
-            {
-                return;
-            }
-
-            Item item = Engine.Items.GetItem( serial );
-
-            Cliloc = item?.Properties?.Select( p => p.Cliloc ).FirstOrDefault() ?? -1;
-        }
-
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

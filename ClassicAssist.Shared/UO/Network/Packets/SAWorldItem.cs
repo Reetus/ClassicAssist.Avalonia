@@ -21,43 +21,42 @@ using System.IO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class SAWorldItem : BasePacket
 {
-    public class SAWorldItem : BasePacket
+    public SAWorldItem( byte[] packet, int length, int hueOverride )
     {
-        public SAWorldItem( byte[] packet, int length, int hueOverride )
+        _writer = new PacketWriter( length );
+        _writer.Write( packet, 0, length );
+
+        if ( hueOverride <= 0 )
         {
-            _writer = new PacketWriter( length );
-            _writer.Write( packet, 0, length );
-
-            if ( hueOverride <= 0 )
-            {
-                return;
-            }
-
-            _writer.Seek( 21, SeekOrigin.Begin );
-            _writer.Write( (short) hueOverride );
-            _writer.Seek( 0, SeekOrigin.End );
+            return;
         }
 
-        public SAWorldItem( Item item, int hueOverride = -1 )
-        {
-            _writer = new PacketWriter( 26 );
-            _writer.Write( (byte) 0xF3 );
-            _writer.Write( (short) 0x01 );
-            _writer.Write( (byte) item.ArtDataID );
-            _writer.Write( item.Serial );
-            _writer.Write( (short) item.ID );
-            _writer.Write( (byte) item.Direction );
-            _writer.Write( (short) item.Count );
-            _writer.Write( (short) item.Count );
-            _writer.Write( (short) item.X );
-            _writer.Write( (short) item.Y );
-            _writer.Write( (sbyte) item.Z );
-            _writer.Write( (byte) item.Light );
-            _writer.Write( (short) ( hueOverride > 0 ? hueOverride : item.Hue ) );
-            _writer.Write( (byte) item.Flags );
-            _writer.Fill();
-        }
+        _writer.Seek( 21, SeekOrigin.Begin );
+        _writer.Write( (short) hueOverride );
+        _writer.Seek( 0, SeekOrigin.End );
+    }
+
+    public SAWorldItem( Item item, int hueOverride = -1 )
+    {
+        _writer = new PacketWriter( 26 );
+        _writer.Write( (byte) 0xF3 );
+        _writer.Write( (short) 0x01 );
+        _writer.Write( (byte) item.ArtDataID );
+        _writer.Write( item.Serial );
+        _writer.Write( (short) item.ID );
+        _writer.Write( (byte) item.Direction );
+        _writer.Write( (short) item.Count );
+        _writer.Write( (short) item.Count );
+        _writer.Write( (short) item.X );
+        _writer.Write( (short) item.Y );
+        _writer.Write( (sbyte) item.Z );
+        _writer.Write( (byte) item.Light );
+        _writer.Write( (short) ( hueOverride > 0 ? hueOverride : item.Hue ) );
+        _writer.Write( (byte) item.Flags );
+        _writer.Fill();
     }
 }

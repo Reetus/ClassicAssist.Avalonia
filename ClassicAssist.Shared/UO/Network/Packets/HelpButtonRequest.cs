@@ -21,38 +21,37 @@ using ClassicAssist.Shared;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
-{
-    public class HelpButtonRequest : BasePacket, IMacroCommandParser
-    {
-        public HelpButtonRequest()
-        {
-            if ( Engine.Player == null )
-            {
-                return;
-            }
+namespace ClassicAssist.UO.Network.Packets;
 
-            _writer = new PacketWriter( 258 );
-            _writer.Write( (byte) 0x9B );
-            _writer.Fill();
+public class HelpButtonRequest : BasePacket, IMacroCommandParser
+{
+    public HelpButtonRequest()
+    {
+        if ( Engine.Player == null )
+        {
+            return;
         }
 
-        public string Parse( byte[] packet, int length, PacketDirection direction )
+        _writer = new PacketWriter( 258 );
+        _writer.Write( (byte) 0x9B );
+        _writer.Fill();
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( packet[0] != 0x9B || direction != PacketDirection.Outgoing || length != 258 )
         {
-            if ( packet[0] != 0x9B || direction != PacketDirection.Outgoing || length != 258 )
+            return null;
+        }
+
+        for ( int i = 1; i < length; i++ )
+        {
+            if ( packet[i] != 0x00 )
             {
                 return null;
             }
-
-            for ( int i = 1; i < length; i++ )
-            {
-                if ( packet[i] != 0x00 )
-                {
-                    return null;
-                }
-            }
-
-            return "OpenHelpGump()\r\n";
         }
+
+        return "OpenHelpGump()\r\n";
     }
 }

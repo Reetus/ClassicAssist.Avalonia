@@ -19,47 +19,41 @@
 
 using ClassicAssist.Shared.UI;
 
-namespace ClassicAssist.Data.Filters
+namespace ClassicAssist.Data.Filters;
+
+/// <summary>
+///     One cliloc replacement for <see cref="ClilocFilter" />. Lives beside the filter rather than in
+///     the configure view model (where WPF keeps it) so the data layer doesn't reach into the UI layer.
+/// </summary>
+public class FilterClilocEntry : SetPropertyNotifyChanged
 {
-    /// <summary>
-    ///     One cliloc replacement for <see cref="ClilocFilter" />. Lives beside the filter rather than in
-    ///     the configure view model (where WPF keeps it) so the data layer doesn't reach into the UI layer.
-    /// </summary>
-    public class FilterClilocEntry : SetPropertyNotifyChanged
+    public int Cliloc
     {
-        private int _cliloc;
-        private int _hue = -1;
-        private string _replacement;
-        private bool _showOverhead;
-
-        public int Cliloc
+        get;
+        set
         {
-            get => _cliloc;
-            set
-            {
-                SetProperty( ref _cliloc, value );
-                OnPropertyChanged( nameof( Original ) );
-            }
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( Original ) );
         }
+    }
 
-        public int Hue
-        {
-            get => _hue;
-            set => SetProperty( ref _hue, value );
-        }
+    public int Hue
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = -1;
 
-        public string Original => UO.Data.Cliloc.GetProperty( Cliloc );
+    public string Original => UO.Data.Cliloc.GetProperty( Cliloc );
 
-        public string Replacement
-        {
-            get => _replacement;
-            set => SetProperty( ref _replacement, value );
-        }
+    public string Replacement
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
-        public bool ShowOverhead
-        {
-            get => _showOverhead;
-            set => SetProperty( ref _showOverhead, value );
-        }
+    public bool ShowOverhead
+    {
+        get;
+        set => SetProperty( ref field, value );
     }
 }

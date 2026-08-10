@@ -13,775 +13,768 @@ using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class ObjectCommands
 {
-    public static class ObjectCommands
+    public static List<int> IgnoreList { get; set; } = [];
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static void IgnoreObject( object obj )
     {
-        public static List<int> IgnoreList { get; set; } = new List<int>();
+        int serial = AliasCommands.ResolveSerial( obj );
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static void IgnoreObject( object obj )
+        if ( serial == 0 )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
 
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-
-                return;
-            }
-
-            if ( !IgnoreList.Contains( serial ) )
-            {
-                IgnoreList.Add( serial );
-            }
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ) )]
-        public static void ClearIgnoreList()
+        if ( !IgnoreList.Contains( serial ) )
         {
-            IgnoreList.Clear();
+            IgnoreList.Add( serial );
+        }
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ) )]
+    public static void ClearIgnoreList()
+    {
+        IgnoreList.Clear();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Actions ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static void UseObject( object obj, bool skipQueue = false )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Actions ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static void UseObject( object obj, bool skipQueue = false )
+        ActionPacketQueue.EnqueuePacket( new UseObject( serial ),
+            skipQueue ? QueuePriority.Immediate : QueuePriority.Low );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Actions ),
+        Parameters = new[]
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue ),
+            nameof( ParameterType.SerialOrAlias )
+        } )]
+    public static void UseType( object type, int hue = -1, object container = null )
+    {
+        int serial = AliasCommands.ResolveSerial( type );
 
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
 
-                return;
-            }
-
-            ActionPacketQueue.EnqueuePacket( new UseObject( serial ),
-                skipQueue ? QueuePriority.Immediate : QueuePriority.Low );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Actions ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue ),
-                nameof( ParameterType.SerialOrAlias )
-            } )]
-        public static void UseType( object type, int hue = -1, object container = null )
+        container ??= Engine.Player?.Backpack?.Serial;
+
+        int containerSerial = AliasCommands.ResolveSerial( container );
+
+        if ( !Engine.Items.GetItem( containerSerial, out Item containerItem ) )
         {
-            int serial = AliasCommands.ResolveSerial( type );
+            UOC.SystemMessage( Strings.Cannot_find_container___ );
 
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-
-                return;
-            }
-
-            if ( container == null )
-            {
-                container = Engine.Player?.Backpack?.Serial;
-            }
-
-            int containerSerial = AliasCommands.ResolveSerial( container );
-
-            if ( !Engine.Items.GetItem( containerSerial, out Item containerItem ) )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_container___ );
-
-                return;
-            }
-
-            Item useItem = hue == -1
-                ? containerItem.Container?.SelectEntity( i => i.ID == serial )
-                : containerItem.Container?.SelectEntity( i => i.ID == serial && i.Hue == hue );
-
-            if ( useItem == null )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-
-                return;
-            }
-
-            if ( !AbilitiesManager.GetInstance().CheckHands( useItem.Serial ) )
-            {
-                Engine.SendPacketToServer( new UseObject( useItem.Serial ) );
-            }
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Actions ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.SerialOrAlias ) } )]
-        public static void UseTargetedItem( object item, object target )
+        Item useItem = hue == -1
+            ? containerItem.Container?.SelectEntity( i => i.ID == serial )
+            : containerItem.Container?.SelectEntity( i => i.ID == serial && i.Hue == hue );
+
+        if ( useItem == null )
         {
-            int serial = AliasCommands.ResolveSerial( item );
-            int targetSerial = AliasCommands.ResolveSerial( target );
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
 
-            if ( serial == 0 || targetSerial == 0 )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            Engine.SendPacketToServer( new UseTargetedItem( serial, targetSerial ) );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue )
-            } )]
-        public static int CountType( int graphic, object source = null, int hue = -1 )
+        if ( !AbilitiesManager.GetInstance().CheckHands( useItem.Serial ) )
         {
-            if ( source == null )
-            {
-                source = "backpack";
-            }
+            Engine.SendPacketToServer( new UseObject( useItem.Serial ) );
+        }
+    }
 
-            int sourceSerial = AliasCommands.ResolveSerial( source );
+    [CommandsDisplay( Category = nameof( Strings.Actions ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.SerialOrAlias ) } )]
+    public static void UseTargetedItem( object item, object target )
+    {
+        int serial = AliasCommands.ResolveSerial( item );
+        int targetSerial = AliasCommands.ResolveSerial( target );
 
-            Item countainerItem = Engine.Items.GetItem( sourceSerial );
-
-            if ( countainerItem?.Container == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_container___ );
-
-                return 0;
-            }
-
-            Item[] matches =
-                countainerItem.Container.SelectEntities( i => i.ID == graphic && ( hue == -1 || i.Hue == hue ) );
-
-            return matches?.Sum( i => i.Count ) ?? 0;
+        if ( serial == 0 || targetSerial == 0 )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.Hue ), nameof( ParameterType.Range )
-            } )]
-        public static int CountTypeGround( int graphic, int hue = -1, int range = -1 )
+        Engine.SendPacketToServer( new UseTargetedItem( serial, targetSerial ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
         {
-            IEnumerable<Item> matches = Engine.Items.Where( i =>
-                i.ID == graphic && ( hue == -1 || hue == i.ID ) && ( range == -1 || i.Distance <= range ) );
+            nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue )
+        } )]
+    public static int CountType( int graphic, object source = null, int hue = -1 )
+    {
+        source ??= "backpack";
 
-            int count = matches.Sum( match => match.Count );
+        int sourceSerial = AliasCommands.ResolveSerial( source );
 
-            if ( count > 0 )
-            {
-                return count;
-            }
+        Item countainerItem = Engine.Items.GetItem( sourceSerial );
 
-            IEnumerable<Mobile> mobileMatches = Engine.Mobiles.Where( i =>
-                i.ID == graphic && ( hue == -1 || hue == i.ID ) && ( range == -1 || i.Distance <= range ) );
+        if ( countainerItem?.Container == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_container___ );
 
-            count += mobileMatches.Count();
+            return 0;
+        }
 
+        Item[] matches =
+            countainerItem.Container.SelectEntities( i => i.ID == graphic && ( hue == -1 || i.Hue == hue ) );
+
+        return matches?.Sum( i => i.Count ) ?? 0;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.ItemID ), nameof( ParameterType.Hue ), nameof( ParameterType.Range )
+        } )]
+    public static int CountTypeGround( int graphic, int hue = -1, int range = -1 )
+    {
+        IEnumerable<Item> matches = Engine.Items.Where( i =>
+            i.ID == graphic && ( hue == -1 || hue == i.ID ) && ( range == -1 || i.Distance <= range ) );
+
+        int count = matches.Sum( match => match.Count );
+
+        if ( count > 0 )
+        {
             return count;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.Range ),
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue )
-            } )]
-        public static bool FindType( int graphic, int range = -1, object findLocation = null, int hue = -1,
-            int minimumStackAmount = -1 )
+        IEnumerable<Mobile> mobileMatches = Engine.Mobiles.Where( i =>
+            i.ID == graphic && ( hue == -1 || hue == i.ID ) && ( range == -1 || i.Distance <= range ) );
+
+        count += mobileMatches.Count();
+
+        return count;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
         {
-            int owner = 0;
+            nameof( ParameterType.ItemID ), nameof( ParameterType.Range ),
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue )
+        } )]
+    public static bool FindType( int graphic, int range = -1, object findLocation = null, int hue = -1,
+        int minimumStackAmount = -1 )
+    {
+        int owner = 0;
 
-            if ( findLocation != null )
-            {
-                owner = AliasCommands.ResolveSerial( findLocation );
-            }
-
-            Entity entity;
-
-            bool Predicate( Entity i )
-            {
-                return ( graphic == -1 || i.ID == graphic ) && ( hue == -1 || i.Hue == hue ) &&
-                       ( minimumStackAmount == -1 || !( i is Item ) ||
-                         i is Item itm && itm.Count >= minimumStackAmount ) && !IgnoreList.Contains( i.Serial );
-            }
-
-            if ( owner != 0 )
-            {
-                entity = Engine.Items.SelectEntities( i => Predicate( i ) && i.IsDescendantOf( owner, range ) )
-                    ?.FirstOrDefault();
-            }
-            else
-            {
-                entity =
-                    (Entity) Engine.Mobiles
-                        .SelectEntities( i => Predicate( i ) && ( range == -1 || i.Distance < range ) )
-                        ?.FirstOrDefault() ?? Engine.Items.SelectEntities( i =>
-                        Predicate( i ) && ( range == -1 || i.Distance <= range ) && i.Owner == 0 )?.FirstOrDefault();
-            }
-
-            if ( entity == null )
-            {
-                AliasCommands.UnsetAlias( "found" );
-                return false;
-            }
-
-            AliasCommands.SetMacroAlias( "found", entity.Serial );
-
-            if ( MacroManager.QuietMode )
-            {
-                return true;
-            }
-
-            UOC.SystemMessage( string.Format( Strings.Object___0___updated___, "found" ) );
-
-            return true;
+        if ( findLocation != null )
+        {
+            owner = AliasCommands.ResolveSerial( findLocation );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Range ),
-                nameof( ParameterType.SerialOrAlias )
-            } )]
-        public static bool FindObject( object obj, int range = -1, object findLocation = null )
+        Entity entity;
+
+        bool Predicate( Entity i )
         {
-            int owner = 0;
-
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-
-                return false;
-            }
-
-            if ( findLocation != null )
-            {
-                owner = AliasCommands.ResolveSerial( findLocation );
-            }
-
-            Entity entity;
-
-            bool Predicate( Entity i )
-            {
-                return i.Serial == serial;
-            }
-
-            if ( owner != 0 )
-            {
-                entity = Engine.Items.SelectEntities( i => Predicate( i ) && i.IsDescendantOf( owner, range ) )
-                    ?.FirstOrDefault();
-            }
-            else
-            {
-                entity =
-                    (Entity) Engine.Mobiles
-                        .SelectEntities( i => Predicate( i ) && ( range == -1 || i.Distance < range ) )
-                        ?.FirstOrDefault() ?? Engine.Items.SelectEntities( i =>
-                        Predicate( i ) && ( range == -1 || i.Distance < range ) && i.Owner == 0 )?.FirstOrDefault();
-            }
-
-            if ( entity == null )
-            {
-                AliasCommands.UnsetAlias( "found" );
-                return false;
-            }
-
-            AliasCommands.SetMacroAlias( "found", entity.Serial );
-
-            if ( MacroManager.QuietMode )
-            {
-                return true;
-            }
-
-            UOC.SystemMessage( string.Format( Strings.Object___0___updated___, "found" ) );
-
-            return true;
+            return ( graphic == -1 || i.ID == graphic ) && ( hue == -1 || i.Hue == hue ) &&
+                   ( minimumStackAmount == -1 || i is not Item ||
+                     i is Item itm && itm.Count >= minimumStackAmount ) && !IgnoreList.Contains( i.Serial );
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.SerialOrAlias ),
-                nameof( ParameterType.Amount ), nameof( ParameterType.XCoordinate ),
-                nameof( ParameterType.YCoordinate )
-            } )]
-        public static void MoveItem( object item, object destination, int amount = -1, int x = -1, int y = -1 )
+        if ( owner != 0 )
         {
-            int itemSerial = AliasCommands.ResolveSerial( item );
-
-            if ( itemSerial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            Item itemObj = Engine.Items.GetItem( itemSerial );
-
-            if ( itemObj == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            if ( amount == -1 )
-            {
-                amount = itemObj.Count;
-            }
-
-            int containerSerial = AliasCommands.ResolveSerial( destination );
-
-            if ( containerSerial == 0 )
-            {
-                //TODO
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            ActionPacketQueue.EnqueueDragDrop( itemSerial, amount, containerSerial, QueuePriority.Low, x, y,
-                options: new DragDropOptions { CheckExisting = true, DelaySend = false } );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinateOffset ),
-                nameof( ParameterType.YCoordinateOffset ), nameof( ParameterType.ZCoordinateOffset ),
-                nameof( ParameterType.Amount )
-            } )]
-        public static void MoveItemOffset( object obj, int xOffset, int yOffset, int zOffset, int amount = -1 )
-        {
-            int serial = AliasCommands.ResolveSerial( obj );
-
-            if ( serial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-
-                return;
-            }
-
-            PlayerMobile player = Engine.Player;
-
-            if ( player == null )
-            {
-                return;
-            }
-
-            int x = player.X + xOffset;
-            int y = player.Y + yOffset;
-            int z = player.Z + zOffset;
-
-            ActionPacketQueue.EnqueueDragDropGround( serial, amount, x, y, z );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinate ),
-                nameof( ParameterType.YCoordinate ), nameof( ParameterType.ZCoordinate ),
-                nameof( ParameterType.Amount )
-            } )]
-        public static void MoveItemXYZ( object item, int x, int y, int z, int amount = -1 )
-        {
-            int itemSerial = AliasCommands.ResolveSerial( item );
-
-            if ( itemSerial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            Item itemObj = Engine.Items.GetItem( itemSerial );
-
-            if ( itemObj == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return;
-            }
-
-            if ( amount == -1 )
-            {
-                amount = itemObj.Count;
-            }
-
-            ActionPacketQueue.EnqueueDragDropGround( itemSerial, amount, x, y, z );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Amount ) } )]
-        public static bool DropItemToGround( object item, int amount = -1 )
-        {
-            int itemSerial = AliasCommands.ResolveSerial( item );
-
-            if ( itemSerial == 0 )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return false;
-            }
-
-            Item itemObj = Engine.Items.GetItem( itemSerial );
-
-            if ( itemObj == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                return false;
-            }
-
-            PlayerMobile player = Engine.Player;
-
-            if ( player == null )
-            {
-                return false;
-            }
-
-            if ( amount == -1 )
-            {
-                amount = itemObj.Count;
-            }
-
-            int map = (int) player.Map;
-
-            // 8 adjacent tiles, clockwise from north: N, NE, E, SE, S, SW, W, NW.
-            int[][] offsets =
-            {
-                new[] { 0, -1 }, new[] { 1, -1 }, new[] { 1, 0 }, new[] { 1, 1 }, new[] { 0, 1 }, new[] { -1, 1 },
-                new[] { -1, 0 }, new[] { -1, -1 }
-            };
-
-            foreach ( int[] offset in offsets )
-            {
-                int tx = player.X + offset[0];
-                int ty = player.Y + offset[1];
-
-                if ( MapInfo.ItemCanFit( map, tx, ty, itemObj.ID, out int dropZ ) )
-                {
-                    ActionPacketQueue.EnqueueDragDropGround( itemSerial, amount, tx, ty, dropZ );
-
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
-                nameof( ParameterType.XCoordinateOffset ), nameof( ParameterType.YCoordinateOffset ),
-                nameof( ParameterType.ZCoordinateOffset ), nameof( ParameterType.Amount )
-            } )]
-        public static bool MoveTypeOffset( int id, object findLocation, int xOffset, int yOffset, int zOffset,
-            int amount = -1, int hue = -1, int range = -1 )
-        {
-            bool fromGround = findLocation == null ||
-                              findLocation is string str &&
-                              str.Equals( "ground", StringComparison.InvariantCultureIgnoreCase );
-
-            int owner = 0;
-
-            if ( !fromGround )
-            {
-                owner = AliasCommands.ResolveSerial( findLocation );
-
-                if ( owner == 0 )
-                {
-                    UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                    return false;
-                }
-            }
-
-            bool Predicate( Item i )
-            {
-                return i.ID == id && i.IsDescendantOf( owner ) && ( hue == -1 || i.Hue == hue );
-            }
-
-            bool PredicateGround( Item i )
-            {
-                return i.ID == id && i.Owner == 0 && ( hue == -1 || i.Hue == hue ) &&
-                       ( range == -1 || i.Distance <= range );
-            }
-
-            Item entity = fromGround
-                ? Engine.Items.SelectEntities( PredicateGround )?.FirstOrDefault()
-                : Engine.Items.SelectEntities( Predicate )?.FirstOrDefault();
-
-            if ( entity == null )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return false;
-            }
-
-            PlayerMobile player = Engine.Player;
-
-            if ( player == null )
-            {
-                return false;
-            }
-
-            int x = player.X + xOffset;
-            int y = player.Y + yOffset;
-            int z = player.Z + zOffset;
-
-            ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
-
-            return true;
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
-                nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ),
-                nameof( ParameterType.ZCoordinate ), nameof( ParameterType.Amount ),
-                nameof( ParameterType.Hue ), nameof( ParameterType.Distance )
-            } )]
-        public static bool MoveTypeXYZ( int id, object findLocation, int x, int y, int z, int amount = -1,
-            int hue = -1, int range = -1 )
-        {
-            bool fromGround = findLocation == null ||
-                              findLocation is string str &&
-                              str.Equals( "ground", StringComparison.InvariantCultureIgnoreCase );
-
-            int owner = 0;
-
-            if ( !fromGround )
-            {
-                owner = AliasCommands.ResolveSerial( findLocation );
-
-                if ( owner == 0 )
-                {
-                    UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-                    return false;
-                }
-            }
-
-            Item entity = fromGround
-                ? Engine.Items.SelectEntities( PredicateGround )?.FirstOrDefault()
-                : Engine.Items.SelectEntities( Predicate )?.FirstOrDefault();
-
-            if ( entity == null )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return false;
-            }
-
-            ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
-
-            return true;
-
-            bool PredicateGround( Item i )
-            {
-                return i.ID == id && i.Owner == 0 && ( hue == -1 || i.Hue == hue ) &&
-                       ( range == -1 || i.Distance <= range );
-            }
-
-            bool Predicate( Item i )
-            {
-                return i.ID == id && i.IsDescendantOf( owner ) && ( hue == -1 || i.Hue == hue );
-            }
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[]
-            {
-                nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
-                nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinate ),
-                nameof( ParameterType.YCoordinate ), nameof( ParameterType.ZCoordinate ),
-                nameof( ParameterType.Hue ), nameof( ParameterType.Amount )
-            } )]
-        public static void MoveType( int id, object sourceContainer, object destinationContainer, int x = -1,
-            int y = -1, int z = 0, int hue = -1, int amount = -1 )
-        {
-            int sourceSerial = AliasCommands.ResolveSerial( sourceContainer );
-
-            if ( sourceSerial == -1 )
-            {
-                UOC.SystemMessage( Strings.Invalid_source_container___ );
-                return;
-            }
-
-            int destinationSerial;
-
-            if ( destinationContainer is int destSerial )
-            {
-                destinationSerial = destSerial;
-            }
-            else
-            {
-                destinationSerial = AliasCommands.ResolveSerial( destinationContainer );
-            }
-
-            Item sourceItem = Engine.Items.GetItem( sourceSerial );
-
-            if ( sourceItem == null )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return;
-            }
-
-            if ( sourceItem.Container == null )
-            {
-                UOC.SystemMessage( Strings.Invalid_container___ );
-                return;
-            }
-
-            Item entity = sourceItem.Container.SelectEntities( i => i.ID == id && ( hue == -1 || i.Hue == hue ) )
+            entity = Engine.Items.SelectEntities( i => Predicate( i ) && i.IsDescendantOf( owner, range ) )
                 ?.FirstOrDefault();
-
-            if ( entity == null )
-            {
-                return;
-            }
-
-            if ( amount == -1 )
-            {
-                amount = entity.Count;
-            }
-
-            if ( amount > entity.Count )
-            {
-                amount = entity.Count;
-            }
-
-            if ( destinationSerial == -1 )
-            {
-                ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
-            }
-            else
-            {
-                ActionPacketQueue.EnqueueDragDrop( entity.Serial, amount, destinationSerial );
-            }
+        }
+        else
+        {
+            entity =
+                (Entity) Engine.Mobiles
+                    .SelectEntities( i => Predicate( i ) && ( range == -1 || i.Distance < range ) )
+                    ?.FirstOrDefault() ?? Engine.Items.SelectEntities( i =>
+                    Predicate( i ) && ( range == -1 || i.Distance <= range ) && i.Owner == 0 )?.FirstOrDefault();
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.Layer ), nameof( ParameterType.SerialOrAlias ) } )]
-        public static bool UseLayer( object layer, object obj = null )
+        if ( entity == null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            AliasCommands.UnsetAlias( "found" );
+            return false;
+        }
 
-            if ( serial == 0 || !UOMath.IsMobile( serial ) )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return false;
-            }
+        AliasCommands.SetMacroAlias( "found", entity.Serial );
 
-            Layer layerValue = Layer.Invalid;
-
-            switch ( layer )
-            {
-                case string s:
-                    layerValue = Utility.GetEnumValueByName<Layer>( s );
-                    break;
-                case int i:
-                    layerValue = (Layer) i;
-                    break;
-                case Layer l:
-                    layerValue = l;
-                    break;
-            }
-
-            Mobile mobile = Engine.Mobiles.GetMobile( serial );
-
-            if ( mobile == null )
-            {
-                UOC.SystemMessage( Strings.Mobile_not_found___ );
-                return false;
-            }
-
-            int layerSerial = mobile.GetLayer( layerValue );
-
-            if ( layerSerial == 0 )
-            {
-                UOC.SystemMessage( Strings.Cannot_find_item___ );
-                return false;
-            }
-
-            UseObject( layerSerial );
-
+        if ( MacroManager.QuietMode )
+        {
             return true;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
-        public static bool InIgnoreList( object obj )
+        UOC.SystemMessage( string.Format( Strings.Object___0___updated___, "found" ) );
+
+        return true;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Range ),
+            nameof( ParameterType.SerialOrAlias )
+        } )]
+    public static bool FindObject( object obj, int range = -1, object findLocation = null )
+    {
+        int owner = 0;
 
-            if ( serial > 0 )
-            {
-                return IgnoreList.Contains( serial );
-            }
+        int serial = AliasCommands.ResolveSerial( obj );
 
+        if ( serial == 0 )
+        {
             UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
 
             return false;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ),
-            Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue ) } )]
-        public static void Rehue( object obj, int hue )
+        if ( findLocation != null )
         {
-            int serial = AliasCommands.ResolveSerial( obj );
+            owner = AliasCommands.ResolveSerial( findLocation );
+        }
 
-            if ( serial > 0 )
+        Entity entity;
+
+        bool Predicate( Entity i )
+        {
+            return i.Serial == serial;
+        }
+
+        if ( owner != 0 )
+        {
+            entity = Engine.Items.SelectEntities( i => Predicate( i ) && i.IsDescendantOf( owner, range ) )
+                ?.FirstOrDefault();
+        }
+        else
+        {
+            entity =
+                (Entity) Engine.Mobiles
+                    .SelectEntities( i => Predicate( i ) && ( range == -1 || i.Distance < range ) )
+                    ?.FirstOrDefault() ?? Engine.Items.SelectEntities( i =>
+                    Predicate( i ) && ( range == -1 || i.Distance < range ) && i.Owner == 0 )?.FirstOrDefault();
+        }
+
+        if ( entity == null )
+        {
+            AliasCommands.UnsetAlias( "found" );
+            return false;
+        }
+
+        AliasCommands.SetMacroAlias( "found", entity.Serial );
+
+        if ( MacroManager.QuietMode )
+        {
+            return true;
+        }
+
+        UOC.SystemMessage( string.Format( Strings.Object___0___updated___, "found" ) );
+
+        return true;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.SerialOrAlias ),
+            nameof( ParameterType.Amount ), nameof( ParameterType.XCoordinate ),
+            nameof( ParameterType.YCoordinate )
+        } )]
+    public static void MoveItem( object item, object destination, int amount = -1, int x = -1, int y = -1 )
+    {
+        int itemSerial = AliasCommands.ResolveSerial( item );
+
+        if ( itemSerial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
+        }
+
+        Item itemObj = Engine.Items.GetItem( itemSerial );
+
+        if ( itemObj == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
+        }
+
+        if ( amount == -1 )
+        {
+            amount = itemObj.Count;
+        }
+
+        int containerSerial = AliasCommands.ResolveSerial( destination );
+
+        if ( containerSerial == 0 )
+        {
+            //TODO
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
+        }
+
+        ActionPacketQueue.EnqueueDragDrop( itemSerial, amount, containerSerial, QueuePriority.Low, x, y,
+            options: new DragDropOptions { CheckExisting = true, DelaySend = false } );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinateOffset ),
+            nameof( ParameterType.YCoordinateOffset ), nameof( ParameterType.ZCoordinateOffset ),
+            nameof( ParameterType.Amount )
+        } )]
+    public static void MoveItemOffset( object obj, int xOffset, int yOffset, int zOffset, int amount = -1 )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+
+            return;
+        }
+
+        PlayerMobile player = Engine.Player;
+
+        if ( player == null )
+        {
+            return;
+        }
+
+        int x = player.X + xOffset;
+        int y = player.Y + yOffset;
+        int z = player.Z + zOffset;
+
+        ActionPacketQueue.EnqueueDragDropGround( serial, amount, x, y, z );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinate ),
+            nameof( ParameterType.YCoordinate ), nameof( ParameterType.ZCoordinate ),
+            nameof( ParameterType.Amount )
+        } )]
+    public static void MoveItemXYZ( object item, int x, int y, int z, int amount = -1 )
+    {
+        int itemSerial = AliasCommands.ResolveSerial( item );
+
+        if ( itemSerial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
+        }
+
+        Item itemObj = Engine.Items.GetItem( itemSerial );
+
+        if ( itemObj == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return;
+        }
+
+        if ( amount == -1 )
+        {
+            amount = itemObj.Count;
+        }
+
+        ActionPacketQueue.EnqueueDragDropGround( itemSerial, amount, x, y, z );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Amount ) } )]
+    public static bool DropItemToGround( object item, int amount = -1 )
+    {
+        int itemSerial = AliasCommands.ResolveSerial( item );
+
+        if ( itemSerial == 0 )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return false;
+        }
+
+        Item itemObj = Engine.Items.GetItem( itemSerial );
+
+        if ( itemObj == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+            return false;
+        }
+
+        PlayerMobile player = Engine.Player;
+
+        if ( player == null )
+        {
+            return false;
+        }
+
+        if ( amount == -1 )
+        {
+            amount = itemObj.Count;
+        }
+
+        int map = (int) player.Map;
+
+        // 8 adjacent tiles, clockwise from north: N, NE, E, SE, S, SW, W, NW.
+        int[][] offsets =
+        [
+            [0, -1], [1, -1], [1, 0], [1, 1], [0, 1], [-1, 1],
+            [-1, 0], [-1, -1]
+        ];
+
+        foreach ( int[] offset in offsets )
+        {
+            int tx = player.X + offset[0];
+            int ty = player.Y + offset[1];
+
+            if ( MapInfo.ItemCanFit( map, tx, ty, itemObj.ID, out int dropZ ) )
             {
-                if ( hue > 0 )
-                {
-                    Engine.RehueList.Add( serial, hue );
-                }
-                else
-                {
-                    Engine.RehueList.Remove( serial );
-                }
+                ActionPacketQueue.EnqueueDragDropGround( itemSerial, amount, tx, ty, dropZ );
 
-                if ( UOMath.IsMobile( serial ) )
-                {
-                    Mobile m = Engine.Mobiles.GetMobile( serial );
+                return true;
+            }
+        }
 
-                    if ( m == null )
-                    {
-                        return;
-                    }
+        return false;
+    }
 
-                    Engine.SendPacketToClient( new MobileIncoming( m, m.Equipment, hue ) );
-                }
-                else
-                {
-                    Item i = Engine.Items.GetItem( serial );
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
+            nameof( ParameterType.XCoordinateOffset ), nameof( ParameterType.YCoordinateOffset ),
+            nameof( ParameterType.ZCoordinateOffset ), nameof( ParameterType.Amount )
+        } )]
+    public static bool MoveTypeOffset( int id, object findLocation, int xOffset, int yOffset, int zOffset,
+        int amount = -1, int hue = -1, int range = -1 )
+    {
+        bool fromGround = findLocation == null ||
+                          findLocation is string str &&
+                          str.Equals( "ground", StringComparison.InvariantCultureIgnoreCase );
 
-                    if ( i == null )
-                    {
-                        return;
-                    }
+        int owner = 0;
 
-                    Engine.RehueList.CheckItem( i );
-                }
+        if ( !fromGround )
+        {
+            owner = AliasCommands.ResolveSerial( findLocation );
 
-                return;
+            if ( owner == 0 )
+            {
+                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+                return false;
+            }
+        }
+
+        bool Predicate( Item i )
+        {
+            return i.ID == id && i.IsDescendantOf( owner ) && ( hue == -1 || i.Hue == hue );
+        }
+
+        bool PredicateGround( Item i )
+        {
+            return i.ID == id && i.Owner == 0 && ( hue == -1 || i.Hue == hue ) &&
+                   ( range == -1 || i.Distance <= range );
+        }
+
+        Item entity = fromGround
+            ? Engine.Items.SelectEntities( PredicateGround )?.FirstOrDefault()
+            : Engine.Items.SelectEntities( Predicate )?.FirstOrDefault();
+
+        if ( entity == null )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return false;
+        }
+
+        PlayerMobile player = Engine.Player;
+
+        if ( player == null )
+        {
+            return false;
+        }
+
+        int x = player.X + xOffset;
+        int y = player.Y + yOffset;
+        int z = player.Z + zOffset;
+
+        ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
+
+        return true;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
+            nameof( ParameterType.XCoordinate ), nameof( ParameterType.YCoordinate ),
+            nameof( ParameterType.ZCoordinate ), nameof( ParameterType.Amount ),
+            nameof( ParameterType.Hue ), nameof( ParameterType.Distance )
+        } )]
+    public static bool MoveTypeXYZ( int id, object findLocation, int x, int y, int z, int amount = -1,
+        int hue = -1, int range = -1 )
+    {
+        bool fromGround = findLocation == null ||
+                          findLocation is string str &&
+                          str.Equals( "ground", StringComparison.InvariantCultureIgnoreCase );
+
+        int owner = 0;
+
+        if ( !fromGround )
+        {
+            owner = AliasCommands.ResolveSerial( findLocation );
+
+            if ( owner == 0 )
+            {
+                UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+                return false;
+            }
+        }
+
+        Item entity = fromGround
+            ? Engine.Items.SelectEntities( PredicateGround )?.FirstOrDefault()
+            : Engine.Items.SelectEntities( Predicate )?.FirstOrDefault();
+
+        if ( entity == null )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return false;
+        }
+
+        ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
+
+        return true;
+
+        bool PredicateGround( Item i )
+        {
+            return i.ID == id && i.Owner == 0 && ( hue == -1 || i.Hue == hue ) &&
+                   ( range == -1 || i.Distance <= range );
+        }
+
+        bool Predicate( Item i )
+        {
+            return i.ID == id && i.IsDescendantOf( owner ) && ( hue == -1 || i.Hue == hue );
+        }
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.ItemID ), nameof( ParameterType.SerialOrAlias ),
+            nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.XCoordinate ),
+            nameof( ParameterType.YCoordinate ), nameof( ParameterType.ZCoordinate ),
+            nameof( ParameterType.Hue ), nameof( ParameterType.Amount )
+        } )]
+    public static void MoveType( int id, object sourceContainer, object destinationContainer, int x = -1,
+        int y = -1, int z = 0, int hue = -1, int amount = -1 )
+    {
+        int sourceSerial = AliasCommands.ResolveSerial( sourceContainer );
+
+        if ( sourceSerial == -1 )
+        {
+            UOC.SystemMessage( Strings.Invalid_source_container___ );
+            return;
+        }
+
+        int destinationSerial;
+
+        if ( destinationContainer is int destSerial )
+        {
+            destinationSerial = destSerial;
+        }
+        else
+        {
+            destinationSerial = AliasCommands.ResolveSerial( destinationContainer );
+        }
+
+        Item sourceItem = Engine.Items.GetItem( sourceSerial );
+
+        if ( sourceItem == null )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return;
+        }
+
+        if ( sourceItem.Container == null )
+        {
+            UOC.SystemMessage( Strings.Invalid_container___ );
+            return;
+        }
+
+        Item entity = sourceItem.Container.SelectEntities( i => i.ID == id && ( hue == -1 || i.Hue == hue ) )
+            ?.FirstOrDefault();
+
+        if ( entity == null )
+        {
+            return;
+        }
+
+        if ( amount == -1 )
+        {
+            amount = entity.Count;
+        }
+
+        if ( amount > entity.Count )
+        {
+            amount = entity.Count;
+        }
+
+        if ( destinationSerial == -1 )
+        {
+            ActionPacketQueue.EnqueueDragDropGround( entity.Serial, amount, x, y, z );
+        }
+        else
+        {
+            ActionPacketQueue.EnqueueDragDrop( entity.Serial, amount, destinationSerial );
+        }
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.Layer ), nameof( ParameterType.SerialOrAlias ) } )]
+    public static bool UseLayer( object layer, object obj = null )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial == 0 || !UOMath.IsMobile( serial ) )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return false;
+        }
+
+        Layer layerValue = Layer.Invalid;
+
+        switch ( layer )
+        {
+            case string s:
+                layerValue = Utility.GetEnumValueByName<Layer>( s );
+                break;
+            case int i:
+                layerValue = (Layer) i;
+                break;
+            case Layer l:
+                layerValue = l;
+                break;
+        }
+
+        Mobile mobile = Engine.Mobiles.GetMobile( serial );
+
+        if ( mobile == null )
+        {
+            UOC.SystemMessage( Strings.Mobile_not_found___ );
+            return false;
+        }
+
+        int layerSerial = mobile.GetLayer( layerValue );
+
+        if ( layerSerial == 0 )
+        {
+            UOC.SystemMessage( Strings.Cannot_find_item___ );
+            return false;
+        }
+
+        UseObject( layerSerial );
+
+        return true;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ) } )]
+    public static bool InIgnoreList( object obj )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial > 0 )
+        {
+            return IgnoreList.Contains( serial );
+        }
+
+        UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+
+        return false;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ),
+        Parameters = new[] { nameof( ParameterType.SerialOrAlias ), nameof( ParameterType.Hue ) } )]
+    public static void Rehue( object obj, int hue )
+    {
+        int serial = AliasCommands.ResolveSerial( obj );
+
+        if ( serial > 0 )
+        {
+            if ( hue > 0 )
+            {
+                Engine.RehueList.Add( serial, hue );
+            }
+            else
+            {
+                Engine.RehueList.Remove( serial );
             }
 
-            UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Entity ), Parameters = new[] { nameof( ParameterType.Hue ) } )]
-        public static void AutoColorPick( int hue )
-        {
-            Engine.RemoveReceiveFilter( new PacketFilterInfo( 0x95 ) );
-            Engine.AddReceiveFilter( new PacketFilterInfo( 0x95, ( p, pfi ) =>
+            if ( UOMath.IsMobile( serial ) )
             {
-                int serial = ( p[1] << 24 ) | ( p[2] << 16 ) | ( p[3] << 8 ) | p[4];
-                int itemid = ( p[5] << 8 ) | p[6];
+                Mobile m = Engine.Mobiles.GetMobile( serial );
 
-                Engine.SendPacketToServer( new HuePickerResponse( serial, itemid, hue ) );
-                Engine.RemoveReceiveFilter( pfi );
-            } ) );
+                if ( m == null )
+                {
+                    return;
+                }
+
+                Engine.SendPacketToClient( new MobileIncoming( m, m.Equipment, hue ) );
+            }
+            else
+            {
+                Item i = Engine.Items.GetItem( serial );
+
+                if ( i == null )
+                {
+                    return;
+                }
+
+                Engine.RehueList.CheckItem( i );
+            }
+
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Entity ) )]
-        public static void ClearObjectQueue()
+        UOC.SystemMessage( Strings.Invalid_or_unknown_object_id );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ), Parameters = new[] { nameof( ParameterType.Hue ) } )]
+    public static void AutoColorPick( int hue )
+    {
+        Engine.RemoveReceiveFilter( new PacketFilterInfo( 0x95 ) );
+        Engine.AddReceiveFilter( new PacketFilterInfo( 0x95, ( p, pfi ) =>
         {
-            ActionPacketQueue.Clear();
-        }
+            int serial = ( p[1] << 24 ) | ( p[2] << 16 ) | ( p[3] << 8 ) | p[4];
+            int itemid = ( p[5] << 8 ) | p[6];
+
+            Engine.SendPacketToServer( new HuePickerResponse( serial, itemid, hue ) );
+            Engine.RemoveReceiveFilter( pfi );
+        } ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Entity ) )]
+    public static void ClearObjectQueue()
+    {
+        ActionPacketQueue.Clear();
     }
 }

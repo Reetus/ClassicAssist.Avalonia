@@ -4,78 +4,77 @@ using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using UOC = ClassicAssist.Shared.UO.Commands;
 
-namespace ClassicAssist.Data.Macros.Commands
+namespace ClassicAssist.Data.Macros.Commands;
+
+public static class MacroCommands
 {
-    public static class MacroCommands
+    [CommandsDisplay( Category = nameof( Strings.Macros ),
+        Parameters = new[] { nameof( ParameterType.MacroName ), nameof( ParameterType.Parameters ) } )]
+    public static void PlayMacro( string name, params object[] args )
     {
-        [CommandsDisplay( Category = nameof( Strings.Macros ),
-            Parameters = new[] { nameof( ParameterType.MacroName ), nameof( ParameterType.Parameters ) } )]
-        public static void PlayMacro( string name, params object[] args )
+        MacroManager manager = MacroManager.GetInstance();
+
+        MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name == name );
+
+        if ( macro == null )
         {
-            MacroManager manager = MacroManager.GetInstance();
-
-            MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name == name );
-
-            if ( macro == null )
-            {
-                UOC.SystemMessage( Strings.Unknown_macro___ );
-                return;
-            }
-
-            Task.Run( () => macro.Action( macro, args ) );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.String ) } )]
-        public static void Stop( string name = null )
-        {
-            MacroManager.GetInstance().Stop( name );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Macros ) )]
-        public static void StopAll()
-        {
-            MacroManager.GetInstance().StopAll();
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Macros ),
-            Parameters = new[] { nameof( ParameterType.Parameters ) } )]
-        public static void Replay( params object[] args )
-        {
-            MacroManager manager = MacroManager.GetInstance();
-
-            MacroEntry current = manager?.GetCurrentMacro();
-
-            if ( current?.Action == null )
-            {
-                return;
-            }
-
-            manager.Replay = true;
-
-            Task.Run( () => current.Action( current, args ) );
-        }
-
-        [CommandsDisplay( Category = nameof( Strings.Macros ),
-            Parameters = new[] { nameof( ParameterType.MacroName ) } )]
-        public static bool IsRunning( string name )
-        {
-            MacroManager manager = MacroManager.GetInstance();
-
-            MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name == name );
-
-            if ( macro != null )
-            {
-                return macro.IsRunning;
-            }
-
             UOC.SystemMessage( Strings.Unknown_macro___ );
-            return false;
+            return;
         }
 
-        [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.MacroName ) } )]
-        public static void PlayCUOMacro( string name )
+        Task.Run( () => macro.Action( macro, args ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.String ) } )]
+    public static void Stop( string name = null )
+    {
+        MacroManager.GetInstance().Stop( name );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Macros ) )]
+    public static void StopAll()
+    {
+        MacroManager.GetInstance().StopAll();
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Macros ),
+        Parameters = new[] { nameof( ParameterType.Parameters ) } )]
+    public static void Replay( params object[] args )
+    {
+        MacroManager manager = MacroManager.GetInstance();
+
+        MacroEntry current = manager?.GetCurrentMacro();
+
+        if ( current?.Action == null )
         {
-            ReflectionCommands.PlayCUOMacro( name );
+            return;
         }
+
+        manager.Replay = true;
+
+        Task.Run( () => current.Action( current, args ) );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Macros ),
+        Parameters = new[] { nameof( ParameterType.MacroName ) } )]
+    public static bool IsRunning( string name )
+    {
+        MacroManager manager = MacroManager.GetInstance();
+
+        MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name == name );
+
+        if ( macro != null )
+        {
+            return macro.IsRunning;
+        }
+
+        UOC.SystemMessage( Strings.Unknown_macro___ );
+        return false;
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Macros ), Parameters = new[] { nameof( ParameterType.MacroName ) } )]
+    public static void PlayCUOMacro( string name )
+    {
+        ReflectionCommands.PlayCUOMacro( name );
     }
 }

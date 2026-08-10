@@ -19,72 +19,71 @@ using ClassicAssist.Misc;
 using ClassicAssist.UI.ViewModels;
 using Newtonsoft.Json.Linq;
 
-namespace ClassicAssist.Avalonia
+namespace ClassicAssist.Avalonia;
+
+/// <summary>
+///     Process-wide state for the UI half of ClassicAssist. Replaces the old <c>Assistant.Engine</c>,
+///     which doubled as the in-process ClassicUO entry point; that entry point now lives in the
+///     separate plugin assembly and this process is a plain Avalonia app.
+/// </summary>
+public static class UiHost
 {
-    /// <summary>
-    ///     Process-wide state for the UI half of ClassicAssist. Replaces the old <c>Assistant.Engine</c>,
-    ///     which doubled as the in-process ClassicUO entry point; that entry point now lives in the
-    ///     separate plugin assembly and this process is a plain Avalonia app.
-    /// </summary>
-    public static class UiHost
+    public static MainWindow MainWindow { get; internal set; }
+
+    public static void Initialize()
     {
-        public static MainWindow MainWindow { get; internal set; }
+        Options.LoadEvent += OnOptionsLoad;
+        Options.SaveEvent += OnOptionsSave;
+    }
 
-        public static void Initialize()
+    private static void OnOptionsSave( JObject obj )
+    {
+        BaseViewModel[] instances = BaseViewModel.Instances;
+
+        foreach ( BaseViewModel instance in instances )
         {
-            Options.LoadEvent += OnOptionsLoad;
-            Options.SaveEvent += OnOptionsSave;
-        }
-
-        private static void OnOptionsSave( JObject obj )
-        {
-            BaseViewModel[] instances = BaseViewModel.Instances;
-
-            foreach ( BaseViewModel instance in instances )
+            if ( instance is ISettingProvider settingProvider )
             {
-                if ( instance is ISettingProvider settingProvider )
-                {
-                    settingProvider.Serialize( obj );
-                }
+                settingProvider.Serialize( obj );
+            }
 
-                if ( instance is IGlobalSettingProvider globalSettingProvider )
-                {
-                    JObject global = new JObject();
+            if ( instance is IGlobalSettingProvider globalSettingProvider )
+            {
+                JObject global = [];
 
-                    globalSettingProvider.Serialize( global, true );
+                globalSettingProvider.Serialize( global, true );
 
-                    File.WriteAllText(
-                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() ),
-                        global.ToString() );
-                }
+                File.WriteAllText(
+                    Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() ),
+                    global.ToString() );
             }
         }
+    }
 
-        private static void OnOptionsLoad( JObject json, Options options )
+    private static void OnOptionsLoad( JObject json, Options options )
+    {
+        BaseViewModel[] instances = BaseViewModel.Instances;
+
+        foreach ( BaseViewModel instance in instances )
         {
-            BaseViewModel[] instances = BaseViewModel.Instances;
-
-            foreach ( BaseViewModel instance in instances )
+            if ( instance is ISettingProvider settingProvider )
             {
-                if ( instance is ISettingProvider settingProvider )
+                settingProvider.Deserialize( json, options );
+            }
+
+            if ( instance is IGlobalSettingProvider globalSettingProvider )
+            {
+                string filePath =
+                    Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() );
+
+                if ( !File.Exists( filePath ) )
                 {
-                    settingProvider.Deserialize( json, options );
+                    continue;
                 }
 
-                if ( instance is IGlobalSettingProvider globalSettingProvider )
-                {
-                    string filePath =
-                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() );
+                JObject global = JObject.Parse( File.ReadAllText( filePath ) );
 
-                    if ( !File.Exists( filePath ) )
-                    {
-                        continue;
-                    }
-
-                    JObject global = JObject.Parse( File.ReadAllText( filePath ) );
-
-                    globalSettingProvider.Deserialize( global, options, true );
-                }
+                globalSettingProvider.Deserialize( global, options, true );
             }
         }
     }

@@ -20,26 +20,25 @@
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 
-namespace ClassicAssist.UO.Network.Packets
+namespace ClassicAssist.UO.Network.Packets;
+
+public class StunRequest : BasePacket, IMacroCommandParser
 {
-    public class StunRequest : BasePacket, IMacroCommandParser
+    public StunRequest()
     {
-        public StunRequest()
+        _writer = new PacketWriter( 5 );
+        _writer.Write( (byte) 0xBF );
+        _writer.Write( (short) 5 );
+        _writer.Write( (short) 0x0A );
+    }
+
+    public string Parse( byte[] packet, int length, PacketDirection direction )
+    {
+        if ( direction == PacketDirection.Outgoing && packet[0] == 0xBF && packet[4] == 0x0A )
         {
-            _writer = new PacketWriter( 5 );
-            _writer.Write( (byte) 0xBF );
-            _writer.Write( (short) 5 );
-            _writer.Write( (short) 0x0A );
+            return "SetAbility(\"Stun\")\r\n";
         }
 
-        public string Parse( byte[] packet, int length, PacketDirection direction )
-        {
-            if ( direction == PacketDirection.Outgoing && packet[0] == 0xBF && packet[4] == 0x0A )
-            {
-                return "SetAbility(\"Stun\")\r\n";
-            }
-
-            return null;
-        }
+        return null;
     }
 }

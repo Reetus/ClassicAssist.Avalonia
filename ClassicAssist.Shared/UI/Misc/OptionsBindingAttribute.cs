@@ -17,10 +17,9 @@
 
 using System;
 
-namespace ClassicAssist.UI.Misc
+namespace ClassicAssist.UI.Misc;
+
+public class OptionsBindingAttribute : Attribute
 {
-    public class OptionsBindingAttribute : Attribute
-    {
-        public string Property { get; set; }
-    }
+    public string Property { get; set; }
 }

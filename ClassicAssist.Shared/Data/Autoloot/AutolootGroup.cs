@@ -23,78 +23,73 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ClassicAssist.UI.Misc.DraggableTreeView;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+public class AutolootGroup : INotifyPropertyChanged, IDraggableGroup
 {
-    public class AutolootGroup : INotifyPropertyChanged, IDraggableGroup
+    public AutolootGroup()
     {
-        private ObservableCollection<IDraggable> _children = new ObservableCollection<IDraggable>();
-        private bool _enabled = true;
-        private string _name;
+        Children.CollectionChanged += ChildrenOnCollectionChanged;
+    }
 
-        public AutolootGroup()
+    public bool Enabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
+
+    public string Name
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public ObservableCollection<IDraggable> Children
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public event PropertyChangedEventHandler PropertyChanged;
+
+    private void ChildrenOnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        if ( e.NewItems != null )
         {
-            Children.CollectionChanged += ChildrenOnCollectionChanged;
-        }
-
-        public bool Enabled
-        {
-            get => _enabled;
-            set => SetProperty( ref _enabled, value );
-        }
-
-        public string Name
-        {
-            get => _name;
-            set => SetProperty( ref _name, value );
-        }
-
-        public ObservableCollection<IDraggable> Children
-        {
-            get => _children;
-            set => SetProperty( ref _children, value );
-        }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void ChildrenOnCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
-        {
-            if ( e.NewItems != null )
+            foreach ( object newItem in e.NewItems )
             {
-                foreach ( object newItem in e.NewItems )
+                if ( newItem is not AutolootEntry entry )
                 {
-                    if ( !( newItem is AutolootEntry entry ) )
-                    {
-                        continue;
-                    }
-
-                    entry.Group = this;
+                    continue;
                 }
-            }
 
-            if ( e.OldItems != null )
-            {
-                foreach ( object oldItem in e.OldItems )
-                {
-                    if ( !( oldItem is AutolootEntry entry ) )
-                    {
-                        continue;
-                    }
-
-                    entry.Group = null;
-                }
+                entry.Group = this;
             }
         }
 
-        protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+        if ( e.OldItems != null )
         {
-            PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
-        }
+            foreach ( object oldItem in e.OldItems )
+            {
+                if ( oldItem is not AutolootEntry entry )
+                {
+                    continue;
+                }
 
-        // ReSharper disable once RedundantAssignment
-        public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
-        {
-            obj = value;
-            OnPropertyChanged( propertyName );
+                entry.Group = null;
+            }
         }
+    }
+
+    protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
+    {
+        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+    }
+
+    // ReSharper disable once RedundantAssignment
+    public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
+    {
+        obj = value;
+        OnPropertyChanged( propertyName );
     }
 }

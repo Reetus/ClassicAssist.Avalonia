@@ -22,23 +22,22 @@ using System.Globalization;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class BooleanToStrikethroughValueConverter : IValueConverter
 {
-    public class BooleanToStrikethroughValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not bool valueBool )
         {
-            if ( !( value is bool valueBool ) )
-            {
-                return null;
-            }
-
-            return valueBool ? null : TextDecorations.Strikethrough;
+            return null;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
-        {
-            throw new NotSupportedException();
-        }
+        return valueBool ? null : TextDecorations.Strikethrough;
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotSupportedException();
     }
 }

@@ -21,45 +21,46 @@ using System.Text;
 using Avalonia.Data.Converters;
 using ClassicAssist.UI.Misc;
 
-namespace ClassicAssist.Avalonia.Misc
+namespace ClassicAssist.Avalonia.Misc;
+
+public class PacketEntryTextValueConverter : IValueConverter
 {
-    public class PacketEntryTextValueConverter : IValueConverter
+    public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( value is not PacketEntry packetEntry )
         {
-            if ( !( value is PacketEntry packetEntry ) )
-                return string.Empty;
-
-            if (packetEntry?.Data == null)
-            {
-                return string.Empty;
-            }
-
-            StringBuilder textBuilder = new StringBuilder();
-
-            for (int i = 0; i < packetEntry.Length; i++)
-            {
-                byte b1 = packetEntry.Data[i];
-
-                if (b1 < 0x20 || b1 == 0xB7 || b1 == 0xFF)
-                {
-                    b1 = (byte)'.';
-                }
-
-                textBuilder.Append( (char)b1 );
-
-                if ((i + 1) % 16 == 0)
-                {
-                    textBuilder.AppendLine();
-                }
-            }
-
-            return textBuilder.ToString();
+            return string.Empty;
         }
 
-        public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+        if ( packetEntry?.Data == null )
         {
-            throw new NotImplementedException();
+            return string.Empty;
         }
+
+        StringBuilder textBuilder = new();
+
+        for ( int i = 0; i < packetEntry.Length; i++ )
+        {
+            byte b1 = packetEntry.Data[i];
+
+            if ( b1 is < 0x20 or 0xB7 or 0xFF )
+            {
+                b1 = (byte) '.';
+            }
+
+            textBuilder.Append( (char) b1 );
+
+            if ( ( i + 1 ) % 16 == 0 )
+            {
+                textBuilder.AppendLine();
+            }
+        }
+
+        return textBuilder.ToString();
+    }
+
+    public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
+    {
+        throw new NotImplementedException();
     }
 }

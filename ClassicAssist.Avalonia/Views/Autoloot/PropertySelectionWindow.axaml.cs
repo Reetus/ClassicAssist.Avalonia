@@ -20,21 +20,20 @@
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 
-namespace ClassicAssist.Avalonia.Views.Autoloot
-{
-    /// <summary>
-    ///     Interaction logic for PropertySelectionWindow.xaml
-    /// </summary>
-    public partial class PropertySelectionWindow : Window
-    {
-        public PropertySelectionWindow()
-        {
-            InitializeComponent();
-        }
+namespace ClassicAssist.Avalonia.Views.Autoloot;
 
-        private void InitializeComponent()
-        {
-            AvaloniaXamlLoader.Load( this );
-        }
+/// <summary>
+///     Interaction logic for PropertySelectionWindow.xaml
+/// </summary>
+public partial class PropertySelectionWindow : Window
+{
+    public PropertySelectionWindow()
+    {
+        InitializeComponent();
+    }
+
+    private void InitializeComponent()
+    {
+        AvaloniaXamlLoader.Load( this );
     }
 }

@@ -27,161 +27,156 @@ using System.Windows.Input;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Shared.Resources;
 
-namespace ClassicAssist.UI.ViewModels.Hotkeys
+namespace ClassicAssist.UI.ViewModels.Hotkeys;
+
+/// <summary>
+///     Backs the hotkey Options dialog: reflects every <see cref="HotkeyConfigurationAttribute" />
+///     property on the selected entry into a bindable row, and writes the chosen values back on OK.
+///     <para>
+///         WPF builds this dialog imperatively - a Grid of TextBlock/ComboBox pairs assembled in the
+///         window's constructor. Avalonia binds an ItemsControl to <see cref="Entries" /> instead, so
+///         the shape of the dialog stays in XAML and this stays testable without a UI thread.
+///     </para>
+/// </summary>
+public class HotkeyOptionsViewModel : BaseViewModel
 {
+    private readonly HotkeyEntry _hotkeyEntry;
+
     /// <summary>
-    ///     Backs the hotkey Options dialog: reflects every <see cref="HotkeyConfigurationAttribute" />
-    ///     property on the selected entry into a bindable row, and writes the chosen values back on OK.
-    ///     <para>
-    ///         WPF builds this dialog imperatively - a Grid of TextBlock/ComboBox pairs assembled in the
-    ///         window's constructor. Avalonia binds an ItemsControl to <see cref="Entries" /> instead, so
-    ///         the shape of the dialog stays in XAML and this stays testable without a UI thread.
-    ///     </para>
+    ///     Parameterless ctor for the XAML designer only - a dialog opened this way has no rows.
     /// </summary>
-    public class HotkeyOptionsViewModel : BaseViewModel
+    public HotkeyOptionsViewModel()
     {
-        private readonly HotkeyEntry _hotkeyEntry;
-        private ICommand _okCommand;
+    }
 
-        /// <summary>
-        ///     Parameterless ctor for the XAML designer only - a dialog opened this way has no rows.
-        /// </summary>
-        public HotkeyOptionsViewModel()
+    public HotkeyOptionsViewModel( HotkeyEntry hotkeyEntry )
+    {
+        _hotkeyEntry = hotkeyEntry;
+
+        if ( hotkeyEntry == null )
         {
+            return;
         }
 
-        public HotkeyOptionsViewModel( HotkeyEntry hotkeyEntry )
+        IEnumerable<PropertyInfo> properties = hotkeyEntry.GetType().GetProperties()
+            .Where( prop => prop.IsDefined( typeof( HotkeyConfigurationAttribute ), false ) );
+
+        foreach ( PropertyInfo property in properties )
         {
-            _hotkeyEntry = hotkeyEntry;
+            HotkeyConfigurationAttribute attribute =
+                property.GetCustomAttribute<HotkeyConfigurationAttribute>();
 
-            if ( hotkeyEntry == null )
+            // Only Enum is handled, matching upstream. Anything else is skipped rather than thrown
+            // on: an unsupported property should cost you that one row, not the whole dialog.
+            if ( attribute?.BaseType != typeof( Enum ) || attribute.Type == null || !attribute.Type.IsEnum )
             {
-                return;
+                continue;
             }
 
-            IEnumerable<PropertyInfo> properties = hotkeyEntry.GetType().GetProperties()
-                .Where( prop => prop.IsDefined( typeof( HotkeyConfigurationAttribute ), false ) );
-
-            foreach ( PropertyInfo property in properties )
-            {
-                HotkeyConfigurationAttribute attribute =
-                    property.GetCustomAttribute<HotkeyConfigurationAttribute>();
-
-                // Only Enum is handled, matching upstream. Anything else is skipped rather than thrown
-                // on: an unsupported property should cost you that one row, not the whole dialog.
-                if ( attribute?.BaseType != typeof( Enum ) || attribute.Type == null || !attribute.Type.IsEnum )
-                {
-                    continue;
-                }
-
-                Entries.Add( new HotkeyOptionEntry( property, attribute, property.GetValue( hotkeyEntry ) ) );
-            }
-        }
-
-        public ObservableCollection<HotkeyOptionEntry> Entries { get; } =
-            new ObservableCollection<HotkeyOptionEntry>();
-
-        public ICommand OkCommand => _okCommand ?? ( _okCommand = new RelayCommand( Ok, o => true ) );
-
-        private void Ok( object obj )
-        {
-            if ( _hotkeyEntry == null )
-            {
-                return;
-            }
-
-            foreach ( HotkeyOptionEntry entry in Entries )
-            {
-                entry.Apply( _hotkeyEntry );
-            }
+            Entries.Add( new HotkeyOptionEntry( property, attribute, property.GetValue( hotkeyEntry ) ) );
         }
     }
 
-    /// <summary>
-    ///     One configurable property: its label, the values it can take, and the value currently chosen.
-    /// </summary>
-    public class HotkeyOptionEntry : BaseViewModel
+    public ObservableCollection<HotkeyOptionEntry> Entries { get; } =
+        [];
+
+    public ICommand OkCommand => field ??= new RelayCommand( Ok, o => true );
+
+    private void Ok( object obj )
     {
-        private readonly PropertyInfo _property;
-        private HotkeyOptionValue _selectedValue;
-
-        public HotkeyOptionEntry( PropertyInfo property, HotkeyConfigurationAttribute attribute, object value )
+        if ( _hotkeyEntry == null )
         {
-            _property = property;
-
-            // Upstream shows the attribute name verbatim rather than through the resource manager, and
-            // there is no resource for "Cure Type" to look up, so this matches.
-            Name = attribute.Name ?? property.Name;
-
-            foreach ( object enumValue in Enum.GetValues( attribute.Type ) )
-            {
-                HotkeyOptionValue optionValue = new HotkeyOptionValue( enumValue );
-
-                Values.Add( optionValue );
-
-                if ( Equals( enumValue, value ) )
-                {
-                    _selectedValue = optionValue;
-                }
-            }
-
-            // A stored value outside the enum leaves nothing selected; fall back to the first entry so
-            // the ComboBox is never blank.
-            if ( _selectedValue == null )
-            {
-                _selectedValue = Values.FirstOrDefault();
-            }
+            return;
         }
 
-        public string Name { get; }
-
-        public HotkeyOptionValue SelectedValue
+        foreach ( HotkeyOptionEntry entry in Entries )
         {
-            get => _selectedValue;
-            set => SetProperty( ref _selectedValue, value );
-        }
-
-        public ObservableCollection<HotkeyOptionValue> Values { get; } =
-            new ObservableCollection<HotkeyOptionValue>();
-
-        public void Apply( object target )
-        {
-            if ( SelectedValue != null )
-            {
-                _property.SetValue( target, SelectedValue.Value );
-            }
+            entry.Apply( _hotkeyEntry );
         }
     }
+}
 
-    /// <summary>
-    ///     An enum member paired with the text to show for it.
-    /// </summary>
-    public class HotkeyOptionValue
+/// <summary>
+///     One configurable property: its label, the values it can take, and the value currently chosen.
+/// </summary>
+public class HotkeyOptionEntry : BaseViewModel
+{
+    private readonly PropertyInfo _property;
+    private HotkeyOptionValue _selectedValue;
+
+    public HotkeyOptionEntry( PropertyInfo property, HotkeyConfigurationAttribute attribute, object value )
     {
-        public HotkeyOptionValue( object value )
+        _property = property;
+
+        // Upstream shows the attribute name verbatim rather than through the resource manager, and
+        // there is no resource for "Cure Type" to look up, so this matches.
+        Name = attribute.Name ?? property.Name;
+
+        foreach ( object enumValue in Enum.GetValues( attribute.Type ) )
         {
-            Value = value;
+            HotkeyOptionValue optionValue = new( enumValue );
 
-            DescriptionAttribute description = value.GetType().GetMember( value.ToString() ).FirstOrDefault()
-                ?.GetCustomAttribute<DescriptionAttribute>();
+            Values.Add( optionValue );
 
-            string name = description?.Description ?? value.ToString();
-
-            // Upstream throws when a name has no resource. Here a missing translation falls back to the
-            // description itself - a dialog that refuses to open is worse than an untranslated label,
-            // especially as the exception would be swallowed by the invoker.
-            string localized = Strings.ResourceManager.GetString( name );
-
-            DisplayName = string.IsNullOrEmpty( localized ) ? name : localized;
+            if ( Equals( enumValue, value ) )
+            {
+                _selectedValue = optionValue;
+            }
         }
 
-        public string DisplayName { get; }
+        // A stored value outside the enum leaves nothing selected; fall back to the first entry so
+        // the ComboBox is never blank.
+        _selectedValue ??= Values.FirstOrDefault();
+    }
 
-        public object Value { get; }
+    public string Name { get; }
 
-        public override string ToString()
+    public HotkeyOptionValue SelectedValue
+    {
+        get => _selectedValue;
+        set => SetProperty( ref _selectedValue, value );
+    }
+
+    public ObservableCollection<HotkeyOptionValue> Values { get; } =
+        [];
+
+    public void Apply( object target )
+    {
+        if ( SelectedValue != null )
         {
-            return DisplayName;
+            _property.SetValue( target, SelectedValue.Value );
         }
+    }
+}
+
+/// <summary>
+///     An enum member paired with the text to show for it.
+/// </summary>
+public class HotkeyOptionValue
+{
+    public HotkeyOptionValue( object value )
+    {
+        Value = value;
+
+        DescriptionAttribute description = value.GetType().GetMember( value.ToString() ).FirstOrDefault()
+            ?.GetCustomAttribute<DescriptionAttribute>();
+
+        string name = description?.Description ?? value.ToString();
+
+        // Upstream throws when a name has no resource. Here a missing translation falls back to the
+        // description itself - a dialog that refuses to open is worse than an untranslated label,
+        // especially as the exception would be swallowed by the invoker.
+        string localized = Strings.ResourceManager.GetString( name );
+
+        DisplayName = string.IsNullOrEmpty( localized ) ? name : localized;
+    }
+
+    public string DisplayName { get; }
+
+    public object Value { get; }
+
+    public override string ToString()
+    {
+        return DisplayName;
     }
 }

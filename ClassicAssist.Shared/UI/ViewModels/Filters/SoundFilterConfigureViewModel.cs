@@ -23,56 +23,50 @@ using System.Linq;
 using ClassicAssist.Data.Filters;
 using ClassicAssist.UI.ViewModels;
 
-namespace ClassicAssist.Shared.UI.ViewModels.Filters
+namespace ClassicAssist.Shared.UI.ViewModels.Filters;
+
+/// <summary>
+///     Edits <see cref="SoundFilter.Items" /> in place (the dialog has only a Close button, as in WPF)
+///     and exposes them grouped by category. Avalonia has no <c>CollectionViewSource</c>, so the
+///     grouping WPF does in XAML is materialised here instead.
+/// </summary>
+public class SoundFilterConfigureViewModel : BaseViewModel
 {
-    /// <summary>
-    ///     Edits <see cref="SoundFilter.Items" /> in place (the dialog has only a Close button, as in WPF)
-    ///     and exposes them grouped by category. Avalonia has no <c>CollectionViewSource</c>, so the
-    ///     grouping WPF does in XAML is materialised here instead.
-    /// </summary>
-    public class SoundFilterConfigureViewModel : BaseViewModel
+    public SoundFilterConfigureViewModel()
     {
-        private ObservableCollection<SoundFilterCategory> _categories =
-            new ObservableCollection<SoundFilterCategory>();
+    }
 
-        private ObservableCollection<SoundFilterEntry> _items = new ObservableCollection<SoundFilterEntry>();
+    public SoundFilterConfigureViewModel( ObservableCollection<SoundFilterEntry> items )
+    {
+        Items = items;
 
-        public SoundFilterConfigureViewModel()
+        foreach ( IGrouping<string, SoundFilterEntry> grouping in items.GroupBy( i => i.Category ) )
         {
-        }
-
-        public SoundFilterConfigureViewModel( ObservableCollection<SoundFilterEntry> items )
-        {
-            Items = items;
-
-            foreach ( IGrouping<string, SoundFilterEntry> grouping in items.GroupBy( i => i.Category ) )
-            {
-                Categories.Add( new SoundFilterCategory( grouping.Key, grouping ) );
-            }
-        }
-
-        public ObservableCollection<SoundFilterCategory> Categories
-        {
-            get => _categories;
-            set => SetProperty( ref _categories, value );
-        }
-
-        public ObservableCollection<SoundFilterEntry> Items
-        {
-            get => _items;
-            set => SetProperty( ref _items, value );
+            Categories.Add( new SoundFilterCategory( grouping.Key, grouping ) );
         }
     }
 
-    public class SoundFilterCategory
+    public ObservableCollection<SoundFilterCategory> Categories
     {
-        public SoundFilterCategory( string name, IEnumerable<SoundFilterEntry> entries )
-        {
-            Name = name;
-            Entries = new ObservableCollection<SoundFilterEntry>( entries );
-        }
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
 
-        public ObservableCollection<SoundFilterEntry> Entries { get; }
-        public string Name { get; }
+    public ObservableCollection<SoundFilterEntry> Items
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+}
+
+public class SoundFilterCategory
+{
+    public SoundFilterCategory( string name, IEnumerable<SoundFilterEntry> entries )
+    {
+        Name = name;
+        Entries = new ObservableCollection<SoundFilterEntry>( entries );
     }
+
+    public ObservableCollection<SoundFilterEntry> Entries { get; }
+    public string Name { get; }
 }

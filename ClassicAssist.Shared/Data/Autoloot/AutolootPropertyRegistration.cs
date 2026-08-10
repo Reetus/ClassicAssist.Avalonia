@@ -27,200 +27,199 @@ using ClassicAssist.UI.Misc;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
-namespace ClassicAssist.Data.Autoloot
+namespace ClassicAssist.Data.Autoloot;
+
+/// <summary>
+///     Registers the hand-written constraint properties that aren't in Properties.json: Layer,
+///     Skill Bonus, ID (Multiple), Cliloc (Multiple), Autoloot Match and the talisman skill-bonus
+///     variants. Both the Autoloot tab and the ECV filter load their constraint list through this so
+///     the two share the same set.
+/// </summary>
+public static class AutolootPropertyRegistration
 {
-    /// <summary>
-    ///     Registers the hand-written constraint properties that aren't in Properties.json: Layer,
-    ///     Skill Bonus, ID (Multiple), Cliloc (Multiple), Autoloot Match and the talisman skill-bonus
-    ///     variants. Both the Autoloot tab and the ECV filter load their constraint list through this so
-    ///     the two share the same set.
-    /// </summary>
-    public static class AutolootPropertyRegistration
+    public static void LoadSpecialProperties( ObservableCollection<PropertyEntry> constraints )
     {
-        public static void LoadSpecialProperties( ObservableCollection<PropertyEntry> constraints )
+        constraints.AddSorted( new PropertyEntry
         {
-            constraints.AddSorted( new PropertyEntry
+            Name = Strings.Layer,
+            ConstraintType = PropertyType.Predicate,
+            AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
+            Predicate = ( item, entry ) =>
             {
-                Name = Strings.Layer,
-                ConstraintType = PropertyType.Predicate,
-                AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
-                Predicate = ( item, entry ) =>
-                {
-                    Layer layer = TileData.GetLayer( item.ID );
+                Layer layer = TileData.GetLayer( item.ID );
 
-                    return entry.Operator == AutolootOperator.NotPresent ||
-                           AutolootHelpers.Operation( entry.Operator, entry.Value, (int) layer );
-                },
-                AllowedValuesEnum = typeof( Layer )
-            } );
+                return entry.Operator == AutolootOperator.NotPresent ||
+                       AutolootHelpers.Operation( entry.Operator, entry.Value, (int) layer );
+            },
+            AllowedValuesEnum = typeof( Layer )
+        } );
 
-            constraints.AddSorted( new PropertyEntry
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.Skill_Bonus,
+            ConstraintType = PropertyType.PredicateWithValue,
+            Predicate = ( item, entry ) =>
             {
-                Name = Strings.Skill_Bonus,
-                ConstraintType = PropertyType.PredicateWithValue,
-                Predicate = ( item, entry ) =>
+                int[] clilocs = [1060451, 1060452, 1060453, 1060454, 1060455, 1072394, 1072395];
+
+                if ( item.Properties == null )
                 {
-                    int[] clilocs = { 1060451, 1060452, 1060453, 1060454, 1060455, 1072394, 1072395 };
-
-                    if ( item.Properties == null )
-                    {
-                        return false;
-                    }
-
-                    List<Property> properties = item.Properties.Where( e => e != null && clilocs.Contains( e.Cliloc ) ).ToList();
-
-                    return MatchSkillBonus( entry, properties );
-                },
-                AllowedValuesEnum = typeof( SkillBonusSkills )
-            } );
-
-            constraints.AddSorted( new PropertyEntry
-            {
-                Name = Strings.ID__Multiple_,
-                ConstraintType = PropertyType.PredicateWithValue,
-                UseMultipleValues = true,
-                AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
-                Predicate = ( item, entry ) =>
-                {
-                    switch ( entry.Operator )
-                    {
-                        case AutolootOperator.NotEqual:
-                        case AutolootOperator.NotPresent:
-                            return entry.Values == null || !entry.Values.Contains( item.ID );
-                        case AutolootOperator.Equal:
-                            return entry.Values != null && entry.Values.Contains( item.ID );
-                        case AutolootOperator.GreaterThan:
-                        case AutolootOperator.LessThan:
-                        default:
-                            return false;
-                    }
+                    return false;
                 }
-            } );
 
-            constraints.AddSorted( new PropertyEntry
+                List<Property> properties = [.. item.Properties.Where( e => e != null && clilocs.Contains( e.Cliloc ) )];
+
+                return MatchSkillBonus( entry, properties );
+            },
+            AllowedValuesEnum = typeof( SkillBonusSkills )
+        } );
+
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.ID__Multiple_,
+            ConstraintType = PropertyType.PredicateWithValue,
+            UseMultipleValues = true,
+            AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
+            Predicate = ( item, entry ) =>
             {
-                Name = Strings.Cliloc__Multiple_,
-                ConstraintType = PropertyType.PredicateWithValue,
-                UseMultipleValues = true,
-                AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
-                Predicate = ( item, entry ) =>
+                switch ( entry.Operator )
                 {
-                    if ( item.Properties == null )
-                    {
+                    case AutolootOperator.NotEqual:
+                    case AutolootOperator.NotPresent:
+                        return entry.Values == null || !entry.Values.Contains( item.ID );
+                    case AutolootOperator.Equal:
+                        return entry.Values != null && entry.Values.Contains( item.ID );
+                    case AutolootOperator.GreaterThan:
+                    case AutolootOperator.LessThan:
+                    default:
                         return false;
-                    }
-
-                    List<Property> properties = item.Properties.Where( e => e != null && entry.Values != null && entry.Values.Contains( e.Cliloc ) ).ToList();
-
-                    switch ( entry.Operator )
-                    {
-                        case AutolootOperator.NotEqual:
-                        case AutolootOperator.NotPresent:
-                            return !properties.Any();
-                        case AutolootOperator.Equal:
-                            return properties.Any();
-                        case AutolootOperator.GreaterThan:
-                        case AutolootOperator.LessThan:
-                        default:
-                            return false;
-                    }
                 }
-            } );
+            }
+        } );
 
-            constraints.AddSorted( new PropertyEntry
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.Cliloc__Multiple_,
+            ConstraintType = PropertyType.PredicateWithValue,
+            UseMultipleValues = true,
+            AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
+            Predicate = ( item, entry ) =>
             {
-                Name = Strings.Autoloot_Match,
-                ConstraintType = PropertyType.PredicateWithValue,
-                AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
-                Predicate = ( entity, entry ) =>
+                if ( item.Properties == null )
                 {
-                    AutolootEntry autoLootEntry = AutolootManager.GetInstance().GetEntries()
-                        .FirstOrDefault( ale => ale.Name == entry.Additional );
-
-                    if ( autoLootEntry == null || !( entity is Item item ) )
-                    {
-                        return false;
-                    }
-
-                    IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( new[] { item }, autoLootEntry );
-
-                    if ( entry.Operator == AutolootOperator.NotEqual )
-                    {
-                        return !matchItems.Any();
-                    }
-
-                    return matchItems.Any();
+                    return false;
                 }
-            } );
 
-            constraints.AddSorted( new PropertyEntry
-            {
-                Name = Strings.Talisman_Skill_Bonus,
-                ConstraintType = PropertyType.PredicateWithValue,
-                Predicate = ( item, entry ) =>
+                List<Property> properties = [.. item.Properties.Where( e => e != null && entry.Values != null && entry.Values.Contains( e.Cliloc ) )];
+
+                switch ( entry.Operator )
                 {
-                    if ( item.Properties == null )
-                    {
+                    case AutolootOperator.NotEqual:
+                    case AutolootOperator.NotPresent:
+                        return !properties.Any();
+                    case AutolootOperator.Equal:
+                        return properties.Any();
+                    case AutolootOperator.GreaterThan:
+                    case AutolootOperator.LessThan:
+                    default:
                         return false;
-                    }
+                }
+            }
+        } );
 
-                    List<Property> properties = item.Properties.Where( e => e != null && e.Cliloc == 1072394 ).ToList();
-
-                    return MatchSkillBonus( entry, properties );
-                },
-                AllowedValuesEnum = typeof( SkillBonusSkills )
-            } );
-
-            constraints.AddSorted( new PropertyEntry
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.Autoloot_Match,
+            ConstraintType = PropertyType.PredicateWithValue,
+            AllowedOperators = AutolootAllowedOperators.Equal | AutolootAllowedOperators.NotEqual,
+            Predicate = ( entity, entry ) =>
             {
-                Name = Strings.Talisman_Exceptional_Skill_Bonus,
-                ConstraintType = PropertyType.PredicateWithValue,
-                Predicate = ( item, entry ) =>
+                AutolootEntry autoLootEntry = AutolootManager.GetInstance().GetEntries()
+                    .FirstOrDefault( ale => ale.Name == entry.Additional );
+
+                if ( autoLootEntry == null || entity is not Item item )
                 {
-                    if ( item.Properties == null )
-                    {
-                        return false;
-                    }
+                    return false;
+                }
 
-                    List<Property> properties = item.Properties.Where( e => e != null && e.Cliloc == 1072395 ).ToList();
+                IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( [item], autoLootEntry );
 
-                    return MatchSkillBonus( entry, properties );
-                },
-                AllowedValuesEnum = typeof( SkillBonusSkills )
-            } );
+                if ( entry.Operator == AutolootOperator.NotEqual )
+                {
+                    return !matchItems.Any();
+                }
+
+                return matchItems.Any();
+            }
+        } );
+
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.Talisman_Skill_Bonus,
+            ConstraintType = PropertyType.PredicateWithValue,
+            Predicate = ( item, entry ) =>
+            {
+                if ( item.Properties == null )
+                {
+                    return false;
+                }
+
+                List<Property> properties = [.. item.Properties.Where( e => e != null && e.Cliloc == 1072394 )];
+
+                return MatchSkillBonus( entry, properties );
+            },
+            AllowedValuesEnum = typeof( SkillBonusSkills )
+        } );
+
+        constraints.AddSorted( new PropertyEntry
+        {
+            Name = Strings.Talisman_Exceptional_Skill_Bonus,
+            ConstraintType = PropertyType.PredicateWithValue,
+            Predicate = ( item, entry ) =>
+            {
+                if ( item.Properties == null )
+                {
+                    return false;
+                }
+
+                List<Property> properties = [.. item.Properties.Where( e => e != null && e.Cliloc == 1072395 )];
+
+                return MatchSkillBonus( entry, properties );
+            },
+            AllowedValuesEnum = typeof( SkillBonusSkills )
+        } );
+    }
+
+    /// <summary>
+    ///     Lets the additional assemblies contribute their own constraints, by invoking any
+    ///     <c>public static void Initialize( ObservableCollection&lt;PropertyEntry&gt; )</c> they expose.
+    ///     Call this last, after the built-in properties, so a plugin can inspect - or replace - what is
+    ///     already registered.
+    /// </summary>
+    public static void LoadPluginProperties( ObservableCollection<PropertyEntry> constraints )
+    {
+        PluginAssemblies.InvokeInitialize( [typeof( ObservableCollection<PropertyEntry> )],
+            [constraints] );
+    }
+
+    private static bool MatchSkillBonus( AutolootConstraintEntry entry, List<Property> properties )
+    {
+        if ( entry.Operator != AutolootOperator.NotPresent )
+        {
+            return properties.Where( property => PropertyMatches( entry, property ) )
+                .Any( property => AutolootHelpers.Operation( entry.Operator, Convert.ToInt32( property.Arguments[1] ), entry.Value ) );
         }
 
-        /// <summary>
-        ///     Lets the additional assemblies contribute their own constraints, by invoking any
-        ///     <c>public static void Initialize( ObservableCollection&lt;PropertyEntry&gt; )</c> they expose.
-        ///     Call this last, after the built-in properties, so a plugin can inspect - or replace - what is
-        ///     already registered.
-        /// </summary>
-        public static void LoadPluginProperties( ObservableCollection<PropertyEntry> constraints )
+        Property match = properties.FirstOrDefault( property => PropertyMatches( entry, property ) );
+
+        return match == null;
+
+        bool PropertyMatches( AutolootConstraintEntry e, Property p )
         {
-            PluginAssemblies.InvokeInitialize( new[] { typeof( ObservableCollection<PropertyEntry> ) },
-                new object[] { constraints } );
-        }
-
-        private static bool MatchSkillBonus( AutolootConstraintEntry entry, List<Property> properties )
-        {
-            if ( entry.Operator != AutolootOperator.NotPresent )
-            {
-                return properties.Where( property => PropertyMatches( entry, property ) )
-                    .Any( property => AutolootHelpers.Operation( entry.Operator, Convert.ToInt32( property.Arguments[1] ), entry.Value ) );
-            }
-
-            Property match = properties.FirstOrDefault( property => PropertyMatches( entry, property ) );
-
-            return match == null;
-
-            bool PropertyMatches( AutolootConstraintEntry e, Property p )
-            {
-                return p.Arguments != null && p.Arguments.Length >= 1 &&
-                       ( e.Additional == nameof( SkillBonusSkills.Any ) ||
-                         p.Arguments[0].Equals( e.Additional, System.StringComparison.CurrentCultureIgnoreCase ) ||
-                         string.IsNullOrEmpty( e.Additional ) );
-            }
+            return p.Arguments != null && p.Arguments.Length >= 1 &&
+                   ( e.Additional == nameof( SkillBonusSkills.Any ) ||
+                     p.Arguments[0].Equals( e.Additional, System.StringComparison.CurrentCultureIgnoreCase ) ||
+                     string.IsNullOrEmpty( e.Additional ) );
         }
     }
 }
