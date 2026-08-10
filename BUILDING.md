@@ -23,6 +23,39 @@ dotnet test  ClassicAssist.Tests/ClassicAssist.Tests.csproj
 
 Everything lands in `Output/ClassicAssist/`, which *is* the deployable folder.
 
+## Releases and the updater
+
+`ClassicAssist.Updater` ships inside that folder and updates it in place. It reads the GitHub
+releases API - by default
+`https://api.github.com/repos/Reetus/ClassicAssist.Avalonia/releases`, overridable via
+`ReleasesURL` in `updater.settings.json` beside the binaries - so cutting a release is the only
+publishing step; there is no separate manifest to keep in sync.
+
+A release is expected to carry **one archive per platform**, named with its runtime identifier:
+
+```
+ClassicAssist-<version>-win-x64.zip
+ClassicAssist-<version>-linux-x64.zip
+ClassicAssist-<version>-osx-x64.zip
+ClassicAssist-<version>-osx-arm64.zip
+```
+
+Matching is on separator-delimited tokens, not exact names, so the surrounding convention can
+change without breaking updaters already in the wild. A release carrying exactly one archive and no
+platform naming is taken as-is, which is what makes a single-package repository work before
+per-platform builds exist. A release with nothing for the running platform is skipped rather than
+offered and then failed on.
+
+The update applies in two stages, because an updater cannot overwrite its own binaries: the copy in
+the install downloads and extracts the package to a temp folder, then hands over to the updater
+*inside* that package with `--stage Install` to perform the copy.
+
+Before copying anything, every file the package would overwrite is probed for write access, and the
+whole update is refused if any of them fail - a partial copy would leave an install made of two
+versions. Windows locks files that a running client has mapped, so this catches an open client
+there; on Linux and macOS a mapped assembly is not locked, and what covers that case is closing the
+running clients first (detected via `/proc/<pid>/maps` on Linux).
+
 ## Code style
 
 `.editorconfig` is enforced during build (`EnforceCodeStyleInBuild` in `Directory.Build.props`), so

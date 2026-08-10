@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RollForward>LatestMajor</RollForward>
+        <Nullable>disable</Nullable>
+        <!-- Same file the launcher and the UI app use; see the launcher csproj for why this is
+             separate from the Window.Icon set in App.axaml. -->
+        <ApplicationIcon>..\ClassicAssist.Avalonia\Assets\logo.ico</ApplicationIcon>
+        <!-- Sits in the folder it updates, beside the launcher and the plugin. That is also why the
+             update runs in two stages: an updater cannot overwrite itself, so the copy is performed
+             by the freshly extracted copy running out of the temp folder - see MainViewModel. -->
+        <OutputPath>..\Output\ClassicAssist\</OutputPath>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    </PropertyGroup>
+    <ItemGroup>
+        <!-- Styles, icons and the view model base linked rather than referenced, so this project
+             stays out of the UI app's RPC/IronPython dependency graph - the same arrangement the
+             launcher uses. The linked files keep their original namespaces. -->
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\ClassicAssistDark.xaml" Link="Controls\ClassicAssistDark.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Controls\Compact.Theme.xaml" Link="Controls\Compact.Theme.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Assets\Icons.xaml" Link="Assets\Icons.xaml" />
+        <AvaloniaResource Include="..\ClassicAssist.Avalonia\Assets\logo.ico" Link="Assets\logo.ico" />
+        <Compile Include="..\ClassicAssist.Launcher\ViewModels\BaseViewModel.cs" Link="ViewModels\BaseViewModel.cs" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
+        <!--
+          Pinned ahead of Avalonia.FreeDesktop's transitive 0.21.2, which has a high-severity
+          advisory (GHSA-xrw6-gwf8-vvr9). Same pin as the launcher and the UI app.
+        -->
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
+        <!-- No DataGrid in this app's own views; the linked ClassicAssistDark/Compact dictionaries
+             style one, and Avalonia resolves every type in a dictionary at compile time. -->
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    </ItemGroup>
+    <ItemGroup>
+        <InternalsVisibleTo Include="ClassicAssist.Tests" />
+    </ItemGroup>
+    <PropertyGroup>
+        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
+        <Version>0.5.$(BuildDate).0</Version>
+    </PropertyGroup>
+</Project>

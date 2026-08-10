@@ -186,8 +186,12 @@ public class AboutControlViewModel : BaseViewModel
 
     private static void CheckForUpdates( object obj )
     {
-        string updaterPath = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory,
-            "ClassicAssist.Updater.exe" );
+        string startupPath = Engine.StartupPath ?? Environment.CurrentDirectory;
+
+        // The apphost has no extension outside Windows, so the .exe spelling alone found nothing on
+        // Linux and the button did quietly nothing.
+        string updaterPath = Path.Combine( startupPath,
+            OperatingSystem.IsWindows() ? "ClassicAssist.Updater.exe" : "ClassicAssist.Updater" );
 
         Version version = null;
 
@@ -203,8 +207,9 @@ public class AboutControlViewModel : BaseViewModel
             return;
         }
 
+        // Quoted: the install path is chosen by the user and routinely contains spaces.
         ProcessStartInfo psi = new( updaterPath,
-            $"--pid {Process.GetCurrentProcess().Id} --path {Engine.StartupPath}" + ( version != null
+            $"--pid {Process.GetCurrentProcess().Id} --path \"{startupPath}\"" + ( version != null
                 ? $" --version {version}"
                 : "" ) )
         { UseShellExecute = false };
