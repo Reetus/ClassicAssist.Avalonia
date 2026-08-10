@@ -61,13 +61,31 @@ public class DebugPropertiesViewModel : DebugBaseViewModel
         };
     }
 
+    public ICommand ClipboardCopyCommand => field ??= new RelayCommand( ClipboardCopy );
+
     public ObservableCollection<Property> Items
     {
         get;
         set => SetProperty( ref field, value );
     } = [];
 
+    public Property SelectedItem
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
     public ICommand TargetCommand => field ??= new RelayCommandAsync( Target, o => true );
+
+    private void ClipboardCopy( object obj )
+    {
+        if ( SelectedItem == null )
+        {
+            return;
+        }
+
+        Engine.UIInvoker?.SetClipboardText( $"{SelectedItem.Cliloc} // {SelectedItem.Text}" );
+    }
 
     private async Task Target( object arg )
     {

@@ -11,7 +11,10 @@
   </UserControl.DataContext>
   <Grid RowDefinitions="Auto, *">
     <WrapPanel Classes="ToolBar" Grid.Row="0" Margin="0,0,0,10">
-      <Button ToolTip.Tip="Test Autoloot" Command="{Binding TestContainerCommand}">
+      <Button ToolTip.Tip="Test Item" Command="{Binding TestItemCommand}">
+        <Image Source="{DynamicResource CrosshairIcon}" Height="16" />
+      </Button>
+      <Button ToolTip.Tip="Test Container" Command="{Binding TestContainerCommand}">
         <Image Source="{DynamicResource ContainerIcon}" Height="16" />
       </Button>
       <Button ToolTip.Tip="Retest Container" Command="{Binding RetestContainerCommand}">

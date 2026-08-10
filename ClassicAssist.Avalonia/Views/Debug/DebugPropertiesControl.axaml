@@ -20,7 +20,12 @@
         <Image Source="{DynamicResource CrosshairIcon}" />
       </Button>
     </WrapPanel>
-    <DataGrid ItemsSource="{Binding Items}" Grid.Row="1" IsReadOnly="True">
+    <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Grid.Row="1" IsReadOnly="True">
+      <DataGrid.KeyBindings>
+        <!-- The WPF build gets this from a ClipboardBehaviour on the list; Avalonia has no equivalent,
+             and this tree wires Ctrl+C through KeyBindings elsewhere. -->
+        <KeyBinding Gesture="Ctrl+C" Command="{Binding ClipboardCopyCommand}" />
+      </DataGrid.KeyBindings>
       <DataGrid.Columns>
         <DataGridTextColumn Header="{x:Static resources:Strings.Cliloc}" Width="1*" Binding="{Binding Cliloc}"/>
         <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Width="3*" Binding="{Binding Text}"/>

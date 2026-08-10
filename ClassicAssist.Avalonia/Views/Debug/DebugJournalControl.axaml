@@ -18,10 +18,18 @@
                ToolTip.Tip="{x:Static resources:Strings.Clear_All}" />
       </Button>
     </WrapPanel>
+    <CheckBox DockPanel.Dock="Bottom" Margin="0,10,0,0" VerticalAlignment="Center"
+              Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding Enabled}" />
     <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
       <Interaction.Behaviors>
         <misc:ListBoxAutoScrollBehaviour/>
       </Interaction.Behaviors>
+      <ListBox.ContextMenu>
+        <ContextMenu>
+          <MenuItem Header="{x:Static resources:Strings.Copy}" Command="{Binding CopyCommand}"
+                    CommandParameter="{Binding SelectedItem}" />
+        </ContextMenu>
+      </ListBox.ContextMenu>
     </ListBox>
   </DockPanel>
 </UserControl>

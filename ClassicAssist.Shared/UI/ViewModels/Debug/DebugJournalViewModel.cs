@@ -9,19 +9,34 @@ namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
 public class DebugJournalViewModel : BaseViewModel
 {
-    public DebugJournalViewModel()
-    {
-        JournalEntry[] buffer = Engine.Journal.GetEntireBuffer();
-
-        foreach ( JournalEntry journalEntry in buffer )
-        {
-            Items.Add( GetString( journalEntry ) );
-        }
-
-        IncomingPacketHandlers.JournalEntryAddedEvent += OnJournalEntryAddedEvent;
-    }
-
     public ICommand ClearCommand => field ??= new RelayCommand( Clear, o => true );
+
+    public ICommand CopyCommand => field ??= new RelayCommand( Copy, o => o != null );
+
+    /// <summary>
+    ///     Off by default, as in the WPF build: capture only starts when the box is ticked, so the tab
+    ///     costs nothing while the Debug Window is merely open on another tab.
+    /// </summary>
+    public bool Enabled
+    {
+        get;
+        set
+        {
+            if ( value != field )
+            {
+                if ( value )
+                {
+                    SetEnabled();
+                }
+                else
+                {
+                    SetDisabled();
+                }
+            }
+
+            SetProperty( ref field, value );
+        }
+    }
 
     public ObservableCollection<string> Items
     {
@@ -33,6 +48,35 @@ public class DebugJournalViewModel : BaseViewModel
     {
         get;
         set => SetProperty( ref field, value );
+    }
+
+    private void SetEnabled()
+    {
+        // Cleared first, unlike WPF, which appends the buffer every time it is enabled and so shows
+        // every entry twice after a tick-untick-tick.
+        Items.Clear();
+
+        foreach ( JournalEntry journalEntry in Engine.Journal.GetEntireBuffer() )
+        {
+            Items.Add( GetString( journalEntry ) );
+        }
+
+        IncomingPacketHandlers.JournalEntryAddedEvent += OnJournalEntryAddedEvent;
+    }
+
+    private void SetDisabled()
+    {
+        IncomingPacketHandlers.JournalEntryAddedEvent -= OnJournalEntryAddedEvent;
+    }
+
+    private static void Copy( object obj )
+    {
+        if ( obj is not string text )
+        {
+            return;
+        }
+
+        Engine.UIInvoker?.SetClipboardText( text );
     }
 
     private void Clear( object obj )

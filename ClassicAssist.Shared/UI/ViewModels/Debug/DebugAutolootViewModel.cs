@@ -40,9 +40,12 @@ public class DebugAutolootViewModel : BaseViewModel
         set => SetProperty( ref field, value );
     }
 
-    public ICommand RetestContainerCommand => field ??= new RelayCommand( RetestContainer, o => true );
+    public ICommand RetestContainerCommand =>
+        field ??= new RelayCommand( RetestContainer, o => ContainerSerial != 0 );
 
     public ICommand TestContainerCommand => field ??= new RelayCommandAsync( TestContainerAsync, o => true );
+
+    public ICommand TestItemCommand => field ??= new RelayCommandAsync( TestItemAsync, o => true );
 
     public string TestResults
     {
@@ -58,6 +61,26 @@ public class DebugAutolootViewModel : BaseViewModel
     private void RetestContainer( object obj )
     {
         TestContainer( ContainerSerial );
+    }
+
+    /// <summary>
+    ///     Runs the filters against a single item rather than a container's contents, for checking why one
+    ///     particular item is or is not being looted.
+    /// </summary>
+    private async Task TestItemAsync( object arg )
+    {
+        int serial = await Commands.GetTargetSerialAsync( Strings.Target_new_item___, 60000 );
+
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null )
+        {
+            TestResults += $"{Strings.Cannot_find_item___}\n";
+            Commands.SystemMessage( Strings.Cannot_find_item___ );
+            return;
+        }
+
+        TestItems( [item] );
     }
 
     private async Task TestContainerAsync( object arg )
@@ -84,6 +107,11 @@ public class DebugAutolootViewModel : BaseViewModel
             return;
         }
 
+        TestItems( items );
+    }
+
+    private void TestItems( Item[] items )
+    {
         Engine.SendPacketToServer( new BatchQueryProperties( [.. items.Select( i => i.Serial )] ) );
 
         foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries()
