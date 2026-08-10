@@ -106,7 +106,9 @@
                   ToolTip.Tip="{x:Static resources:Strings.Remove}">
             <Image Source="{StaticResource RemoveIcon}" Height="16"/>
           </Button>
-          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" MinWidth="140"
+          <!-- 200 to match the WPF filter's fixed-width profile selector; 140 cut off longer profile
+               names, and the closed box does not grow to fit its content. -->
+          <ComboBox ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" MinWidth="200"
                     HorizontalContentAlignment="Stretch">
             <!-- Closed-box display: inline rename via EditTextBlock, same as WPF's PART_EditableTextBox -
                  no delete affordance here, that only belongs to rows in the open dropdown below. -->
