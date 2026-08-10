@@ -56,6 +56,7 @@ namespace ClassicAssist.Tests
         [DataRow( "SetScavenger" )]
         [DataRow( "StopDress" )]
         [DataRow( "WaitForTradeWindow" )]
+        [DataRow( "WaitForRemoveObject" )]
         public void HasHelpText( string command )
         {
             string key = command.ToUpperInvariant();
@@ -103,6 +104,7 @@ namespace ClassicAssist.Tests
         [DataRow( "SetScavenger" )]
         [DataRow( "StopDress" )]
         [DataRow( "WaitForTradeWindow" )]
+        [DataRow( "WaitForRemoveObject" )]
         public void IsExposedAsAMacroCommand( string command )
         {
             MethodInfo method = typeof( ClassicAssist.Shared.Engine ).Assembly.GetTypes()
