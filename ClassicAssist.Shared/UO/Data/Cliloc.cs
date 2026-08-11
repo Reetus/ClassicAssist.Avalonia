@@ -180,6 +180,15 @@ public static class Cliloc
         _lazyClilocList = new Lazy<Dictionary<int, string>>( LoadClilocs );
     }
 
+    internal static void Initialize( Func<Dictionary<int, string>> customInitializer )
+    {
+        // For use in unit tests
+        if ( customInitializer != null )
+        {
+            _lazyClilocList = new Lazy<Dictionary<int, string>>( customInitializer );
+        }
+    }
+
     public static string GetProperty( int property )
     {
         return _lazyClilocList.Value.TryGetValue( property, out string propertyString )

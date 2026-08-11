@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using ClassicAssist.Shared.UO.Data;
@@ -147,6 +148,78 @@ namespace ClassicAssist.Tests
             {
                 Assert.Fail();
             }
+        }
+
+        [TestMethod]
+        public void WillParseMultipleTooltipsWithArguments()
+        {
+            Cliloc.Initialize( () => new Dictionary<int, string>
+            {
+                { 1163908, "Regent Sculpture" },
+                { 1072788, "Weight: ~1_WEIGHT~ stones" },
+                { 1043304, "Value: ~1_val~" },
+                { 1043305, "~1_val~" }
+            } );
+
+            const string layout =
+                "{ buttontileart 50 101 2328 2328 0 0 0 44963 2661 18 0 }{ tooltip 1163908 }{ tooltip 1072788 @1 }{ tooltip 1043304 @250,000 }{ tooltip 1043305 @Burning Regent Sculpture }";
+
+            Gump gump = GumpParser.Parse( 0x01, 0x01, 1, 1, layout, new string[] { } );
+
+            GumpElement ge = gump.GetElementByXY( 50, 101 );
+
+            Assert.IsNotNull( ge );
+            Assert.IsNotNull( ge.Tooltips );
+            Assert.AreEqual( 4, ge.Tooltips.Count );
+
+            // No-argument tooltip.
+            Assert.AreEqual( 1163908, ge.Tooltips[0].Cliloc );
+            Assert.IsNull( ge.Tooltips[0].Arguments );
+            Assert.AreEqual( "Regent Sculpture", ge.Tooltips[0].Text );
+
+            // Single numeric argument.
+            Assert.AreEqual( 1072788, ge.Tooltips[1].Cliloc );
+            Assert.AreEqual( "1", ge.Tooltips[1].Arguments[0] );
+            Assert.AreEqual( "Weight: 1 stones", ge.Tooltips[1].Text );
+
+            // Argument containing a comma.
+            Assert.AreEqual( "250,000", ge.Tooltips[2].Arguments[0] );
+            Assert.AreEqual( "Value: 250,000", ge.Tooltips[2].Text );
+
+            // Multi-word (space-containing) argument survives the space-split.
+            Assert.AreEqual( "Burning Regent Sculpture", ge.Tooltips[3].Arguments[0] );
+            Assert.AreEqual( "Burning Regent Sculpture", ge.Tooltips[3].Text );
+        }
+
+        [TestMethod]
+        public void WontThrowExceptionEmptyElement()
+        {
+            Cliloc.Initialize( () => new Dictionary<int, string>() );
+
+            const string base64 =
+                "3QPWAAD7jQEsWGoAAAAAAAAAAAAAAY0AAAQoeJxlUwtOwzAM5Sg+gj/5ngAOwAVgVDDB1mnrEAJxd+ykrE0qtWlrv+e+5zg/cBxf9pfTeBng90c/DuNneTsPl/33cNrvwKFdmRGBk77HaPnd27B7H87T+el4AefAJeDI4IKz7MN0+Li/Hk7gEQQF2GcgDsBA5HUxzOPwNVler20wlbjrlEQg5FlKCCCCLcBKYVwAvk0LrvK+IDT/qjoty14gCnjv/KLEq2xF6jM0wVCDsQmqaAumJpgrMt+C2bRVJBX9z9dpGo8GtrhDirYkbQiuaN7aX2sRrWlKsRvRaOgLjUrnJuOlms/mXTpe3PBCw4szz3W8vOHlhpdnXmnkzQHXzS6ZsKrIjDY+rXFu+01zw2K34aTinIK1BDMBL75tGkm3svyOOwMiVXtxUQz4xoC4ysvdAPFyFmi+l8JiJ8WrXD0hulQflG6FRXIxog/GbWH6r+x1cNO6rk4g2fnipFY5Um1Q8+toFhhYbLJsKRDqITa2EqguBcI9JAbLcl0KRKfm7g+O5Av4AAAAFQAAAioAAAYEeJyVVE1P20AQffRUhNQLnODQrQSCHohaKnFAqBIQvkqhFaQIjk7shlWTONgOiP7dHvgD/QF988YJRQiklbXemZ15870LYA6HGMCjz9VFjhIOTe4O20hQoM1/D1fIpyqcU6eFbzx1OKXOBfdVrj1q5DzNiK6o75CSdrjk/xabtFHgM07ImYeBNJ7DhQi+cm+LHqN3GENCbEZMjNem5BnzG0q3S81U+cXY8LjhMu/jsy/ClNL+Ltkv+rAIYyy3rLKkBjzL+aVR6F10qNWS16Mo5AW5l/vwFHOs3qWU+8gsD3BHxCAa11Kf9kjH9euInCdl8mPSFX5H4ad4Mst5TeR3qDksMaJNp9vgVfEO/w28ZnZWF/O2QfkHvOXdyIgaycM9/lBukhNRL9sraXFGMfcVi2kadg3rWGY9PG2OlMPzFnPujvaC7CHThLvNcZj/BhYYZ6K5dXoDKuraJI5tZ6R+yqPZWeH6yPUe08qvQ92QYUFbc7wP+eRuhfo61aVX35sN4T/hFSu0xG+XpzfKvFBsRpfyFDrin7xKK/RX1voN+reO3jKeNzjTTBbCWqZdVaInbrF+AR6yL1Qxq+2QXFc1SP+bheJRdn3dFKvBNN+gfPL2tWX1Hc+80AEbXpam8rIX9C+xo7qHIY6OqnIlH176C9ifxOtor0euLcS4hwFTacaqSf/msfUop77qFLSMP6Asq7lreQjzesra7/D/g/O0hbN/hs8LbQ==";
+
+            byte[] packet = Convert.FromBase64String( base64 );
+
+            IncomingPacketHandlers.Initialize();
+            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xDD );
+
+            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+        }
+
+        [TestMethod]
+        public void WontThrowExceptionEmptyElementLayout()
+        {
+            // Shard-generated layouts can contain an empty element, e.g. a conditional block that
+            // emitted no command.  It must be skipped rather than indexed.
+            const string layout = "{ button 50 490 4007 4005 1 0 19 }{  }{ Text 250 50 900 0 }";
+
+            Gump gump = GumpParser.Parse( 0x01, 0x01, 1, 1, layout, new[] { "hello" } );
+
+            Assert.IsNotNull( gump );
+            Assert.AreEqual( 2, gump.GumpElements.Length );
+            Assert.AreEqual( ElementType.button, gump.GetElementByXY( 50, 490 ).Type );
+            Assert.AreEqual( "hello", gump.GetElementByXY( 250, 50 ).Text );
         }
 
         [TestMethod]

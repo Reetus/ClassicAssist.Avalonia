@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using ClassicAssist.UO.Data;
 
@@ -84,12 +85,19 @@ public static class GumpParser
             split[i] = split[i].TrimStart( '{', ' ' ).Trim();
             string[] formatted = split[i].Split( [' '], StringSplitOptions.RemoveEmptyEntries );
 
+            // Layouts can contain an empty element, e.g. "{ button ... }{  }{ text ... }" where a
+            // conditional block emitted no command.  Nothing to parse, don't index into it.
+            if ( formatted.Length == 0 )
+            {
+                continue;
+            }
+
             for ( int j = 0; j < formatted.Length; j++ )
             {
                 formatted[j] = formatted[j].Trim();
             }
 
-            switch ( formatted[0] )
+            switch ( formatted[0].ToLower() )
             {
                 case "noclose":
                     closable = false;
@@ -557,8 +565,37 @@ public static class GumpParser
                         {
                             if ( lastGumpElement != null )
                             {
+                                // Reassemble the (space-split) arguments the same way xmfhtmltok does; the
+                                // leading @ marks the free-text arg so multi-word values survive the split.
+                                string[] args = null;
+
+                                if ( formatted.Length > 2 )
+                                {
+                                    StringBuilder sb = new( formatted[2] );
+
+                                    for ( int a = 3; a < formatted.Length; a++ )
+                                    {
+                                        sb.Append( ' ' );
+                                        sb.Append( formatted[a] );
+                                    }
+
+                                    args = GetTokens( sb.ToString() );
+                                }
+
+                                lastGumpElement.Tooltips ??= [];
+
+                                // GetLocalString resolves #-tokens in place, so pass a copy to keep raw args.
+                                Property property = new()
+                                {
+                                    Cliloc = tooltip,
+                                    Arguments = args,
+                                    Text = Cliloc.GetLocalString( tooltip, args?.ToArray() )
+                                };
+
+                                lastGumpElement.Tooltips.Add( property );
+
                                 lastGumpElement.Tooltip = tooltip;
-                                lastGumpElement.Text = Cliloc.GetProperty( tooltip );
+                                lastGumpElement.Text = property.Text;
                             }
                         }
                         else
