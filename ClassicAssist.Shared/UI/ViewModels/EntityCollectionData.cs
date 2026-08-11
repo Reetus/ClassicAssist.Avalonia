@@ -39,10 +39,10 @@ public class EntityCollectionData : SetPropertyNotifyChanged
 
     public bool IsCoin => Entity?.ID is 0x0EEA or 0x0EED or 0x0EF0;
 
-    // Session-only: the WPF side persists this to EntityCollectionViewerOptions.LockedItems, which
-    // hasn't been ported yet, so a lock here doesn't survive closing the window. Needs to raise
-    // PropertyChanged - the padlock overlay in the ListBox item template binds to it directly, and
-    // ContextToggleLock flips it on rows already on screen rather than rebuilding them.
+    // Persisted to Options.LockedItems (see EntityCollectionViewerViewModel.ContextToggleLock), so a
+    // lock survives both a Rebuild() and closing/reopening the window. Needs to raise PropertyChanged
+    // - the padlock overlay in the ListBox item template binds to it directly, and ContextToggleLock
+    // flips it on rows already on screen rather than rebuilding them.
     public bool IsLocked
     {
         get => _isLocked;
@@ -50,6 +50,18 @@ public class EntityCollectionData : SetPropertyNotifyChanged
     }
 
     public string Name => GetName( Entity );
+
+    /// <summary>
+    ///     Re-raises change notification for the computed, entity-derived properties. Called when the
+    ///     underlying entity's name/properties/hue are updated after the row was created (e.g. an OPL
+    ///     packet arriving after the item was added to the viewer).
+    /// </summary>
+    public void NotifyPropertiesUpdated()
+    {
+        OnPropertyChanged( nameof( Name ) );
+        OnPropertyChanged( nameof( FullName ) );
+        OnPropertyChanged( nameof( Pixmap ) );
+    }
 
     public Pixmap Pixmap
     {

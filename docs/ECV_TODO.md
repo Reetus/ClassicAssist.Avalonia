@@ -410,19 +410,18 @@ hidden entirely via Hide Locked Items (see Toolbar section).
 
 ## Data model gaps
 
-- [x] **`EntityCollectionData.IsLocked`** - now ported (see Locking), as a plain settable bool with
-      no persistence behind it yet.
-- [ ] **`EntityCollectionData` is missing `NotifyPropertiesUpdated()`** - old-side (`ClassicAssist/UI/ViewModels/EntityCollectionData.cs:98-108`)
-      re-raises `PropertyChanged` for `Name`/`FullName`/`Bitmap` when an OPL packet updates the
-      underlying entity's name/properties/hue *after* the row was already created and displayed.
-      Avalonia's `EntityCollectionData`
-      (`ClassicAssist.Shared/UI/ViewModels/EntityCollectionData.cs`) is a **plain class with no
-      `INotifyPropertyChanged` at all** - old-side it extends `SetPropertyNotifyChanged`. Practical
-      effect: if an item's server-side properties/name/hue arrive after it's already rendered in
-      the grid, the Avalonia tile has no way to update itself short of a full `Rebuild()`. (Old's
-      `OnItemPropertiesUpdated`, VM line 984, is exactly the wiring that calls
-      `NotifyPropertiesUpdated()` on the affected row when that happens - also unported, since it
-      has nothing to call.)
+- [x] **`EntityCollectionData.IsLocked`** - now ported (see Locking), persisted via
+      `Options.LockedItems` and raising `PropertyChanged` (see below - needed for both the padlock
+      overlay and this).
+- [x] **`EntityCollectionData.NotifyPropertiesUpdated()`** - ported. `EntityCollectionData` now
+      extends `SetPropertyNotifyChanged` (it was a plain class with no `INotifyPropertyChanged` at
+      all) and re-raises `PropertyChanged` for `Name`/`FullName`/`Pixmap` (old's `Bitmap`).
+      `EntityCollectionViewerViewModel.OnItemPropertiesUpdated` subscribes to
+      `IncomingPacketHandlers.ItemPropertiesUpdatedEvent`, matching old: re-applies a name override
+      before refreshing the row (OPL overwrites `Item.Name` with the server value, clobbering a
+      user rename otherwise), calls `NotifyPropertiesUpdated()`, then re-sorts the row's position if
+      a property-derived sort is active, since names/properties routinely arrive after the row was
+      already inserted.
 - [ ] **`EntityCollectionData.FullName`** - present on both sides with matching logic
       (join item `Properties` text with `\r\n`, fall back to `Name`); not a gap, listed only to
       confirm it was checked.

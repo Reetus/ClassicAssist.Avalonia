@@ -127,6 +127,10 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
         SelectedItems.CollectionChanged += OnSelectedItemsChanged;
         Collection.CollectionChanged += OnCollectionChanged;
+
+        // Item names/properties arrive in a separate OPL packet slightly after the item is
+        // added, so refresh the displayed row when its properties are (re)populated.
+        IncomingPacketHandlers.ItemPropertiesUpdatedEvent += OnItemPropertiesUpdated;
     }
 
     /// <summary>
@@ -358,6 +362,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         Collection.CollectionChanged -= OnCollectionChanged;
         SelectedItems.CollectionChanged -= OnSelectedItemsChanged;
         QueueActions.CollectionChanged -= QueueActions_CollectionChanged;
+        IncomingPacketHandlers.ItemPropertiesUpdatedEvent -= OnItemPropertiesUpdated;
         _threadQueue?.Dispose();
     }
 
@@ -522,6 +527,92 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         }
 
         UpdateStatusLabel();
+    }
+
+    /// <summary>
+    ///     Refreshes an already-displayed row when the underlying item's name/properties/hue arrive
+    ///     (or change) after the row was created - an OPL packet routinely lands after the item was
+    ///     first added, so without this the tile is stuck showing whatever it had at insert time until
+    ///     the next full <see cref="Rebuild" />. Mirrors the WPF build's <c>OnItemPropertiesUpdated</c>.
+    /// </summary>
+    private void OnItemPropertiesUpdated( Item item )
+    {
+        // Runs on the network thread. Filter cheaply against the (thread-safe) collection so we
+        // only marshal to the UI thread for items this viewer actually displays.
+        if ( item == null || !Collection.GetItem( item.Serial, out _ ) )
+        {
+            return;
+        }
+
+        IDispatcher dispatcher = _dispatcher ?? Engine.Dispatcher;
+
+        void Apply()
+        {
+            EntityCollectionData ecd = Entities.FirstOrDefault( e => e.Entity.Serial == item.Serial );
+
+            if ( ecd == null )
+            {
+                return;
+            }
+
+            // OnProperties overwrites Item.Name with the server value, which would clobber a
+            // user-applied rename - re-apply the override before refreshing the row.
+            if ( _nameOverrides.TryGetValue( item.Serial, out string nameOverride ) )
+            {
+                item.Name = nameOverride;
+            }
+
+            ecd.NotifyPropertiesUpdated();
+
+            // Names/properties arrive after the row was inserted, so under a property-derived
+            // sort (e.g. Name or Weight) the item may now be in the wrong place - move it.
+            IComparer<Entity> sorter = GetSorter();
+
+            if ( sorter == null )
+            {
+                return;
+            }
+
+            int oldIndex = Entities.IndexOf( ecd );
+
+            if ( oldIndex < 0 )
+            {
+                return;
+            }
+
+            int newIndex = 0;
+
+            for ( int i = 0; i < Entities.Count; i++ )
+            {
+                if ( i == oldIndex )
+                {
+                    continue;
+                }
+
+                if ( sorter.Compare( Entities[i].Entity, ecd.Entity ) <= 0 )
+                {
+                    newIndex++;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if ( newIndex != oldIndex )
+            {
+                Entities.Move( oldIndex, newIndex );
+            }
+        }
+
+        if ( dispatcher != null && !dispatcher.CheckAccess() )
+        {
+            dispatcher.Invoke( Apply );
+        }
+        else
+        {
+            Apply();
+        }
     }
 
     private void OnSelectedItemsChanged( object sender, NotifyCollectionChangedEventArgs e )
