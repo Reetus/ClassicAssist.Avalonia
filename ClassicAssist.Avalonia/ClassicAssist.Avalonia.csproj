@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
+        <AssemblyTitle>ClassicAssist Avalonia</AssemblyTitle>
         <!-- Embedded in the apphost binary. Separate from Window.Icon, which is what X11 reports as
              _NET_WM_ICON; this is the icon a file manager or a Windows shortcut shows. -->
         <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
@@ -63,8 +64,4 @@
             <DependentUpon>GeneralControl.axaml</DependentUpon>
         </Compile>
     </ItemGroup>
-    <PropertyGroup>
-        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
-        <Version>0.3.$(BuildDate).0</Version>
-    </PropertyGroup>
 </Project>

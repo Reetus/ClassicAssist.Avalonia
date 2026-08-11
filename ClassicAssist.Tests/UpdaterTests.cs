@@ -166,6 +166,17 @@ namespace ClassicAssist.Tests
         }
 
         /// <summary>
+        ///     The shape this tree actually stamps on an untagged build - four numeric components and
+        ///     a suffix, where WPF used three. Output/ClassicAssist is both the build output and a
+        ///     working install, so this is what stops the updater overwriting a tree being worked in.
+        /// </summary>
+        [TestMethod]
+        public void WillNotUpdateAFourPartDevelopBuild()
+        {
+            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2230.0-develop", "0.5.9999.0" ) );
+        }
+
+        /// <summary>
         ///     An unreadable current version means a broken or absent install, which WPF treated as
         ///     grounds to force the update rather than to give up.
         /// </summary>

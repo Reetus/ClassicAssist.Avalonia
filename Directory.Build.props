@@ -18,4 +18,53 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
 
+  <!--
+    One version for every assembly, set here rather than per project so they cannot drift apart.
+
+    Only a development build ever sees it: `dotnet build -p:Version=...` passes a global property,
+    which beats anything set here, and the release workflow always does that. Nothing derives a date
+    from the third component - the About tab reads BuildDateAttribute, stamped in ClassicAssist.Shared.
+  -->
+  <PropertyGroup>
+    <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
+    <VersionPrefix>0.5.$(BuildDate).0</VersionPrefix>
+
+    <!--
+      The rule is: a build that was not handed its version is a development build. The release
+      workflow passes -p:Version=, a global property, which replaces this outright; everything else
+      gets the suffix.
+
+      It matters because Output/ClassicAssist is both the build output and a working install, so a
+      developer really can press Check for Updates on their own build. Without the tag that build
+      just looks like an old release, and the updater would helpfully overwrite the tree they are
+      working in; VersionHelpers.IsVersionNewer refuses to update anything tagged develop.
+
+      Only the suffix; VersionPrefix still feeds AssemblyVersion and FileVersion, which stay
+      numeric.
+    -->
+    <VersionSuffix>develop</VersionSuffix>
+  </PropertyGroup>
+
+  <!--
+    What Explorer's Details tab, Task Manager and the Windows app list show; without these they
+    default to the dotted assembly name.
+
+    Product names the product and is the same on every assembly; AssemblyTitle names the component
+    and is set per project, because it becomes FileDescription - the column Task Manager shows, and
+    the only thing distinguishing three simultaneously running ClassicAssist processes.
+  -->
+  <PropertyGroup>
+    <Product>ClassicAssist Avalonia</Product>
+    <Company>Reetus</Company>
+    <Copyright>Copyright © 2026 Reetus</Copyright>
+
+    <!--
+      Without this the SDK appends +<commit sha> to InformationalVersion, which is what Explorer
+      shows as Product version, and it reads as a corrupted string. Nothing needs it there: the
+      updater's VersionHelpers strips the +build suffix before comparing, and a release is already
+      identified by its tag.
+    -->
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
 </Project>

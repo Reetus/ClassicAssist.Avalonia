@@ -4,6 +4,7 @@
         <!-- net472 is for the Mono-based legacy TazUO, which cannot load a modern .NET assembly at all. -->
         <TargetFrameworks>net10.0;net472</TargetFrameworks>
         <LangVersion>latest</LangVersion>
+        <AssemblyTitle>ClassicAssist Plugin Shared</AssemblyTitle>
     </PropertyGroup>
 
     <!--

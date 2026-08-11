@@ -28,7 +28,14 @@ public class AboutControlViewModel : BaseViewModel
         Assembly assembly = Assembly.GetExecutingAssembly();
         Version version = assembly.GetName().Version;
 
-        Version = $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+        // The informational version, not AssemblyVersion: the latter is numeric only, so a
+        // development build showed as a plain 0.5.x.0 with nothing to distinguish it from a
+        // release. The -develop suffix is what decides whether the updater will replace this build,
+        // which makes it the part worth reading here and in a pasted bug report.
+        Version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion ??
+            $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+
         BuildDate = $"{GetBuildDateTime( assembly ).ToLongDateString()}";
 
         Engine.ConnectedEvent += OnConnectedEvent;
@@ -186,35 +193,58 @@ public class AboutControlViewModel : BaseViewModel
 
     private static void CheckForUpdates( object obj )
     {
-        string startupPath = Engine.StartupPath ?? Environment.CurrentDirectory;
+        string updaterPath = FindUpdater();
 
-        // The apphost has no extension outside Windows, so the .exe spelling alone found nothing on
-        // Linux and the button did quietly nothing.
-        string updaterPath = Path.Combine( startupPath,
-            OperatingSystem.IsWindows() ? "ClassicAssist.Updater.exe" : "ClassicAssist.Updater" );
-
-        Version version = null;
-
-        if ( System.Version.TryParse(
-            FileVersionInfo.GetVersionInfo( Assembly.GetExecutingAssembly().Location ).ProductVersion,
-            out Version v ) )
-        {
-            version = v;
-        }
-
-        if ( !File.Exists( updaterPath ) )
+        if ( updaterPath == null )
         {
             return;
         }
 
+        // The install root is the folder the updater sits in, not the one this assembly runs from.
+        // Handing over StartupPath would point the updater at ui/, and it would then copy a whole
+        // release into ui/ and keep its settings there.
+        string installPath = Path.GetDirectoryName( updaterPath );
+
+        // Passed on as text rather than through System.Version, which cannot parse a prerelease tag
+        // at all: a development build's "0.5.2230.0-develop" failed to parse, --version was dropped
+        // entirely, and the updater was left to rediscover the version itself. It does, and gets the
+        // tag - but only because that fallback exists, and losing the tag means the updater stops
+        // recognising a development build and offers to overwrite it with a release.
+        string version = FileVersionInfo.GetVersionInfo( Assembly.GetExecutingAssembly().Location )
+            .ProductVersion;
+
         // Quoted: the install path is chosen by the user and routinely contains spaces.
         ProcessStartInfo psi = new( updaterPath,
-            $"--pid {Process.GetCurrentProcess().Id} --path \"{startupPath}\"" + ( version != null
-                ? $" --version {version}"
-                : "" ) )
-        { UseShellExecute = false };
+            $"--pid {Process.GetCurrentProcess().Id} --path \"{installPath}\"" +
+            ( !string.IsNullOrWhiteSpace( version ) ? $" --version \"{version}\"" : "" ) )
+        { UseShellExecute = false, WorkingDirectory = installPath };
 
         Process.Start( psi );
+    }
+
+    /// <summary>
+    ///     Locates the updater, which lives in the install root while this assembly runs from the ui
+    ///     subfolder below it. WPF has no such split and looks only beside itself, which is why the
+    ///     button did nothing at all here - the file was never where it looked. The flat case is
+    ///     probed first anyway, for a development build run out of one folder.
+    /// </summary>
+    internal static string FindUpdater()
+    {
+        // The apphost has no extension outside Windows, so the .exe spelling alone found nothing on
+        // Linux even once the folder was right.
+        string fileName = OperatingSystem.IsWindows() ? "ClassicAssist.Updater.exe" : "ClassicAssist.Updater";
+
+        string startupPath = Engine.StartupPath ?? Environment.CurrentDirectory;
+
+        // Normalised rather than left as ui/../: the path is handed to the updater, which shows it
+        // to the user and matches it against the module paths of running clients.
+        string[] candidates =
+        [
+            Path.GetFullPath( Path.Combine( startupPath, fileName ) ),
+            Path.GetFullPath( Path.Combine( startupPath, "..", fileName ) )
+        ];
+
+        return Array.Find( candidates, File.Exists );
     }
 
     private void OnConnectedEvent()
@@ -260,12 +290,10 @@ public class AboutControlViewModel : BaseViewModel
 
     internal static DateTime GetBuildDateTime( Assembly assembly )
     {
-        System.Version.TryParse( FileVersionInfo.GetVersionInfo( assembly.Location ).FileVersion,
-            out Version version );
+        BuildDateAttribute attribute = assembly.GetCustomAttribute<BuildDateAttribute>();
 
-        DateTime buildDateTime =
-            new DateTime( 2020, 7, 3 ).Add( new TimeSpan( TimeSpan.TicksPerDay * version.Build ) );
-
-        return buildDateTime;
+        // Absent only in a build without the AssemblyAttribute item - a consumer of this library
+        // outside the solution. Not worth crashing the About tab over.
+        return attribute?.DateTime ?? File.GetLastWriteTime( assembly.Location );
     }
 }

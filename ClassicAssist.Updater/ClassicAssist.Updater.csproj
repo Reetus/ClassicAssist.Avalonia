@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
+        <AssemblyTitle>ClassicAssist Updater</AssemblyTitle>
         <TargetFramework>net10.0</TargetFramework>
         <RollForward>LatestMajor</RollForward>
         <Nullable>disable</Nullable>
@@ -42,8 +43,4 @@
     <ItemGroup>
         <InternalsVisibleTo Include="ClassicAssist.Tests" />
     </ItemGroup>
-    <PropertyGroup>
-        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
-        <Version>0.5.$(BuildDate).0</Version>
-    </PropertyGroup>
 </Project>

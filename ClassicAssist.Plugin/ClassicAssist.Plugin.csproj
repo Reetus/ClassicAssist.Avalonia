@@ -13,6 +13,8 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- ClassicUO/TazUO look for the type Assistant.Engine inside a file named ClassicAssist.dll -->
     <AssemblyName>ClassicAssist</AssemblyName>
+    <!-- Display name only; the file name above is the part the client cares about. -->
+    <AssemblyTitle>ClassicAssist Plugin</AssemblyTitle>
     <RootNamespace>ClassicAssist.Plugin</RootNamespace>
     <OutputPath>..\Output\ClassicAssist\</OutputPath>
     <!-- Its own folder: the two builds have different dependency closures and cannot share one. -->
@@ -177,8 +179,4 @@
     <ProjectReference Include="..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
   </ItemGroup>
 
-    <PropertyGroup>
-        <BuildDate>$([System.DateTime]::op_Subtraction($([System.DateTime]::get_Now().get_Date()),$([System.DateTime]::new(2020,7,3))).get_TotalDays())</BuildDate>
-        <Version>0.3.$(BuildDate).0</Version>
-    </PropertyGroup>
 </Project>
