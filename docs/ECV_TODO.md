@@ -256,12 +256,17 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
 - [x] `OpenContainersOnlyKnownContainers` (bool) - checkbox in the Settings window; `ContainerGumpIDs.json`
       was copied over from old-side (`ClassicAssist.Shared/Data/ContainerGumpIDs.json`, wasn't in the
       Avalonia tree at all before this) since the feature is a no-op without it.
-- [ ] `Assemblies` (`ObservableCollection<Assembly>`) - **deliberately still not round-tripped.**
-      `EntityCollectionViewerOptions.Deserialize` skips this key entirely rather than
+- [x] `Assemblies` (`ObservableCollection<Assembly>`) - **not round-tripped, and checked to confirm
+      that's fine.** `EntityCollectionViewerOptions.Deserialize` skips this key entirely rather than
       `Assembly.LoadFile`-ing whatever paths it finds; an old-side file's `Assemblies` array is
-      silently dropped on next save from this port. This is the ECV-local list, distinct from the
-      global `AssistantOptions.Assemblies` that `PluginAssemblies` loads - plugin constraints do now
-      reach the filter list (see the Filter section), they just come from the global list only.
+      silently dropped on next save from this port. Old-side, this collection is itself never read
+      back out anywhere (checked) - `Assembly.LoadFile` in its `Deserialize` is called purely for the
+      load side effect (getting the DLL into the process so `AutolootPropertyRegistration`'s
+      reflection scan over loaded assemblies picks up its constraint types), not for the resulting
+      `ObservableCollection<Assembly>` itself. Avalonia's global `AssistantOptions.Assemblies` +
+      `PluginAssemblies.InvokeInitialize` already loads plugin DLLs the same way at startup, so
+      constraint types reach the filter list regardless (see the Filter section) - this per-window
+      list was redundant with that even on old-side.
 - [x] **Settings window** - `EntityCollectionViewerSettingsWindow.axaml` +
       `EntityCollectionViewerSettingsViewModel`, opened via `ConfigureCommand` (new toolbar button,
       `ConfigureIcon`). Structurally simpler than old on purpose: one view model instead of three
