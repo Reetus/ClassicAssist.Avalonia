@@ -107,9 +107,15 @@ except where noted:
 - [x] **Move to bank** - `ContextMoveToBankCommand`.
 - [x] **Move to ground** - `ContextMoveToGroundCommand` - prompts for a drop location via
       `Commands.GetTargetInfoAsync`.
-- [ ] **Move to set** submenu - still explicitly out of scope. `Options.ContainerSets` exists and is
-      now editable (see Settings/Options persistence), but nothing reads it back out into a context
-      menu submenu yet - building and persisting the sets was the ask, not this consumer.
+- [x] **Move to set** submenu - `ContextMoveToSetCommand`, ported. `MenuItem.ItemsSource` binds
+      `Options.ContainerSets`, collapsed via `CountToBooleanConverter` when empty (old used a
+      `DataTrigger` on `Count == 0` for the same thing). Each set's nested `MenuItem` reaches back to
+      the window's `DataContext` via `ElementName`, not `$parent[Window]` - the submenu is a popup
+      nested inside the context menu's own popup, and there's no proven precedent in this codebase
+      that ancestor-walking `$parent` lookups cross two nested popup boundaries reliably, while
+      `ElementName` is the well-established Avalonia idiom for exactly this. Cycles through the set's
+      containers as they fill up (checked via the "Contents: X/Y Items" cliloc when tooltips are
+      enabled, first-in-the-list otherwise) and retries a drop up to 5 times per item, same as old.
 - [x] **Open container** - `ContextOpenContainerCommand`.
 - [x] **Drop to ground** - `ContextDropToGroundCommand`, probes the 8 tiles around the player for a
       free spot via `MapInfo.ItemCanFit` (`ClassicAssist.Shared/UO/Data/Map.cs`), same as old. Used to
@@ -246,9 +252,8 @@ Every persisted field on `EntityCollectionViewerOptions` and where it's edited:
       see Locking (the `HashSet<int>` workaround from the Hide Locked Items pass was replaced by
       this).
 - [x] `ContainerSets` (`ObservableCollection<ContainerSet>`) - editable in the Settings window
-      (add/remove sets, target-add/remove serials per set). **Not consumed anywhere yet** - the
-      context menu's "Move to set" submenu that would read these back out is still explicitly out of
-      scope (see Context menu section); this only builds and persists the sets themselves.
+      (add/remove sets, target-add/remove serials per set), and now consumed too - see the context
+      menu's "Move to set" submenu (Context menu section).
 - [x] `CombineStacksIgnore` / `OpenContainersIgnore` - editable in the Settings window (ID and Cliloc
       use the reusable `GraphicEditTextBlock`/`ClilocEditTextBlock` controls - see below; Hue stays a
       plain `DataGridTextColumn`) and now actually consulted by `CombineStacks()`/`OpenAllContainers()`,
@@ -464,6 +469,5 @@ Not gaps - confirmed present and functioning in the Avalonia view model
 - Refresh (including the `_customRefresh` hook for a caller-supplied re-fetch)
 - Status label (`{0} items, {1} selected, {2} total amount}`) tracking selection
 - The `Grid Container Viewer` global hotkey that opens an ECV window (full port, see Hotkeys)
-- The item context menu and its commands (see Context menu), except "Move to set", which is
-  intentionally excluded, and the queue/status-row UI the old commands ran through (see Queued
-  actions & cancellation)
+- The item context menu and its commands, including "Move to set" (see Context menu), and the
+  queue/status-row UI the old commands ran through (see Queued actions & cancellation)

@@ -36,6 +36,7 @@ using ClassicAssist.UI.Models;
 using ClassicAssist.UO;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
+using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json;
@@ -201,6 +202,9 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     public ICommand ContextMoveToGroundCommand => field ??=
             new RelayCommandAsync( ContextMoveToGround, o => SelectedItems.Count > 0 );
+
+    public ICommand ContextMoveToSetCommand => field ??=
+            new RelayCommandAsync( ContextMoveToSet, o => SelectedItems.Count > 0 );
 
     public ICommand ContextOpenContainerCommand => field ??= new RelayCommandAsync(
             ContextOpenContainer,
@@ -1622,6 +1626,129 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
             return true;
         }, string.Format( Strings.Moving_item__0_____1_, 0, items.Length ) );
+    }
+
+    /// <summary>
+    ///     Moves the selection into whichever container in <paramref name="arg" /> (a
+    ///     <see cref="ContainerSet" />'s <c>Items</c>) currently has room, cycling through the set as
+    ///     containers fill up. Mirrors the WPF build's <c>ContextMoveToSet</c>.
+    /// </summary>
+    private async Task ContextMoveToSet( object arg )
+    {
+        if ( arg is not ObservableCollection<int> containers )
+        {
+            return;
+        }
+
+        List<int> usedContainers = [];
+
+        Item[] items = [.. SelectedItems.Where( i => !i.IsLocked ).Select( i => i.Entity ).OfType<Item>()];
+
+        EnqueueAction( async queueAction =>
+        {
+            foreach ( var item in items.Select( ( value, i ) => new { i, value } ) )
+            {
+                if ( queueAction.CancellationTokenSource.IsCancellationRequested )
+                {
+                    _dispatcher.Invoke( () => queueAction.Status = Strings.Cancel );
+
+                    return false;
+                }
+
+                _dispatcher.Invoke( () => queueAction.Status =
+                    string.Format( Strings.Moving_item__0_____1_, item.i, items.Length ) );
+
+                for ( int attempts = 0; attempts < 5; attempts++ )
+                {
+                    int serial = await GetContainer();
+
+                    if ( item.value.Owner == serial )
+                    {
+                        break;
+                    }
+
+                    PacketFilterInfo pfi = new( 0x25,
+                        [
+                            PacketFilterConditions.IntAtPositionCondition( item.value.Serial, 1 ),
+                            PacketFilterConditions.IntAtPositionCondition( serial, 15 )
+                        ] );
+                    PacketWaitEntry waitEntry = Engine.PacketWaitEntries.Add( pfi, PacketDirection.Incoming, true );
+
+                    if ( !await ActionPacketQueue.EnqueueDragDrop( item.value.Serial, -1, serial,
+                            cancellationToken: queueAction.CancellationTokenSource.Token ) )
+                    {
+                        Commands.SystemMessage( $"Retrying 0x{item.value.Serial:x}..." );
+
+                        continue;
+                    }
+
+                    bool result = waitEntry.Lock.WaitOne( 3000 );
+
+                    if ( !result )
+                    {
+                        Commands.SystemMessage( $"Retrying 0x{item.value.Serial:x}..." );
+
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
+            return true;
+        }, string.Format( Strings.Moving_item__0_____1_, 0, items.Length ) );
+
+        return;
+
+        async Task<int> GetContainer()
+        {
+            if ( !Engine.TooltipsEnabled )
+            {
+                return containers.FirstOrDefault();
+            }
+
+            int serial = containers.FirstOrDefault();
+
+            foreach ( int container in containers )
+            {
+                Item item = Engine.Items.GetItem( container );
+
+                if ( item == null )
+                {
+                    continue;
+                }
+
+                if ( item.Properties == null )
+                {
+                    await Commands.WaitForPropertiesAsync( [item], 5000 );
+                }
+
+                Property property = item.Properties?.FirstOrDefault( e => e.Cliloc == 1073841 );
+
+                if ( property == null )
+                {
+                    continue;
+                }
+
+                if ( property.Arguments[0].Equals( property.Arguments[1] ) )
+                {
+                    continue;
+                }
+
+                serial = container;
+
+                if ( !usedContainers.Contains( serial ) )
+                {
+                    Commands.WaitForContainerContentsUse( serial, 5000 );
+                    await Task.Delay( ClassicAssist.Data.Options.CurrentOptions.ActionDelayMS );
+                    usedContainers.Add( serial );
+                }
+
+                break;
+            }
+
+            return serial;
+        }
     }
 
     private Task ContextOpenContainer( object arg )

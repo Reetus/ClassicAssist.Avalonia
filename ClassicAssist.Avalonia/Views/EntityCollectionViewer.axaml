@@ -11,6 +11,7 @@
         xmlns:autolootViews="clr-namespace:ClassicAssist.Avalonia.Views.Autoloot"
         mc:Ignorable="d" d:DesignWidth="600" d:DesignHeight="600"
         x:Class="ClassicAssist.Avalonia.Views.EntityCollectionViewer"
+        x:Name="Window"
         x:DataType="viewModels:EntityCollectionViewerViewModel"
         Title="{x:Static resources:Strings.Entity_Collection_Viewer}"
         Width="600" Height="600" MinHeight="400" Topmost="{Binding Options.AlwaysOnTop}">
@@ -19,6 +20,7 @@
     <misc:EnumMatchToBooleanConverter x:Key="EnumMatchToBooleanConverter"/>
     <misc:AutolootOperatorFilterValueConverter x:Key="AutolootOperatorFilterValueConverter"/>
     <misc:EnumDescriptionValueConverter x:Key="EnumDescriptionValueConverter"/>
+    <misc:CountToBooleanConverter x:Key="CountToBooleanConverter"/>
   </Window.Resources>
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="3" Spacing="3">
@@ -237,6 +239,17 @@
                     Command="{Binding ContextMoveToBankCommand}" />
           <MenuItem Header="{x:Static resources:Strings.Move_to_ground}"
                     Command="{Binding ContextMoveToGroundCommand}" />
+          <MenuItem Header="{x:Static resources:Strings.Move_to_set}"
+                    ItemsSource="{Binding Options.ContainerSets}"
+                    IsVisible="{Binding Options.ContainerSets.Count, Converter={StaticResource CountToBooleanConverter}}">
+            <MenuItem.ItemTemplate>
+              <DataTemplate DataType="models:ContainerSet">
+                <MenuItem Header="{Binding Name}"
+                          Command="{Binding DataContext.ContextMoveToSetCommand, ElementName=Window}"
+                          CommandParameter="{Binding Items}" />
+              </DataTemplate>
+            </MenuItem.ItemTemplate>
+          </MenuItem>
           <MenuItem Header="{x:Static resources:Strings.Open_container}"
                     Command="{Binding ContextOpenContainerCommand}" />
           <MenuItem Header="{x:Static resources:Strings.Drop_to_ground}"
