@@ -34,6 +34,9 @@
         <Compile Include="..\ClassicAssist.Avalonia\Controls\GroupBox.cs" Link="Controls\GroupBox.cs" />
     </ItemGroup>
     <ItemGroup>
+      <InternalsVisibleTo Include="ClassicAssist.Tests" />
+    </ItemGroup>
+    <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.8" />
         <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
         <!--

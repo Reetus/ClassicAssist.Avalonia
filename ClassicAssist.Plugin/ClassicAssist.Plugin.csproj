@@ -31,10 +31,14 @@
   </PropertyGroup>
 
   <!--
-    DNNE emits a native shim exporting `Install`, which modern ClassicUO needs because it only
-    dlopen()s the plugin and never falls back to a managed load. TazUO does fall back, and on Linux
-    it always takes that path (there is no standalone libdl.so on modern distros, so its dlopen
-    throws immediately), so the managed Assistant.Engine.Install entry point is sufficient there.
+    DNNE emits a native shim exporting `Install`, which is how a NativeAOT ClassicUO can dlopen()
+    the plugin directly - it hosts no CLR of its own, and the shim starts one through hostfxr.
+
+    It is not the only route to such a client, and not a requirement: plugins are loaded through
+    ClassicUO.Bootstrap, a net472 host that takes them with Assembly.LoadFile and a reflected call
+    to Assistant.Engine.Install, so the framework build below serves the same clients. TazUO also
+    loads managed, and on Linux always does (there is no standalone libdl.so on modern distros, so
+    its dlopen throws immediately). PluginPathResolver picks whichever is present.
 
     Building the shim needs clang, so it turns itself on only when clang is actually there - that
     way one plain `dotnet build` produces every artifact the machine can produce, and a machine

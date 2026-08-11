@@ -101,12 +101,13 @@ jobs:
       - name: Restore
         run: dotnet restore ClassicAssist.slnx
 
-      # EnableDnne is forced on rather than left to auto-detect. It probes for clang at a Unix path,
-      # so on Windows it silently resolves to false and the package would ship without the native
-      # shim that modern ClassicUO needs to load the plugin - the exact case a Windows release is
-      # for. A release should fail loudly if the toolchain is missing, not quietly ship less.
+      # EnableDnne is left to auto-detect, which produces the native shim wherever clang is present
+      # and skips it otherwise - on Windows always, since the probe uses a Unix path. That is not a
+      # broken package: the shim is only one of the two ways a NativeAOT client reaches the plugin,
+      # and PluginPathResolver falls back to the net472 build, which ClassicUO.Bootstrap loads by
+      # reflection.
       - name: Build
-        run: dotnet build ClassicAssist.slnx -c Release --no-restore -p:Version=${{ needs.prepare.outputs.version }} -p:EnableDnne=true
+        run: dotnet build ClassicAssist.slnx -c Release --no-restore -p:Version=${{ needs.prepare.outputs.version }}
 
       - name: Test
         run: dotnet test ClassicAssist.Tests/ClassicAssist.Tests.csproj -c Release --no-build
@@ -177,8 +178,10 @@ jobs:
             fi
           done
 
-          # DNNE names the shim <AssemblyName>NE and gives it the platform's library extension.
-          shim=''
+          # The DNNE shim is deliberately not required. It is built only where clang is, and a
+          # package without it still works - see the Build step. Reported so the log says which
+          # kind of package this is.
+          shim='none'
 
           for candidate in ClassicAssistNE.so ClassicAssistNE.dll ClassicAssistNE.dylib; do
             if [[ -f "$candidate" ]]; then
@@ -186,10 +189,7 @@ jobs:
             fi
           done
 
-          if [[ -z "$shim" ]]; then
-            echo "::error::No ClassicAssistNE native shim was produced. Either the runner has no C toolchain, or drop -p:EnableDnne=true and accept a managed-load-only plugin."
-            missing=1
-          fi
+          echo "Native shim: $shim"
 
           # Both trees keep their own copy of the native libraries, and Avalonia cannot start
           # without Skia - so an over-eager trim shows up here rather than as a window that never
