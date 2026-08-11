@@ -289,8 +289,15 @@
       <ListBox.ItemTemplate>
         <DataTemplate DataType="viewModels:EntityCollectionData">
           <StackPanel Background="Transparent">
-            <Image Height="32" Stretch="Uniform" HorizontalAlignment="Center"
-                   Source="{Binding Pixmap, Converter={StaticResource PixmapValueConverter}}"/>
+            <Grid HorizontalAlignment="Center">
+              <Image Height="32" Stretch="Uniform" HorizontalAlignment="Center"
+                     Source="{Binding Pixmap, Converter={StaticResource PixmapValueConverter}}"/>
+              <!-- Padlock overlay for locked tiles - matches old's LockIcon (ECV/ListStyles.xaml). -->
+              <Image Width="12" Height="12" Margin="0,0,2,2"
+                     HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                     Source="avares://ClassicAssist.Avalonia/Assets/lock.png"
+                     IsVisible="{Binding IsLocked}"/>
+            </Grid>
             <TextBlock FontSize="10" Padding="1" TextAlignment="Center" TextWrapping="WrapWithOverflow"
                        ToolTip.Tip="{Binding FullName}"
                        IsVisible="{Binding !$parent[ListBox].DataContext.ShowProperties}"

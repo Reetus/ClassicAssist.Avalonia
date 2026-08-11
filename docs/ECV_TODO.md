@@ -361,11 +361,15 @@ hidden entirely via Hide Locked Items (see Toolbar section).
       `Options.PropertyChanged`), and `Rebuild()` restores `IsLocked` from `Options.LockedItems` the
       same way it used to from the `HashSet`. Locks now survive both a rebuild and closing/reopening
       the window, matching old.
-- [ ] **Still missing: the padlock overlay icon.** Purely cosmetic - locked tiles don't render a
-      padlock (old: `ListStyles.xaml:24-27`/`39-41`, a `LockIcon` `Image` shown via a `DataTrigger` on
-      `IsLocked`). `EntityCollectionViewer.axaml`'s item template has no equivalent. Doesn't affect
-      behavior - locking, hiding, and skipping locked items in move commands all work without it, you
-      just can't see which tiles are locked at a glance.
+- [x] **Padlock overlay icon** - `EntityCollectionViewer.axaml`'s item template now overlays a 12x12
+      `Assets/lock.png` (the same padlock used by `SkillsTabControl`'s `LockStatusValueConverter`,
+      rather than porting old's separate `EntityCollectionViewerViewModel.PadlockIcon` resource) at the
+      bottom-right of the art image, inset 2px, `IsVisible` bound to `IsLocked`. Old positions it flush
+      against the corner (`ListStyles.xaml:24-27`/`39-41`); this port insets it slightly instead.
+      Needed `EntityCollectionData` to start raising `PropertyChanged` for `IsLocked` (previously a
+      plain auto-property) - `ContextToggleLock` flips it on rows already on screen rather than
+      rebuilding them, so without notification the icon would only ever reflect the state as of the
+      last `Rebuild()`, not live toggles.
 
 ## Sorting
 

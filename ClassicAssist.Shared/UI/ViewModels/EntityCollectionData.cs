@@ -14,6 +14,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+using ClassicAssist.Shared.UI;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
 
@@ -27,9 +28,10 @@ namespace ClassicAssist.UI.ViewModels;
 ///         framework at all; the view converts it on the way to the screen.
 ///     </para>
 /// </summary>
-public class EntityCollectionData
+public class EntityCollectionData : SetPropertyNotifyChanged
 {
     private readonly Dictionary<int, Pixmap> _cache = [];
+    private bool _isLocked;
 
     public Entity Entity { get; set; }
 
@@ -38,8 +40,14 @@ public class EntityCollectionData
     public bool IsCoin => Entity?.ID is 0x0EEA or 0x0EED or 0x0EF0;
 
     // Session-only: the WPF side persists this to EntityCollectionViewerOptions.LockedItems, which
-    // hasn't been ported yet, so a lock here doesn't survive closing the window.
-    public bool IsLocked { get; set; }
+    // hasn't been ported yet, so a lock here doesn't survive closing the window. Needs to raise
+    // PropertyChanged - the padlock overlay in the ListBox item template binds to it directly, and
+    // ContextToggleLock flips it on rows already on screen rather than rebuilding them.
+    public bool IsLocked
+    {
+        get => _isLocked;
+        set => SetProperty( ref _isLocked, value );
+    }
 
     public string Name => GetName( Entity );
 
