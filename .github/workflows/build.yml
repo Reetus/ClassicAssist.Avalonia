@@ -21,16 +21,10 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 9.0.x
+        dotnet-version: 10.0.x
 
     - name: Build
       run: dotnet build -c Release
 
     - name: Test
       run: dotnet test ClassicAssist.Tests/ClassicAssist.Tests.csproj -c Release --no-build
-
-    - name: Upload Plugin Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: ClassicAssist-${{ matrix.os }}
-        path: ./Output/ClassicAssist

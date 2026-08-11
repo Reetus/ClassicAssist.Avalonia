@@ -1,0 +1,264 @@
+name: Release
+
+# Cuts a release the updater can consume: one zip per platform, named
+# ClassicAssist-<version>-<rid>.zip, attached to a GitHub release whose tag is the version.
+# See BUILDING.md ("Releases and the updater") for the contract this implements.
+#
+# Each platform is built on its own runner rather than cross-built from one, because the parts that
+# differ are exactly the parts a cross-build gets wrong: the apphosts (ClassicAssist.Launcher,
+# ClassicAssist.Updater, ui/ClassicAssist.Avalonia) and the DNNE native shim, which needs the
+# target's C toolchain. The rest of the tree is runtime-agnostic and identical everywhere.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version, e.g. 0.5.1234.0. A leading "v" is kept for the tag and stripped for the build.'
+        required: true
+        type: string
+      prerelease:
+        description: 'Mark the release as a prerelease (updaters only offer it when Install Prereleases is on)'
+        required: false
+        default: false
+        type: boolean
+      draft:
+        description: 'Create as a draft - the updater ignores drafts, so publish it to make the release live'
+        required: false
+        default: true
+        type: boolean
+
+# Two releases of the same version at once would race over the tag.
+concurrency:
+  group: release-${{ inputs.version }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Fails a bad version in seconds rather than after four builds have run.
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - name: Parse version
+        id: version
+        shell: bash
+        # Via env rather than inlined into the script: workflow inputs are attacker-controlled text
+        # as far as the shell is concerned.
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        run: |
+          tag="$RAW_VERSION"
+          version="${tag#v}"
+
+          if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){1,3}(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$tag' is not a version MSBuild can stamp - expected 1.2, 1.2.3 or 1.2.3.4, optionally with a -prerelease suffix."
+            exit 1
+          fi
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building $version, tagging $tag"
+
+  build:
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every platform's result is wanted, not just the first failure - the release job will not run
+      # regardless, and one broken runner should not hide the state of the other three.
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            exe: ''
+            runtimes: 'linux-x64 unix'
+          - os: windows-latest
+            rid: win-x64
+            exe: '.exe'
+            runtimes: 'win-x64 win'
+          - os: macos-latest
+            rid: osx-arm64
+            exe: ''
+            runtimes: 'osx osx-arm64 osx-x64 osx.11.0 unix'
+          # x64 macOS. GitHub retired the macos-13 label; macos-15-intel is the current Intel image.
+          - os: macos-15-intel
+            rid: osx-x64
+            exe: ''
+            runtimes: 'osx osx-arm64 osx-x64 osx.11.0 unix'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ClassicAssist.slnx
+
+      # EnableDnne is forced on rather than left to auto-detect. It probes for clang at a Unix path,
+      # so on Windows it silently resolves to false and the package would ship without the native
+      # shim that modern ClassicUO needs to load the plugin - the exact case a Windows release is
+      # for. A release should fail loudly if the toolchain is missing, not quietly ship less.
+      - name: Build
+        run: dotnet build ClassicAssist.slnx -c Release --no-restore -p:Version=${{ needs.prepare.outputs.version }} -p:EnableDnne=true
+
+      - name: Test
+        run: dotnet test ClassicAssist.Tests/ClassicAssist.Tests.csproj -c Release --no-build
+
+      # A RID-agnostic build carries native binaries for every RID the packages support - SkiaSharp,
+      # HarfBuzz and friends for Android, iOS, loongarch, riscv and every musl variant - which comes
+      # to ~245MB of the ~290MB tree, twice over (the plugin and ui/ each get a copy). That is not
+      # merely wasteful: the updater downloads the package with GetByteArrayAsync into a byte[] on a
+      # five minute timeout, so a 290MB package times out on any ordinary connection.
+      #
+      # Trimming is by OS family rather than by architecture, which keeps it dull: the kept list is
+      # everything the running platform could resolve, including the RID-agnostic managed folders
+      # (unix/, win/) and osx.11.0, which is where LibDeflate.Native puts its macOS binary - see the
+      # NETSDK1206 note in Directory.Build.props. The step below checks the result still has natives.
+      - name: Trim runtimes to this platform
+        shell: bash
+        env:
+          KEEP: ${{ matrix.runtimes }}
+        run: |
+          cd Output/ClassicAssist
+
+          for dir in runtimes ui/runtimes; do
+            [[ -d "$dir" ]] || continue
+
+            for path in "$dir"/*; do
+              name=$( basename "$path" )
+              keep=0
+
+              for wanted in $KEEP; do
+                if [[ "$name" == "$wanted" ]]; then
+                  keep=1
+                fi
+              done
+
+              if [[ $keep -eq 0 ]]; then
+                rm -rf "$path"
+              fi
+            done
+          done
+
+          echo 'Kept:'
+          ls -d runtimes/* ui/runtimes/* 2>/dev/null || true
+
+      # bash runs on all three runners, so the layout contract is checked in one place. Everything
+      # here is something the updater or the plugin host resolves by path at runtime, where a missing
+      # file surfaces as an unexplained silence rather than as an error.
+      - name: Verify package layout
+        shell: bash
+        env:
+          EXE: ${{ matrix.exe }}
+        run: |
+          cd Output/ClassicAssist
+
+          missing=0
+
+          for file in \
+            "ClassicAssist.dll" \
+            "framework/ClassicAssist.dll" \
+            "ClassicAssist.Launcher$EXE" \
+            "ClassicAssist.Updater$EXE" \
+            "ui/ClassicAssist.Avalonia$EXE" \
+            "ui/ClassicAssist.Shared.dll" \
+            "ui/Modules/Assistant.py"
+          do
+            if [[ ! -f "$file" ]]; then
+              echo "::error::Missing from the package: $file"
+              missing=1
+            fi
+          done
+
+          # DNNE names the shim <AssemblyName>NE and gives it the platform's library extension.
+          shim=''
+
+          for candidate in ClassicAssistNE.so ClassicAssistNE.dll ClassicAssistNE.dylib; do
+            if [[ -f "$candidate" ]]; then
+              shim="$candidate"
+            fi
+          done
+
+          if [[ -z "$shim" ]]; then
+            echo "::error::No ClassicAssistNE native shim was produced. Either the runner has no C toolchain, or drop -p:EnableDnne=true and accept a managed-load-only plugin."
+            missing=1
+          fi
+
+          # Both trees keep their own copy of the native libraries, and Avalonia cannot start
+          # without Skia - so an over-eager trim shows up here rather than as a window that never
+          # appears on a user's machine.
+          for dir in runtimes ui/runtimes; do
+            if [[ -d "$dir" && -z "$( find "$dir" -name 'libSkiaSharp.*' -print -quit )" ]]; then
+              echo "::error::$dir has no libSkiaSharp left; the runtimes keep list for ${{ matrix.rid }} is wrong."
+              missing=1
+            fi
+          done
+
+          exit $missing
+
+      # zip rather than tar, and zip rather than upload-artifact's own archiving: the updater
+      # extracts with ZipFile.ExtractToDirectory, which restores Unix file modes from the zip's
+      # external attributes. Uploading the tree directly would lose the executable bit on the three
+      # apphosts. Contents at the zip root, no wrapping folder - the updater copies the extracted
+      # tree straight over the install directory.
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/packages"
+          cd Output/ClassicAssist
+          zip -r "$GITHUB_WORKSPACE/packages/ClassicAssist-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip" .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path packages | Out-Null
+          Compress-Archive -Path Output\ClassicAssist\* -DestinationPath "packages\ClassicAssist-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.zip"
+
+      - name: Upload package
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.rid }}
+          path: packages/*.zip
+          if-no-files-found: error
+
+  release:
+    needs: [ prepare, build ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # Full history so generateReleaseNotes has the previous tag to diff against.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          path: packages
+          pattern: package-*
+          merge-multiple: true
+
+      - name: List packages
+        run: ls -lh packages
+
+      # Draft by default. The updater skips drafts, and a draft's assets are not downloadable
+      # anonymously, so nothing reaches users until the release is published by hand.
+      - name: Create release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: packages/*.zip
+          tag: ${{ needs.prepare.outputs.tag }}
+          name: ${{ needs.prepare.outputs.tag }}
+          commit: ${{ github.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: ${{ inputs.prerelease }}
+          draft: ${{ inputs.draft }}
+          generateReleaseNotes: true

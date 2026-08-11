@@ -40,6 +40,18 @@ ClassicAssist-<version>-osx-x64.zip
 ClassicAssist-<version>-osx-arm64.zip
 ```
 
+Those four are produced by `.github/workflows/release.yml`, run by hand from the Actions tab with
+the version as its only required input. Each platform builds on its own runner in parallel - what
+differs between the packages is the apphosts and the DNNE native shim, and both need the target's
+own toolchain - and a final job attaches all four to one draft release tagged with the version.
+Drafts are invisible to the updater, so nothing reaches users until the release is published.
+
+Packages are trimmed to the platform they are for before zipping: a runtime-agnostic build carries
+native binaries for every RID under the sun, ~245MB of a ~290MB tree, and the updater reads the
+whole download into memory on a five minute timeout. The keep list lives in the workflow matrix, by
+OS family rather than by architecture, and the build fails if trimming leaves a tree with no Skia in
+it.
+
 Matching is on separator-delimited tokens, not exact names, so the surrounding convention can
 change without breaking updaters already in the wild. A release carrying exactly one archive and no
 platform naming is taken as-is, which is what makes a single-package repository work before
