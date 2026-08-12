@@ -20,6 +20,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using ClassicAssist.UO.Objects;
 
 namespace ClassicAssist.Data.Autoloot;
 
@@ -32,6 +33,12 @@ public class AutolootManager
     ///     Trigger autoloot on a container/corpse serial. Wired by the UI (AutolootViewModel).
     /// </summary>
     public Action<int, bool> CheckContainer { get; set; }
+
+    /// <summary>
+    ///     Run the configured entries against a set of items, applying rehue as a side effect and
+    ///     returning those that should be looted. Wired by the UI (AutolootViewModel).
+    /// </summary>
+    public Func<IEnumerable<Item>, List<Item>> CheckItems { get; set; }
 
     public Func<List<AutolootEntry>> GetEntries { get; set; } = () => [];
 

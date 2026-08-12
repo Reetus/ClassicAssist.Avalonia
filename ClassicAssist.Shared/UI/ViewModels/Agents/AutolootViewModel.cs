@@ -60,6 +60,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         AutolootManager manager = AutolootManager.GetInstance();
         manager.GetEntries = () => [.. Items];
         manager.CheckContainer = OnCorpseEvent;
+        manager.CheckItems = CheckItems;
         manager.IsEnabled = () => Enabled;
         manager.SetEnabled = enabled => Enabled = enabled;
         manager.IsRunning = () => false;
@@ -511,48 +512,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 Thread.Sleep( 1000 );
             }
 
-            List<Item> lootItems = [];
-
-            // If change logic, also change in DebugAutolootViewModel
-
-            foreach ( AutolootEntry entry in Items.OrderByDescending( x => x.Priority ) )
-            {
-                if ( !entry.Enabled )
-                {
-                    continue;
-                }
-
-                if ( entry.Group != null && !entry.Group.Enabled )
-                {
-                    continue;
-                }
-
-                IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( items, entry );
-
-                if ( matchItems == null )
-                {
-                    continue;
-                }
-
-                foreach ( Item matchItem in matchItems )
-                {
-                    if ( entry.Rehue )
-                    {
-                        Engine.SendPacketToClient( new ContainerContentUpdate( matchItem.Serial, matchItem.ID, matchItem.Direction, matchItem.Count, matchItem.X, matchItem.Y,
-                            matchItem.Grid, matchItem.Owner, entry.RehueHue ) );
-                    }
-
-                    if ( DisableInGuardzone && Engine.Player.GetRegion().Attributes.HasFlag( RegionAttributes.Guarded ) )
-                    {
-                        continue;
-                    }
-
-                    if ( entry.Autoloot )
-                    {
-                        lootItems.Add( matchItem );
-                    }
-                }
-            }
+            List<Item> lootItems = CheckItems( items );
 
             foreach ( Item lootItem in lootItems.Distinct() )
             {
@@ -577,6 +537,60 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                 t.Wait( LOOT_TIMEOUT );
             }
         }
+    }
+
+    /// <summary>
+    ///     Runs the configured entries over <paramref name="itemsEnumerable" />, applying rehue as a
+    ///     side effect, and returns the items that should be looted.
+    /// </summary>
+    /// <remarks>
+    ///     If change logic, also change in DebugAutolootViewModel.
+    /// </remarks>
+    private List<Item> CheckItems( IEnumerable<Item> itemsEnumerable )
+    {
+        List<Item> items = [.. itemsEnumerable.Where( i => i != null )];
+        List<Item> lootItems = [];
+
+        foreach ( AutolootEntry entry in Items.OrderByDescending( x => x.Priority ) )
+        {
+            if ( !entry.Enabled )
+            {
+                continue;
+            }
+
+            if ( entry.Group != null && !entry.Group.Enabled )
+            {
+                continue;
+            }
+
+            IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( items, entry );
+
+            if ( matchItems == null )
+            {
+                continue;
+            }
+
+            foreach ( Item matchItem in matchItems )
+            {
+                if ( entry.Rehue )
+                {
+                    Engine.SendPacketToClient( new ContainerContentUpdate( matchItem.Serial, matchItem.ID, matchItem.Direction, matchItem.Count, matchItem.X, matchItem.Y,
+                        matchItem.Grid, matchItem.Owner, entry.RehueHue ) );
+                }
+
+                if ( DisableInGuardzone && Engine.Player.GetRegion().Attributes.HasFlag( RegionAttributes.Guarded ) )
+                {
+                    continue;
+                }
+
+                if ( entry.Autoloot )
+                {
+                    lootItems.Add( matchItem );
+                }
+            }
+        }
+
+        return lootItems;
     }
 
     private static bool CheckItemContainer( int serial, int containerSerial )

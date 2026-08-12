@@ -32,6 +32,19 @@ public static class TileData
 
     private static StaticTile[] LoadStaticTiles()
     {
+        // No client data configured at all - as opposed to a path that is set but has no
+        // tiledata.mul, which is a real misconfiguration and still throws below. Upstream returns
+        // a tile named "unknown" here and comments that its tests depend on it; the port dropped
+        // that, which left anything reading Item.Name (autoloot's "Autolooting {0}" message, for
+        // one) unable to run without a UO install. The single-element array gives the same answer
+        // through GetStaticTile's existing range check, without reintroducing the try/catch that
+        // stopped it inlining. Only the static tiles get this - upstream's GetLandTile throws with
+        // no data too, so LoadLandTiles is deliberately left alone.
+        if ( string.IsNullOrEmpty( _dataPath ) || !Directory.Exists( _dataPath ) )
+        {
+            return [new StaticTile { Name = "unknown" }];
+        }
+
         string fileName = Path.Combine( _dataPath, "tiledata.mul" );
 
         if ( !File.Exists( fileName ) )
