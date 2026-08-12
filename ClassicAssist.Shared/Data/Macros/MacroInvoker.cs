@@ -31,6 +31,7 @@ public class MacroInvoker
     public delegate void dMacroStartStop();
 
     private static readonly ScriptEngine _engine = Python.CreateEngine();
+    private static readonly object BoxedTrue = true;
     private static Dictionary<string, object> _importCache;
     private readonly AutoResetEvent _pauseEvent = new( false );
     private readonly SystemMessageTextWriter _textWriter = new();
@@ -224,6 +225,7 @@ public class MacroInvoker
                 _engine.SetTrace( OnTrace );
 
                 _macroScope.SetVariable( "args", parameters ?? [] );
+                _macroScope.SetVariable( "CAA", BoxedTrue );
 
                 StopWatch.Reset();
                 StopWatch.Start();
