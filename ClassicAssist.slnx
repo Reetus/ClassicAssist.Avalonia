@@ -6,4 +6,5 @@
   <Project Path="ClassicAssist.Shared/ClassicAssist.Shared.csproj" />
   <Project Path="ClassicAssist.Tests/ClassicAssist.Tests.csproj" />
   <Project Path="ClassicAssist.Updater/ClassicAssist.Updater.csproj" />
+  <Project Path="Tools/ExportCommands/ExportCommands.csproj" />
 </Solution>

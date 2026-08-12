@@ -112,6 +112,16 @@ jobs:
       - name: Test
         run: dotnet test ClassicAssist.Tests/ClassicAssist.Tests.csproj -c Release --no-build
 
+      # Reflects over the built ClassicAssist.Shared.dll (see Tools/ExportCommands) so external
+      # editors (VS Code / Pylance) get autocomplete and signature help for file-based .py macros.
+      # ExportCommands itself builds to Output/Tools/, outside Output/ClassicAssist, so it never
+      # ends up in the package this workflow zips below - only the stubs it emits do.
+      - name: Generate Python stubs
+        shell: bash
+        run: |
+          cd Output/ClassicAssist/ui
+          dotnet "$GITHUB_WORKSPACE/Output/Tools/ExportCommands/ExportCommands.dll" "$(pwd)/ClassicAssist.Shared.dll" --pyi "$(pwd)/pyi"
+
       # A RID-agnostic build carries native binaries for every RID the packages support - SkiaSharp,
       # HarfBuzz and friends for Android, iOS, loongarch, riscv and every musl variant - which comes
       # to ~245MB of the ~290MB tree, twice over (the plugin and ui/ each get a copy). That is not
