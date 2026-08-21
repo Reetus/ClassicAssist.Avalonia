@@ -216,6 +216,15 @@
                          IsEnabled="{Binding CurrentOptions.DebugAdapterEnabled, Converter={StaticResource InverseBooleanConverter}}" />
               </StackPanel>
             </CheckBox>
+            <CheckBox IsChecked="{Binding CurrentOptions.McpEnabled}"
+                      Command="{Binding ToggleMcpCommand}"
+                      ToolTip.Tip="{x:Static resources:Strings.MCP_tooltip}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{x:Static resources:Strings.MCP}" VerticalAlignment="Center" />
+                <TextBox Width="50" Margin="10,0,0,0" Text="{Binding CurrentOptions.McpPort}"
+                         IsEnabled="{Binding CurrentOptions.McpEnabled, Converter={StaticResource InverseBooleanConverter}}" />
+              </StackPanel>
+            </CheckBox>
           </StackPanel>
         </controls:GroupBox>
 

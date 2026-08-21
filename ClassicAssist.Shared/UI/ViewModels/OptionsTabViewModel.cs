@@ -5,6 +5,7 @@ using ClassicAssist.Data;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.DebugAdapter.Dap;
+using ClassicAssist.Mcp;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
@@ -29,6 +30,8 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
     public ICommand SetLanguageOverrideCommand => field ??= new RelayCommand( SetLanguageOverride );
 
     public ICommand ToggleDebugAdapterCommand => field ??= new RelayCommand( ToggleDebugAdapter, o => true );
+
+    public ICommand ToggleMcpCommand => field ??= new RelayCommand( ToggleMcp, o => true );
 
     public void Serialize( JObject json )
     {
@@ -107,6 +110,15 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
         if ( DapServer.IsRunning )
         {
             CurrentOptions.DebugAdapterPort = DapServer.Port;
+        }
+
+        // Same session-only handling for the MCP server - never persisted, so its state is
+        // reflected here rather than read from the profile.
+        CurrentOptions.McpEnabled = McpServer.IsRunning;
+
+        if ( McpServer.IsRunning )
+        {
+            CurrentOptions.McpPort = McpServer.Port;
         }
 
         ActionCommands.UseOnceList.Clear();
@@ -292,6 +304,37 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
             // Ensure any partially-initialised server is torn down before reverting the toggle.
             DapServer.Shutdown();
             CurrentOptions.DebugAdapterEnabled = false;
+            await Engine.MessageBoxProvider.Show( e.Message, Strings.Error );
+        }
+    }
+
+    private async void ToggleMcp( object obj )
+    {
+        try
+        {
+            if ( CurrentOptions.McpEnabled )
+            {
+                int port = CurrentOptions.McpPort;
+
+                if ( port is < 1 or > 65535 )
+                {
+                    CurrentOptions.McpEnabled = false;
+                    await Engine.MessageBoxProvider.Show( Strings.MCP_invalid_port, Strings.Error );
+                    return;
+                }
+
+                McpServer.Initialize( port );
+            }
+            else
+            {
+                McpServer.Shutdown();
+            }
+        }
+        catch ( Exception e )
+        {
+            // Ensure any partially-initialised server is torn down before reverting the toggle.
+            McpServer.Shutdown();
+            CurrentOptions.McpEnabled = false;
             await Engine.MessageBoxProvider.Show( e.Message, Strings.Error );
         }
     }

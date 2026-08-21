@@ -313,6 +313,18 @@ public class Options : INotifyPropertyChanged
         set => SetProperty( ref field, value );
     } = 4712;
 
+    public bool McpEnabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
+
+    public int McpPort
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = 4713;
+
     public string Name
     {
         get;
