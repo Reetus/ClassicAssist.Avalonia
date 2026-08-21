@@ -50,10 +50,11 @@ namespace ClassicAssist.UI.ViewModels;
 ///     Backs the entity collection viewer: the grid of item art behind "Show World Items" and behind
 ///     opening a container.
 ///     <para>
-///         Ported from the WPF view model with one deliberate simplification and one deferral: the
-///         filter is flat/AND-only rather than old's nested boolean-tree groups (see
-///         <see cref="FilterProfile" />), and the Organizer panel is not ported at all - see
-///         ECV_TODO.md for the full gap accounting. Browsing, sorting, refreshing, drilling into
+///         Ported from the WPF view model with one deferral: the Organizer panel is not ported at all
+///         - see ECV_TODO.md for the full gap accounting. The filter is a nested boolean-tree of
+///         groups (see <see cref="FilterProfile" />/<see cref="EntityCollectionFilterGroup" />),
+///         evaluated by <see cref="EvaluateGroups" /> and persisted to FilterProfiles.json in WPF's
+///         shape, so the two sides can share profiles. Browsing, sorting, refreshing, drilling into
 ///         containers, the filter editor + profiles, the queued move/loot actions, and the settings
 ///         window (<see cref="Options" />) are all here.
 ///     </para>
@@ -86,6 +87,13 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     private readonly string _optionsFile =
         Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "EntityCollectionViewerOptions.json" );
+
+    /// <summary>
+    ///     Snapshot of the group tree taken at Apply time, so later edits to the profile don't change
+    ///     the live filter until it's re-applied. Null when no filter is active - mirrors WPF's
+    ///     <c>_filters</c>.
+    /// </summary>
+    private List<EntityCollectionFilterGroup> _filters;
 
     /// <summary>
     ///     Feeds the queue rows into <see cref="ThreadPriorityQueue{T}" />, one worker thread serializing
@@ -142,20 +150,55 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         new Lazy<Dictionary<int, int>>( LoadMountIDEntries );
 
     public ICommand AddFilterConditionCommand => field ??=
-            new RelayCommand( AddFilterCondition, o => Constraints.Count > 0 );
+            new RelayCommand( AddFilterCondition, o =>
+                FilterConditions != null && ( SelectedGroup == null || !SelectedGroup.HasChildren ) );
+
+    public ICommand AddGroupCommand => field ??= new RelayCommand( AddGroup, o => true );
 
     public ICommand AddProfileCommand => field ??= new RelayCommand( AddProfile, o => true );
 
+    public ICommand AddSubGroupCommand => field ??= new RelayCommand( AddSubGroup, o => SelectedGroup != null );
+
     public ICommand ApplyFiltersCommand => field ??= new RelayCommand( o =>
         {
-            IsFilterApplied = FilterConditions.Count > 0;
+            _filters = BuildActiveGroups();
+            IsFilterApplied = _filters != null;
             Rebuild();
         }, o => true );
 
+    /// <summary>
+    ///     The groups a filter application evaluates: the profile's group tree, or - when it has no
+    ///     groups - a single synthesized And group carrying its flat <see cref="FilterProfile.Conditions" />,
+    ///     so both modes flow through the one <see cref="EvaluateGroups" /> path.
+    /// </summary>
+    private List<EntityCollectionFilterGroup> BuildActiveGroups()
+    {
+        if ( SelectedProfile == null )
+        {
+            return null;
+        }
+
+        if ( SelectedProfile.Groups.Count > 0 )
+        {
+            return SelectedProfile.Groups.ToList();
+        }
+
+        return
+        [
+            new EntityCollectionFilterGroup
+            {
+                Items = new ObservableCollection<AutolootConstraintEntry>( SelectedProfile.Conditions )
+            }
+        ];
+    }
+
     public ICommand ChangeSortStyleCommand => field ??= new RelayCommand( ChangeSortStyle, o => true );
+
+    public ICommand RemoveGroupCommand => field ??= new RelayCommand( RemoveGroup, o => SelectedGroup != null );
 
     public ICommand ResetFiltersCommand => field ??= new RelayCommand( o =>
         {
+            _filters = null;
             IsFilterApplied = false;
             Rebuild();
         }, o => true );
@@ -242,12 +285,29 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     public ICommand EquipItemCommand => field ??= new RelayCommandAsync( EquipItem, o => SelectedItems.Count > 0 );
 
+    /// <summary>The operators a group can combine with its predecessor - the tree editor's
+    /// operation dropdown draws from this.</summary>
+    public IReadOnlyList<BooleanOperation> OperationOptions { get; } =
+        [BooleanOperation.And, BooleanOperation.Or, BooleanOperation.Not];
+
     /// <summary>
-    ///     The active filter conditions, AND-combined - mirrored into <see cref="SelectedProfile" /> on
-    ///     save.
+    ///     The condition grid's items source. With any groups it's the selected group's items (tree
+    ///     mode); with no groups it's the profile's flat <see cref="FilterProfile.Conditions" /> and
+    ///     the group tree is hidden. Re-raised whenever <see cref="SelectedProfile" /> or
+    ///     <see cref="SelectedGroup" /> changes so the grid follows whichever collection is active.
     /// </summary>
-    public ObservableCollection<AutolootConstraintEntry> FilterConditions { get; } =
-        [];
+    public ObservableCollection<AutolootConstraintEntry> FilterConditions
+    {
+        get
+        {
+            if ( SelectedProfile == null )
+            {
+                return null;
+            }
+
+            return SelectedProfile.Groups.Count > 0 ? SelectedGroup?.Items : SelectedProfile.Conditions;
+        }
+    }
 
     public ICommand HideItemCommand => field ??= new RelayCommand( HideItem, o => SelectedItems.Count > 0 );
 
@@ -294,6 +354,8 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     public ICommand RemoveProfileCommand => field ??= new RelayCommand( RemoveProfile, o => true );
 
+    public ICommand SaveProfilesCommand => field ??= new RelayCommand( o => SaveFilterProfiles(), o => true );
+
     public bool SelectedItemsAllLocked => SelectedItems.Count > 0 && SelectedItems.All( e => e.IsLocked );
 
     public ObservableCollection<EntityCollectionData> SelectedItems
@@ -303,33 +365,138 @@ public class EntityCollectionViewerViewModel : BaseViewModel
     } = [];
 
     /// <summary>
-    ///     The profile currently being edited. Switching profiles swaps <see cref="FilterConditions" />'
-    ///     contents to match and re-applies the filter if one is currently active.
+    ///     The profile currently being edited. Switching profiles points <see cref="SelectedGroup" />
+    ///     at the new profile's first group and, if a filter is active, re-applies it from the new
+    ///     profile (old's <c>SetActiveProfile</c>). Subscribes to the profile's group tree so
+    ///     <see cref="ShowGroupTree" /> follows add/remove anywhere in it.
     /// </summary>
     public FilterProfile SelectedProfile
     {
         get;
         set
         {
+            if ( field != null )
+            {
+                field.Groups.CollectionChanged -= OnProfileGroupsChanged;
+                UnsubscribeGroupsRecursive( field.Groups );
+            }
+
             SetProperty( ref field, value );
 
-            FilterConditions.Clear();
-
-            if ( value == null )
+            if ( value != null )
             {
-                return;
+                value.Groups.CollectionChanged += OnProfileGroupsChanged;
+                SubscribeGroupsRecursive( value.Groups );
             }
 
-            foreach ( AutolootConstraintEntry condition in value.Conditions )
-            {
-                FilterConditions.Add( condition );
-            }
+            SelectedGroup = value?.Groups.FirstOrDefault();
+
+            OnPropertyChanged( nameof( FilterConditions ) );
+            OnPropertyChanged( nameof( ShowGroupTree ) );
 
             if ( IsFilterApplied )
             {
+                _filters = BuildActiveGroups();
                 Rebuild();
             }
         }
+    }
+
+    /// <summary>
+    ///     The group whose items the filter editor's condition grid is showing. Null in flat mode (no
+    ///     groups) or with nothing selected - <see cref="FilterConditions" /> falls back to the
+    ///     profile's flat conditions then.
+    /// </summary>
+    public EntityCollectionFilterGroup SelectedGroup
+    {
+        get;
+        set
+        {
+            SetProperty( ref field, value );
+            OnPropertyChanged( nameof( FilterConditions ) );
+            OnPropertyChanged( nameof( SelectedGroupIsBranch ) );
+        }
+    }
+
+    /// <summary>
+    ///     Whether the selected group is a branch (has sub-groups) - its own conditions are ignored by
+    ///     evaluation, so the editor shows a placeholder instead of a condition grid. False when
+    ///     nothing is selected (flat mode), where the grid edits the profile's flat conditions.
+    /// </summary>
+    public bool SelectedGroupIsBranch => SelectedGroup is { HasChildren: true };
+
+    /// <summary>
+    ///     Whether the filter editor shows the group tree + condition grid split. True when there are
+    ///     multiple top-level groups, or any group has sub-groups - a single branch group needs the
+    ///     tree to reach its children, and a tree with nothing to navigate is just wasted space.
+    ///     Mirrors WPF's <c>HasSubgroups</c> flat-vs-split decision, plus the multi-group case.
+    /// </summary>
+    public bool ShowGroupTree =>
+        SelectedProfile != null &&
+        ( SelectedProfile.Groups.Count > 1 || HasSubgroupsRecursive( SelectedProfile.Groups ) );
+
+    private void OnProfileGroupsChanged( object sender, NotifyCollectionChangedEventArgs e )
+    {
+        if ( e.NewItems != null )
+        {
+            foreach ( object obj in e.NewItems )
+            {
+                if ( obj is EntityCollectionFilterGroup group )
+                {
+                    SubscribeGroupsRecursive( [group] );
+                }
+            }
+        }
+
+        if ( e.OldItems != null )
+        {
+            foreach ( object obj in e.OldItems )
+            {
+                if ( obj is EntityCollectionFilterGroup group )
+                {
+                    UnsubscribeGroupsRecursive( [group] );
+                }
+            }
+        }
+
+        OnPropertyChanged( nameof( ShowGroupTree ) );
+        OnPropertyChanged( nameof( SelectedGroupIsBranch ) );
+    }
+
+    private void SubscribeGroupsRecursive( IEnumerable<EntityCollectionFilterGroup> groups )
+    {
+        foreach ( EntityCollectionFilterGroup group in groups )
+        {
+            group.Children.CollectionChanged += OnProfileGroupsChanged;
+            SubscribeGroupsRecursive( group.Children );
+        }
+    }
+
+    private void UnsubscribeGroupsRecursive( IEnumerable<EntityCollectionFilterGroup> groups )
+    {
+        foreach ( EntityCollectionFilterGroup group in groups )
+        {
+            group.Children.CollectionChanged -= OnProfileGroupsChanged;
+            UnsubscribeGroupsRecursive( group.Children );
+        }
+    }
+
+    private static bool HasSubgroupsRecursive( IEnumerable<EntityCollectionFilterGroup> groups )
+    {
+        foreach ( EntityCollectionFilterGroup group in groups )
+        {
+            if ( group.Children.Count > 0 )
+            {
+                return true;
+            }
+
+            if ( HasSubgroupsRecursive( group.Children ) )
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>Whether the filter condition panel is visible - does not by itself apply the filter.</summary>
@@ -478,8 +645,10 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
             if ( newEntities.Count > 0 )
             {
-                List<Predicate<Item>> predicates = IsFilterApplied && FilterConditions.Count > 0
-                    ? [.. AutolootHelpers.ConstraintsToPredicates( FilterConditions.Where( c => c.Enabled ) )]
+                // A single-item evaluation against the applied group tree, so live adds get the same
+                // boolean-tree treatment a full Rebuild would give them.
+                List<Predicate<Item>> predicates = IsFilterApplied && _filters != null
+                    ? [MatchesFilter]
                     : null;
 
                 IComparer<Entity> sorter = GetSorter();
@@ -656,18 +825,133 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     private ItemCollection ApplyFilter( ItemCollection source )
     {
-        if ( !IsFilterApplied || FilterConditions.Count == 0 )
+        if ( !IsFilterApplied || _filters == null || _filters.Count == 0 )
         {
             return source;
         }
 
+        return EvaluateGroups( _filters, source );
+    }
+
+    /// <summary>
+    ///     Applies the snapshot <see cref="_filters" /> to a single item - used by the live-add path
+    ///     (<see cref="ApplyCollectionChange" />), which patches rows in place rather than rebuilding.
+    /// </summary>
+    private bool MatchesFilter( Item item )
+    {
+        ItemCollection single = new( item.Owner ) { item };
+
+        return EvaluateGroups( _filters, single ).GetItems().Contains( item );
+    }
+
+    private void AddFilterCondition( object obj )
+    {
+        FilterConditions?.Add( new AutolootConstraintEntry { Property = Constraints.FirstOrDefault() } );
+    }
+
+    private void RemoveFilterCondition( object obj )
+    {
+        if ( obj is AutolootConstraintEntry entry )
+        {
+            FilterConditions?.Remove( entry );
+        }
+    }
+
+    // Combines top-level groups left-to-right using each group's Operation (first group's
+    // operation is ignored - there is nothing before it to combine with). Ported line-for-line from
+    // WPF's EntityCollectionViewerViewModel.EvaluateGroups.
+    internal static ItemCollection EvaluateGroups( List<EntityCollectionFilterGroup> groups, ItemCollection source )
+    {
+        if ( groups == null || groups.Count == 0 )
+        {
+            return source;
+        }
+
+        ItemCollection items = EvaluateGroup( groups[0], source );
+
+        for ( int i = 1; i < groups.Count; i++ )
+        {
+            EntityCollectionFilterGroup group = groups[i];
+
+            ItemCollection groupItems = group.Operation == BooleanOperation.Or
+                ? EvaluateGroup( group, source )
+                : EvaluateGroup( group, items );
+
+            switch ( group.Operation )
+            {
+                case BooleanOperation.And:
+                    items = groupItems;
+
+                    break;
+                case BooleanOperation.Or:
+                    items.Add( groupItems.GetItems() );
+
+                    break;
+                case BooleanOperation.Not:
+                    items.Remove( groupItems.GetItems() );
+
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        return items;
+    }
+
+    internal static ItemCollection EvaluateGroup( EntityCollectionFilterGroup group, ItemCollection source )
+    {
+        // Branch groups (with sub-groups) are pure boolean containers - their own filters are ignored
+        // (hidden in the editor).
+        ItemCollection result = group.Children.Count > 0 ? source : FilterItems( group.Items, source );
+
+        if ( group.Children.Count == 0 )
+        {
+            return result;
+        }
+
+        ItemCollection childResult = EvaluateGroup( group.Children[0], result );
+
+        for ( int i = 1; i < group.Children.Count; i++ )
+        {
+            EntityCollectionFilterGroup child = group.Children[i];
+
+            ItemCollection childItems = child.Operation == BooleanOperation.Or
+                ? EvaluateGroup( child, result )
+                : EvaluateGroup( child, childResult );
+
+            switch ( child.Operation )
+            {
+                case BooleanOperation.And:
+                    childResult = childItems;
+
+                    break;
+                case BooleanOperation.Or:
+                    childResult.Add( childItems.GetItems() );
+
+                    break;
+                case BooleanOperation.Not:
+                    childResult.Remove( childItems.GetItems() );
+
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        return childResult;
+    }
+
+    /// <summary>
+    ///     Filters <paramref name="source" /> down to the items matching every enabled condition in
+    ///     <paramref name="items" /> - WPF's <c>source.Filter(group.Items)</c>, expressed through the
+    ///     shared Autoloot predicate system (the item type here is <see cref="AutolootConstraintEntry" />,
+    ///     WPF's <c>EntityCollectionFilterItem</c>). An empty set matches everything, like WPF.
+    /// </summary>
+    private static ItemCollection FilterItems( IEnumerable<AutolootConstraintEntry> items, ItemCollection source )
+    {
         List<Predicate<Item>> predicates =
-            [.. AutolootHelpers.ConstraintsToPredicates( FilterConditions.Where( c => c.Enabled ) )];
-
-        if ( predicates.Count == 0 )
-        {
-            return source;
-        }
+            [.. AutolootHelpers.ConstraintsToPredicates( items.Where( i => i.Enabled ) )];
 
         ItemCollection filtered = new( source.Serial );
 
@@ -680,19 +964,6 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         }
 
         return filtered;
-    }
-
-    private void AddFilterCondition( object obj )
-    {
-        FilterConditions.Add( new AutolootConstraintEntry { Property = Constraints.FirstOrDefault() } );
-    }
-
-    private void RemoveFilterCondition( object obj )
-    {
-        if ( obj is AutolootConstraintEntry entry )
-        {
-            FilterConditions.Remove( entry );
-        }
     }
 
     private void LoadCustomProperties()
@@ -976,46 +1247,26 @@ public class EntityCollectionViewerViewModel : BaseViewModel
                     Name = profileToken["Name"]?.ToObject<string>() ?? "New Filter Profile"
                 };
 
-                foreach ( JToken conditionToken in GetConditionTokens( profileToken ) )
+                // "Groups" is WPF's shape (and this port's, now that they share it); "Conditions" is
+                // this port's own earlier flat shape, which stays flat (no groups, tree hidden) until
+                // a group is added.
+                if ( profileToken["Groups"] is JArray groupArray )
                 {
-                    // "Property" is this port's own flat shape; "Constraint"."Name" is old WPF's
-                    // nested Groups[].Items[].Constraint shape - see GetConditionTokens.
-                    string propertyName = conditionToken["Property"]?.ToObject<string>() ??
-                                           conditionToken["Constraint"]?["Name"]?.ToObject<string>();
-
-                    // Deliberately no fall back to the first constraint: a name that doesn't resolve
-                    // means the constraint isn't registered this session - a plugin that failed to
-                    // load, or an old-side property this port doesn't have - and silently adopting an
-                    // unrelated property would change what the filter matches with nothing to show it.
-                    PropertyEntry property = Constraints.FirstOrDefault( c => c.Name == propertyName );
-
-                    if ( property == null )
+                    foreach ( JToken groupObj in groupArray )
                     {
-                        continue;
+                        profile.Groups.Add( DeserializeGroup( groupObj ) );
                     }
-
-                    AutolootConstraintEntry condition = new()
-                    {
-                        Property = property,
-                        Operator = conditionToken["Operator"]?.ToObject<AutolootOperator>() ??
-                                   AutolootOperator.Equal,
-                        Value = conditionToken["Value"]?.ToObject<int>() ?? 0,
-                        Additional = conditionToken["Additional"]?.ToObject<string>(),
-                        // Absent for every condition written before this was persisted - defaults to
-                        // enabled, matching AutolootConstraintEntry's own default.
-                        Enabled = conditionToken["Enabled"]?.ToObject<bool>() ?? true
-                    };
-
-                    // Absent for every condition written before this was persisted, and for the
-                    // majority that don't use it - left at its default rather than an empty set.
-                    if ( conditionToken["Values"] != null )
-                    {
-                        condition.Values = conditionToken["Values"].ToObject<ObservableCollection<int>>() ??
-                                           [];
-                    }
-
-                    profile.Conditions.Add( condition );
                 }
+
+                if ( profileToken["Conditions"] is JArray conditions )
+                {
+                    foreach ( JToken condition in conditions )
+                    {
+                        DeserializeCondition( condition, profile.Conditions );
+                    }
+                }
+
+                profile.UpdateGroupsFirstFlags();
 
                 Profiles.Add( profile );
             }
@@ -1040,33 +1291,69 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         }
     }
 
-    /// <summary>
-    ///     Reads a profile's condition tokens from either shape: this port's own flat "Conditions"
-    ///     array, or old WPF's "Groups[].Items[]" - so a <c>FilterProfiles.json</c> written by WPF
-    ///     loads here too, as long as it doesn't use the boolean-tree nesting this port doesn't have.
-    ///     Only the top-level groups' items are read; nested "Children" sub-groups are silently
-    ///     skipped rather than flattened, since there's no way to represent their Or/Not semantics in
-    ///     a flat AND-only list without changing what the filter actually matches.
-    /// </summary>
-    private static IEnumerable<JToken> GetConditionTokens( JToken profileToken )
+    private EntityCollectionFilterGroup DeserializeGroup( JToken groupObj )
     {
-        if ( profileToken["Conditions"] is JArray conditions )
+        EntityCollectionFilterGroup group = new()
         {
-            foreach ( JToken condition in conditions )
-            {
-                yield return condition;
-            }
+            Operation = groupObj["Operation"]?.ToObject<BooleanOperation>() ?? BooleanOperation.And
+        };
 
-            yield break;
-        }
-
-        foreach ( JToken groupToken in profileToken["Groups"] ?? Enumerable.Empty<JToken>() )
+        if ( groupObj["Items"] != null )
         {
-            foreach ( JToken itemToken in groupToken["Items"] ?? Enumerable.Empty<JToken>() )
+            foreach ( JToken itemObj in groupObj["Items"] )
             {
-                yield return itemToken;
+                DeserializeCondition( itemObj, group.Items );
             }
         }
+
+        if ( groupObj["Children"] != null )
+        {
+            foreach ( JToken childObj in groupObj["Children"] )
+            {
+                group.Children.Add( DeserializeGroup( childObj ) );
+            }
+        }
+
+        return group;
+    }
+
+    private void DeserializeCondition( JToken conditionToken, ObservableCollection<AutolootConstraintEntry> target )
+    {
+        // "Constraint"."Name" is WPF's (and now this port's) shape; "Property" is this port's legacy
+        // flat shape.
+        string propertyName = conditionToken["Constraint"]?["Name"]?.ToObject<string>() ??
+                               conditionToken["Property"]?.ToObject<string>();
+
+        // Deliberately no fall back to the first constraint: a name that doesn't resolve means the
+        // constraint isn't registered this session - a plugin that failed to load, or an old-side
+        // property this port doesn't have - and silently adopting an unrelated property would change
+        // what the filter matches with nothing to show it.
+        PropertyEntry property = Constraints.FirstOrDefault( c => c.Name == propertyName );
+
+        if ( property == null )
+        {
+            return;
+        }
+
+        AutolootConstraintEntry condition = new()
+        {
+            Property = property,
+            Operator = conditionToken["Operator"]?.ToObject<AutolootOperator>() ?? AutolootOperator.Equal,
+            Value = conditionToken["Value"]?.ToObject<int>() ?? 0,
+            Additional = conditionToken["Additional"]?.ToObject<string>(),
+            // Absent for every condition written before this was persisted - defaults to enabled,
+            // matching AutolootConstraintEntry's own default.
+            Enabled = conditionToken["Enabled"]?.ToObject<bool>() ?? true
+        };
+
+        // Absent for every condition written before this was persisted, and for the majority that
+        // don't use it - left at its default rather than an empty set.
+        if ( conditionToken["Values"] != null )
+        {
+            condition.Values = conditionToken["Values"].ToObject<ObservableCollection<int>>() ?? [];
+        }
+
+        target.Add( condition );
     }
 
     private void AddDefaultProfile()
@@ -1079,8 +1366,6 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     public void SaveFilterProfiles()
     {
-        SelectedProfile?.Conditions = new ObservableCollection<AutolootConstraintEntry>( FilterConditions );
-
         try
         {
             JObject obj = new() { { "LastProfileID", SelectedProfile?.ID } };
@@ -1091,39 +1376,26 @@ public class EntityCollectionViewerViewModel : BaseViewModel
             {
                 JObject profileObj = new() { { "ID", profile.ID }, { "Name", profile.Name } };
 
-                JArray conditions = [];
+                JArray groups = [];
 
-                foreach ( AutolootConstraintEntry condition in profile.Conditions )
+                // A flat profile (no groups) is written as a single And group so a WPF-loaded
+                // FilterProfiles.json still carries its conditions.
+                if ( profile.Groups.Count > 0 )
                 {
-                    // A condition with no property can't be evaluated, and writing "Property": null
-                    // is worse than dropping it - on load an unnamed condition can't be matched, so it
-                    // would come back as some unrelated property carrying this one's operator/value.
-                    if ( condition.Property == null )
+                    foreach ( EntityCollectionFilterGroup group in profile.Groups )
                     {
-                        continue;
+                        groups.Add( SerializeGroup( group ) );
                     }
-
-                    JObject conditionObj = new()
+                }
+                else if ( profile.Conditions.Count > 0 )
+                {
+                    groups.Add( SerializeGroup( new EntityCollectionFilterGroup
                     {
-                        { "Property", condition.Property.Name },
-                        { "Operator", (int) condition.Operator },
-                        { "Value", condition.Value },
-                        { "Additional", condition.Additional },
-                        { "Enabled", condition.Enabled }
-                    };
-
-                    // Only written when there's something in it, matching old. This is the multi-value
-                    // set behind ID (Multiple) / Cliloc (Multiple) - without it those conditions came
-                    // back empty after a restart and matched nothing.
-                    if ( condition.Values != null && condition.Values.Count > 0 )
-                    {
-                        conditionObj.Add( "Values", JArray.FromObject( condition.Values ) );
-                    }
-
-                    conditions.Add( conditionObj );
+                        Items = new ObservableCollection<AutolootConstraintEntry>( profile.Conditions )
+                    } ) );
                 }
 
-                profileObj.Add( "Conditions", conditions );
+                profileObj.Add( "Groups", groups );
 
                 profiles.Add( profileObj );
             }
@@ -1136,6 +1408,60 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         {
             SentrySdk.CaptureException( ex );
         }
+    }
+
+    private static JObject SerializeGroup( EntityCollectionFilterGroup group )
+    {
+        JObject groupObj = new() { { "Operation", (int) group.Operation } };
+
+        JArray items = [];
+
+        foreach ( AutolootConstraintEntry condition in group.Items )
+        {
+            // A condition with no property can't be evaluated, and writing "Constraint": null is worse
+            // than dropping it - on load an unnamed condition can't be matched, so it would come back
+            // as some unrelated property carrying this one's operator/value.
+            if ( condition.Property == null )
+            {
+                continue;
+            }
+
+            JObject conditionObj = new()
+            {
+                { "Operator", (int) condition.Operator },
+                { "Value", condition.Value },
+                { "Additional", condition.Additional },
+                { "Enabled", condition.Enabled }
+            };
+
+            // Only written when there's something in it, matching old. This is the multi-value set
+            // behind ID (Multiple) / Cliloc (Multiple) - without it those conditions came back empty
+            // after a restart and matched nothing.
+            if ( condition.Values != null && condition.Values.Count > 0 )
+            {
+                conditionObj.Add( "Values", JArray.FromObject( condition.Values ) );
+            }
+
+            conditionObj.Add( "Constraint", new JObject { { "Name", condition.Property.Name } } );
+
+            items.Add( conditionObj );
+        }
+
+        groupObj.Add( "Items", items );
+
+        if ( group.Children.Count > 0 )
+        {
+            JArray children = [];
+
+            foreach ( EntityCollectionFilterGroup child in group.Children )
+            {
+                children.Add( SerializeGroup( child ) );
+            }
+
+            groupObj.Add( "Children", children );
+        }
+
+        return groupObj;
     }
 
     private void AddProfile( object obj )
@@ -1167,6 +1493,100 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         }
 
         SaveFilterProfiles();
+    }
+
+    private void AddGroup( object obj )
+    {
+        EntityCollectionFilterGroup group = new()
+        {
+            Items = new ObservableCollection<AutolootConstraintEntry>()
+        };
+
+        if ( SelectedProfile.Groups.Count == 0 )
+        {
+            // flat -> tree: the flat conditions become this first group's items so nothing is lost
+            foreach ( AutolootConstraintEntry condition in SelectedProfile.Conditions )
+            {
+                group.Items.Add( condition );
+            }
+
+            SelectedProfile.Conditions.Clear();
+        }
+
+        // A new group starts empty - conditions are added via the grid's Add button, so nothing
+        // depends on a constraint being available to seed it with.
+
+        SelectedProfile.Groups.Add( group );
+        SelectedProfile.UpdateGroupsFirstFlags();
+        SelectedGroup = group;
+    }
+
+    private void AddSubGroup( object obj )
+    {
+        EntityCollectionFilterGroup group = new()
+        {
+            Items = new ObservableCollection<AutolootConstraintEntry>()
+        };
+
+        SelectedGroup?.Children.Add( group );
+        SelectedGroup = group;
+    }
+
+    private void RemoveGroup( object obj )
+    {
+        EntityCollectionFilterGroup group = obj as EntityCollectionFilterGroup ?? SelectedGroup;
+
+        if ( group == null || SelectedProfile == null )
+        {
+            return;
+        }
+
+        if ( SelectedProfile.Groups.Remove( group ) )
+        {
+            SelectedProfile.UpdateGroupsFirstFlags();
+            SelectedGroup = SelectedProfile.Groups.FirstOrDefault();
+
+            if ( SelectedGroup == null )
+            {
+                // tree -> flat: keep the removed group's conditions in the flat list
+                foreach ( AutolootConstraintEntry condition in group.Items )
+                {
+                    SelectedProfile.Conditions.Add( condition );
+                }
+            }
+
+            return;
+        }
+
+        foreach ( EntityCollectionFilterGroup parent in SelectedProfile.Groups )
+        {
+            if ( RemoveChildRecursive( parent, group ) )
+            {
+                SelectedGroup = parent;
+
+                return;
+            }
+        }
+
+        SelectedGroup = SelectedProfile.Groups.FirstOrDefault();
+    }
+
+    private static bool RemoveChildRecursive( EntityCollectionFilterGroup parent, EntityCollectionFilterGroup child )
+    {
+        if ( parent.Children.Remove( child ) )
+        {
+            return true;
+        }
+
+        foreach ( EntityCollectionFilterGroup subGroup in parent.Children )
+        {
+            if ( RemoveChildRecursive( subGroup, child ) )
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool CombineStacksExcluded( Item item )

@@ -3,8 +3,7 @@
 Gap between this repo's Entity Collection Viewer and the WPF `ClassicAssist` tree. Originally this
 doc described a bare browse/sort/refresh port with everything else missing; several passes since
 have closed most of that gap (see the `[x]` items throughout) - what's left is mainly the Organizer
-panel, the Extensibility registry, and the boolean-tree filter groups, each called out below with
-why they're still out.
+panel and the Extensibility registry, each called out below with why they're still out.
 
 Old (WPF) source lives under `ClassicAssist/ClassicAssist/UI/Views/ECV/` and
 `ClassicAssist/ClassicAssist/UI/ViewModels/EntityCollectionViewerViewModel.cs` (2035 lines). New
@@ -14,18 +13,16 @@ plus `ClassicAssist.Avalonia/ClassicAssist.Avalonia/Views/EntityCollectionViewer
 
 ## Toolbar & window chrome
 
-- [x] **Filter toggle + panel** - ported as a right-sized MVP rather than a line-for-line port: a
-      `FilterIcon` toggle button shows/hides a `DataGrid` of flat, AND-only conditions (Property /
-      Operator / Value rows), backed by `EntityCollectionViewerViewModel.FilterConditions`
-      (`ObservableCollection<AutolootConstraintEntry>`) and `Constraints`
-      (`ObservableCollection<PropertyEntry>`, loaded from `Data/Properties.json` +
-      `Properties.Custom.json` exactly like `AutolootViewModel` does). Evaluation reuses
-      `AutolootHelpers.ConstraintsToPredicates` directly - no parallel filter-predicate system was
-      built. **Deliberately not ported**: the boolean-tree groups (`And`/`Or`/`Not`, nested
-      sub-groups), the ECV-specific extra constraints (Name substring, TileFlags, Distance, Organizer
-      Match, Is Multi), and profile persistence (`FilterProfiles.json`, add/remove/rename/switch) -
-      see the Filter section below, which still describes the full old-side shape as the reference
-      for if/when that's wanted.
+- [x] **Filter toggle + panel** - the `FilterIcon` toggle button shows/hides the filter editor. The
+      panel is a left-tree + right-editor design (see the Filter section): a `TreeView` of the
+      boolean groups with a per-node And/Or/Not operation dropdown, and a `DataGrid` of the
+      selected group's conditions on the right (Property / Operator / Value rows, the same editors
+      the flat grid used). Group items are `AutolootConstraintEntry`s and `Constraints` come from
+      `Data/Properties.json` + `Properties.Custom.json` exactly like `AutolootViewModel`; evaluation
+      reuses `AutolootHelpers.ConstraintsToPredicates` via the ported `EvaluateGroups`/`EvaluateGroup`
+      (see Filter section). Profile persistence (`FilterProfiles.json`, add/remove/rename/switch)
+      and the ECV-specific extra constraints (Name substring, TileFlags, Distance, Organizer Match,
+      Is Multi) are all ported too - see the Filter section below.
 - [ ] **Organizer toggle + panel** - toggles `EntityCollectionViewerOrganizerControl.xaml`.
       Not present. See "Organizer panel" section below. (Explicitly deferred again when this pass's
       other items were scoped.)
@@ -155,28 +152,47 @@ underneath; what's missing is only the progress/cancel UI.
 
 ## Filter
 
-**Update:** the filter panel, the 5 ECV-only constraints, and profile persistence are all now
-ported (see Toolbar section for the panel itself). Key divergence from old, confirmed with the user
-rather than assumed: **no boolean-tree groups**. Old's `EntityCollectionFilterEntry` holds nested
-`EntityCollectionFilterGroup`s with their own `And`/`Or`/`Not` operators; this port instead gives
-each profile one flat, AND-only `ObservableCollection<AutolootConstraintEntry>`
-(`FilterProfile.Conditions`). There is also no per-condition `Enabled` toggle (old's
-`EntityCollectionFilterItem.Enabled`) - remove a row to disable it.
+**Update:** the filter panel, the 5 ECV-only constraints, profile persistence, and the boolean-tree
+groups are all now ported (see Toolbar section for the panel itself). The port now matches old's
+tree structure - `EntityCollectionFilterEntry` → `FilterProfile`, nested
+`EntityCollectionFilterGroup`s with their own `And`/`Or`/`Not` operators - so profiles round-trip
+between the two sides. The new UI is deliberately a **left TreeView + right condition-grid editor**
+rather than WPF's draggable-tree: selecting a group in the tree edits its conditions in the grid,
+and New Group / Subgroup / Remove Group buttons plus a per-node operation dropdown build the tree.
+The TreeView is only shown when there's something to navigate - more than one top-level group, or
+any sub-group (a single branch group still needs the tree to reach its children; WPF's
+<c>HasSubgroups</c> flat-vs-split decision, plus the multi-group case). A profile with no groups
+edits its flat conditions directly (this port's legacy flat <c>FilterProfile.Conditions</c> shape
+loads that way), and a profile with a single leaf group is treated the same (the tree column is an
+Auto column so hiding it truly releases the space). A branch group (one with sub-groups) is a pure
+boolean container - the editor shows WPF's "filters are defined in sub-groups" placeholder instead
+of a condition grid. New groups start empty - conditions are added via the grid's Add button, so
+nothing depends on a constraint list being non-empty to seed a row. A profile's first group in each
+list hides its operation dropdown since there's nothing before it to combine with (WPF's
+<c>IsFirst</c> collapse). Old's drag-to-reorder and the recursive-split-panel editor were not
+reproduced.
 
-The other structural simplification: rather than introducing old's parallel
+The other structural divergence from old stands: rather than introducing old's parallel
 `EntityCollectionFilterItem`/`PropertyEntry` model, this port **extended the shared Autoloot types
 themselves** so `AutolootHelpers.ConstraintsToPredicates` could be reused as-is for filtering:
 `PropertyType` gained `Predicate`/`PredicateWithValue`, `PropertyEntry` gained a `Predicate` field
 (`Func<Entity, AutolootConstraintEntry, bool>`), and `AutolootConstraintEntry` gained `Additional`
-(string). This is additive - `AutolootViewModel` and everything else already using these types is
-unaffected, since the new members are only populated by what registers them.
+(string) plus `Enabled` (old's `EntityCollectionFilterItem.Enabled`). Group items are therefore
+`AutolootConstraintEntry`s rather than a parallel `EntityCollectionFilterItem`. This is additive -
+`AutolootViewModel` and everything else already using these types is unaffected.
 
 Old: `UI/Views/ECV/Filter/EntityCollectionFilterControl.xaml(.cs)`,
 `EntityCollectionFilterViewModel.cs`, `Filter/Models/{EntityCollectionFilterEntry,
 EntityCollectionFilterGroup, EntityCollectionFilterItem, GroupItem}.cs`.
 
-- [ ] **Boolean-tree filter groups** - deliberately not ported; see above. `GroupItem` and
-      `EntityCollectionFilterGroup` have no Avalonia equivalent at all.
+- [x] **Boolean-tree filter groups** - `EntityCollectionFilterGroup` (`Operation`/`Items`/`Children`,
+      computed `Name`/`HasChildren`; no `IDraggable` plumbing) + `BooleanOperation` live in
+      `ClassicAssist.Shared/UI/Models/EntityCollectionFilterGroup.cs`; `FilterProfile.Conditions`
+      became `FilterProfile.Groups`. Evaluation is a line-for-line port of WPF's recursive
+      `EvaluateGroups`/`EvaluateGroup` (`internal static` on `EntityCollectionViewerViewModel`):
+      branch groups are pure boolean containers, a leaf group ANDs its enabled conditions, and each
+      following node's `Or`/`Not` is applied against the working result. The WPF unit tests
+      (`EntityCollectionFilterGroupTests`) were ported alongside.
 - [x] **Filter conditions reuse the Autoloot constraint system** - `EntityCollectionViewerViewModel
       .RegisterFilterOnlyConstraints()` registers the same 5 built-ins old did: **Name** (substring
       match over item properties or name), **TileFlags**, **Distance**, **Organizer Match** (matches
@@ -187,19 +203,19 @@ EntityCollectionFilterGroup, EntityCollectionFilterItem, GroupItem}.cs`.
       `AutolootPropertyRegistration.LoadPluginProperties`, called last so a plugin can inspect or
       replace what is already registered; `AutolootViewModel` calls it at both its constraint-building
       sites, so the two lists stay identical.
-- [x] **Filter profiles persist to `FilterProfiles.json`** - `LoadFilterProfiles`/
+- [x] **Filter profiles persist to `FilterProfiles.json` in WPF's shape** - `LoadFilterProfiles`/
       `SaveFilterProfiles` on the view model, `AddProfileCommand`/`RemoveProfileCommand`, and
-      `SelectedProfile`'s setter (which swaps `FilterConditions`' contents and re-applies if a filter
-      is currently active - old's `SetActiveProfile`). Renaming is inline via an `EditTextBlock`
-      bound to `SelectedProfile.Name` rather than a separate rename command/dialog. Saved shape is a
-      flat `{ LastProfileID, Profiles: [{ ID, Name, Conditions: [...] }] }` - simpler than old's
-      nested-group JSON since there's nothing recursive to serialize. **Always written** in this flat
-      shape, but **read compatible** with an existing WPF-written `FilterProfiles.json`:
-      `GetConditionTokens` falls back to old's `Groups[].Items[]`/`Constraint.Name` shape when
-      `Conditions` isn't present, as long as the file doesn't use boolean-tree nesting (`Children` is
-      silently skipped, not flattened, since there's no sound way to fold Or/Not semantics into a
-      flat AND list). A WPF file's first save from this port permanently rewrites it to the flat
-      shape.
+      `SelectedProfile`'s setter (which points `SelectedGroup` at the new profile's first group and
+      re-applies if a filter is currently active - old's `SetActiveProfile`). Renaming is inline via
+      an `EditTextBlock` bound to `SelectedProfile.Name` rather than a separate rename
+      command/dialog. Saved shape is exactly WPF's nested
+      `{ LastProfileID, Profiles: [{ ID, Name, Groups: [{ Operation, Items: [{ Operator, Value,
+      Additional, Enabled, Values?, Constraint: { Name } }], Children?: [...] }] }] }` - the file
+      written by either side loads in the other. This port's earlier flat `Conditions` shape is still
+      **read** (into a flat, no-group profile) so a `FilterProfiles.json` written by this port before
+      this change isn't orphaned; a flat profile is **written** as a single And group so WPF still
+      reads its conditions, meaning a flat profile comes back in tree mode after a save + reload.
+      Ctrl+S saves profiles (`SaveProfilesCommand`), matching WPF's binding.
 
 ## Organizer panel
 

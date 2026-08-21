@@ -27,7 +27,11 @@ public class CountToBooleanConverter : IValueConverter
 {
     public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
-        return value is int count && count > 0;
+        // Optional ConverterParameter is the exclusive lower bound (e.g. "1" makes it "count > 1",
+        // used to keep a group tree hidden until there are multiple groups).
+        int threshold = parameter is string text && int.TryParse( text, out int parsed ) ? parsed : 0;
+
+        return value is int count && count > threshold;
     }
 
     public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )

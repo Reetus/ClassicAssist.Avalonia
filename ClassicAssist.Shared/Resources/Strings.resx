@@ -289,6 +289,15 @@
   <data name="Filters" xml:space="preserve">
     <value>Filters</value>
   </data>
+  <data name="Filter_Group_Filters" xml:space="preserve">
+    <value>Group ({0} filters)</value>
+  </data>
+  <data name="Filter_Group_Subgroups" xml:space="preserve">
+    <value>Group ({0} subgroups)</value>
+  </data>
+  <data name="Filter_Group_BranchPlaceholder" xml:space="preserve">
+    <value>Group has sub-groups — filters are defined in sub-groups.</value>
+  </data>
   <data name="Force Walk Off" xml:space="preserve">
     <value>Force Walk Off</value>
   </data>
@@ -1563,6 +1572,9 @@ Are you sure you wish to continue?</value>
   </data>
   <data name="New Group" xml:space="preserve">
     <value>New Group</value>
+  </data>
+  <data name="Subgroup" xml:space="preserve">
+    <value>Subgroup</value>
   </data>
   <data name="Remove Group" xml:space="preserve">
     <value>Remove Group</value>

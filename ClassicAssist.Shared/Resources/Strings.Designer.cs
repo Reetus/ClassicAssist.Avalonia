@@ -507,6 +507,24 @@ namespace ClassicAssist.Shared.Resources {
             }
         }
         
+        public static string Filter_Group_Filters {
+            get {
+                return ResourceManager.GetString("Filter_Group_Filters", resourceCulture);
+            }
+        }
+        
+        public static string Filter_Group_Subgroups {
+            get {
+                return ResourceManager.GetString("Filter_Group_Subgroups", resourceCulture);
+            }
+        }
+        
+        public static string Filter_Group_BranchPlaceholder {
+            get {
+                return ResourceManager.GetString("Filter_Group_BranchPlaceholder", resourceCulture);
+            }
+        }
+        
         public static string Force_Walk_Off {
             get {
                 return ResourceManager.GetString("Force Walk Off", resourceCulture);
@@ -3042,6 +3060,12 @@ namespace ClassicAssist.Shared.Resources {
         public static string New_Group {
             get {
                 return ResourceManager.GetString("New Group", resourceCulture);
+            }
+        }
+        
+        public static string Subgroup {
+            get {
+                return ResourceManager.GetString("Subgroup", resourceCulture);
             }
         }
         
