@@ -752,9 +752,21 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
             "Modules" ) );
     }
 
+    private static string CanonicalPath( string p )
+    {
+        try
+        {
+            return Path.GetFullPath( p );
+        }
+        catch
+        {
+            return p;
+        }
+    }
+
     private void ScanMacrosFolder()
     {
-        string macrosFolder = Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" );
+        string macrosFolder = CanonicalPath( Path.Combine( AssistantOptions.GetGlobalPath(), "Macros" ) );
 
         string[] files;
 
@@ -769,10 +781,20 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
             return;
         }
 
+        // Normalise once so comparison against FilePath entries that may have been
+        // persisted with an un-canonicalised "./" segment still matches - otherwise
+        // breakpoints set in VSCode (canonical) never hit co_filename "./" and the
+        // entry is considered deleted after the next scan.
+        for ( int i = 0; i < files.Length; i++ )
+        {
+            files[i] = CanonicalPath( files[i] );
+        }
+
         HashSet<string> seen = new( files, StringComparer.OrdinalIgnoreCase );
 
-        foreach ( string filePath in files )
+        foreach ( string rawFilePath in files )
         {
+            string filePath = CanonicalPath( rawFilePath );
             DateTime lastWrite;
 
             try
@@ -785,7 +807,7 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
             }
 
             MacroEntry entry = Items.FirstOrDefault( e => e.IsFileBacked &&
-                e.FilePath.Equals( filePath, StringComparison.OrdinalIgnoreCase ) );
+                CanonicalPath( e.FilePath ).Equals( filePath, StringComparison.OrdinalIgnoreCase ) );
 
             if ( entry == null )
             {
@@ -844,8 +866,9 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
         // Remove file-backed entries whose file has been deleted (never while running, nor
         // while their content is still waiting to be written back to the file).
         foreach ( MacroEntry entry in Items.Where( e =>
-                     e.IsFileBacked && !e.IsRunning && !e.BackingFileWritePending && !seen.Contains( e.FilePath ) ).ToList() )
+                     e.IsFileBacked && !e.IsRunning && !e.BackingFileWritePending && !seen.Contains( CanonicalPath( e.FilePath ) ) ).ToList() )
         {
+            _fileSyncTimes.Remove( CanonicalPath( entry.FilePath ) );
             _fileSyncTimes.Remove( entry.FilePath );
 
             if ( ReferenceEquals( SelectedItem, entry ) )

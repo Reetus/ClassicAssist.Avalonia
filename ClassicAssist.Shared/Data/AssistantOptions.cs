@@ -53,6 +53,15 @@ public static class AssistantOptions
             ? GlobalDirectory
             : Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, GlobalDirectory );
 
+        try
+        {
+            path = Path.GetFullPath( path );
+        }
+        catch
+        {
+            // keep raw path if canonicalisation fails
+        }
+
         if ( !Directory.Exists( path ) )
         {
             Directory.CreateDirectory( path );

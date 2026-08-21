@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -422,6 +423,27 @@ public sealed class DebugManager
 
     internal static string NormalizePath( string path )
     {
+        if ( string.IsNullOrEmpty( path ) )
+        {
+            return path;
+        }
+
+        // Canonicalise so breakpoints set on a VSCode-resolved path (e.g.
+        // .../ui/Macros/foo.py) match the IronPython co_filename derived from
+        // the file-backed FilePath which may contain intermediate "."/ ".." /
+        // duplicate separators (e.g. .../ui/./Macros/foo.py when
+        // AssistantOptions.GlobalDirectory=="."). Without this,
+        // setBreakpoints and ShouldBreak compare different keys and the
+        // breakpoint is never hit.
+        try
+        {
+            path = Path.GetFullPath( path );
+        }
+        catch
+        {
+            // invalid path - fall back to raw string
+        }
+
         return path.Replace( '\\', '/' ).TrimEnd( '/' );
     }
 }

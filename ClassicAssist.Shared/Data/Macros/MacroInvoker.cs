@@ -202,8 +202,22 @@ public class MacroInvoker
 
         _importCache ??= InitializeImports( _engine );
 
-        ScriptSource source = _macro.IsFileBacked && !string.IsNullOrEmpty( _macro.FilePath )
-            ? _engine.CreateScriptSourceFromString( _macro.Macro, _macro.FilePath, SourceCodeKind.Statements )
+        string canonicalFilePath = null;
+
+        if ( _macro.IsFileBacked && !string.IsNullOrEmpty( _macro.FilePath ) )
+        {
+            try
+            {
+                canonicalFilePath = Path.GetFullPath( _macro.FilePath );
+            }
+            catch
+            {
+                canonicalFilePath = _macro.FilePath;
+            }
+        }
+
+        ScriptSource source = canonicalFilePath != null
+            ? _engine.CreateScriptSourceFromString( _macro.Macro, canonicalFilePath, SourceCodeKind.Statements )
             : _engine.CreateScriptSourceFromString( _macro.Macro, SourceCodeKind.Statements );
 
         Dictionary<string, object> importCache = new( _importCache );
