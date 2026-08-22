@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.VisualTree;
 using ClassicAssist.Avalonia.Misc;
 using ClassicAssist.Avalonia.Views.Agents;
@@ -239,26 +240,31 @@ public class ScreenshotAgentTests
             .First( b => Equals( b.Content, ClassicAssist.Shared.Resources.Strings.Take_Snapshot ) );
     }
 
+    /// <summary>
+    ///     Reads one pixel as RGBA, whatever the platform stores it as.
+    ///     <para>
+    ///         Reading the saved PNG's bytes directly would be reading them in Skia's native order, and
+    ///         that order is not the same everywhere: <c>kN32</c> is BGRA on little-endian x86 and RGBA
+    ///         on Apple/ARM, so a hardcoded channel mapping passes on Linux and Windows and fails on
+    ///         macOS arm64 - which is exactly what CI caught. Copying through a buffer that is declared
+    ///         <see cref="PixelFormat.Rgba8888" /> makes Avalonia transcode into that order instead, so
+    ///         the assertions stay about the composer's channel order rather than the host's.
+    ///     </para>
+    /// </summary>
     private static (byte r, byte g, byte b) ReadPixel( Bitmap bitmap, int x, int y )
     {
-        int stride = bitmap.PixelSize.Width * 4;
-        IntPtr buffer = Marshal.AllocHGlobal( stride * bitmap.PixelSize.Height );
+        using WriteableBitmap rgba =
+            new( bitmap.PixelSize, new Vector( 96, 96 ), PixelFormat.Rgba8888, AlphaFormat.Unpremul );
 
-        try
-        {
-            bitmap.CopyPixels( new PixelRect( bitmap.PixelSize ), buffer, stride * bitmap.PixelSize.Height, stride );
+        using ILockedFramebuffer buffer = rgba.Lock();
 
-            byte[] row = new byte[4];
+        bitmap.CopyPixels( buffer, AlphaFormat.Unpremul );
 
-            Marshal.Copy( buffer + y * stride + x * 4, row, 0, 4 );
+        byte[] pixel = new byte[4];
 
-            // Avalonia hands these back in the platform's own order, which is BGRA here.
-            return ( row[2], row[1], row[0] );
-        }
-        finally
-        {
-            Marshal.FreeHGlobal( buffer );
-        }
+        Marshal.Copy( buffer.Address + y * buffer.RowBytes + x * 4, pixel, 0, 4 );
+
+        return ( pixel[0], pixel[1], pixel[2] );
     }
 
     /// <summary>
