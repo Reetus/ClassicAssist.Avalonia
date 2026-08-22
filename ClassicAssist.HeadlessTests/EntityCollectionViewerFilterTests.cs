@@ -17,26 +17,15 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Controls;
-using Avalonia.VisualTree;
-using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data.Autoloot;
-using ClassicAssist.Shared;
 using ClassicAssist.UI.Models;
-using ClassicAssist.UI.ViewModels;
-// Avalonia.Controls has an ItemCollection of its own; the UO one is what the viewer takes.
-using ItemCollection = ClassicAssist.UO.Objects.ItemCollection;
 using Xunit;
 
 namespace ClassicAssist.HeadlessTests;
 
 /// <summary>
-///     The Entity Collection Viewer's filter editor, driven through the real window.
+///     The Entity Collection Viewer's filter editor in group mode, driven through the real window.
 ///     <para>
 ///         These cover what a view model test cannot see: whether editing the filter through the
 ///         actual view leaves the profile intact. The Property column's constraint list is bound by
@@ -48,16 +37,19 @@ namespace ClassicAssist.HeadlessTests;
 /// </summary>
 public class EntityCollectionViewerFilterTests
 {
-    // The fixture is a real FilterProfiles.json: one branch group with two leaf sub-groups, the
-    // second OR'd against the first, five conditions between them - the shape that broke.
+    // A real FilterProfiles.json: one branch group with two leaf sub-groups, the second OR'd against
+    // the first, five conditions between them - the shape that broke.
     private const string MultiGroupProfiles = "Fixtures/FilterProfiles.MultiGroup.json";
+
+    private const string MultiGroupProfileName = "Faster Casting";
 
     [Fact]
     public Task VisitingEveryGroupKeepsConditionProperties()
     {
         return Headless.Run( () =>
         {
-            using Harness harness = Harness.Open( MultiGroupProfiles );
+            using EntityCollectionViewerHarness harness =
+                EntityCollectionViewerHarness.Open( MultiGroupProfiles );
 
             EntityCollectionFilterGroup root = harness.ViewModel.SelectedProfile.Groups[0];
 
@@ -75,17 +67,15 @@ public class EntityCollectionViewerFilterTests
     {
         return Headless.Run( () =>
         {
-            using Harness harness = Harness.Open( MultiGroupProfiles );
+            using EntityCollectionViewerHarness harness =
+                EntityCollectionViewerHarness.Open( MultiGroupProfiles );
 
             FilterProfile multiGroup = harness.ViewModel.SelectedProfile;
 
             harness.SelectGroup( multiGroup.Groups[0].Children[1] );
 
-            harness.ViewModel.SelectedProfile = harness.ViewModel.Profiles.First( p => p.Name == "House Signs" );
-            Headless.Settle();
-
-            harness.ViewModel.SelectedProfile = multiGroup;
-            Headless.Settle();
+            harness.SelectProfile( "House Signs" );
+            harness.SelectProfile( MultiGroupProfileName );
 
             AssertFixtureConditions( multiGroup );
         } );
@@ -100,7 +90,8 @@ public class EntityCollectionViewerFilterTests
     {
         return Headless.Run( () =>
         {
-            using Harness harness = Harness.Open( MultiGroupProfiles );
+            using EntityCollectionViewerHarness harness =
+                EntityCollectionViewerHarness.Open( MultiGroupProfiles );
 
             EntityCollectionFilterGroup root = harness.ViewModel.SelectedProfile.Groups[0];
 
@@ -110,16 +101,7 @@ public class EntityCollectionViewerFilterTests
 
             harness.CloseWindow();
 
-            EntityCollectionViewerViewModel reloaded = new( new ItemCollection( 0 ) );
-
-            try
-            {
-                AssertFixtureConditions( reloaded.Profiles.First( p => p.Name == "Faster Casting" ) );
-            }
-            finally
-            {
-                reloaded.Cleanup();
-            }
+            AssertFixtureConditions( EntityCollectionViewerHarness.Reload( MultiGroupProfileName ) );
         } );
     }
 
@@ -133,20 +115,22 @@ public class EntityCollectionViewerFilterTests
     {
         return Headless.Run( () =>
         {
-            using Harness harness = Harness.Open( MultiGroupProfiles );
+            using EntityCollectionViewerHarness harness =
+                EntityCollectionViewerHarness.Open( MultiGroupProfiles );
 
             EntityCollectionFilterGroup root = harness.ViewModel.SelectedProfile.Groups[0];
 
             harness.SelectGroup( root.Children[0] );
 
             Assert.True( harness.ViewModel.ShowGroupTree );
+            Assert.True( harness.GroupTree.IsEffectivelyVisible );
             Assert.False( harness.ViewModel.SelectedGroupIsBranch );
-            Assert.True( harness.ConditionGrid.IsVisible );
+            Assert.True( harness.ConditionGrid.IsEffectivelyVisible );
 
             harness.SelectGroup( root );
 
             Assert.True( harness.ViewModel.SelectedGroupIsBranch );
-            Assert.False( harness.ConditionGrid.IsVisible );
+            Assert.False( harness.ConditionGrid.IsEffectivelyVisible );
         } );
     }
 
@@ -157,137 +141,13 @@ public class EntityCollectionViewerFilterTests
         Assert.Equal( 2, root.Children.Count );
         Assert.Empty( root.Items );
 
-        AssertConditions( root.Children[0], BooleanOperation.And,
+        FilterAssert.Conditions( root.Children[0], BooleanOperation.And,
             ( "Faster Casting", AutolootOperator.GreaterThan, 1 ),
             ( "Faster Cast Recovery", AutolootOperator.GreaterThan, 3 ) );
 
-        AssertConditions( root.Children[1], BooleanOperation.Or,
+        FilterAssert.Conditions( root.Children[1], BooleanOperation.Or,
             ( "Faster Casting", AutolootOperator.GreaterThan, 1 ),
             ( "Faster Cast Recovery", AutolootOperator.GreaterThan, 2 ),
             ( "Defense Chance Increase", AutolootOperator.GreaterThan, 10 ) );
-    }
-
-    private static void AssertConditions( EntityCollectionFilterGroup group, BooleanOperation operation,
-        params ( string Name, AutolootOperator Operator, int Value )[] expected )
-    {
-        Assert.Equal( operation, group.Operation );
-
-        List<( string, AutolootOperator, int )> actual = group.Items
-            .Select( i => ( i.Property?.Name, i.Operator, i.Value ) ).ToList();
-
-        Assert.Equal( expected.Select( e => ( e.Name, e.Operator, e.Value ) ).ToList(), actual );
-    }
-
-    /// <summary>
-    ///     A real EntityCollectionViewer over a temporary startup directory - the view model reads and
-    ///     writes FilterProfiles.json beside the app, so each test gets its own copy of the fixture to
-    ///     edit and save.
-    /// </summary>
-    private sealed class Harness : IDisposable
-    {
-        private readonly string _originalStartupPath;
-        private readonly string _tempDirectory;
-        private bool _closed;
-
-        private Harness( string tempDirectory, string originalStartupPath, EntityCollectionViewer window,
-            EntityCollectionViewerViewModel viewModel )
-        {
-            _tempDirectory = tempDirectory;
-            _originalStartupPath = originalStartupPath;
-
-            Window = window;
-            ViewModel = viewModel;
-        }
-
-        public EntityCollectionViewer Window { get; }
-        public EntityCollectionViewerViewModel ViewModel { get; }
-
-        public DataGrid ConditionGrid =>
-            Window.GetVisualDescendants().OfType<DataGrid>().Single();
-
-        private TreeView GroupTree =>
-            Window.GetVisualDescendants().OfType<TreeView>().Single();
-
-        public static Harness Open( string fixture )
-        {
-            string originalStartupPath = Engine.StartupPath;
-            string tempDirectory = Path.Combine( Path.GetTempPath(), Path.GetRandomFileName() );
-
-            Directory.CreateDirectory( Path.Combine( tempDirectory, "Data" ) );
-
-            // The constraint names the fixture refers to are resolved against Data/Properties.json,
-            // and a condition naming a constraint that isn't registered is dropped on load.
-            File.Copy( Path.Combine( AppContext.BaseDirectory, "Data", "Properties.json" ),
-                Path.Combine( tempDirectory, "Data", "Properties.json" ) );
-
-            File.Copy( Path.Combine( AppContext.BaseDirectory, fixture ),
-                Path.Combine( tempDirectory, "FilterProfiles.json" ) );
-
-            Engine.StartupPath = tempDirectory;
-
-            EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
-            EntityCollectionViewer window = new() { DataContext = viewModel };
-
-            window.Show();
-
-            // The filter panel is collapsed until the toolbar toggle is pressed, and a collapsed panel
-            // realizes no cells - so without this the tests would pass by testing nothing.
-            viewModel.ShowFilter = true;
-
-            Headless.Settle();
-
-            return new Harness( tempDirectory, originalStartupPath, window, viewModel );
-        }
-
-        /// <summary>
-        ///     Selects a group the way clicking it in the tree does, through the TreeView rather than
-        ///     the view model, so the bindings the view relies on are the ones under test.
-        /// </summary>
-        public void SelectGroup( EntityCollectionFilterGroup group )
-        {
-            GroupTree.SelectedItem = group;
-
-            Headless.Settle();
-
-            Assert.Same( group, ViewModel.SelectedGroup );
-
-            // A leaf group's conditions have to be on screen for any of this to mean anything: an
-            // unrealized grid has no cells, hence no ComboBox that can drop its selection.
-            if ( !group.HasChildren )
-            {
-                Assert.Equal( group.Items.Count,
-                    ConditionGrid.GetVisualDescendants().OfType<DataGridRow>().Count() );
-            }
-        }
-
-        /// <summary>Closes the window, which is the only thing that saves filter profiles.</summary>
-        public void CloseWindow()
-        {
-            Window.Close();
-
-            Headless.Settle();
-
-            _closed = true;
-        }
-
-        public void Dispose()
-        {
-            if ( !_closed )
-            {
-                Window.Close();
-                Headless.Settle();
-            }
-
-            Engine.StartupPath = _originalStartupPath;
-
-            try
-            {
-                Directory.Delete( _tempDirectory, true );
-            }
-            catch ( IOException )
-            {
-                // best effort
-            }
-        }
     }
 }

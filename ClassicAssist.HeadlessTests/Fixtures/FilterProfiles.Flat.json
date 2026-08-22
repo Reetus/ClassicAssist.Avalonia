@@ -1,0 +1,38 @@
+{
+  "LastProfileID": "a1c0de11-0000-4000-8000-000000000001",
+  "Profiles": [
+    {
+      "ID": "a1c0de11-0000-4000-8000-000000000001",
+      "Name": "Faster Casting",
+      "Conditions": [
+        {
+          "Property": "Faster Casting",
+          "Operator": 2,
+          "Value": 1,
+          "Additional": null,
+          "Enabled": true
+        },
+        {
+          "Property": "Faster Cast Recovery",
+          "Operator": 2,
+          "Value": 3,
+          "Additional": null,
+          "Enabled": true
+        }
+      ]
+    },
+    {
+      "ID": "a1c0de11-0000-4000-8000-000000000002",
+      "Name": "House Signs",
+      "Conditions": [
+        {
+          "Property": "Name",
+          "Operator": 0,
+          "Value": 0,
+          "Additional": "house sign",
+          "Enabled": true
+        }
+      ]
+    }
+  ]
+}
