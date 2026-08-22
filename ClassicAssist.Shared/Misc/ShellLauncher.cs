@@ -74,6 +74,21 @@ public static class ShellLauncher
     }
 
     /// <summary>
+    ///     Opens a file with whatever the platform has registered for its type. Unlike
+    ///     <see cref="OpenFolder" /> this never creates the target - a missing file should fail rather
+    ///     than turn into a directory of the same name.
+    /// </summary>
+    public static bool OpenFile( string path )
+    {
+        if ( string.IsNullOrWhiteSpace( path ) || !File.Exists( path ) )
+        {
+            return false;
+        }
+
+        return TryStart( new ProcessStartInfo( path ) { UseShellExecute = true } ) != null;
+    }
+
+    /// <summary>
     ///     Opens <paramref name="path" /> in VS Code, falling back to the default handler for the file
     ///     type when VS Code isn't installed.
     /// </summary>

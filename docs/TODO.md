@@ -39,14 +39,39 @@ nothing.
 - [ ] **Trap Pouches** - `TrapPouchManager`/`TrapPouchEntry` + `TrapPouchTabControl` agent tab.
       Blocks macro commands `ClearTrapPouch`/`SetTrapPouch`/`UseTrapPouch` and hotkeys
       `Use Trap Pouch`/`Clear Trap Pouches`.
-- [ ] **Screenshot** - `ScreenshotManager` + `ScreenshotTabControl` agent tab
-      (screenshots of the client window, mobile filters). Also blocks the `Take Snapshot` hotkey.
+- [x] ~~**Screenshot**~~ - `ScreenshotManager` + `ScreenshotTabControl` agent tab (gallery, info bar,
+      death triggers with the mobile-body filter), plus `MainCommands.Snapshot` and the
+      `Take Snapshot` hotkey.
+
+      The capture itself is the part that could not be ported. Upstream `BitBlt`s the client window
+      from the handle in the plugin header, which is Windows-only and, on every client this repo
+      loads into, has no handle to work from: TazUO passes `IntPtr.Zero` on all platforms, ClassicUO
+      only fills it in `if (CUOEnviroment.IsWindows)`, and `ClassicUO.Bootstrap` never does. So the
+      pixels come from the client's own graphics device instead -
+      `ReflectionImpl.CaptureClientFrame` reads FNA's backbuffer (or the render target the client
+      composes the frame into, whichever it is using, mirroring its own PrintScreen handler) on the
+      client thread via `TickWorkQueue`, and hands the UI a temp file of raw RGBA rather than
+      megabytes of base64 over the JSON-RPC link. That works identically on Windows, Linux and macOS
+      and captures under Wayland, where taking another window's pixels is not possible at all.
+      `AvaloniaScreenshotComposer` draws the watermark and info bar over it and encodes the PNG.
+
+      Two consequences. Upstream's UO-only/fullscreen radio pair is gone - what is captured is the
+      frame the client drew, so there is no desktop to include; `Snapshot`'s `fullscreen` argument is
+      still accepted and ignored so existing macros run. And a NativeAOT ClassicUO cannot be
+      captured at all, since its graphics stack is native code: the tab detects that through
+      `CanCaptureClientFrame` and disables itself with a message saying so. That probe deliberately
+      does not use `Engine.ReflectionAvailable`, which is true on that client - it loads the plugin
+      managed through its bootstrap, and the bootstrap ships a decoy managed `ClassicUO` assembly
+      whose `Client.Game` is a stub `GameController`, so the load-path flag, the assembly-name probe
+      and the type probe all pass while there is nothing to read.
 - [ ] **Name Overrides** - `NameOverrideManager` + `NameOverrideTabControl` agent tab.
 - [ ] **Backups** - `Data/Backup/{GoogleDrive,Mega,OneDrive,WebDAV}` + backup/restore UI.
 - [ ] **Chat window** - `ChatManager` is ported but there is no `ChatWindow`; the
       `Show Chat Window` hotkey and chat window `Options.ChatWindow*` fields are absent.
-- [ ] **GIF recorder** - `GIFRecorderWindow` + `Show GIF Capture` hotkey. Screen capture of the
-      client is a plugin-side capability this repo does not have.
+- [ ] **GIF recorder** - `GIFRecorderWindow` + `Show GIF Capture` hotkey. The capture side now
+      exists (`IHostMethods.CaptureClientFrame`, added for the Screenshot agent), but a recorder
+      wants tens of frames a second and each one is a full backbuffer read on the client's thread
+      plus a temp file - so the frame transport, not the window, is the open question here.
 - [ ] **Public Macros browser** - the "Public Macros" tab (`MacroBrowserControl`,
       `MacroBrowserViewModel`, classicassistant.net API) is absent from the main window.
 - [ ] **Macro commands browser** - `MacrosCommandWindow`/`MacrosCommandViewModel` behind the Macros
@@ -154,11 +179,12 @@ Signature gaps still open:
 - [ ] `UseType` lacks `skipQueue`
 - [ ] `MessageBox` is commented out in `MainCommands.cs`
 
-## Missing hotkeys (5)
+## Missing hotkeys (4)
 
 From `HOTKEYS_TODO.md`:
 
-- [ ] `Take Snapshot` (`SnapshotCommand`)
+- [x] ~~`Take Snapshot`~~ (`SnapshotCommand`) - with `MainCommands.Snapshot`, which the Screenshot
+      agent above provides.
 - [x] ~~`Greater Heal / Cure Self`, `Mini Heal / Cure Self`~~ - with the configurable-hotkey
       infrastructure behind them: `HotkeyConfigurationAttribute`, `HotkeyEntry.Configurable`,
       `CureType`, `ConfigureHotkeyCommand` + the Options button on the Hotkeys tab, and the

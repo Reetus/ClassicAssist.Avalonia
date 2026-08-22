@@ -43,9 +43,12 @@ These hotkeys are thin wrappers over macro commands this repo does not have. See
       ViewModels' state in `AutolootViewModel` / `ScavengerTabViewModel`, and the `SetAutoloot` /
       `SetScavenger` macro commands drive them.
 
-- [ ] **Take Snapshot** (`SnapshotCommand.cs`) - needs `MainCommands.Snapshot`, which returns
-      `(bool, string)` and is absent here. Upstream captures the client window through the host,
-      so this is really a plugin-side capability question, not just a missing method.
+- [x] ~~**Take Snapshot**~~ (`SnapshotCommand.cs`) - ported with `MainCommands.Snapshot` alongside
+      the Screenshot agent. The capability question it flagged was the real work: the client window
+      is captured by reading FNA's backbuffer inside the plugin
+      (`ReflectionImpl.CaptureClientFrame`) rather than through the window handle upstream uses,
+      which is null on every client here bar ClassicUO on Windows. See the Screenshot entry in
+      `TODO.md` for the detail, including the clients this does not work on.
 
 ## Blocked on configurable-hotkey infrastructure
 

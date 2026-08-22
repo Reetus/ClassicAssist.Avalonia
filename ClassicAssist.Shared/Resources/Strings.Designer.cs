@@ -4238,5 +4238,23 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Unlock Item", resourceCulture);
             }
         }
+
+        public static string Screenshots_not_supported {
+            get {
+                return ResourceManager.GetString("Screenshots not supported", resourceCulture);
+            }
+        }
+
+        public static string Screenshots_not_supported_detail {
+            get {
+                return ResourceManager.GetString("Screenshots not supported detail", resourceCulture);
+            }
+        }
+
+        public static string Snapshot_failed {
+            get {
+                return ResourceManager.GetString("Snapshot failed", resourceCulture);
+            }
+        }
     }
 }

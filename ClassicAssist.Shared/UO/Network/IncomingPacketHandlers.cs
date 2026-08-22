@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using ClassicAssist.Data;
+using ClassicAssist.Data.Screenshot;
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Chat;
 using ClassicAssist.Data.Counters;
@@ -176,8 +177,8 @@ public static class IncomingPacketHandlers
             return;
         }
 
-        //ScreenshotManager manager = ScreenshotManager.GetInstance();
-        //manager.OnMobileDeath( mobile );
+        ScreenshotManager manager = ScreenshotManager.GetInstance();
+        manager.OnMobileDeath?.Invoke( mobile );
     }
 
     private static void OnDeathStatus( PacketReader reader )
@@ -189,8 +190,8 @@ public static class IncomingPacketHandlers
             return;
         }
 
-        //ScreenshotManager manager = ScreenshotManager.GetInstance();
-        //manager.OnPlayerDeath( Engine.Player?.Name );
+        ScreenshotManager manager = ScreenshotManager.GetInstance();
+        manager.OnPlayerDeath?.Invoke( Engine.Player?.Name );
     }
 
     private static void OnMovementSpeed( PacketReader reader )

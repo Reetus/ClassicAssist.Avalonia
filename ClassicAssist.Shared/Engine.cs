@@ -12,6 +12,7 @@ using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Commands;
 using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Macros;
+using ClassicAssist.Data.Screenshot;
 using ClassicAssist.Data.Misc;
 using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Data.Targeting;
@@ -142,6 +143,12 @@ public static partial class Engine
     ///     State of the current secure trade window, tracked from the 0x6F packet in both directions.
     /// </summary>
     public static Trade Trade { get; set; } = new();
+
+    /// <summary>
+    ///     Draws captured frames into their final PNG - see <see cref="IScreenshotComposer" />. Set by
+    ///     the Avalonia app at startup, so it is null in a host that has no rendering (the tests).
+    /// </summary>
+    public static IScreenshotComposer ScreenshotComposer { get; set; }
 
     public static IUIInvoker UIInvoker { get; set; }
     public static bool WaitingForTarget { get; set; }
