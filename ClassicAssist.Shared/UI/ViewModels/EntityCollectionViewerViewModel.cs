@@ -950,8 +950,10 @@ public class EntityCollectionViewerViewModel : BaseViewModel
     /// </summary>
     private static ItemCollection FilterItems( IEnumerable<AutolootConstraintEntry> items, ItemCollection source )
     {
-        List<Predicate<Item>> predicates =
-            [.. AutolootHelpers.ConstraintsToPredicates( items.Where( i => i.Enabled ) )];
+        IEnumerable<AutolootConstraintEntry> enabled =
+            items?.Where( i => i != null && i.Enabled ) ?? Enumerable.Empty<AutolootConstraintEntry>();
+
+        List<Predicate<Item>> predicates = [.. AutolootHelpers.ConstraintsToPredicates( enabled )];
 
         ItemCollection filtered = new( source.Serial );
 

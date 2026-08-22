@@ -36,8 +36,18 @@ public static class AutolootHelpers
     {
         List<Predicate<Item>> predicates = [];
 
+        if ( constraints == null )
+        {
+            return predicates;
+        }
+
         foreach ( AutolootConstraintEntry constraint in constraints )
         {
+            if ( constraint?.Property == null )
+            {
+                continue;
+            }
+
             switch ( constraint.Property.ConstraintType )
             {
                 case PropertyType.Properties:
