@@ -1,0 +1,92 @@
+{
+  "LastProfileID": "fc6fe493-397e-4e4e-8946-ddcb0e3a62e3",
+  "Profiles": [
+    {
+      "ID": "fc6fe493-397e-4e4e-8946-ddcb0e3a62e3",
+      "Name": "Faster Casting",
+      "Groups": [
+        {
+          "Operation": 0,
+          "Items": [],
+          "Children": [
+            {
+              "Operation": 0,
+              "Items": [
+                {
+                  "Operator": 2,
+                  "Value": 1,
+                  "Additional": null,
+                  "Enabled": true,
+                  "Constraint": {
+                    "Name": "Faster Casting"
+                  }
+                },
+                {
+                  "Operator": 2,
+                  "Value": 3,
+                  "Additional": null,
+                  "Enabled": true,
+                  "Constraint": {
+                    "Name": "Faster Cast Recovery"
+                  }
+                }
+              ]
+            },
+            {
+              "Operation": 1,
+              "Items": [
+                {
+                  "Operator": 2,
+                  "Value": 1,
+                  "Additional": null,
+                  "Enabled": true,
+                  "Constraint": {
+                    "Name": "Faster Casting"
+                  }
+                },
+                {
+                  "Operator": 2,
+                  "Value": 2,
+                  "Additional": null,
+                  "Enabled": true,
+                  "Constraint": {
+                    "Name": "Faster Cast Recovery"
+                  }
+                },
+                {
+                  "Operator": 2,
+                  "Value": 10,
+                  "Additional": null,
+                  "Enabled": true,
+                  "Constraint": {
+                    "Name": "Defense Chance Increase"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ID": "f12f1f41-6a63-430c-b05a-240764ea7e36",
+      "Name": "House Signs",
+      "Groups": [
+        {
+          "Operation": 0,
+          "Items": [
+            {
+              "Operator": 0,
+              "Value": 0,
+              "Additional": "house sign",
+              "Enabled": true,
+              "Constraint": {
+                "Name": "Name"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

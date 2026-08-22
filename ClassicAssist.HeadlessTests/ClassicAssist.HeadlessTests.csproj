@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- xUnit v3 test projects have to be executables. -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
+    <RollForward>LatestMajor</RollForward>
+    <!-- xUnit v3 runs on Microsoft.Testing.Platform; this keeps plain `dotnet test` working, which is
+         what CI calls (alongside the VSTest-based ClassicAssist.Tests, in the same invocation). -->
+    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <!-- Avalonia.Headless.XUnit's [AvaloniaFact] is xUnit v2-only on the 11.x line (its v3 build
+         starts at Avalonia 12), so this project drives HeadlessUnitTestSession itself - see
+         HeadlessSession. Swap to the package's attribute when the app moves to Avalonia 12. -->
+    <PackageReference Include="Avalonia.Headless" Version="11.3.8" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ClassicAssist.Avalonia\ClassicAssist.Avalonia.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The constraint list the filter editor offers, read from Data/Properties.json beside the app -
+         the fixtures name real constraints ("Faster Casting"), so the tests need the real file. -->
+    <None Include="..\ClassicAssist.Shared\Data\Properties.json" Link="Data\Properties.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

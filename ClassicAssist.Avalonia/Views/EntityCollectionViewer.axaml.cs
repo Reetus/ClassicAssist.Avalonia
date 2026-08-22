@@ -40,13 +40,14 @@ public partial class EntityCollectionViewer : Window
     ///     Filter profiles have no explicit Save button - edits (renames, added/removed conditions) are
     ///     only persisted on close.
     ///     <para>
-    ///         This has to happen here rather than in <see cref="OnClosed" />: closing detaches the
-    ///         filter DataGrid, at which point each Property cell's ComboBox loses the
-    ///         <c>$parent[Window]</c> ancestor binding feeding its ItemsSource. An empty ComboBox drops
-    ///         its selection, and SelectedItem is bound two-way, so every condition's Property is
-    ///         nulled - saving afterwards wrote "Property": null for the lot, and the next load
-    ///         silently rebound them all to whichever constraint sorted first. Closing still sees the
-    ///         real values.
+    ///         Still deliberately here rather than in <see cref="OnClosed" />, even though the detach
+    ///         that made it necessary is handled at its source now: closing tears down the filter
+    ///         DataGrid, and each Property cell's ComboBox gets its constraint list through an
+    ///         ancestor binding that reports null once the cell is gone. That used to empty the
+    ///         ComboBox, drop its selection, and write Property = null back through the two-way
+    ///         binding, so a save after teardown persisted conditions with no property at all
+    ///         (RetainedItemsSource is what keeps the list in place now). Saving before teardown means
+    ///         this never depends on that behaviour in the first place.
     ///     </para>
     /// </summary>
     protected override void OnClosing( WindowClosingEventArgs e )

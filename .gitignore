@@ -12,6 +12,7 @@ ClassicAssist.Launcher/ClassicAssist.Launcher.csproj.user
 CleanupModified.ps1
 Tools/ExportCommands/obj/
 ClassicAssist.Tests/bin/
+ClassicAssist.HeadlessTests/bin/
 ClassicAssist.UITest/bin/
 ClassicAssist.Avalonia/ClassicAssist.Avalonia.csproj.user
 ClassicAssist.Avalonia/Properties/launchSettings.json
