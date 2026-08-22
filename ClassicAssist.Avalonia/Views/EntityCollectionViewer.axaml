@@ -167,7 +167,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="4" Margin="0,1">
                     <!-- Hidden for the first group in a list - its operation has nothing to combine
                          with, so evaluation ignores it (same as WPF's IsFirst-collapsed selector). -->
-                    <ComboBox ItemsSource="{Binding $parent[Window].DataContext.OperationOptions}"
+                    <ComboBox misc:RetainedItemsSource.Source="{Binding $parent[Window].DataContext.OperationOptions}"
                               SelectedItem="{Binding Operation}" MinWidth="72" HorizontalAlignment="Stretch"
                               IsVisible="{Binding !IsFirst}">
                       <ComboBox.ItemTemplate>
@@ -204,7 +204,13 @@
                 <DataGridTemplateColumn.CellTemplate>
                   <DataTemplate DataType="autoloot:AutolootConstraintEntry">
                     <StackPanel VerticalAlignment="Center">
-                      <ComboBox ItemsSource="{Binding $parent[Window].DataContext.Constraints}" SelectedItem="{Binding Property}"
+                      <!-- RetainedItemsSource, not ItemsSource: the ancestor-walking list binding
+                           reports null when the grid swaps its ItemsSource (selecting another group),
+                           and a ComboBox with no items clears SelectedItem - which this two-way
+                           binding then wrote back as Property = null, leaving conditions that matched
+                           everything and were dropped on save. -->
+                      <ComboBox misc:RetainedItemsSource.Source="{Binding $parent[Window].DataContext.Constraints}"
+                                SelectedItem="{Binding Property}"
                                 HorizontalAlignment="Stretch" VerticalAlignment="Center">
                         <ComboBox.ItemTemplate>
                           <DataTemplate DataType="autoloot:PropertyEntry">
