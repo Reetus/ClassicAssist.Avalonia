@@ -17,7 +17,9 @@ using System.IO;
 using System.IO.Pipes;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using Avalonia;
+using ClassicAssist.Avalonia.Misc;
 using ClassicAssist.Plugin.Shared;
 using StreamJsonRpc;
 
@@ -41,6 +43,15 @@ internal class Program
     [STAThread]
     public static void Main( string[] args )
     {
+        AppDomain.CurrentDomain.UnhandledException +=
+            ( _, e ) => CrashLog.Log( e.ExceptionObject as Exception );
+
+        TaskScheduler.UnobservedTaskException += ( _, e ) =>
+        {
+            CrashLog.Log( e.Exception );
+            e.SetObserved();
+        };
+
         if ( args == null || args.Length == 0 )
         {
             Console.Error.WriteLine(
