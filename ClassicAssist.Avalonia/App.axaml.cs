@@ -27,6 +27,7 @@ public class App : Application
         // Must precede InstallRPC: constructing the managers and view models marshals onto these.
         SEngine.Dispatcher = new AvaloniaDispatcher( Dispatcher.UIThread );
         SEngine.UIInvoker = new AvaloniaUIInvoker( Dispatcher.UIThread );
+        SEngine.ScreenshotComposer = new AvaloniaScreenshotComposer();
 
         desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 

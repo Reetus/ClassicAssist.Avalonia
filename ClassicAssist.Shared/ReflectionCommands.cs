@@ -14,6 +14,8 @@
 
 using System;
 using System.Drawing;
+using System.Threading.Tasks;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Plugin.Shared.Reflection;
 using ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects;
 
@@ -30,6 +32,28 @@ namespace ClassicAssist.Shared;
 public static class ReflectionCommands
 {
     private static readonly TimeSpan PATHFINDING_FALLBACK_WINDOW = TimeSpan.FromSeconds( 1 );
+
+    /// <summary>
+    ///     Whether the client can hand back the frame it just drew. Kept apart from
+    ///     <see cref="Engine.ReflectionAvailable" /> deliberately: a NativeAOT ClassicUO loads the
+    ///     plugin managed through its bootstrap, so that flag is true there while the graphics device
+    ///     the capture needs is native code with no managed side to read. Callers use this to show the
+    ///     feature as unavailable rather than letting it look broken.
+    /// </summary>
+    public static Task<bool> CanCaptureClientFrame()
+    {
+        return Engine.Host != null ? Engine.Host.CanCaptureClientFrame() : Task.FromResult( ReflectionImpl.CanCaptureClientFrame() );
+    }
+
+    /// <summary>
+    ///     The frame the client last drew, or null when it cannot be captured. Async all the way down,
+    ///     unlike its neighbours here - the pixels are megabytes read on the client's own thread, and
+    ///     the UI thread is one of the callers.
+    /// </summary>
+    public static Task<ScreenshotFrame> CaptureClientFrame()
+    {
+        return Engine.Host != null ? Engine.Host.CaptureClientFrame() : ReflectionImpl.CaptureClientFrame();
+    }
 
     public static void PlayCUOMacro( string name )
     {

@@ -24,7 +24,7 @@ using ClassicAssist.Plugin.Shared.Reflections.Helpers;
 
 namespace ClassicAssist.Plugin.Shared.Reflection
 {
-    public static class ReflectionImpl
+    public static partial class ReflectionImpl
     {
         public static string ClassicUOPath { get; set; }
         public static Assembly DefaultAssembly { get; set; }
@@ -32,6 +32,20 @@ namespace ClassicAssist.Plugin.Shared.Reflection
         public static Action<int, bool> Move { get; set; }
 
         public static Queue<Action> TickWorkQueue { get; set; }
+
+        /// <summary>
+        ///     Queues work for the client's own thread. Callers are RPC threads while the drain in
+        ///     <c>PluginEngine.OnTick</c> is the client thread, so both sides take the queue's lock -
+        ///     <see cref="Queue{T}" /> is not safe for concurrent use, and a torn queue here would
+        ///     surface as work silently going missing.
+        /// </summary>
+        public static void Enqueue( Action action )
+        {
+            lock ( TickWorkQueue )
+            {
+                TickWorkQueue.Enqueue( action );
+            }
+        }
 
         public static void Initialize( Assembly assembly, string classicUOPath, Queue<Action> tickWorkQueue, Action<int, bool> move )
         {
@@ -146,7 +160,7 @@ namespace ClassicAssist.Plugin.Shared.Reflection
 
         public static void Logout()
         {
-            TickWorkQueue.Enqueue( () =>
+            Enqueue( () =>
             {
                 dynamic socket = new ReflectionObject( ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Network.NetClient", "Socket", null ) );
 
@@ -176,7 +190,7 @@ namespace ClassicAssist.Plugin.Shared.Reflection
 
         public static void Quit()
         {
-            TickWorkQueue.Enqueue( () =>
+            Enqueue( () =>
             {
                 dynamic game = new ReflectionObject( ReflectionHelper.GetTypePropertyValue<dynamic>( "ClassicUO.Client", "Game", null ) );
 

@@ -2161,4 +2161,13 @@ Are you sure you wish to continue?</value>
   <data name="Unlock Item" xml:space="preserve">
     <value>Unlock Item</value>
   </data>
+  <data name="Screenshots not supported" xml:space="preserve">
+    <value>Screenshots are not available with this client.</value>
+  </data>
+  <data name="Screenshots not supported detail" xml:space="preserve">
+    <value>This client is a native build, so the frame it draws cannot be read back. TazUO and the managed builds of ClassicUO are supported.</value>
+  </data>
+  <data name="Snapshot failed" xml:space="preserve">
+    <value>Could not take a screenshot - the client did not respond.</value>
+  </data>
 </root>

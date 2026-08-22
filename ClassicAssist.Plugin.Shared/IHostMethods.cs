@@ -56,6 +56,21 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> HasDisconnectedGump();
 
         /// <summary>
+        ///     Whether a screenshot of the client window can be taken at all, i.e. whether the client's
+        ///     graphics device is reachable from in-process. False on a NativeAOT ClassicUO, whose
+        ///     graphics stack is native code - and which <see cref="IsReflectionAvailable" /> cannot
+        ///     stand in for, since it loads the plugin managed through its bootstrap and so reports
+        ///     true. Callers should surface a capture as unavailable rather than failed.
+        /// </summary>
+        Task<bool> CanCaptureClientFrame();
+
+        /// <summary>
+        ///     Reads the frame the client last drew and returns where the pixels were written, or null
+        ///     when this client cannot be captured or stopped ticking before the read happened.
+        /// </summary>
+        Task<ScreenshotFrame> CaptureClientFrame();
+
+        /// <summary>
         ///     False when the plugin was loaded via the native DNNE export (modern ClassicUO) rather than
         ///     the managed load path TazUO always uses. Client-internals reflection
         ///     (<see cref="ClassicAssist.Plugin.Shared.Reflection" />) targets TazUO's shapes specifically

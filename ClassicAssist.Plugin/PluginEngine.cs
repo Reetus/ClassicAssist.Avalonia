@@ -730,13 +730,26 @@ namespace ClassicAssist.Plugin
 
         private static void OnTick()
         {
-            while ( TickWorkQueue.Count > 0 )
+            // Producers are RPC threads (see ReflectionImpl), so take the queue's own lock for each
+            // step rather than iterating it unsynchronised. Held only across the dequeue, never across
+            // the action - those run client code and can be slow.
+            while ( true )
             {
-                Action action = TickWorkQueue.Dequeue();
+                Action action;
+
+                lock ( TickWorkQueue )
+                {
+                    if ( TickWorkQueue.Count == 0 )
+                    {
+                        break;
+                    }
+
+                    action = TickWorkQueue.Dequeue();
+                }
 
                 action?.Invoke();
             }
-            
+
             _plugin?.OnTick();
         }
 
@@ -1078,7 +1091,7 @@ namespace ClassicAssist.Plugin
 
             public void SetTitle( string title )
             {
-                TickWorkQueue.Enqueue( () => PluginEngine.SetTitle( title ) );
+                ReflectionImpl.Enqueue( () => PluginEngine.SetTitle( title ) );
             }
 
             public Task<(int x, int y)> GetGumpPosition( uint id )
@@ -1169,6 +1182,16 @@ namespace ClassicAssist.Plugin
             public Task<bool> IsReflectionAvailable()
             {
                 return Task.FromResult( PluginEngine.ReflectionAvailable );
+            }
+
+            public Task<bool> CanCaptureClientFrame()
+            {
+                return Task.FromResult( ReflectionImpl.CanCaptureClientFrame() );
+            }
+
+            public Task<ScreenshotFrame> CaptureClientFrame()
+            {
+                return ReflectionImpl.CaptureClientFrame();
             }
 
             public void OnShutdown()

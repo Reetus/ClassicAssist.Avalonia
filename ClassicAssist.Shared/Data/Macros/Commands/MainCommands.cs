@@ -1,8 +1,10 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Hotkeys;
+using ClassicAssist.Data.Screenshot;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
@@ -247,6 +249,59 @@ public static class MainCommands
         MacroEntry macro = manager.Items.FirstOrDefault( m => m.Name.Equals( macroName ) );
 
         return macro != null && ( macro.IsRunning || manager.Replay );
+    }
+
+    /// <summary>
+    ///     Takes a screenshot of the client window, returning whether it worked and where it went.
+    /// </summary>
+    /// <param name="fullscreen">
+    ///     Accepted and ignored. Upstream captured either the client window or the whole desktop through
+    ///     GDI; here the pixels come from the frame the client itself drew, so there is no desktop to
+    ///     include. Kept in the signature so existing macros still run.
+    /// </param>
+    [CommandsDisplay( Category = nameof( Strings.Main ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.IntegerValue ), nameof( ParameterType.Boolean ), nameof( ParameterType.String )
+        } )]
+    public static (bool, string) Snapshot( int delay = 0, bool? fullscreen = null, string fileName = "" )
+    {
+        try
+        {
+            if ( delay > 0 )
+            {
+                Thread.Sleep( delay );
+            }
+
+            ScreenshotManager manager = ScreenshotManager.GetInstance();
+
+            if ( manager.TakeScreenshot == null )
+            {
+                UOC.SystemMessage( Strings.Snapshot_failed, (int) SystemMessageHues.Red );
+
+                return ( false, null );
+            }
+
+            // Blocking is safe here and not in the tab's own button: macros and hotkeys run on their own
+            // threads, and the capture completes on the client's tick with the composer hopping to the
+            // UI thread of its own accord.
+            string savedTo = manager.TakeScreenshot( string.Empty, fileName ).GetAwaiter().GetResult();
+
+            if ( string.IsNullOrEmpty( savedTo ) )
+            {
+                UOC.SystemMessage( Strings.Snapshot_failed, (int) SystemMessageHues.Red );
+
+                return ( false, null );
+            }
+
+            return ( true, savedTo );
+        }
+        catch ( Exception e )
+        {
+            UOC.SystemMessage( e.Message, (int) SystemMessageHues.Red );
+
+            return ( false, null );
+        }
     }
 
     [CommandsDisplay( Category = nameof( Strings.Main ) )]

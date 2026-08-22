@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+             xmlns:agents="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Agents;assembly=ClassicAssist.Shared"
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+             xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="ClassicAssist.Avalonia.Views.Agents.ScreenshotTabControl">
+  <UserControl.DataContext>
+    <agents:ScreenshotTabViewModel/>
+  </UserControl.DataContext>
+  <UserControl.Resources>
+    <misc:PathToThumbnailValueConverter x:Key="ThumbnailConverter"/>
+    <misc:InverseBooleanValueConverter x:Key="InverseBooleanConverter"/>
+  </UserControl.Resources>
+  <Grid ColumnDefinitions="250, *" Margin="10">
+    <Grid Grid.Column="0" RowDefinitions="Auto, *, Auto">
+      <Button Grid.Row="0" Content="{x:Static resources:Strings.Take_Snapshot}" Margin="0,0,0,5"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              Command="{Binding TakeSnapshotCommand}"/>
+      <ListBox Grid.Row="1" x:Name="ScreenshotList" ItemsSource="{Binding Screenshots}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid DoubleTapped="OnScreenshotDoubleTapped">
+              <Image Source="{Binding Path, Converter={StaticResource ThumbnailConverter}, ConverterParameter=256}"
+                     Stretch="UniformToFill"/>
+              <Border Background="Black" CornerRadius="5" Padding="2" HorizontalAlignment="Right"
+                      VerticalAlignment="Bottom" Margin="5" Opacity="0.8">
+                <TextBlock Text="{Binding Extension}" VerticalAlignment="Center"/>
+              </Border>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Button Grid.Row="2" Content="{x:Static resources:Strings.Open_Folder}" Margin="0,5,0,0"
+              HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+              Command="{Binding OpenFolderCommand}"/>
+    </Grid>
+    <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="10,0,0,0">
+      <StackPanel>
+        <!-- Shown only on a client whose frames cannot be read back at all - see
+             ReflectionImpl.CanCaptureClientFrame. Everything below still binds, so the settings can be
+             prepared against a client that does support it. -->
+        <Border Background="{DynamicResource ThemeControlMidBrush}"
+                BorderBrush="{DynamicResource ThemeBorderMidBrush}" BorderThickness="1" Padding="10"
+                Margin="0,0,0,5"
+                IsVisible="{Binding CaptureSupported, Converter={StaticResource InverseBooleanConverter}}">
+          <StackPanel>
+            <TextBlock Text="{x:Static resources:Strings.Screenshots_not_supported}" FontWeight="Bold"
+                       TextWrapping="Wrap"/>
+            <TextBlock Text="{x:Static resources:Strings.Screenshots_not_supported_detail}" TextWrapping="Wrap"
+                       Margin="0,5,0,0"/>
+          </StackPanel>
+        </Border>
+        <controls:GroupBox Header="{x:Static resources:Strings.Options}">
+          <StackPanel Margin="5">
+            <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Filename_Format_}"
+                                                Text="{Binding FilenameFormat}"/>
+          </StackPanel>
+        </controls:GroupBox>
+        <controls:GroupBox Header="{x:Static resources:Strings.Information_Bar}" Margin="0,5,0,0">
+          <StackPanel Margin="5">
+            <CheckBox Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding IncludeInfoBar}"/>
+            <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Format_}"
+                                                Text="{Binding Format}"
+                                                IsEnabled="{Binding IncludeInfoBar}"/>
+            <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Font_Size_}"
+                                                Text="{Binding FontSize}"
+                                                IsEnabled="{Binding IncludeInfoBar}"/>
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,0" IsEnabled="{Binding IncludeInfoBar}">
+              <TextBlock Text="{x:Static resources:Strings.Font_Color_}" Margin="0,0,5,0"
+                         VerticalAlignment="Center"/>
+              <Button Command="{Binding SetFontColourCommand}">
+                <Image Source="{StaticResource ColorWheelIcon}" Height="12" Width="12"/>
+              </Button>
+              <Border Width="24" Height="16" Margin="5,0,0,0" BorderThickness="1"
+                      BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                      Background="{Binding FontColor}"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,5,0,0" IsEnabled="{Binding IncludeInfoBar}">
+              <TextBlock Text="{x:Static resources:Strings.Background_Color_}" Margin="0,0,5,0"
+                         VerticalAlignment="Center"/>
+              <Button Command="{Binding SetBackgroundColourCommand}">
+                <Image Source="{StaticResource ColorWheelIcon}" Height="12" Width="12"/>
+              </Button>
+              <Border Width="24" Height="16" Margin="5,0,0,0" BorderThickness="1"
+                      BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+                      Background="{Binding BackgroundColor}"/>
+            </StackPanel>
+          </StackPanel>
+        </controls:GroupBox>
+        <controls:GroupBox Header="{x:Static resources:Strings.Auto_Screenshot}" Margin="0,5,0,0">
+          <StackPanel Margin="5">
+            <CheckBox Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding AutoScreenshot}"/>
+            <StackPanel IsEnabled="{Binding AutoScreenshot}">
+              <CheckBox Content="{x:Static resources:Strings.Player_Death}" IsChecked="{Binding PlayerDeath}"
+                        Margin="0,5,0,0"/>
+              <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Player_Death_Delay_}"
+                                                  Text="{Binding PlayerDeathDelay}"
+                                                  IsEnabled="{Binding PlayerDeath}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                <CheckBox Content="{x:Static resources:Strings.Mobile_Death}" IsChecked="{Binding MobileDeath}"
+                          Margin="0,0,5,0"/>
+                <Button Content="…" Padding="6,0" Command="{Binding ConfigureFilterCommand}"
+                        VerticalAlignment="Center"/>
+              </StackPanel>
+              <StackPanel IsEnabled="{Binding MobileDeath}">
+                <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Mobile_Death_Delay_}"
+                                                    Text="{Binding MobileDeathDelay}"/>
+                <controls:HorizontalHeaderedTextBox Header="{x:Static resources:Strings.Max_Distance_}"
+                                                    Text="{Binding Distance}"/>
+                <CheckBox Content="{x:Static resources:Strings.Only_if_enemy}" Margin="0,5,0,0"
+                          IsChecked="{Binding OnlyIfEnemy}"/>
+              </StackPanel>
+            </StackPanel>
+          </StackPanel>
+        </controls:GroupBox>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

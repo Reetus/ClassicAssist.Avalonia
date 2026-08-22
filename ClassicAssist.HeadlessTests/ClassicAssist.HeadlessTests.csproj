@@ -26,5 +26,8 @@
          the fixtures name real constraints ("Faster Casting"), so the tests need the real file. -->
     <None Include="..\ClassicAssist.Shared\Data\Properties.json" Link="Data\Properties.json"
           CopyToOutputDirectory="PreserveNewest" />
+    <!-- The screenshot agent's default mobile-death filter is every humanoid body in Data/Bodies.json. -->
+    <None Include="..\ClassicAssist.Shared\Data\Bodies.json" Link="Data\Bodies.json"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
