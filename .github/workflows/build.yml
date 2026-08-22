@@ -27,4 +27,4 @@ jobs:
       run: dotnet build -c Release
 
     - name: Test
-      run: dotnet test ClassicAssist.Tests/ClassicAssist.Tests.csproj -c Release --no-build
+      run: dotnet test ClassicAssist.slnx -c Release --no-build

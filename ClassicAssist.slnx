@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="ClassicAssist.Avalonia/ClassicAssist.Avalonia.csproj" />
+  <Project Path="ClassicAssist.HeadlessTests/ClassicAssist.HeadlessTests.csproj" />
   <Project Path="ClassicAssist.Launcher/ClassicAssist.Launcher.csproj" />
   <Project Path="ClassicAssist.Plugin.Shared/ClassicAssist.Plugin.Shared.csproj" />
   <Project Path="ClassicAssist.Plugin/ClassicAssist.Plugin.csproj" />
