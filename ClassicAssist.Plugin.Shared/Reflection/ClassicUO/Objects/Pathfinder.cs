@@ -55,6 +55,30 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
             return _pathfinderInstance = property?.GetValue( player );
         }
 
+        /// <summary>
+        ///     Reads the client's <c>AlwaysRun</c> profile setting via reflection so the new
+        ///     5-argument <c>WalkTo</c> signature gets the right base <c>run</c> value. The client
+        ///     still applies its own stamina / hidden clamps when actually walking, so a false result
+        ///     here is a safe default rather than a hard override.
+        /// </summary>
+        private static bool GetAlwaysRun()
+        {
+            try
+            {
+                Type profileManagerType = ReflectionImpl.DefaultAssembly?.GetType( "ClassicUO.Configuration.ProfileManager" );
+
+                object currentProfile = profileManagerType?.GetProperty( "CurrentProfile" )?.GetValue( null );
+
+                PropertyInfo alwaysRun = currentProfile?.GetType().GetProperty( "AlwaysRun" );
+
+                return alwaysRun != null && (bool) alwaysRun.GetValue( currentProfile );
+            }
+            catch ( Exception )
+            {
+                return false;
+            }
+        }
+
         public static bool AutoWalking
         {
             get
@@ -153,9 +177,23 @@ namespace ClassicAssist.Plugin.Shared.Reflection.ClassicUO.Objects
 
                 bool retval = false;
 
+                // TazUO changed `Pathfinder.WalkTo` from `(x, y, z, distance)` to
+                // `(x, y, z, distance, run)`. Resolve the argument list from the resolved
+                // signature so both the old and new shapes work. The client no longer auto-picks
+                // `run` from distance, so for the new shape we honour the profile's `AlwaysRun`
+                // setting.
+                int parameterCount = _walkMethod.GetParameters().Length;
+
+                object[] args = parameterCount switch
+                {
+                    4 => new object[] { x, y, z, distance },
+                    5 => new object[] { x, y, z, distance, GetAlwaysRun() },
+                    _ => throw new Exception( $"Unexpected Pathfinder.WalkTo parameter count: {parameterCount}" ),
+                };
+
                 ReflectionImpl.TickWorkQueue.Enqueue( () =>
                 {
-                    retval = (bool) _walkMethod.Invoke( instance, new object[] { x, y, z, distance } );
+                    retval = (bool) _walkMethod.Invoke( instance, args );
                     are.Set();
                 } );
 
