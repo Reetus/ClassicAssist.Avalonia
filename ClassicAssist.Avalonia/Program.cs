@@ -21,6 +21,9 @@ using System.Threading.Tasks;
 using Avalonia;
 using ClassicAssist.Avalonia.Misc;
 using ClassicAssist.Plugin.Shared;
+using MessagePack;
+using MessagePack.Formatters;
+using MessagePack.Resolvers;
 using StreamJsonRpc;
 
 namespace ClassicAssist.Avalonia;
@@ -67,7 +70,15 @@ internal class Program
             return;
         }
 
-        Rpc = JsonRpc.Attach( stream, new Shared.Engine.PluginMethods() );
+        // The modern plugin uses the named pipe and speaks MessagePack; the Framework build uses the
+        // "tcp:" endpoint and stays on JSON, because it is pinned to an older StreamJsonRpc than this
+        // process and a wire-format mismatch would be silent.
+        bool messagePack = !args[0].StartsWith( "tcp:", StringComparison.Ordinal );
+
+        Rpc = messagePack
+            ? CreateMessagePackRpc( stream, new Shared.Engine.PluginMethods() )
+            : JsonRpc.Attach( stream, new Shared.Engine.PluginMethods() );
+
         Host = Rpc.Attach<IHostMethods>();
 
         // Group the assistant window with the game window into one taskbar button on Windows.
@@ -83,6 +94,50 @@ internal class Program
         // Avalonia on Linux requires the UI to own the process main thread, which is the entire
         // reason this runs as a separate process rather than inside the plugin. Blocking call.
         BuildAvaloniaApp().StartWithClassicDesktopLifetime( args );
+    }
+
+    /// <summary>
+    ///     Builds the MessagePack transport the modern plugin and the UI agree on, matching
+    ///     <c>PluginEngine.CreateMessagePackHandler</c>. The plugin's default resolver is
+    ///     attribute-based, so <see cref="ScreenshotFrame" /> (no <c>[MessagePackObject]</c>) and
+    ///     <see cref="System.Drawing.Point" /> / <see cref="System.Drawing.Size" /> need the contractless
+    ///     resolver, and <see cref="IntPtr" /> needs a formatter of its own. The two ends must stay in
+    ///     step; change one and change the other.
+    /// </summary>
+    private static JsonRpc CreateMessagePackRpc( Stream stream, object target )
+    {
+        MessagePackFormatter formatter = new();
+
+        IMessagePackFormatter[] formatters = [IntPtrFormatter.Instance];
+        IFormatterResolver[] resolvers = [ContractlessStandardResolver.Instance, StandardResolver.Instance];
+        IFormatterResolver resolver = CompositeResolver.Create( formatters, resolvers );
+
+        formatter.SetMessagePackSerializerOptions(
+            MessagePackSerializerOptions.Standard.WithSecurity( MessagePackSecurity.UntrustedData )
+                .WithResolver( resolver ) );
+
+        LengthHeaderMessageHandler handler = new( System.IO.Pipelines.PipeWriter.Create( stream ),
+            System.IO.Pipelines.PipeReader.Create( stream ), formatter );
+
+        JsonRpc rpc = new( handler, target );
+        rpc.StartListening();
+
+        return rpc;
+    }
+
+    private sealed class IntPtrFormatter : IMessagePackFormatter<IntPtr>
+    {
+        public static readonly IntPtrFormatter Instance = new();
+
+        public void Serialize( ref MessagePackWriter writer, IntPtr value, MessagePackSerializerOptions options )
+        {
+            writer.Write( value.ToInt64() );
+        }
+
+        public IntPtr Deserialize( ref MessagePackReader reader, MessagePackSerializerOptions options )
+        {
+            return new IntPtr( reader.ReadInt64() );
+        }
     }
 
     /// <summary>

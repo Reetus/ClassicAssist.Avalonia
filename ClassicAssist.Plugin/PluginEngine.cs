@@ -34,6 +34,12 @@ using ClassicAssist.Shared;
 using CUO_API;
 using StreamJsonRpc;
 
+#if !NETFRAMEWORK
+using MessagePack;
+using MessagePack.Formatters;
+using MessagePack.Resolvers;
+#endif
+
 // ReSharper disable once CheckNamespace
 namespace ClassicAssist.Plugin
 {
@@ -618,7 +624,8 @@ namespace ClassicAssist.Plugin
 
                     _hostMethods = new HostMethods();
 
-                    JsonRpc rpc = JsonRpc.Attach( pipe, _hostMethods );
+                    JsonRpc rpc = new JsonRpc( CreateMessagePackHandler( pipe ), _hostMethods );
+                    rpc.StartListening();
                     rpc.Disconnected += ( _, _ ) => Detach();
 
                     _plugin = rpc.Attach<IPluginMethods>();
@@ -648,6 +655,52 @@ namespace ClassicAssist.Plugin
             } );
 #endif
         }
+
+#if !NETFRAMEWORK
+        /// <summary>
+        ///     Builds the MessagePack transport the modern plugin and the UI agree on. The Framework
+        ///     build stays on <see cref="JsonRpc.Attach(Stream, object)" />: it is pinned to an older
+        ///     StreamJsonRpc than the UI, and a wire-format mismatch there would be silent.
+        ///     <para>
+        ///         StreamJsonRpc's default resolver is attribute-based, so the contract's types that
+        ///         carry no <c>[MessagePackObject]</c> (<see cref="ScreenshotFrame" />) and the BCL
+        ///         structs with no built-in formatter (<see cref="Point" />, <see cref="Size" />) need
+        ///         the contractless resolver. <see cref="IntPtr" /> needs a formatter of its own -
+        ///         MessagePack has none for a pointer. The UI builds the identical handler; the two
+        ///         must stay in step.
+        ///     </para>
+        /// </summary>
+        private static IJsonRpcMessageHandler CreateMessagePackHandler( Stream stream )
+        {
+            MessagePackFormatter formatter = new();
+
+            IMessagePackFormatter[] formatters = [IntPtrFormatter.Instance];
+            IFormatterResolver[] resolvers = [ContractlessStandardResolver.Instance, StandardResolver.Instance];
+            IFormatterResolver resolver = CompositeResolver.Create( formatters, resolvers );
+
+            formatter.SetMessagePackSerializerOptions(
+                MessagePackSerializerOptions.Standard.WithSecurity( MessagePackSecurity.UntrustedData )
+                    .WithResolver( resolver ) );
+
+            return new LengthHeaderMessageHandler( System.IO.Pipelines.PipeWriter.Create( stream ),
+                System.IO.Pipelines.PipeReader.Create( stream ), formatter );
+        }
+
+        private sealed class IntPtrFormatter : IMessagePackFormatter<IntPtr>
+        {
+            public static readonly IntPtrFormatter Instance = new();
+
+            public void Serialize( ref MessagePackWriter writer, IntPtr value, MessagePackSerializerOptions options )
+            {
+                writer.Write( value.ToInt64() );
+            }
+
+            public IntPtr Deserialize( ref MessagePackReader reader, MessagePackSerializerOptions options )
+            {
+                return new IntPtr( reader.ReadInt64() );
+            }
+        }
+#endif
 
 #if NETFRAMEWORK
         /// <summary>

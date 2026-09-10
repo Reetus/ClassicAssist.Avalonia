@@ -16,10 +16,10 @@ namespace ClassicAssist.Plugin.Shared
     ///     One frame read back out of the client's graphics device, handed to the UI process as a file
     ///     rather than as bytes on the wire.
     ///     <para>
-    ///         The RPC link is JSON, so a <c>byte[]</c> crosses it base64-encoded - about 11MB for a
-    ///         1080p frame, on a link that also carries every packet. Both halves are on the same
-    ///         machine by construction (the plugin launches the UI), so the pixels go through a temp
-    ///         file and only its path is sent. The reader owns the file and is expected to delete it;
+    ///         Sending the pixels inline would put megabytes - about 11MB for a 1080p frame - through
+    ///         the same link that carries every packet. Both halves are on the same machine by
+    ///         construction (the plugin launches the UI), so the pixels go through a temp file and only
+    ///         its path is sent. The reader owns the file and is expected to delete it;
     ///         <see cref="ClassicAssist.Plugin.Shared.Reflection.ReflectionImpl" /> also sweeps stale
     ///         ones, for the case where the UI died between the capture and the read.
     ///     </para>
