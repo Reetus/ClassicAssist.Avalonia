@@ -8,4 +8,5 @@
   <Project Path="ClassicAssist.Tests/ClassicAssist.Tests.csproj" />
   <Project Path="ClassicAssist.Updater/ClassicAssist.Updater.csproj" />
   <Project Path="Tools/ExportCommands/ExportCommands.csproj" />
+  <Project Path="Tools/PacketTransportBenchmark/PacketTransportBenchmark.csproj" />
 </Solution>

@@ -11,6 +11,9 @@ ClassicAssist/Properties/launchSettings.json
 ClassicAssist.Launcher/ClassicAssist.Launcher.csproj.user
 CleanupModified.ps1
 Tools/ExportCommands/obj/
+Tools/PacketTransportBenchmark/obj/
+ClassicAssist.Plugin.Shared/bin/
+ClassicAssist.Shared/bin/
 ClassicAssist.Tests/bin/
 ClassicAssist.HeadlessTests/bin/
 ClassicAssist.UITest/bin/
