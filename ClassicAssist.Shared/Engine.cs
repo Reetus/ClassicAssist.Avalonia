@@ -50,6 +50,11 @@ public static partial class Engine
 
     private const int MAX_DISTANCE = 32;
 
+    // Entities can't leave range faster than a walk step, so there is no need to sweep the full
+    // collections on every tick.
+    private const int DISTANCE_CLEANUP_INTERVAL_MS = 250;
+    private static long _nextDistanceCleanup;
+
     private static SendRecvPacket _sendToClient;
     private static SendRecvPacket _sendToServer;
     private static GetPacketLength _getPacketLength;
@@ -317,8 +322,6 @@ public static partial class Engine
             Player.Z = z;
         }
 
-        Items.RemoveByDistance( MAX_DISTANCE, x, y );
-        Mobiles.RemoveByDistance( MAX_DISTANCE, x, y );
         ScavengerManager.GetInstance().CheckArea?.Invoke();
     }
 
@@ -743,6 +746,14 @@ public static partial class Engine
                 Action action = TickWorkQueue.Dequeue();
 
                 action?.Invoke();
+            }
+
+            if ( Player != null && Environment.TickCount64 >= _nextDistanceCleanup )
+            {
+                _nextDistanceCleanup = Environment.TickCount64 + DISTANCE_CLEANUP_INTERVAL_MS;
+
+                Items.RemoveByDistance( MAX_DISTANCE, Player.X, Player.Y );
+                Mobiles.RemoveByDistance( MAX_DISTANCE, Player.X, Player.Y );
             }
         }
         catch ( Exception e )

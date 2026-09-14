@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using ClassicAssist.Shared;
@@ -14,9 +15,39 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
     private const int MULTI_ART_DATA_ID = 2;
     public readonly int Serial;
 
+    // Reference-counted registry of serials present in any ItemCollection. Lets GetItem answer
+    // "not found anywhere" in O(1) instead of recursively scanning every container - the common case
+    // for brand-new serials arriving in world/content packets. Counts may drift high (e.g. re-adds of
+    // the same serial, discarded collections), which only costs a wasted scan; they can never drop
+    // below the true membership count because decrements are tied to verified removals.
+    private static readonly ConcurrentDictionary<int, int> _serialCounts = new();
+
     public ItemCollection( int serial ) : base( DefaultCapacity )
     {
         Serial = serial;
+    }
+
+    private static void TrackSerial( int serial )
+    {
+        _serialCounts.AddOrUpdate( serial, 1, static ( _, count ) => count + 1 );
+    }
+
+    private static void UntrackSerial( int serial )
+    {
+        while ( _serialCounts.TryGetValue( serial, out int count ) )
+        {
+            if ( count <= 1 )
+            {
+                if ( _serialCounts.TryRemove( KeyValuePair.Create( serial, count ) ) )
+                {
+                    return;
+                }
+            }
+            else if ( _serialCounts.TryUpdate( serial, count - 1, count ) )
+            {
+                return;
+            }
+        }
     }
 
     public IEnumerator<Item> GetEnumerator()
@@ -49,7 +80,12 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
 
         if ( added )
         {
-            OnCollectionChanged( true, true, [entity] );
+            TrackSerial( entity.Serial );
+
+            if ( HasEverSubscribed )
+            {
+                GetSubscribedParentContainer()?.OnCollectionChanged( true, [entity] );
+            }
         }
 
         return added;
@@ -61,10 +97,38 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
 
         if ( added )
         {
-            OnCollectionChanged( true, true, entities );
+            foreach ( Item entity in entities )
+            {
+                TrackSerial( entity.Serial );
+            }
+
+            if ( HasEverSubscribed )
+            {
+                GetSubscribedParentContainer()?.OnCollectionChanged( true, entities );
+            }
         }
 
         return added;
+    }
+
+    /// <summary>
+    ///     Resolves the container collection of this collection's parent item, returning it only when it
+    ///     has <see cref="EntityCollection{T}.CollectionChanged" /> subscribers to notify.
+    /// </summary>
+    private ItemCollection GetSubscribedParentContainer()
+    {
+        if ( Serial == 0 || !Engine.Items.GetItem( Serial, out Item self ) || self == null || self.Owner == 0 )
+        {
+            return null;
+        }
+
+        if ( !Engine.Items.GetItem( self.Owner, out Item parent ) || parent?.Container == null ||
+             !parent.Container.HasSubscribers )
+        {
+            return null;
+        }
+
+        return parent.Container;
     }
 
     public bool FindItems( int id, out Item[] items )
@@ -111,22 +175,31 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
     /// <returns>Null if no match is found.</returns>
     public bool GetItem( int serial, out Item item )
     {
+        if ( EntityList.TryGetValue( serial, out Item match ) && match != null )
+        {
+            item = match;
+
+            return true;
+        }
+
+        item = null;
+
+        // Serial isn't in any collection - skip the recursive container scan
+        if ( !_serialCounts.ContainsKey( serial ) )
+        {
+            return false;
+        }
+
         try
         {
-            Item match = EntityList.Values.FirstOrDefault( i => i.Serial == serial );
-
-            if ( match != null )
+            foreach ( KeyValuePair<int, Item> kvp in EntityList )
             {
-                item = match;
+                if ( !kvp.Value.IsContainer || kvp.Value.Container == null )
+                {
+                    continue;
+                }
 
-                return true;
-            }
-
-            IEnumerable<Item> containers = EntityList.Values.Where( i => i.IsContainer );
-
-            foreach ( Item container in containers )
-            {
-                if ( !container.Container.GetItem( serial, out Item containerMatch ) )
+                if ( !kvp.Value.Container.GetItem( serial, out Item containerMatch ) )
                 {
                     continue;
                 }
@@ -139,8 +212,6 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
         {
             // ignored
         }
-
-        item = null;
 
         return false;
     }
@@ -205,10 +276,7 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
             changed = base.Remove( entity );
         }
 
-        if ( changed )
-        {
-            OnCollectionChanged( true, false, [entity] );
-        }
+        // Parent notification happens in Remove(int), which all removal paths flow through
 
         return changed;
     }
@@ -240,11 +308,6 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
             }
         }
 
-        if ( changed )
-        {
-            OnCollectionChanged( true, false, entities );
-        }
-
         return changed;
     }
 
@@ -257,28 +320,44 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
         if ( EntityList.ContainsKey( serial ) )
         {
             changed = base.Remove( serial );
-        }
-        else
-        {
-            IEnumerable<Item> containers = EntityList.Values.Where( i => i.IsContainer );
 
-            foreach ( Item container in containers )
+            if ( changed )
             {
-                if ( container.Container?.GetItem( serial ) == null )
+                UntrackSerial( serial );
+            }
+        }
+        else if ( item != null )
+        {
+            // GetItem already proved the serial exists in a nested container; only then scan
+            foreach ( KeyValuePair<int, Item> kvp in EntityList )
+            {
+                if ( !kvp.Value.IsContainer || kvp.Value.Container?.GetItem( serial ) == null )
                 {
                     continue;
                 }
 
-                container.Container.Remove( serial );
+                kvp.Value.Container.Remove( serial );
             }
         }
 
-        if ( changed && item != null )
+        if ( changed && item != null && HasEverSubscribed )
         {
-            OnCollectionChanged( true, false, [item] );
+            GetSubscribedParentContainer()?.OnCollectionChanged( false, [item] );
         }
 
         return changed;
+    }
+
+    internal override void Clear()
+    {
+        int[] serials = [.. EntityList.Keys];
+
+        base.Clear();
+
+        foreach ( int serial in serials )
+        {
+            UntrackSerial( serial );
+        }
     }
 
     internal void RemoveByOwner( int serial )
@@ -395,21 +474,9 @@ public sealed class ItemCollection : EntityCollection<Item>, IEnumerable<Item>
     {
         OnCollectionChanged( added, items );
 
-        // Ripple down
-
-        if ( !rippleDown )
+        if ( rippleDown )
         {
-            return;
-        }
-
-        if ( Serial == 0 || !Engine.Items.GetItem( Serial, out Item item ) || item.Owner == 0 )
-        {
-            return;
-        }
-
-        if ( Engine.Items.GetItem( item.Owner, out Item parent ) )
-        {
-            parent.Container?.OnCollectionChanged( false, added, items );
+            GetSubscribedParentContainer()?.OnCollectionChanged( added, items );
         }
     }
 
