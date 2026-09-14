@@ -51,8 +51,8 @@ namespace ClassicAssist.Tests
             collection.Add( new Item( 0x40000001 ) { ArtDataID = MULTI_ART_DATA_ID, X = 100, Y = 100 } );
             notifications = 0;
 
-            // Only that it notified - Remove raises both per-item and per-batch, and pinning the exact
-            // count here would freeze that implementation detail rather than the contract.
+            // Only that it notified - the exact count is an implementation detail, and pinning it here
+            // would freeze it rather than the contract.
             collection.ClearMultis();
             Assert.IsTrue( notifications > 0 );
         }

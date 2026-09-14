@@ -29,7 +29,7 @@ public abstract class EntityCollection<T> where T : Entity
     {
         bool changed = EntityList.AddOrUpdate( entity.Serial, entity, ( k, v ) => entity ) != null;
 
-        if ( changed )
+        if ( changed && _collectionChanged != null )
         {
             OnCollectionChanged( true, [entity] );
         }
@@ -51,7 +51,7 @@ public abstract class EntityCollection<T> where T : Entity
             changed = true;
         }
 
-        if ( changed )
+        if ( changed && _collectionChanged != null )
         {
             OnCollectionChanged( true, entities );
         }
@@ -75,7 +75,7 @@ public abstract class EntityCollection<T> where T : Entity
     {
         EntityList.TryRemove( serial, out T val );
 
-        if ( val != null )
+        if ( val != null && _collectionChanged != null )
         {
             OnCollectionChanged( false, [val] );
         }
@@ -107,11 +107,30 @@ public abstract class EntityCollection<T> where T : Entity
         OnCollectionChanged( false, all );
     }
 
-    public event dCollectionChanged CollectionChanged;
+    private dCollectionChanged _collectionChanged;
+
+    /// <summary>
+    ///     Sticky flag (per entity type) so hot paths can skip the entire notification machinery unless
+    ///     something has ever subscribed to any collection of this type. It never goes back to false:
+    ///     one subscription permanently arms the (still cheap) subscriber checks.
+    /// </summary>
+    internal static bool HasEverSubscribed { get; private set; }
+
+    internal bool HasSubscribers => _collectionChanged != null;
+
+    public event dCollectionChanged CollectionChanged
+    {
+        add
+        {
+            _collectionChanged += value;
+            HasEverSubscribed = true;
+        }
+        remove => _collectionChanged -= value;
+    }
 
     public virtual void OnCollectionChanged( bool added, T[] entities )
     {
-        CollectionChanged?.Invoke( EntityList.Count, added, entities );
+        _collectionChanged?.Invoke( EntityList.Count, added, entities );
     }
 
     public virtual void RemoveByDistance( int maxDistance, int x, int y )
