@@ -21,6 +21,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -30,6 +31,7 @@ using Avalonia.VisualTree;
 using ClassicAssist.Avalonia.Misc;
 using ClassicAssist.Avalonia.Views.Agents;
 using ClassicAssist.Data;
+using ClassicAssist.Data.Screenshot;
 using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
@@ -225,6 +227,93 @@ public class ScreenshotAgentTests
                 window.Close();
             }
         } );
+    }
+
+    [Fact]
+    public Task EncodesTheFrameInMemoryAsPng()
+    {
+        return Headless.Run( () =>
+        {
+            using ScreenshotHarness harness = new();
+
+            ScreenshotImage image = Encode( harness, "png", null );
+
+            Assert.Equal( "image/png", image.MimeType );
+            Assert.Equal( "png", image.Format );
+            Assert.Equal( FRAME_WIDTH, image.Width );
+            Assert.Equal( FRAME_HEIGHT, image.Height );
+
+            using MemoryStream stream = new( image.Data );
+            using Bitmap decoded = new( stream );
+
+            Assert.Equal( FRAME_WIDTH, decoded.PixelSize.Width );
+            Assert.Equal( FRAME_HEIGHT, decoded.PixelSize.Height );
+
+            // The frame is opaque green, and the in-memory encode must not wash it out with a
+            // watermark or info bar the way ComposeAsync does.
+            Assert.Equal( ((byte) 0x00, (byte) 0xC0, (byte) 0x40), ReadPixel( decoded, 1, 1 ) );
+        } );
+    }
+
+    [Fact]
+    public Task DownscalesTheEncodedFrameToMaxWidth()
+    {
+        return Headless.Run( () =>
+        {
+            using ScreenshotHarness harness = new();
+
+            ScreenshotImage image = Encode( harness, "png", 100 );
+
+            // 200 * 100/320 = 62.5, rounded to even 62, reported and encoded at the resized size.
+            Assert.Equal( 100, image.Width );
+            Assert.Equal( 62, image.Height );
+
+            using MemoryStream stream = new( image.Data );
+            using Bitmap decoded = new( stream );
+
+            Assert.Equal( 100, decoded.PixelSize.Width );
+            Assert.Equal( 62, decoded.PixelSize.Height );
+        } );
+    }
+
+    [Fact]
+    public Task EncodesTheFrameAsJpeg()
+    {
+        return Headless.Run( () =>
+        {
+            using ScreenshotHarness harness = new();
+
+            ScreenshotImage image = Encode( harness, "jpeg", null );
+
+            Assert.Equal( "image/jpeg", image.MimeType );
+            Assert.Equal( "jpeg", image.Format );
+
+            // JPEG SOI marker.
+            Assert.Equal( 0xFF, image.Data[0] );
+            Assert.Equal( 0xD8, image.Data[1] );
+        } );
+    }
+
+    private static ScreenshotImage Encode( ScreenshotHarness harness, string format, int? maxWidth )
+    {
+        Task<ScreenshotImage> encode = Engine.ScreenshotComposer.EncodeAsync( new ScreenshotEncodeRequest
+        {
+            FramePath = harness.FramePath,
+            Width = FRAME_WIDTH,
+            Height = FRAME_HEIGHT,
+            MaxWidth = maxWidth,
+            Format = format
+        } );
+
+        for ( int i = 0; i < 1000 && !encode.IsCompleted; i++ )
+        {
+            Headless.Settle();
+            Thread.Sleep( 2 );
+        }
+
+        Assert.True( encode.IsCompleted, "The encode never completed." );
+
+        return encode.GetAwaiter().GetResult();
     }
 
     private static bool VisibleBanner( Control control )

@@ -23,6 +23,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using ClassicAssist.Data.Screenshot;
+using SkiaSharp;
 
 namespace ClassicAssist.Avalonia.Misc;
 
@@ -56,6 +57,90 @@ public class AvaloniaScreenshotComposer : IScreenshotComposer
         byte[] pixels = File.ReadAllBytes( request.FramePath );
 
         await Dispatcher.UIThread.InvokeAsync( () => Compose( request, pixels ) );
+    }
+
+    /// <summary>
+    ///     Encodes the raw frame as an in-memory image for callers that want the bytes rather than a
+    ///     file (the MCP snapshot tool). No watermark or info bar is drawn.
+    ///     <para>
+    ///         Done through Skia rather than <see cref="Bitmap.Save" />: Avalonia's save path only ever
+    ///         writes PNG, whereas this tool offers JPEG too. Runs off the UI thread - it is pure
+    ///         pixel work with no Avalonia objects, and a full-screen encode would otherwise stall the
+    ///         UI.
+    ///     </para>
+    /// </summary>
+    public Task<ScreenshotImage> EncodeAsync( ScreenshotEncodeRequest request )
+    {
+        return Task.Run( () => Encode( request ) );
+    }
+
+    private static ScreenshotImage Encode( ScreenshotEncodeRequest request )
+    {
+        byte[] pixels = File.ReadAllBytes( request.FramePath );
+
+        int width = request.Width;
+        int height = request.Height;
+
+        // The frame is tightly packed RGBA, which is exactly Skia's Rgba8888. Copy row by row because
+        // a Skia bitmap's rows can be padded to a wider stride.
+        using SKBitmap bitmap = new( new SKImageInfo( width, height, SKColorType.Rgba8888, SKAlphaType.Opaque ) );
+
+        IntPtr destination = bitmap.GetPixels();
+        int rowLength = width * 4;
+
+        for ( int y = 0; y < height; y++ )
+        {
+            int offset = y * rowLength;
+
+            if ( offset + rowLength > pixels.Length )
+            {
+                break;
+            }
+
+            Marshal.Copy( pixels, offset, destination + y * bitmap.RowBytes, rowLength );
+        }
+
+        bool jpeg = string.Equals( request.Format, "jpeg", StringComparison.OrdinalIgnoreCase ) ||
+                    string.Equals( request.Format, "jpg", StringComparison.OrdinalIgnoreCase );
+
+        SKBitmap output = bitmap;
+        SKBitmap resized = null;
+
+        if ( request.MaxWidth is > 0 && width > request.MaxWidth.Value )
+        {
+            width = request.MaxWidth.Value;
+            height = Math.Max( 1, (int) Math.Round( height * ( width / (double) request.Width ) ) );
+
+            resized = bitmap.Resize( new SKImageInfo( width, height, SKColorType.Rgba8888, SKAlphaType.Opaque ),
+                SKBitmapResizeMethod.Lanczos3 );
+
+            output = resized;
+        }
+
+        try
+        {
+            using MemoryStream stream = new();
+            using SKImage image = SKImage.FromBitmap( output );
+
+            using ( SKData data = image.Encode( jpeg ? SKEncodedImageFormat.Jpeg : SKEncodedImageFormat.Png,
+                       jpeg ? 90 : 100 ) )
+            {
+                data.SaveTo( stream );
+            }
+
+            return new ScreenshotImage
+            {
+                Data = stream.ToArray(),
+                MimeType = jpeg ? "image/jpeg" : "image/png",
+                Format = jpeg ? "jpeg" : "png",
+                Width = width,
+                Height = height
+            };
+        }
+        finally
+        {
+            resized?.Dispose();
+        }
     }
 
     private static void Compose( ScreenshotComposeRequest request, byte[] pixels )

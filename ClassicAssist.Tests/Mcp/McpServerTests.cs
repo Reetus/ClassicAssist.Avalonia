@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -31,6 +32,90 @@ namespace ClassicAssist.Tests.Mcp
             Assert.IsTrue( tools.Any( t => t.Name == "getPlayer" ) );
             Assert.IsTrue( tools.Any( t => t.Name == "invokeCommand" ) );
             Assert.IsTrue( tools.Any( t => t.Name == "listAgents" ) );
+
+            // Tools ported from upstream's additional-tools set.
+            foreach ( string name in new[]
+                     {
+                         "getSnapshot", "getBuffs", "getSkills", "getSkill", "getTarget", "getHotkeys", "executeHotkey",
+                         "getCurrentMacro", "getRunningMacros", "waitForMacro"
+                     } )
+            {
+                Assert.IsTrue( tools.Any( t => t.Name == name ), $"Missing tool '{name}'." );
+            }
+        }
+
+        [TestMethod]
+        public void ToolsCarryAnnotations()
+        {
+            McpTool[] tools = McpTools.GetTools().ToArray();
+
+            McpTool readOnly = tools.First( t => t.Name == "getPlayer" );
+
+            Assert.IsTrue( readOnly.Annotations?["readOnlyHint"]?.ToObject<bool>() );
+            Assert.IsFalse( readOnly.Annotations?["destructiveHint"]?.ToObject<bool>() ?? true );
+
+            McpTool mutating = tools.First( t => t.Name == "executeHotkey" );
+
+            Assert.IsFalse( mutating.Annotations?["readOnlyHint"]?.ToObject<bool>() ?? true );
+            Assert.IsTrue( mutating.Annotations?["destructiveHint"]?.ToObject<bool>() );
+        }
+
+        [TestMethod]
+        public void PaginateReturnsPageMetadata()
+        {
+            int[] source = Enumerable.Range( 0, 500 ).ToArray();
+
+            (List<int> page, int total, int offsetValue, int limitValue) = McpTools.Paginate( source, 200, 0 );
+
+            Assert.AreEqual( 500, total );
+            Assert.AreEqual( 0, offsetValue );
+            Assert.AreEqual( 200, limitValue );
+            Assert.AreEqual( 200, page.Count );
+            Assert.AreEqual( 0, page[0] );
+
+            JObject result = new();
+
+            McpTools.WithPageInfo( result, total, offsetValue, limitValue, page.Count );
+
+            Assert.AreEqual( 500, result["total"]?.ToObject<int>() );
+            Assert.AreEqual( 200, result["returned"]?.ToObject<int>() );
+            Assert.IsTrue( result["truncated"]?.ToObject<bool>() );
+        }
+
+        [TestMethod]
+        public void InspectionToolsInvokeWithoutAGameSession()
+        {
+            foreach ( string name in new[] { "getHotkeys", "getSkills", "getTarget", "getRunningMacros" } )
+            {
+                CallToolResult result = McpTools.Invoke( name, new JObject() );
+
+                Assert.IsFalse( result.IsError, $"{name} returned an error: {result.Content.FirstOrDefault()?.Text}" );
+                Assert.IsNotNull( result.Content.FirstOrDefault()?.Text );
+            }
+        }
+
+        [TestMethod]
+        public void UnknownSkillReportsError()
+        {
+            CallToolResult result = McpTools.Invoke( "getSkill", new JObject { ["name"] = "NoSuchSkill" } );
+
+            Assert.IsTrue( result.IsError );
+        }
+
+        [TestMethod]
+        public void WaitForMacroWithoutARunningMacroReportsError()
+        {
+            CallToolResult result = McpTools.Invoke( "waitForMacro", new JObject() );
+
+            Assert.IsTrue( result.IsError );
+        }
+
+        [TestMethod]
+        public void SnapshotWithoutHostReportsError()
+        {
+            CallToolResult result = McpTools.Invoke( "getSnapshot", new JObject() );
+
+            Assert.IsTrue( result.IsError );
         }
 
         [TestMethod]
