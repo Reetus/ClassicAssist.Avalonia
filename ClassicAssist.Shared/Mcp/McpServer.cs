@@ -16,6 +16,13 @@ public static class McpServer
     private const string PROTOCOL_VERSION = "2025-06-18";
     private const string SERVER_VERSION = "1.0.0";
 
+    /// <summary>
+    ///     Maximum time a single HTTP request may take before the connection is dropped. This
+    ///     bounds blocking tools (e.g. waitForMacro, invokeCommand of a Wait* command); tools
+    ///     must clamp their own timeouts to fit within it.
+    /// </summary>
+    public const int RequestTimeoutSeconds = 300;
+
     private static TcpListener _listener;
     private static CancellationTokenSource _cts;
 
@@ -106,7 +113,7 @@ public static class McpServer
         {
             using CancellationTokenSource timeoutCts = CancellationTokenSource.CreateLinkedTokenSource( token );
 
-            timeoutCts.CancelAfter( TimeSpan.FromSeconds( 30 ) );
+            timeoutCts.CancelAfter( TimeSpan.FromSeconds( RequestTimeoutSeconds ) );
 
             try
             {
