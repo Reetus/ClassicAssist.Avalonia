@@ -19,8 +19,8 @@ namespace ClassicAssist.Shared
     {
         void OnConnected();
         void OnDisconnected();
-        Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length );
-        Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length );
+        Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length, long sentAt );
+        Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length, long sentAt );
         void OnClientClosing();
         Task<bool> OnHotkeyPressed( int key, int mod, bool pressed );
         void OnMouse( int button, int wheel );

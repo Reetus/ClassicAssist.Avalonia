@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -18,6 +19,7 @@ using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Data.Targeting;
 using ClassicAssist.Misc;
 using ClassicAssist.Plugin.Shared;
+using ClassicAssist.Shared.Diagnostics;
 using ClassicAssist.Shared.UO;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
@@ -319,6 +321,7 @@ public static partial class Engine
 
     public static void OnClientClosing()
     {
+        PacketHandlerTiming.Shutdown();
         Options.Save( Options.CurrentOptions );
         AssistantOptions.Save();
         SentrySdk.Close();
@@ -807,40 +810,76 @@ public static partial class Engine
             Engine.OnDisconnected();
         }
 
-        public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length )
+        public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length, long sentAt )
         {
-            if ( !Installed )
+            long start = PacketHandlerTiming.Enabled ? Stopwatch.GetTimestamp() : 0L;
+
+            try
             {
-                return Task.FromResult( (true, Array.Empty<byte>(), 0) );
+                if ( !Installed )
+                {
+                    return Task.FromResult( (true, Array.Empty<byte>(), 0) );
+                }
+
+                byte[] original = new byte[length];
+                int originalLength = length;
+                Array.Copy( data, original, length );
+
+                bool result = Engine.OnPacketReceive( data, length );
+
+                bool modified = length != originalLength || !original.SequenceEqual( data );
+
+                return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
             }
-
-            byte[] original = new byte[length];
-            int originalLength = length;
-            Array.Copy( data, original, length );
-
-            bool result = Engine.OnPacketReceive( data, length );
-
-            bool modified = length != originalLength || !original.SequenceEqual( data );
-
-            return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
+            finally
+            {
+                if ( start != 0L )
+                {
+                    PacketHandlerTiming.Record( false, length > 0 ? data[0] : (byte) 0,
+                        Stopwatch.GetTimestamp() - start, RequestLatency( sentAt ) );
+                }
+            }
         }
 
-        public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length )
+        public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length, long sentAt )
         {
-            if ( !Installed )
+            long start = PacketHandlerTiming.Enabled ? Stopwatch.GetTimestamp() : 0L;
+
+            try
             {
-                return Task.FromResult( (true, Array.Empty<byte>(), 0) );
+                if ( !Installed )
+                {
+                    return Task.FromResult( (true, Array.Empty<byte>(), 0) );
+                }
+
+                byte[] original = new byte[length];
+                int originalLength = length;
+                Array.Copy( data, original, length );
+
+                bool result = Engine.OnPacketSend( data, length );
+
+                bool modified = length != originalLength || !original.SequenceEqual( data );
+
+                return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
             }
+            finally
+            {
+                if ( start != 0L )
+                {
+                    PacketHandlerTiming.Record( true, length > 0 ? data[0] : (byte) 0,
+                        Stopwatch.GetTimestamp() - start, RequestLatency( sentAt ) );
+                }
+            }
+        }
 
-            byte[] original = new byte[length];
-            int originalLength = length;
-            Array.Copy( data, original, length );
-
-            bool result = Engine.OnPacketSend( data, length );
-
-            bool modified = length != originalLength || !original.SequenceEqual( data );
-
-            return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
+        /// <summary>
+        ///     How long the request took to reach this handler, from the plugin's send tick. Everything
+        ///     the plugin's round-trip log does not attribute to the handler is split by this: if it is
+        ///     large the request sat in the queue/transport, if it is ~0 the wait was on the response.
+        /// </summary>
+        private static long RequestLatency( long sentAt )
+        {
+            return sentAt > 0 ? Environment.TickCount - sentAt : -1;
         }
 
         public void OnClientClosing()

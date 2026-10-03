@@ -157,7 +157,7 @@ namespace PacketTransportBenchmark
 
                 for ( int i = 0; i < count; i++ )
                 {
-                    pending[i] = plugin.OnPacketReceive( packet, packet.Length );
+                    pending[i] = plugin.OnPacketReceive( packet, packet.Length, Environment.TickCount );
                 }
 
                 Task.WaitAll( pending );
@@ -186,7 +186,7 @@ namespace PacketTransportBenchmark
         private static (bool, byte[], int) Call( IPluginMethods plugin, byte[] packet )
         {
             // What PluginEngine.Filter does: block the client's own thread on the UI's answer.
-            return plugin.OnPacketReceive( packet, packet.Length ).GetAwaiter().GetResult();
+            return plugin.OnPacketReceive( packet, packet.Length, Environment.TickCount ).GetAwaiter().GetResult();
         }
 
         private static void Report( string mode, int count, Stopwatch elapsed, double[] samples )
@@ -370,13 +370,13 @@ namespace PacketTransportBenchmark
 
             await Try( "OnPacketReceive", async () =>
             {
-                (bool accept, byte[] rewritten, int length) = await plugin.OnPacketReceive( [0x1B], 1 );
+                (bool accept, byte[] rewritten, int length) = await plugin.OnPacketReceive( [0x1B], 1, Environment.TickCount );
 
                 return accept && rewritten.Length == 0 && length == 0;
             } );
             await Try( "OnPacketSend", async () =>
             {
-                (bool accept, byte[] rewritten, int length) = await plugin.OnPacketSend( [0x1B], 1 );
+                (bool accept, byte[] rewritten, int length) = await plugin.OnPacketSend( [0x1B], 1, Environment.TickCount );
 
                 return accept && rewritten.Length == 0 && length == 0;
             } );
@@ -464,12 +464,12 @@ namespace PacketTransportBenchmark
                 return Task.FromResult( true );
             }
 
-            public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length )
+            public Task<(bool, byte[], int)> OnPacketSend( byte[] data, int length, long sentAt )
             {
-                return OnPacketReceive( data, length );
+                return OnPacketReceive( data, length, sentAt );
             }
 
-            public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length )
+            public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length, long sentAt )
             {
                 Interlocked.Increment( ref _received );
 
