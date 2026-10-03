@@ -71,6 +71,24 @@ namespace ClassicAssist.Plugin
 
         public static AutoResetEvent ShutdownResetEvent { get; } = new AutoResetEvent( false );
 
+        // ---------------------------------------------------------------------------------------------
+        // Packet round-trip diagnostics.
+        //
+        // The client's own thread blocks inside Filter() until the UI answers, so any latency here is a
+        // stutter in the game. Set PacketDiagnostics to true to have the plugin write
+        // Logs/packet-latency-*.log beside itself: one line per round trip at or above
+        // PacketDiagnosticsSlowThresholdMs, plus an aggregate line every PacketDiagnosticsSummarySeconds.
+        // When false the packet path pays nothing but a static field read.
+        //
+        // This is deliberately a code switch rather than a setting: turn it on to investigate, then turn
+        // it back off before shipping. Off by default; the packet path then pays only a static field read.
+        // ---------------------------------------------------------------------------------------------
+        public static bool PacketDiagnostics { get; set; } = false;
+
+        public static double PacketDiagnosticsSlowThresholdMs { get; set; } = 1.0;
+
+        public static int PacketDiagnosticsSummarySeconds { get; set; } = 5;
+
         public static Assembly ClassicAssembly { get; set; }
 
         public static string ClientPath { get; set; }
@@ -208,11 +226,11 @@ namespace ClassicAssist.Plugin
             // means no marshalling stub, so the array arrives as the real managed array with its length
             // intact rather than as a bare pointer.
             plugin->OnRecv = Marshal.GetFunctionPointerForDelegate( _onRecvDelegate =
-                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length,
-                    ( pluginMethods, buffer ) => pluginMethods.OnPacketReceive( buffer, buffer.Length ) ) );
+                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length, false,
+                    ( pluginMethods, buffer, sentAt ) => pluginMethods.OnPacketReceive( buffer, buffer.Length, sentAt ) ) );
             plugin->OnSend = Marshal.GetFunctionPointerForDelegate( _onSendDelegate =
-                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length,
-                    ( pluginMethods, buffer ) => pluginMethods.OnPacketSend( buffer, buffer.Length ) ) );
+                ( ref byte[] data, ref int length ) => FilterPacketFramework( ref data, ref length, true,
+                    ( pluginMethods, buffer, sentAt ) => pluginMethods.OnPacketSend( buffer, buffer.Length, sentAt ) ) );
 #else
             plugin->OnConnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnConnected;
             plugin->OnDisconnected = (IntPtr) (delegate* unmanaged[Cdecl]<void>) &NativeOnDisconnected;
@@ -875,6 +893,8 @@ namespace ClassicAssist.Plugin
 
         private static void OnClientClosing()
         {
+            PacketLatencyLog.Shutdown();
+
             if ( _plugin == null )
             {
                 return;
@@ -908,8 +928,8 @@ namespace ClassicAssist.Plugin
 #endif
         private static unsafe byte OnPacketSendNative( IntPtr data, int* length )
         {
-            return FilterPacketNative( data, length,
-                ( plugin, buffer ) => plugin.OnPacketSend( buffer, buffer.Length ) );
+            return FilterPacketNative( data, length, true,
+                ( plugin, buffer, sentAt ) => plugin.OnPacketSend( buffer, buffer.Length, sentAt ) );
         }
 
 #if !NETFRAMEWORK
@@ -917,8 +937,8 @@ namespace ClassicAssist.Plugin
 #endif
         private static unsafe byte OnPacketReceiveNative( IntPtr data, int* length )
         {
-            return FilterPacketNative( data, length,
-                ( plugin, buffer ) => plugin.OnPacketReceive( buffer, buffer.Length ) );
+            return FilterPacketNative( data, length, false,
+                ( plugin, buffer, sentAt ) => plugin.OnPacketReceive( buffer, buffer.Length, sentAt ) );
         }
 
         /// <summary>
@@ -948,8 +968,8 @@ namespace ClassicAssist.Plugin
         ///     Framework's flavour of <see cref="FilterPacketNative" />: identical, but taking the length
         ///     as a managed <c>ref</c> because the host's delegate signature is what the marshaller sees.
         /// </summary>
-        private static bool FilterPacketFramework( ref byte[] data, ref int length,
-            Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
+        private static bool FilterPacketFramework( ref byte[] data, ref int length, bool outgoing,
+            Func<IPluginMethods, byte[], long, Task<(bool, byte[], int)>> call )
         {
             IPluginMethods plugin = _plugin;
 
@@ -962,7 +982,7 @@ namespace ClassicAssist.Plugin
             byte[] buffer = new byte[length];
             Buffer.BlockCopy( data, 0, buffer, 0, length );
 
-            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, call );
+            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, outgoing, call );
 
             if ( newPacket != null && newLength > 0 )
             {
@@ -976,8 +996,8 @@ namespace ClassicAssist.Plugin
         }
 
 #endif
-        private static unsafe byte FilterPacketNative( IntPtr data, int* length,
-            Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
+        private static unsafe byte FilterPacketNative( IntPtr data, int* length, bool outgoing,
+            Func<IPluginMethods, byte[], long, Task<(bool, byte[], int)>> call )
         {
             IPluginMethods plugin = _plugin;
 
@@ -991,7 +1011,7 @@ namespace ClassicAssist.Plugin
 
             Marshal.Copy( data, buffer, 0, capacity );
 
-            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, call );
+            ( bool result, byte[] newPacket, int newLength ) = Filter( plugin, buffer, outgoing, call );
 
             if ( newPacket == null || newLength <= 0 || newLength > capacity )
             {
@@ -1007,28 +1027,53 @@ namespace ClassicAssist.Plugin
         /// <summary>
         ///     Asks the UI process what to do with a packet. Never throws: any failure means the UI can't
         ///     answer, and the packet should go through untouched rather than take the client down with it.
+        ///     <para>
+        ///         The client's own thread blocks here for the whole round trip. When
+        ///         <see cref="PacketDiagnostics" /> is set, the wait is timed and handed to
+        ///         <see cref="PacketLatencyLog" />; otherwise the only cost is a static field read.
+        ///     </para>
         /// </summary>
         /// <returns>
         ///     Whether to let the packet through, plus the rewritten packet, if any. A null or empty rewrite
         ///     means leave the buffer alone. The rewrite is not length-checked here - each caller knows how
         ///     much room its own buffer has.
         /// </returns>
-        private static (bool, byte[], int) Filter( IPluginMethods plugin, byte[] buffer,
-            Func<IPluginMethods, byte[], Task<(bool, byte[], int)>> call )
+        private static (bool, byte[], int) Filter( IPluginMethods plugin, byte[] buffer, bool outgoing,
+            Func<IPluginMethods, byte[], long, Task<(bool, byte[], int)>> call )
         {
             bool result;
             byte[] newPacket;
             int newLength;
 
+            bool diagnose = PacketDiagnostics;
+            long start = diagnose ? Stopwatch.GetTimestamp() : 0L;
+
+            // Wall clock the UI can compare against: Environment.TickCount64 is the same system uptime
+            // in both processes. The UI uses it to split the wait into "sat in the queue before the
+            // handler" vs "waited on the response after it".
+            long sentAt = Environment.TickCount;
+
             try
             {
-                ( result, newPacket, newLength ) = call( plugin, buffer ).Result;
+                ( result, newPacket, newLength ) = call( plugin, buffer, sentAt ).Result;
             }
             catch ( Exception e )
             {
+                if ( diagnose )
+                {
+                    PacketLatencyLog.Record( outgoing, buffer[0], buffer.Length, Stopwatch.GetTimestamp() - start,
+                        false, false, true );
+                }
+
                 OnRpcException( e, $"packet filter (0x{buffer[0]:X2})" );
 
                 return ( true, null, 0 );
+            }
+
+            if ( diagnose )
+            {
+                PacketLatencyLog.Record( outgoing, buffer[0], buffer.Length, Stopwatch.GetTimestamp() - start, result,
+                    newPacket != null && newLength > 0 );
             }
 
             if ( !result )
