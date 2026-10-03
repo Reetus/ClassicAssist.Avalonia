@@ -127,6 +127,13 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.5.302" />
+    <!--
+      Referenced directly, not left to StreamJsonRpc, so both targets resolve the one version in
+      Directory.Build.props. Left transitive, net10.0 pulls 13.0.3 and net472 13.0.1, and the
+      net10.0 copy lands in Output\ClassicAssist beside the launcher and replaces its 13.0.4 -
+      see Directory.Build.props for the MissingMethodException that causes.
+    -->
+    <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
   </ItemGroup>
 
   <!--

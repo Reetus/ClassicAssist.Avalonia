@@ -17,5 +17,7 @@
         <ProjectReference Include="..\..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
         <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
         <PackageReference Include="MessagePack" Version="2.5.302" />
+        <!-- Kept on the one version every project uses; StreamJsonRpc would otherwise resolve 13.0.3. -->
+        <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     </ItemGroup>
 </Project>

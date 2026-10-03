@@ -38,7 +38,7 @@
         <!-- No DataGrid in this app's own views; the linked ClassicAssistDark/Compact dictionaries
              style one, and Avalonia resolves every type in a dictionary at compile time. -->
         <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     </ItemGroup>
     <ItemGroup>
         <InternalsVisibleTo Include="ClassicAssist.Tests" />

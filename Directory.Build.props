@@ -19,6 +19,21 @@
   </PropertyGroup>
 
   <!--
+    One Newtonsoft.Json version across every project.
+
+    It arrives transitively through StreamJsonRpc, and NuGet resolves whichever version the
+    referencer asks for: the plugin's net10.0 build would take 13.0.3 (StreamJsonRpc 2.22.23) and
+    its net472 build 13.0.1 (StreamJsonRpc 2.13.33). The net10.0 build outputs into the same
+    Output\ClassicAssist folder as the launcher, so its older copy replaces the launcher's 13.0.4.
+    13.0.4 is the release that added the single-argument JToken.WriteTo(JsonWriter) overload the
+    launcher's shutdown save binds to, so the launcher then dies with MissingMethodException. Every
+    project references this one version explicitly to stop the downgrade.
+  -->
+  <PropertyGroup>
+    <NewtonsoftJsonVersion>13.0.4</NewtonsoftJsonVersion>
+  </PropertyGroup>
+
+  <!--
     One version for every assembly, set here rather than per project so they cannot drift apart.
 
     Only a development build ever sees it: `dotnet build -p:Version=...` passes a global property,
