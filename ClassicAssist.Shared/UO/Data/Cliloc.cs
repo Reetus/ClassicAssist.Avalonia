@@ -65,79 +65,213 @@ public static class Cliloc
     {
         // Ordinal comparison rather than ToLower(), which allocated two lowercased copies of the string
         // on every call for a check that nearly always fails.
-        if ( tokenizedString.Contains( "http://", StringComparison.OrdinalIgnoreCase ) ||
-             tokenizedString.Contains( "https://", StringComparison.OrdinalIgnoreCase ) )
+        if ( tokenizedString.IndexOf( "http://", StringComparison.OrdinalIgnoreCase ) >= 0 ||
+             tokenizedString.IndexOf( "https://", StringComparison.OrdinalIgnoreCase ) >= 0 )
         {
             return tokenizedString;
         }
 
-        // Tracks whether the pass below actually replaced anything. Without it a '#' that starts no
-        // token - most obviously a trailing one, as in "you see: #" - satisfies the Contains check
-        // forever while the pass does nothing, and the caller hangs. Journal text and gump text come
-        // straight from the server, so that string is reachable from outside.
-        bool replaced = true;
-
-        while ( replaced && tokenizedString.Contains( "#" ) )
+        if ( tokenizedString.IndexOf( '#' ) < 0 )
         {
-            replaced = false;
-
-            for ( int x = 0; x < tokenizedString.Length; x++ )
-            {
-                if ( tokenizedString[x] != '#' || x >= tokenizedString.Length - 1 )
-                {
-                    continue;
-                }
-
-                if ( !char.IsNumber( tokenizedString[x + 1] ) )
-                {
-                    return tokenizedString;
-                }
-
-                int y;
-
-                for ( y = x + 1; y < tokenizedString.Length; y++ )
-                {
-                    if ( !char.IsNumber( tokenizedString[y] ) )
-                    {
-                        break;
-                    }
-                }
-
-                string token = tokenizedString[x..y];
-                string tokenNum = tokenizedString.Substring( x + 1, y - x - 1 );
-
-                if ( tokenNum.Length <= 0 )
-                {
-                    continue;
-                }
-
-                if ( !int.TryParse( tokenNum, out int propertyNum ) )
-                {
-                    return tokenizedString;
-                }
-
-                string property = GetProperty( propertyNum );
-                tokenizedString = tokenizedString.Replace( token, property );
-                replaced = true;
-            }
+            return tokenizedString;
         }
 
-        return tokenizedString;
+        // One StringBuilder pass per round instead of a Substring + string.Replace per token, which
+        // allocated a fresh copy of the whole string for every replacement. A round can insert a value
+        // that itself contains a #token, so repeat while any remain - the original Replace loop did the
+        // same. Progress is checked so a value equal to its own token cannot spin.
+        string current = tokenizedString;
+
+        while ( true )
+        {
+            ReadOnlySpan<char> source = current;
+            StringBuilder builder = null;
+            int position = 0;
+            bool replaced = false;
+
+            while ( position < source.Length )
+            {
+                int index = source[position..].IndexOf( '#' );
+
+                if ( index < 0 )
+                {
+                    break;
+                }
+
+                index += position;
+
+                // A '#' that starts no digit run is literal text. Returning the string as it stands
+                // here is what the old pass did - and it is what stops a trailing '#' from hanging.
+                if ( index + 1 >= source.Length || !char.IsNumber( source[index + 1] ) )
+                {
+                    break;
+                }
+
+                int end = index + 1;
+
+                while ( end < source.Length && char.IsNumber( source[end] ) )
+                {
+                    end++;
+                }
+
+                if ( !int.TryParse( source.Slice( index + 1, end - index - 1 ), out int propertyNum ) )
+                {
+                    break;
+                }
+
+                builder ??= new StringBuilder( current.Length );
+                builder.Append( source[position..index] );
+                builder.Append( GetProperty( propertyNum ) );
+
+                position = end;
+                replaced = true;
+            }
+
+            if ( !replaced )
+            {
+                return current;
+            }
+
+            builder.Append( source[position..] );
+
+            string result = builder.ToString();
+
+            if ( result == current || result.IndexOf( '#' ) < 0 )
+            {
+                return result;
+            }
+
+            current = result;
+        }
     }
 
     public static string GetLocalString( int property, string[] arguments )
     {
         string propertyString = GetProperty( property );
 
-        if ( arguments == null )
+        if ( arguments == null || arguments.Length == 0 )
         {
             return propertyString;
         }
 
-        //foreach (string s in arguments)
+        ReadOnlySpan<char> source = propertyString;
+
+        // Expand the # tokens in the arguments once, writing back as the old path did. This happens
+        // even when the property text has no placeholders: callers read the expanded arguments off
+        // Property.Arguments (autoloot's skill-bonus match reads Arguments[0]/[1] directly), and the
+        // old loop expanded at least the first argument before giving up on the missing placeholder.
+        for ( int i = 0; i < arguments.Length; i++ )
+        {
+            string expanded = GetLocalString( arguments[i] );
+
+            // An argument that itself contains a '~' could be re-scanned as a placeholder by the old
+            // Replace loop; leave that (rare) shape to it.
+            if ( expanded.IndexOf( '~' ) >= 0 )
+            {
+                return GetLocalStringReplace( propertyString, arguments );
+            }
+
+            arguments[i] = expanded;
+        }
+
+        if ( source.IndexOf( '~' ) < 0 )
+        {
+            return propertyString;
+        }
+
+        // Distinct ~...~ tokens, in order of first appearance, each mapped to an argument. The old
+        // implementation replaced every occurrence of a token before moving on, so a repeated token
+        // shares one argument - reusing the index of a token already seen reproduces that.
+        const int MaxTokens = 64;
+
+        Span<int> tokenStarts = stackalloc int[MaxTokens];
+        Span<int> tokenLengths = stackalloc int[MaxTokens];
+        Span<int> tokenArguments = stackalloc int[MaxTokens];
+        int tokenCount = 0;
+        int nextArgument = 0;
+
+        StringBuilder builder = null;
+        int position = 0;
+
+        while ( position < source.Length )
+        {
+            int open = source[position..].IndexOf( '~' );
+
+            if ( open < 0 )
+            {
+                break;
+            }
+
+            open += position;
+
+            int close = source[( open + 1 )..].IndexOf( '~' );
+
+            if ( close < 0 )
+            {
+                break;
+            }
+
+            close += open + 1;
+
+            ReadOnlySpan<char> token = source.Slice( open, close - open + 1 );
+            int mapped = -1;
+
+            for ( int t = 0; t < tokenCount; t++ )
+            {
+                if ( source.Slice( tokenStarts[t], tokenLengths[t] ).SequenceEqual( token ) )
+                {
+                    mapped = tokenArguments[t];
+                    break;
+                }
+            }
+
+            if ( mapped < 0 )
+            {
+                // Arguments exhausted: the old loop stopped here and left the rest untouched.
+                if ( nextArgument >= arguments.Length )
+                {
+                    break;
+                }
+
+                if ( tokenCount >= MaxTokens )
+                {
+                    return GetLocalStringReplace( propertyString, arguments );
+                }
+
+                mapped = nextArgument++;
+                tokenStarts[tokenCount] = open;
+                tokenLengths[tokenCount] = close - open + 1;
+                tokenArguments[tokenCount] = mapped;
+                tokenCount++;
+            }
+
+            builder ??= new StringBuilder( propertyString.Length + 16 );
+            builder.Append( source[position..open] );
+            builder.Append( arguments[mapped] );
+            position = close + 1;
+        }
+
+        if ( builder == null )
+        {
+            // Nothing was substituted (a lone '~', say); return the property text as-is.
+            return propertyString;
+        }
+
+        builder.Append( source[position..] );
+
+        return builder.ToString();
+    }
+
+    /// <summary>
+    ///     The historical <c>Replace</c>-per-placeholder implementation, kept only as a fallback for
+    ///     the rare shapes <see cref="GetLocalString( int, string[] )" /> cannot reproduce exactly.
+    /// </summary>
+    private static string GetLocalStringReplace( string propertyString, string[] arguments )
+    {
         for ( int x = 0; x < arguments.Length; x++ )
         {
             arguments[x] = GetLocalString( arguments[x] );
+
             bool found = false;
             int start = 0;
             int index = 0;
@@ -178,6 +312,34 @@ public static class Cliloc
         // runs after the version is known. Leaving a list loaded from an earlier call in place would
         // pin whatever was read first for the lifetime of the process.
         _lazyClilocList = new Lazy<Dictionary<int, string>>( LoadClilocs );
+    }
+
+    /// <summary>
+    ///     Forces the cliloc list to load now rather than on the first lookup.
+    ///     <para>
+    ///         <see cref="LoadClilocs" /> reads the whole Cliloc file and, on clients from 7.0.104,
+    ///         BWT-decompresses it before parsing every entry into the dictionary. Because the list is
+    ///         behind a <see cref="Lazy{T}" />, the first <see cref="GetProperty" /> call pays all of
+    ///         that - and the first lookup in a session is a localized message, which runs on the packet
+    ///         path and blocks the client's own thread while the UI answers. That was measured at ~1.6s
+    ///         on the first 0xC1 after login.
+    ///     </para>
+    ///     <para>
+    ///         <see cref="Engine.InstallRPC" /> calls this before flipping <c>Installed</c>, so the cost
+    ///         is paid once during startup (behind the splash) and no packet ever waits on it.
+    ///     </para>
+    /// </summary>
+    public static void Preload()
+    {
+        try
+        {
+            _ = _lazyClilocList.Value;
+        }
+        catch ( Exception )
+        {
+            // A missing or unreadable Cliloc file already degrades to "Localized string N not found!"
+            // per lookup; a startup that dies here would only be worse.
+        }
     }
 
     internal static void Initialize( Func<Dictionary<int, string>> customInitializer )

@@ -206,6 +206,13 @@ public static partial class Engine
         Art.Initialize( ClientPath );
         Hues.Initialize( ClientPath );
         Cliloc.Initialize( ClientPath );
+
+        // Force the cliloc load here rather than letting the first localized message trigger it on the
+        // packet path, where it blocks the client's thread for the duration of the read + BWT decode
+        // (measured ~1.6s on the first 0xC1). Runs before Installed flips, so nothing is being filtered
+        // yet and the cost lands during startup behind the splash.
+        Cliloc.Preload();
+
         Skills.Initialize( ClientPath );
         Speech.Initialize( ClientPath );
         TileData.Initialize( ClientPath );
