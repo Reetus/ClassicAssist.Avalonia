@@ -58,6 +58,11 @@ public static partial class Engine
     private static SendRecvPacket _sendToClient;
     private static SendRecvPacket _sendToServer;
     private static GetPacketLength _getPacketLength;
+
+    // Packet length per id, cached. It is fixed for the life of the connection, but ProcessIncomingQueue
+    // and ProcessOutgoingQueue used to ask the plugin over RPC for every single packet - a reverse round
+    // trip per packet that competed with the response path on the plugin's RPC read loop.
+    private static readonly ConcurrentDictionary<byte, short> _packetLengthCache = new();
     private static readonly PacketFilter _incomingPacketFilter = new();
     private static readonly PacketFilter _outgoingPacketPreFilter = new();
     private static readonly PacketFilter _outgoingPacketPostFilter = new();
@@ -210,6 +215,7 @@ public static partial class Engine
         InitializeExtensions();
 
         _getPacketLength = id => Host.GetPacketLength( id ).Result;
+        _packetLengthCache.Clear();
         _sendToClient = SendPacketToClientPlugin;
         _sendToServer = SendPacketToServerPlugin;
         _requestMove = ( dir, run ) => Host.RequestMove( dir, run ).Result;
@@ -393,6 +399,15 @@ public static partial class Engine
         AssistantOptions.Load();
     }
 
+    /// <summary>
+    ///     Packet length for an id, cached. The length is fixed for the life of the connection, so this
+    ///     turns a reverse RPC per packet into one per id.
+    /// </summary>
+    private static int GetPacketLengthCached( byte id )
+    {
+        return _packetLengthCache.GetOrAdd( id, static key => _getPacketLength( key ) );
+    }
+
     private static void ProcessIncomingQueue( Packet packet )
     {
         try
@@ -401,7 +416,7 @@ public static partial class Engine
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( packet.GetPacketID() );
 
-            int length = _getPacketLength( packet.GetPacketID() );
+            int length = GetPacketLengthCached( packet.GetPacketID() );
 
             handler?.OnReceive?.Invoke( new PacketReader( packet.GetPacket(), packet.GetLength(), length > 0 ) );
 
@@ -427,7 +442,7 @@ public static partial class Engine
 
             PacketHandler handler = OutgoingPacketHandlers.GetHandler( packet.GetPacketID() );
 
-            int length = _getPacketLength( packet.GetPacketID() );
+            int length = GetPacketLengthCached( packet.GetPacketID() );
 
             handler?.OnReceive?.Invoke( new PacketReader( packet.GetPacket(), packet.GetLength(), length > 0 ) );
 
