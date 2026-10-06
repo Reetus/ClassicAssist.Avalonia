@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
 
 namespace ClassicAssist.Data.Filters;
@@ -10,6 +12,11 @@ public class WeatherFilter : DynamicFilterEntry
     protected override void OnChanged( bool enabled )
     {
         IsEnabled = enabled;
+    }
+
+    public override IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return IsEnabled ? [new PacketWaitRule( 0x65 )] : [];
     }
 
     public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )

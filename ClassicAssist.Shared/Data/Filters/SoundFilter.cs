@@ -18,14 +18,17 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UI;
 using ClassicAssist.Shared.UI.ViewModels.Filters;
+using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -161,6 +164,30 @@ public class SoundFilter : DynamicFilterEntry, IConfigurableFilter
     protected override void OnChanged( bool enabled )
     {
         IsEnabled = enabled;
+    }
+
+    // 0x54 carries the sound id at offset 2
+    private const int SOUND_ID_OFFSET = 2;
+
+    // Past this many sounds a rule per id buys little over waiting on every sound
+    private const int MAX_SOUND_RULES = 256;
+
+    /// <summary>
+    ///     0x54 for each enabled sound. Edits to the list or an entry's Enabled flag have no change
+    ///     event of their own; <see cref="PacketWaitRegistry.CheckPeriodic" /> picks them up.
+    /// </summary>
+    public override IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        if ( !IsEnabled )
+        {
+            return [];
+        }
+
+        int[] soundIds = [.. Items.ToArray().Where( e => e is { Enabled: true, SoundIDs: not null } ).SelectMany( e => e.SoundIDs ).Distinct()];
+
+        return soundIds.Length > MAX_SOUND_RULES
+            ? [new PacketWaitRule( 0x54 )]
+            : soundIds.Select( id => PacketWaitRegistry.ShortAt( 0x54, SOUND_ID_OFFSET, id ) );
     }
 
     public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )

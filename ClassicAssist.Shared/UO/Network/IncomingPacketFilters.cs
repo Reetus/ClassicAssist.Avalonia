@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Filters;
@@ -16,15 +18,93 @@ public static class IncomingPacketFilters
 
     private static readonly Dictionary<byte, OnReceive> _filters = [];
 
+    // What each registration can drop or rewrite right now. Kept beside the registrations so a new
+    // handler cannot be added without saying when the plugin must wait for it.
+    private static readonly Dictionary<byte, Func<IEnumerable<PacketWaitRule>>> _waitRules = [];
+
+    // Serial offsets per id, for the rehue checks (see RehueList)
+    private const int MOBILE_UPDATE_SERIAL = 1;
+    private const int MOBILE_MOVING_SERIAL = 1;
+    private const int MOBILE_INCOMING_SERIAL = 3;
+    private const int SA_WORLD_ITEM_SERIAL = 4;
+
+    // Cliloc number offset in 0xC1 and 0xCC: id, length, serial, graphic, type, hue, font, cliloc
+    private const int LOCALIZED_CLILOC = 14;
+
     public static void Initialize()
     {
-        Register( 0x1C, OnASCIIMessage );
-        Register( 0x20, OnMobileUpdate );
-        Register( 0x77, OnMobileMoving );
-        Register( 0x78, OnMobileIncoming );
-        Register( 0xC1, OnLocalizedMessage );
-        Register( 0xCC, OnLocalizedMessageAffix );
-        Register( 0xF3, OnSAWorldItem );
+        Register( 0x1C, OnASCIIMessage, RepeatedMessagesRules( 0x1C ) );
+        Register( 0x20, OnMobileUpdate, () => MobileRehueRules( 0x20, MOBILE_UPDATE_SERIAL ) );
+        Register( 0x77, OnMobileMoving, () => MobileRehueRules( 0x77, MOBILE_MOVING_SERIAL ) );
+        Register( 0x78, OnMobileIncoming, () => MobileRehueRules( 0x78, MOBILE_INCOMING_SERIAL ) );
+        Register( 0xC1, OnLocalizedMessage, () => LocalizedMessageRules( 0xC1 ) );
+        Register( 0xCC, OnLocalizedMessageAffix, () => LocalizedMessageRules( 0xCC ) );
+        Register( 0xF3, OnSAWorldItem,
+            () => Engine.RehueList.GetSerials().Select( serial => PacketWaitRegistry.IntAt( 0xF3, SA_WORLD_ITEM_SERIAL, serial ) ) );
+    }
+
+    /// <summary>
+    ///     Everything this class and the option filters (<see cref="DynamicFilterEntry" />) might drop
+    ///     or rewrite at the moment. See <see cref="PacketWaitRegistry" />.
+    /// </summary>
+    public static IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        List<PacketWaitRule> rules = [];
+
+        foreach ( Func<IEnumerable<PacketWaitRule>> provider in _waitRules.Values )
+        {
+            rules.AddRange( provider() );
+        }
+
+        foreach ( DynamicFilterEntry entry in DynamicFilterEntry.Filters.ToArray() )
+        {
+            if ( entry.Enabled )
+            {
+                rules.AddRange( entry.GetWaitRules() );
+            }
+        }
+
+        return rules;
+    }
+
+    private static Func<IEnumerable<PacketWaitRule>> RepeatedMessagesRules( byte packetId )
+    {
+        // Which messages count as repeated depends on the text and timing, so all of them
+        return () => RepeatedMessagesFilter.IsEnabled ? PacketWaitRegistry.AllOf( false, packetId ) : [];
+    }
+
+    private static IEnumerable<PacketWaitRule> LocalizedMessageRules( byte packetId )
+    {
+        if ( RepeatedMessagesFilter.IsEnabled )
+        {
+            return PacketWaitRegistry.AllOf( false, packetId );
+        }
+
+        if ( !ClilocFilter.IsEnabled )
+        {
+            return [];
+        }
+
+        return ClilocFilter.Filters.ToArray().Where( f => f != null && f.Cliloc != 0 ).Select( f => f.Cliloc ).Distinct()
+            .Select( cliloc => PacketWaitRegistry.IntAt( packetId, LOCALIZED_CLILOC, cliloc ) );
+    }
+
+    /// <summary>
+    ///     A mobile packet is replaced by a rehued copy when its serial is in the rehue list, or when
+    ///     friends are rehued and it is a friend.
+    /// </summary>
+    private static IEnumerable<PacketWaitRule> MobileRehueRules( byte packetId, int serialOffset )
+    {
+        IEnumerable<int> serials = Engine.RehueList.GetSerials();
+
+        Options options = Options.CurrentOptions;
+
+        if ( options is { RehueFriends: true, Friends: not null } )
+        {
+            serials = serials.Concat( options.Friends.ToArray().Where( f => f != null ).Select( f => f.Serial ) );
+        }
+
+        return serials.Distinct().Select( serial => PacketWaitRegistry.IntAt( packetId, serialOffset, serial ) );
     }
 
     private static bool OnASCIIMessage( ref byte[] packet, ref int length )
@@ -280,11 +360,12 @@ public static class IncomingPacketFilters
         return block || ClilocFilter.CheckMessageAffix( journalEntry, affixType, affix );
     }
 
-    private static void Register( byte packetId, OnReceive action )
+    private static void Register( byte packetId, OnReceive action, Func<IEnumerable<PacketWaitRule>> waitRules )
     {
         if ( !_filters.ContainsKey( packetId ) )
         {
             _filters.Add( packetId, action );
+            _waitRules.Add( packetId, waitRules );
         }
     }
 

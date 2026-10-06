@@ -79,5 +79,14 @@ namespace ClassicAssist.Plugin.Shared
         Task<bool> IsReflectionAvailable();
 
         void OnShutdown();
+
+        /// <summary>
+        ///     Replaces the set of packets the plugin must wait on the UI for: everything the UI might
+        ///     drop or rewrite. Packets matching no rule are batched and delivered one-way through
+        ///     <see cref="ClassicAssist.Shared.IPluginMethods.OnPacketBatch" />. Until the first call
+        ///     the plugin waits on every packet. Returns once the plugin has switched to the new set,
+        ///     so a filter is only relied on after this completes.
+        /// </summary>
+        Task<bool> SetPacketWaitRules( PacketWaitRule[] rules );
     }
 }

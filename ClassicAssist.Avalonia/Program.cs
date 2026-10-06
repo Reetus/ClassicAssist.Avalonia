@@ -24,6 +24,7 @@ using ClassicAssist.Plugin.Shared;
 using MessagePack;
 using MessagePack.Formatters;
 using MessagePack.Resolvers;
+using Microsoft.VisualStudio.Threading;
 using StreamJsonRpc;
 
 namespace ClassicAssist.Avalonia;
@@ -77,7 +78,7 @@ internal class Program
 
         Rpc = messagePack
             ? CreateMessagePackRpc( stream, new Shared.Engine.PluginMethods() )
-            : JsonRpc.Attach( stream, new Shared.Engine.PluginMethods() );
+            : CreateJsonRpc( stream, new Shared.Engine.PluginMethods() );
 
         Host = Rpc.Attach<IHostMethods>();
 
@@ -119,7 +120,31 @@ internal class Program
         LengthHeaderMessageHandler handler = new( System.IO.Pipelines.PipeWriter.Create( stream ),
             System.IO.Pipelines.PipeReader.Create( stream ), formatter );
 
-        JsonRpc rpc = new( handler, target );
+        return StartListening( new JsonRpc( handler ), target );
+    }
+
+    /// <summary>
+    ///     What <see cref="JsonRpc.Attach(Stream, object)" /> builds - header-delimited JSON, which the
+    ///     Framework plugin's older StreamJsonRpc speaks - but listening only once
+    ///     <see cref="StartListening" /> has set up ordered dispatch.
+    /// </summary>
+    private static JsonRpc CreateJsonRpc( Stream stream, object target )
+    {
+        return StartListening( new JsonRpc( stream ), target );
+    }
+
+    /// <summary>
+    ///     Dispatches the plugin's calls one at a time, in the order they arrived. By default
+    ///     StreamJsonRpc runs each on the thread pool, concurrently, which was harmless while the
+    ///     plugin waited on every packet. Now packets it doesn't wait on arrive in batches
+    ///     (<see cref="IPluginMethods.OnPacketBatch" />) and the next waited-for packet can follow
+    ///     right behind, so they have to be handled in order. Nothing dispatched here may wait on a
+    ///     later call; ticks run on a thread of their own for that reason (see Engine.QueueTick).
+    /// </summary>
+    private static JsonRpc StartListening( JsonRpc rpc, object target )
+    {
+        rpc.AddLocalRpcTarget( target );
+        rpc.SynchronizationContext = new NonConcurrentSynchronizationContext( false );
         rpc.StartListening();
 
         return rpc;

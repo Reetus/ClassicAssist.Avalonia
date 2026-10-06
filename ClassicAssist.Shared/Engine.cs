@@ -105,7 +105,7 @@ public static partial class Engine
     ///     <see cref="InstallRPC" /> has finished loading the UO files and building the managers.
     ///     Callbacks arriving before that are dropped rather than crashing on half-built state.
     /// </summary>
-    public static bool Installed { get; private set; }
+    public static bool Installed { get; internal set; }
 
     public static bool IsClientFocused { get; set; }
     public static ItemCollection Items { get; set; } = new( 0 );
@@ -145,7 +145,7 @@ public static partial class Engine
     ///     Work queued from off-tick contexts (macro commands, extensions) that needs to run on the next
     ///     <c>OnTick</c> callback instead. Mirrors upstream ClassicAssist's <c>Engine.TickWorkQueue</c> -
     ///     unlike <c>PluginEngine.TickWorkQueue</c>, which drains reflection calls on the client's own thread,
-    ///     this one drains on whatever thread the UI process's inbound RPC <c>OnTick</c> arrives on.
+    ///     this one drains on the UI process's tick thread, which each inbound RPC <c>OnTick</c> wakes.
     /// </summary>
     public static Queue<Action> TickWorkQueue { get; set; } = new();
 
@@ -230,6 +230,10 @@ public static partial class Engine
         _requestMove = ( dir, run ) => Host.RequestMove( dir, run ).Result;
 
         Installed = true;
+
+        // Until this lands the plugin waits on every packet, which is always correct, just slow
+        PacketWaitRegistry.Reset();
+        PacketWaitRegistry.PushNow( true );
     }
 
     public static void InitializeExtensions()
@@ -397,6 +401,7 @@ public static partial class Engine
 
         IncomingQueue = new ThreadQueue<Packet>( ProcessIncomingQueue );
         OutgoingQueue = new ThreadQueue<Packet>( ProcessOutgoingQueue );
+        _tickQueue ??= new ThreadQueue<object>( _ => RunTick() );
 
         IncomingPacketHandlers.Initialize();
         OutgoingPacketHandlers.Initialize();
@@ -762,6 +767,36 @@ public static partial class Engine
         return Assembly.GetAssembly( typeof( Engine ) ).GetManifestResourceStream( $"ClassicAssist.Shared.Resources.{name}" );
     }
 
+    // Ticks run on their own thread rather than on the RPC dispatch: incoming calls are dispatched one
+    // at a time so batched and waited-for packets stay in order, and a slow tick there would hold up
+    // the client's next waited-for packet. Coalesced, so a backlog never builds up.
+    private static ThreadQueue<object> _tickQueue;
+    private static int _tickPending;
+    private static readonly object _tickToken = new();
+
+    private static void QueueTick()
+    {
+        if ( _tickQueue == null )
+        {
+            RunTick();
+
+            return;
+        }
+
+        if ( Interlocked.Exchange( ref _tickPending, 1 ) == 0 )
+        {
+            _tickQueue.Enqueue( _tickToken );
+        }
+    }
+
+    private static void RunTick()
+    {
+        Interlocked.Exchange( ref _tickPending, 0 );
+
+        OnTick();
+        PacketWaitRegistry.CheckPeriodic();
+    }
+
     private static void OnTick()
     {
         try
@@ -821,13 +856,7 @@ public static partial class Engine
                     return Task.FromResult( (true, Array.Empty<byte>(), 0) );
                 }
 
-                byte[] original = new byte[length];
-                int originalLength = length;
-                Array.Copy( data, original, length );
-
-                bool result = Engine.OnPacketReceive( data, length );
-
-                bool modified = length != originalLength || !original.SequenceEqual( data );
+                (bool result, bool modified) = Process( data, length, false );
 
                 return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
             }
@@ -852,13 +881,7 @@ public static partial class Engine
                     return Task.FromResult( (true, Array.Empty<byte>(), 0) );
                 }
 
-                byte[] original = new byte[length];
-                int originalLength = length;
-                Array.Copy( data, original, length );
-
-                bool result = Engine.OnPacketSend( data, length );
-
-                bool modified = length != originalLength || !original.SequenceEqual( data );
+                (bool result, bool modified) = Process( data, length, true );
 
                 return Task.FromResult( (result, modified ? data : [], modified ? length : 0) );
             }
@@ -870,6 +893,90 @@ public static partial class Engine
                         Stopwatch.GetTimestamp() - start, RequestLatency( sentAt ) );
                 }
             }
+        }
+
+        /// <summary>
+        ///     Packets the plugin let through without waiting. They take the same path as a waited-for
+        ///     packet, in order, so handlers, wait entries and events see them exactly as before; only
+        ///     the verdict is ignored, because the client already has the original.
+        /// </summary>
+        public void OnPacketBatch( byte[] packed )
+        {
+            if ( !Installed )
+            {
+                return;
+            }
+
+            List<PacketBatchEntry> entries;
+
+            try
+            {
+                entries = PacketBatchWriter.Read( packed );
+            }
+            catch ( FormatException e )
+            {
+                SentrySdk.CaptureException( e );
+
+                return;
+            }
+
+            foreach ( PacketBatchEntry entry in entries )
+            {
+                if ( entry.Packet.Length == 0 )
+                {
+                    continue;
+                }
+
+                try
+                {
+                    (bool result, bool modified) = Process( entry.Packet, entry.Packet.Length, entry.Outgoing );
+
+                    if ( !result || modified )
+                    {
+                        // A wait rule is missing: the UI wanted to drop or rewrite this, but the client
+                        // has already seen the original.
+                        WarnRuleGap( entry.Packet[0], entry.Outgoing, result ? "rewritten" : "dropped" );
+                    }
+                }
+                catch ( Exception e )
+                {
+                    SentrySdk.CaptureException( e, scope => scope.SetExtra( "Packet", entry.Packet ) );
+                }
+            }
+        }
+
+        private static readonly bool[] _ruleGapWarned = new bool[0x200];
+
+        private static void WarnRuleGap( byte id, bool outgoing, string what )
+        {
+            int key = ( outgoing ? 0x100 : 0 ) | id;
+
+            if ( _ruleGapWarned[key] )
+            {
+                return;
+            }
+
+            _ruleGapWarned[key] = true;
+
+            Console.Error.WriteLine(
+                $"ClassicAssist: batched {( outgoing ? "outgoing" : "incoming" )} packet 0x{id:X2} would have been {what}; no packet wait rule covers it" );
+        }
+
+        /// <summary>
+        ///     Runs one packet through the synchronous path and reports whether it may pass and whether
+        ///     the path rewrote it in place.
+        /// </summary>
+        private static (bool result, bool modified) Process( byte[] data, int length, bool outgoing )
+        {
+            byte[] original = new byte[length];
+            int originalLength = length;
+            Array.Copy( data, original, length );
+
+            bool result = outgoing ? Engine.OnPacketSend( data, length ) : Engine.OnPacketReceive( data, length );
+
+            bool modified = length != originalLength || !original.AsSpan().SequenceEqual( data.AsSpan( 0, length ) );
+
+            return (result, modified);
         }
 
         /// <summary>
@@ -914,7 +1021,7 @@ public static partial class Engine
                 return;
             }
 
-            Engine.OnTick();
+            QueueTick();
         }
 
         public void OnFocusChanged( bool focus )
@@ -1065,6 +1172,10 @@ public static partial class Engine
         Connected = true;
 
         ConnectedEvent?.Invoke();
+
+        // A new connection may follow a plugin restart; make sure it holds the current rules
+        PacketWaitRegistry.Reset();
+        PacketWaitRegistry.Invalidate();
     }
 
     public static void OnDisconnected()

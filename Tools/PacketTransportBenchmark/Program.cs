@@ -13,11 +13,13 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Pipelines;
 using System.IO.Pipes;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Plugin.Shared;
@@ -50,7 +52,7 @@ namespace PacketTransportBenchmark
     ///         to round-trip every member of both RPC interfaces over the production formatter.
     ///     </para>
     /// </summary>
-    internal static class Program
+    internal static partial class Program
     {
         private const int Warmup = 2000;
         private const int DefaultPacketSize = 64;
@@ -61,6 +63,13 @@ namespace PacketTransportBenchmark
             if ( args.Length >= 3 && args[0] == "child" )
             {
                 await ConnectAndServe( args[1], ParseFormatter( args[2] ) );
+
+                return;
+            }
+
+            if ( args.Length >= 2 && args[0] == "replay" )
+            {
+                await RunReplay( args[1], args );
 
                 return;
             }
@@ -318,6 +327,8 @@ namespace PacketTransportBenchmark
                 pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, System.IO.Pipes.PipeOptions.Asynchronous );
 
             TaskCompletionSource uiDone = new( TaskCreationOptions.RunContinuationsAsynchronously );
+            PacketSink contractSink = new();
+            HostStub hostStub = new();
 
             // UI endpoint: hosts IPluginMethods, calls IHostMethods.
             Task ui = Task.Run( async () =>
@@ -327,7 +338,7 @@ namespace PacketTransportBenchmark
 
                 await client.ConnectAsync( 10000 );
 
-                using JsonRpc rpc = new( CreateHandler( client, FormatterKind.MessagePack ), new PacketSink() );
+                using JsonRpc rpc = new( CreateHandler( client, FormatterKind.MessagePack ), contractSink );
                 rpc.StartListening();
 
                 IHostMethods host = rpc.Attach<IHostMethods>();
@@ -355,6 +366,19 @@ namespace PacketTransportBenchmark
                 await Try( "IsReflectionAvailable", async () => await host.IsReflectionAvailable() );
                 await Try( "HasDisconnectedGump", async () => await host.HasDisconnectedGump() == false );
 
+                // Conditions, a negated one and an outgoing rule: everything the plugin compiles from
+                PacketWaitRule[] rules =
+                [
+                    PacketWaitRule.FromPattern( "65" ),
+                    PacketWaitRule.FromPattern( "BF ?? ?? 00 08" ),
+                    new PacketWaitRule( 0x1D, false, new PacketWaitCondition( 5, [0xFF], true ) ),
+                    PacketWaitRule.FromPattern( "06", true )
+                ];
+
+                await Try( "SetPacketWaitRules", async () =>
+                    await host.SetPacketWaitRules( rules ) && hostStub.LastRules != null &&
+                    rules.Select( r => r.ToString() ).SequenceEqual( hostStub.LastRules.Select( r => r.ToString() ) ) );
+
                 uiDone.TrySetResult();
 
                 await rpc.Completion;
@@ -363,7 +387,7 @@ namespace PacketTransportBenchmark
             await server.WaitForConnectionAsync();
 
             // Plugin endpoint: hosts IHostMethods, calls IPluginMethods.
-            using JsonRpc pluginRpc = new( CreateHandler( server, FormatterKind.MessagePack ), new HostStub() );
+            using JsonRpc pluginRpc = new( CreateHandler( server, FormatterKind.MessagePack ), hostStub );
             pluginRpc.StartListening();
 
             IPluginMethods plugin = pluginRpc.Attach<IPluginMethods>();
@@ -381,6 +405,23 @@ namespace PacketTransportBenchmark
                 return accept && rewritten.Length == 0 && length == 0;
             } );
             await Try( "OnHotkeyPressed", async () => await plugin.OnHotkeyPressed( 1, 2, true ) );
+            await Try( "OnPacketBatch", async () =>
+            {
+                byte[] incoming = [0xD6, 0x00, 0x05, 0x01, 0x02];
+                byte[] outgoing = [0x06, 0x00, 0x00, 0x00, 0x01];
+
+                PacketBatchWriter writer = new();
+                writer.Add( incoming, false );
+                writer.Add( outgoing, true );
+
+                // One-way: void on the contract, so the proxy sends a notification
+                plugin.OnPacketBatch( writer.ToArray() );
+
+                PacketBatchEntry[] received = await contractSink.WaitForBatch( TimeSpan.FromSeconds( 5 ) );
+
+                return received.Length == 2 && received[0].Packet.AsSpan().SequenceEqual( incoming ) && !received[0].Outgoing &&
+                       received[1].Packet.AsSpan().SequenceEqual( outgoing ) && received[1].Outgoing;
+            } );
 
             await uiDone.Task;
             pluginRpc.Dispose();
@@ -469,6 +510,30 @@ namespace PacketTransportBenchmark
                 return OnPacketReceive( data, length, sentAt );
             }
 
+            private readonly TaskCompletionSource<PacketBatchEntry[]> _firstBatch = new( TaskCreationOptions.RunContinuationsAsynchronously );
+
+            /// <summary>
+            ///     The batched one-way path: every packet gets the same copy + compare a waited-for one
+            ///     does, so the replay charges the UI side the same work per packet either way.
+            /// </summary>
+            public void OnPacketBatch( byte[] packed )
+            {
+                List<PacketBatchEntry> entries = PacketBatchWriter.Read( packed );
+
+                foreach ( PacketBatchEntry entry in entries )
+                {
+                    _ = OnPacketReceive( entry.Packet, entry.Packet.Length, 0 );
+                }
+
+                _firstBatch.TrySetResult( entries.ToArray() );
+            }
+
+            /// <summary>The first batch received, for the contract check.</summary>
+            public Task<PacketBatchEntry[]> WaitForBatch( TimeSpan timeout )
+            {
+                return _firstBatch.Task.WaitAsync( timeout );
+            }
+
             public Task<(bool, byte[], int)> OnPacketReceive( byte[] data, int length, long sentAt )
             {
                 Interlocked.Increment( ref _received );
@@ -541,6 +606,15 @@ namespace PacketTransportBenchmark
             }
 
             public Task<bool> HasDisconnectedGump() => Task.FromResult( false );
+
+            public PacketWaitRule[] LastRules { get; private set; }
+
+            public Task<bool> SetPacketWaitRules( PacketWaitRule[] rules )
+            {
+                LastRules = rules;
+
+                return Task.FromResult( true );
+            }
             public Task<bool> CanCaptureClientFrame() => Task.FromResult( true );
 
             public Task<ScreenshotFrame> CaptureClientFrame() =>

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
 
@@ -17,6 +19,12 @@ public class LightLevelFilter : DynamicFilterEntry
         };
 
         Engine.ConnectedEvent += () => SendLightLevel( Options.CurrentOptions.LightLevel );
+    }
+
+    /// <summary>0x4E (personal light) is blocked and 0x4F (global light) rewritten.</summary>
+    public override IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return Enabled ? [new PacketWaitRule( 0x4E ), new PacketWaitRule( 0x4F )] : [];
     }
 
     public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )

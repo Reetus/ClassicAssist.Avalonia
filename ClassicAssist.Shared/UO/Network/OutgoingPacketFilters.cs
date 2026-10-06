@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Abilities;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using UOC = ClassicAssist.Shared.UO.Commands;
@@ -128,6 +129,15 @@ public static class OutgoingPacketFilters
         {
             _filters.Add( packetId, action );
         }
+    }
+
+    /// <summary>
+    ///     Every registered id, always: these are rare client requests (attack, use, logins), so
+    ///     waiting on them costs nothing worth gating. See <see cref="PacketWaitRegistry" />.
+    /// </summary>
+    public static IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return PacketWaitRegistry.AllOf( true, [.. _filters.Keys] );
     }
 
     public static bool CheckPacket( ref byte[] data, ref int length )
