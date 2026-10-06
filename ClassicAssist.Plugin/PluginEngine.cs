@@ -89,6 +89,29 @@ namespace ClassicAssist.Plugin
 
         public static int PacketDiagnosticsSummarySeconds { get; set; } = 5;
 
+        // ---------------------------------------------------------------------------------------------
+        // Packet wait rules and batching.
+        //
+        // Waiting on the UI for every packet costs a full round trip each, and the server delivers
+        // world contents in bursts of hundreds, so a busy area held the client's frame for hundreds of
+        // milliseconds. The UI now says which packets it might drop or rewrite (SetPacketWaitRules);
+        // only those are waited on. Everything else goes straight through and is queued here, then
+        // delivered one-way in a single OnPacketBatch message.
+        //
+        // Ordering is preserved by flushing the batch before every packet that is waited on, and once
+        // per tick so the UI never sits more than a frame behind. Until the UI sends rules - and again
+        // after it detaches - the set is WaitForEverything, which is the old behaviour.
+        // ---------------------------------------------------------------------------------------------
+        private const int BATCH_FLUSH_BYTES = 64 * 1024;
+        private const int BATCH_FLUSH_PACKETS = 512;
+
+        private static PacketWaitRuleSet _waitRules = PacketWaitRuleSet.WaitForEverything;
+        private static readonly PacketBatchWriter _batch = new PacketBatchWriter();
+
+        // Packets arrive on the client's thread, but Detach runs on the RPC thread. Held across the
+        // notification send too, so two flushes can never reach the pipe out of order.
+        private static readonly object _batchLock = new object();
+
         public static Assembly ClassicAssembly { get; set; }
 
         public static string ClientPath { get; set; }
@@ -789,6 +812,16 @@ namespace ClassicAssist.Plugin
         private static void Detach()
         {
             _plugin = null;
+
+            // A new UI has to send its own rules; until then wait on everything, as before any arrived.
+            // Whatever was batched for the old one has nowhere to go.
+            Volatile.Write( ref _waitRules, PacketWaitRuleSet.WaitForEverything );
+
+            lock ( _batchLock )
+            {
+                _batch.Clear();
+            }
+
             ShutdownResetEvent.Set();
         }
 
@@ -821,7 +854,12 @@ namespace ClassicAssist.Plugin
                 action?.Invoke();
             }
 
-            _plugin?.OnTick();
+            IPluginMethods plugin = _plugin;
+
+            // Bounds how far the UI can lag behind the client to one frame of batched packets
+            FlushBatch( plugin );
+
+            plugin?.OnTick();
         }
 
         private static void OnMouse( int button, int wheel )
@@ -899,6 +937,8 @@ namespace ClassicAssist.Plugin
             {
                 return;
             }
+
+            FlushBatch( _plugin );
 
             try
             {
@@ -978,6 +1018,11 @@ namespace ClassicAssist.Plugin
                 return true;
             }
 
+            if ( TryBatch( plugin, new ReadOnlySpan<byte>( data, 0, length ), outgoing ) )
+            {
+                return true;
+            }
+
             // The client hands over a copy sized to the packet, but trust length over data.Length.
             byte[] buffer = new byte[length];
             Buffer.BlockCopy( data, 0, buffer, 0, length );
@@ -1007,6 +1052,13 @@ namespace ClassicAssist.Plugin
             }
 
             int capacity = *length;
+
+            // Decided on the client's own memory, so a batched packet is copied once, into the batch
+            if ( TryBatch( plugin, new ReadOnlySpan<byte>( (void*) data, capacity ), outgoing ) )
+            {
+                return 1;
+            }
+
             byte[] buffer = new byte[capacity];
 
             Marshal.Copy( data, buffer, 0, capacity );
@@ -1022,6 +1074,69 @@ namespace ClassicAssist.Plugin
             *length = newLength;
 
             return result ? (byte) 1 : (byte) 0;
+        }
+
+        /// <summary>
+        ///     Queues the packet for <see cref="IPluginMethods.OnPacketBatch" /> if no wait rule covers it,
+        ///     returning true: the caller then lets it through untouched without asking the UI. Returns
+        ///     false when the UI must answer, having first flushed the batch so the UI sees everything
+        ///     that came before this packet ahead of it.
+        /// </summary>
+        private static bool TryBatch( IPluginMethods plugin, ReadOnlySpan<byte> packet, bool outgoing )
+        {
+            if ( Volatile.Read( ref _waitRules ).MustWait( packet, outgoing ) )
+            {
+                FlushBatch( plugin );
+
+                return false;
+            }
+
+            bool full;
+
+            lock ( _batchLock )
+            {
+                _batch.Add( packet, outgoing );
+                full = _batch.Length >= BATCH_FLUSH_BYTES || _batch.Count >= BATCH_FLUSH_PACKETS;
+            }
+
+            if ( full )
+            {
+                FlushBatch( plugin );
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        ///     Sends whatever is batched as one notification. Never throws into the client; a lost
+        ///     connection detaches as any other RPC failure does.
+        /// </summary>
+        private static void FlushBatch( IPluginMethods plugin )
+        {
+            lock ( _batchLock )
+            {
+                if ( _batch.Count == 0 )
+                {
+                    return;
+                }
+
+                byte[] packed = _batch.ToArray();
+                _batch.Clear();
+
+                if ( plugin == null )
+                {
+                    return;
+                }
+
+                try
+                {
+                    plugin.OnPacketBatch( packed );
+                }
+                catch ( Exception e )
+                {
+                    OnRpcException( e, nameof( IPluginMethods.OnPacketBatch ) );
+                }
+            }
         }
 
         /// <summary>
@@ -1093,7 +1208,12 @@ namespace ClassicAssist.Plugin
 
         private static void OnDisconnected()
         {
-            _plugin?.OnDisconnected();
+            IPluginMethods plugin = _plugin;
+
+            // The packets before the disconnect belong to that session; deliver them first
+            FlushBatch( plugin );
+
+            plugin?.OnDisconnected();
         }
 
         private static void OnConnected()
@@ -1295,6 +1415,22 @@ namespace ClassicAssist.Plugin
             public void OnShutdown()
             {
                 ShutdownResetEvent.Set();
+            }
+
+            public Task<bool> SetPacketWaitRules( PacketWaitRule[] rules )
+            {
+                PacketWaitRuleSet set = PacketWaitRuleSet.Create( rules );
+                PacketWaitRuleSet previous = Interlocked.Exchange( ref _waitRules, set );
+
+                // Rules change whenever a filter is toggled or a macro adds one, so only say so when
+                // the size of the set actually moved
+                if ( previous.WaitsForEverything || previous.RuleCount != set.RuleCount )
+                {
+                    Trace( $"waiting on the UI for {set.RuleCount} packet rule(s); everything else is batched." );
+                }
+
+                // Returned only once the swap is done: the UI treats a filter as live from here
+                return Task.FromResult( true );
             }
 
             public Task<int> GetProcessId()

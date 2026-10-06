@@ -14,6 +14,12 @@
     <!-- 'dynamic' in the ClassicUO reflection layer needs the binder, which Framework does not ship. -->
     <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <!--
+          Span and BinaryPrimitives for the packet wait rules and batching. Pinned to the version the
+          plugin's net472 build already resolves through StreamJsonRpc, so no second copy reaches the
+          client's process.
+        -->
+        <PackageReference Include="System.Memory" Version="4.5.5" />
     </ItemGroup>
 
 </Project>

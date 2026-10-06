@@ -27,5 +27,14 @@ namespace ClassicAssist.Shared
         void OnTick();
         void OnFocusChanged( bool focus );
         void OnPlayerPositionChanged( int x, int y, int z );
+
+        /// <summary>
+        ///     Packets the plugin let through without waiting, because no
+        ///     <see cref="ClassicAssist.Plugin.Shared.PacketWaitRule" /> asked it to. Packed by
+        ///     <see cref="ClassicAssist.Plugin.Shared.PacketBatchWriter" />, in the order the client saw
+        ///     them, and always sent before the next packet the plugin does wait on. One-way: the
+        ///     client already has these packets, so they can be observed but not dropped or rewritten.
+        /// </summary>
+        void OnPacketBatch( byte[] packed );
     }
 }

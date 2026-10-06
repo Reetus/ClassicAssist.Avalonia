@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Filters;
 using ClassicAssist.UO.Network.PacketFilter;
@@ -54,6 +56,16 @@ public class SeasonFilter : DynamicFilterEntry, IConfigurableFilter
     protected override void OnChanged( bool enabled )
     {
         IsEnabled = enabled;
+    }
+
+    /// <summary>
+    ///     0xBC is blocked. The 0xBF map-change subcommand (0x08 at offset 4) is only watched - the
+    ///     season is resent after it - but waiting on it keeps that resend landing before the client
+    ///     handles the next packet, as it always has. It is rare.
+    /// </summary>
+    public override IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return IsEnabled ? [new PacketWaitRule( 0xBC ), new PacketWaitRule( 0xBF, false, new PacketWaitCondition( 4, [0x08] ) )] : [];
     }
 
     public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )

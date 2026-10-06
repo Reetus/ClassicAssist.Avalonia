@@ -1,11 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace ClassicAssist.UO.Network.PacketFilter;
 
 public class PacketFilter
 {
+    private readonly Lock _changeLock = new();
     private List<PacketFilterInfo> _filters = [];
+
+    /// <summary>
+    ///     Raised after a filter is added or removed. The plugin batches packets no filter can claim,
+    ///     so <see cref="ClassicAssist.UO.Network.PacketWaitRegistry" /> must hear about every change.
+    /// </summary>
+    public event Action Changed;
 
     public void Add( byte packet, PacketFilterCondition[] constraints )
     {
@@ -14,22 +22,51 @@ public class PacketFilter
 
     public void Add( PacketFilterInfo pfi )
     {
-        _filters ??= [];
+        lock ( _changeLock )
+        {
+            _filters ??= [];
 
-        _filters.Add( pfi );
+            _filters.Add( pfi );
+        }
+
+        Changed?.Invoke();
     }
 
     public void Remove( PacketFilterInfo pfi )
     {
-        _filters ??= [];
+        bool removed;
 
-        if ( _filters.Contains( pfi ) )
+        lock ( _changeLock )
         {
-            _filters.Remove( pfi );
+            _filters ??= [];
+
+            removed = _filters.Remove( pfi );
+        }
+
+        if ( removed )
+        {
+            Changed?.Invoke();
         }
     }
 
     public bool Remove( byte packet, PacketFilterCondition[] constraints )
+    {
+        bool removed;
+
+        lock ( _changeLock )
+        {
+            removed = RemoveMatching( packet, constraints );
+        }
+
+        if ( removed )
+        {
+            Changed?.Invoke();
+        }
+
+        return removed;
+    }
+
+    private bool RemoveMatching( byte packet, PacketFilterCondition[] constraints )
     {
         _filters ??= [];
 
@@ -85,7 +122,21 @@ public class PacketFilter
 
     public void Clear()
     {
-        _filters?.Clear();
+        lock ( _changeLock )
+        {
+            _filters?.Clear();
+        }
+
+        Changed?.Invoke();
+    }
+
+    /// <summary>A copy of the current filters, safe to enumerate while others add or remove.</summary>
+    public PacketFilterInfo[] GetFilters()
+    {
+        lock ( _changeLock )
+        {
+            return _filters?.ToArray() ?? [];
+        }
     }
 
     public bool MatchFilter( byte[] packet )

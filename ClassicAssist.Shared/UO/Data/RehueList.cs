@@ -4,6 +4,7 @@ using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.Data;
 using ClassicAssist.Shared.UO;
+using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 
@@ -32,11 +33,27 @@ public class RehueList
         RehueEntry entry = new() { Serial = serial, Hue = hue, Type = type };
 
         _rehueList.AddOrUpdate( serial, i => entry, ( i, rehueEntry ) => entry );
+
+        // The plugin must wait on this serial's packets before the caller resyncs to see the new hue
+        PacketWaitRegistry.PushNow();
     }
 
     public bool Remove( int serial )
     {
-        return _rehueList.TryRemove( serial, out _ );
+        bool removed = _rehueList.TryRemove( serial, out _ );
+
+        if ( removed )
+        {
+            PacketWaitRegistry.Invalidate();
+        }
+
+        return removed;
+    }
+
+    /// <summary>Serials currently rehued, for <see cref="PacketWaitRegistry" />.</summary>
+    public int[] GetSerials()
+    {
+        return [.. _rehueList.Keys];
     }
 
     public bool Contains( int serial )

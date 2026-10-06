@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
+using ClassicAssist.Plugin.Shared;
+using ClassicAssist.UO.Network;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Objects;
@@ -103,6 +105,15 @@ public class CommandsManager
         UOC.SystemMessage( $"{Strings.Commands_} {string.Join( " ", commands )}" );
 
         return true;
+    }
+
+    /// <summary>
+    ///     Outgoing speech is always waited on: whether a line is a command (and so swallowed) depends on
+    ///     its text. Speech is rare enough that this costs nothing. See <see cref="PacketWaitRegistry" />.
+    /// </summary>
+    public static IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return PacketWaitRegistry.AllOf( true, _speechPacketIDs );
     }
 
     public static bool IsSpeechPacket( byte packetId )

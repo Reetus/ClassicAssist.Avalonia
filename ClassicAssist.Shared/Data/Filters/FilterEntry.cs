@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.UO.Network;
 
 namespace ClassicAssist.Data.Filters;
 
@@ -40,6 +41,9 @@ public abstract class FilterEntry : INotifyPropertyChanged
         {
             SetProperty( ref field, value );
             Action?.Invoke( value );
+
+            // Turning a filter on or off changes which packets the plugin must wait on
+            PacketWaitRegistry.Invalidate();
         }
     }
 

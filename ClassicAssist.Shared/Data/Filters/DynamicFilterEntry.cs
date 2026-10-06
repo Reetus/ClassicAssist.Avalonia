@@ -19,6 +19,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
 
 namespace ClassicAssist.Data.Filters;
@@ -39,5 +41,17 @@ public abstract class DynamicFilterEntry : FilterEntry
     public virtual bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
     {
         throw new NotImplementedException();
+    }
+
+    /// <summary>
+    ///     The packets <see cref="CheckPacket" /> might drop or rewrite while the filter is
+    ///     <see cref="FilterEntry.Enabled" />; only asked then. The plugin waits on these and batches
+    ///     the rest, so a filter that cannot say precisely must not under-report. This default knows
+    ///     nothing about the subclass, so it claims every incoming packet (the only direction
+    ///     <see cref="CheckPacket" /> is called for); every filter here overrides it.
+    /// </summary>
+    public virtual IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        return Enumerable.Range( 0, 0x100 ).Select( id => new PacketWaitRule( (byte) id ) );
     }
 }

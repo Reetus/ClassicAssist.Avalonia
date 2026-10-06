@@ -81,6 +81,9 @@ internal sealed class StubHostMethods : IHostMethods
     public Task<bool> IsReflectionAvailable() => Task.FromResult( true );
     public void OnShutdown() => throw NotStubbed();
 
+    // Accepted rather than thrown: the engine pushes its packet wait rules whenever a host is attached
+    public Task<bool> SetPacketWaitRules( PacketWaitRule[] rules ) => Task.FromResult( true );
+
     private static NotSupportedException NotStubbed()
     {
         return new NotSupportedException( "The screenshot tests only stub the capture members." );

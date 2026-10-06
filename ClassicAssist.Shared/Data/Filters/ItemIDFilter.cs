@@ -13,11 +13,15 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
+using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI;
 using ClassicAssist.Shared.UI.ViewModels.Filters;
+using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using Newtonsoft.Json.Linq;
 
@@ -80,6 +84,28 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
     public void ResetOptions()
     {
         Items.Clear();
+    }
+
+    /// <summary>
+    ///     The packets <see cref="CheckPacket" /> rewrites, for enabled entries only: 0xF3, 0x25 and
+    ///     0x1A by their item id field, and 0x3C (container contents) whole, since its items sit at
+    ///     varying offsets. Edits to the list have no change event of their own;
+    ///     <see cref="PacketWaitRegistry.CheckPeriodic" /> picks them up.
+    /// </summary>
+    public override IEnumerable<PacketWaitRule> GetWaitRules()
+    {
+        int[] sourceIds = [.. Items.ToArray().Where( e => e is { Enabled: true } ).Select( e => e.SourceID ).Distinct()];
+
+        if ( sourceIds.Length == 0 )
+        {
+            return [];
+        }
+
+        return sourceIds.SelectMany( id => new[]
+        {
+            PacketWaitRegistry.ShortAt( 0xF3, 8, id ), PacketWaitRegistry.ShortAt( 0x25, 5, id ),
+            PacketWaitRegistry.ShortAt( 0x1A, 7, id )
+        } ).Append( new PacketWaitRule( 0x3C ) );
     }
 
     public override bool CheckPacket( ref byte[] packet, ref int length, PacketDirection direction )
