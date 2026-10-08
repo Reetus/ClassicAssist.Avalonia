@@ -62,25 +62,31 @@
         </Style>
       </StackPanel.Styles>
       <Button Command="{Binding DressAllItemsCommand}" CommandParameter="{Binding SelectedItem}">
-        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
-          <Binding Path="IsDressing" />
-          <Binding Source="{x:Static resources:Strings.Stop}" />
-          <Binding Source="{x:Static resources:Strings.Dress}" />
-        </MultiBinding>
+        <Button.Content>
+          <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+            <Binding Path="IsDressing" />
+            <Binding Source="{x:Static resources:Strings.Stop}" />
+            <Binding Source="{x:Static resources:Strings.Dress}" />
+          </MultiBinding>
+        </Button.Content>
       </Button>
       <Button Command="{Binding UndressItemsCommand}" CommandParameter="{Binding SelectedItem}">
-        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
-          <Binding Path="IsUndressing" />
-          <Binding Source="{x:Static resources:Strings.Stop}" />
-          <Binding Source="{x:Static resources:Strings.Undress}" />
-        </MultiBinding>
+        <Button.Content>
+          <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+            <Binding Path="IsUndressing" />
+            <Binding Source="{x:Static resources:Strings.Stop}" />
+            <Binding Source="{x:Static resources:Strings.Undress}" />
+          </MultiBinding>
+        </Button.Content>
       </Button>
       <Button Command="{Binding UndressAllItemsCommand}">
-        <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
-          <Binding Path="IsUndressingAll" />
-          <Binding Source="{x:Static resources:Strings.Stop}" />
-          <Binding Source="{x:Static resources:Strings.Undress_All}" />
-        </MultiBinding>
+        <Button.Content>
+          <MultiBinding Converter="{StaticResource BooleanToggleLabelConverter}">
+            <Binding Path="IsUndressingAll" />
+            <Binding Source="{x:Static resources:Strings.Stop}" />
+            <Binding Source="{x:Static resources:Strings.Undress_All}" />
+          </MultiBinding>
+        </Button.Content>
       </Button>
       <Button Content="{x:Static resources:Strings.Import}" Command="{Binding ImportItemsCommand}" CommandParameter="{Binding SelectedItem}" />
       <Button Content="{x:Static resources:Strings.New_Item}" Command="{Binding AddDressItemCommand}" CommandParameter="{Binding SelectedItem}" />
