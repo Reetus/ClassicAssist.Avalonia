@@ -40,10 +40,11 @@ public class DebugBuffIconsViewModel : BaseViewModel
     private void OnBufficonEnabledDisabledEvent( int type, bool enabled, int duration )
     {
         BuffIconData data = _manager.GetDataByID( type );
+        string name = data?.Name ?? $"Unknown (0x{type:x})";
 
         _dispatcher.Invoke( () =>
         {
-            Messages.Add( enabled ? $"Enabled: {data.Name}" : $"Disabled: {data?.Name}" );
+            Messages.Add( enabled ? $"Enabled: {name}" : $"Disabled: {name}" );
 
             Items.Clear();
             Items.AddRange( _manager.GetEnabledNames() );
