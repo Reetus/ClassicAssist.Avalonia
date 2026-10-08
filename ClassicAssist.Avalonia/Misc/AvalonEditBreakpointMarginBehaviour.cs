@@ -104,10 +104,7 @@ public class AvalonEditBreakpointMarginBehaviour : Behavior<TextEditor>
 
     private void OnBreakpointsChanged( ObservableCollection<int> oldValue, ObservableCollection<int> newValue )
     {
-        if ( oldValue != null )
-        {
-            oldValue.CollectionChanged -= Breakpoints_CollectionChanged;
-        }
+        oldValue?.CollectionChanged -= Breakpoints_CollectionChanged;
 
         if ( _breakpointMargin == null )
         {
@@ -121,10 +118,7 @@ public class AvalonEditBreakpointMarginBehaviour : Behavior<TextEditor>
 
         _breakpointMargin.Breakpoints = newValue;
 
-        if ( newValue != null )
-        {
-            newValue.CollectionChanged += Breakpoints_CollectionChanged;
-        }
+        newValue?.CollectionChanged += Breakpoints_CollectionChanged;
 
         _breakpointMargin.InvalidateVisual();
     }
@@ -259,10 +253,7 @@ public class AvalonEditBreakpointMarginBehaviour : Behavior<TextEditor>
             return;
         }
 
-        if ( _breakpointMargin.Breakpoints != null )
-        {
-            _breakpointMargin.Breakpoints.CollectionChanged -= Breakpoints_CollectionChanged;
-        }
+        _breakpointMargin.Breakpoints?.CollectionChanged -= Breakpoints_CollectionChanged;
 
         _breakpointMargin = null;
     }

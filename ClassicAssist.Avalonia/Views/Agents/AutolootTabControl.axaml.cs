@@ -12,9 +12,12 @@ namespace ClassicAssist.Avalonia.Views.Agents;
 
 public partial class AutolootTabControl : UserControl
 {
-    private const string DRAG_FORMAT = "AutolootEntry";
     private const double DRAG_THRESHOLD = 5;
 
+    private static readonly DataFormat<string> DragFormat =
+        DataFormat.CreateStringApplicationFormat( "ClassicAssist.AutolootEntry" );
+
+    private AutolootEntry _draggedEntry;
     private AutolootEntry _dragEntry;
     private PointerPressedEventArgs _dragStartArgs;
     private Point _dragStartPoint;
@@ -73,7 +76,7 @@ public partial class AutolootTabControl : UserControl
         }
     }
 
-    private void OnPointerMoved( object sender, PointerEventArgs e )
+    private async void OnPointerMoved( object sender, PointerEventArgs e )
     {
         if ( _dragEntry == null || _dragStartArgs == null )
         {
@@ -88,20 +91,32 @@ public partial class AutolootTabControl : UserControl
             return;
         }
 
-        DataObject data = new();
-        data.Set( DRAG_FORMAT, _dragEntry );
+        PointerPressedEventArgs startArgs = _dragStartArgs;
 
-        DragDrop.DoDragDrop( _dragStartArgs, data, DragDropEffects.Move );
-
+        _draggedEntry = _dragEntry;
         _dragEntry = null;
         _dragStartArgs = null;
+
+        // DataTransfer only carries strings and bytes, so the payload is just a marker that the drag
+        // came from this tree; the entry itself stays in _draggedEntry until the drag ends.
+        DataTransfer data = new();
+        data.Add( DataTransferItem.Create( DragFormat, string.Empty ) );
+
+        try
+        {
+            await DragDrop.DoDragDropAsync( startArgs, data, DragDropEffects.Move );
+        }
+        finally
+        {
+            _draggedEntry = null;
+        }
     }
 
     private void OnTreeDragOver( object sender, DragEventArgs e )
     {
         e.DragEffects = DragDropEffects.None;
 
-        if ( !e.Data.Contains( DRAG_FORMAT ) )
+        if ( _draggedEntry == null || !e.DataTransfer.Contains( DragFormat ) )
         {
             return;
         }
@@ -117,12 +132,7 @@ public partial class AutolootTabControl : UserControl
 
     private void OnTreeDrop( object sender, DragEventArgs e )
     {
-        if ( !e.Data.Contains( DRAG_FORMAT ) )
-        {
-            return;
-        }
-
-        if ( e.Data.Get( DRAG_FORMAT ) is not AutolootEntry entry )
+        if ( _draggedEntry is not { } entry || !e.DataTransfer.Contains( DragFormat ) )
         {
             return;
         }

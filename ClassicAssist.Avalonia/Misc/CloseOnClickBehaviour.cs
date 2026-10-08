@@ -54,10 +54,7 @@ public class CloseOnClickBehaviour : Behavior<Button>
     {
         base.OnAttached();
 
-        if ( AssociatedObject != null )
-        {
-            AssociatedObject.Click += OnPointerPressed;
-        }
+        AssociatedObject?.Click += OnPointerPressed;
     }
 
     private void OnPointerPressed( object sender, RoutedEventArgs e )
@@ -78,9 +75,6 @@ public class CloseOnClickBehaviour : Behavior<Button>
     {
         base.OnDetaching();
 
-        if ( AssociatedObject != null )
-        {
-            AssociatedObject.Click -= OnPointerPressed;
-        }
+        AssociatedObject?.Click -= OnPointerPressed;
     }
 }

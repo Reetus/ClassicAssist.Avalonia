@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -264,6 +265,8 @@ public static class MainCommands
         {
             nameof( ParameterType.IntegerValue ), nameof( ParameterType.Boolean ), nameof( ParameterType.String )
         } )]
+    [SuppressMessage( "Style", "IDE0060:Remove unused parameter",
+        Justification = "fullscreen is part of the macro API; see its <param> doc." )]
     public static (bool, string) Snapshot( int delay = 0, bool? fullscreen = null, string fileName = "" )
     {
         try
@@ -279,7 +282,7 @@ public static class MainCommands
             {
                 UOC.SystemMessage( Strings.Snapshot_failed, (int) SystemMessageHues.Red );
 
-                return ( false, null );
+                return (false, null);
             }
 
             // Blocking is safe here and not in the tab's own button: macros and hotkeys run on their own
@@ -291,16 +294,16 @@ public static class MainCommands
             {
                 UOC.SystemMessage( Strings.Snapshot_failed, (int) SystemMessageHues.Red );
 
-                return ( false, null );
+                return (false, null);
             }
 
-            return ( true, savedTo );
+            return (true, savedTo);
         }
         catch ( Exception e )
         {
             UOC.SystemMessage( e.Message, (int) SystemMessageHues.Red );
 
-            return ( false, null );
+            return (false, null);
         }
     }
 

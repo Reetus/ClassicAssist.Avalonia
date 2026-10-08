@@ -142,17 +142,11 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
         get;
         set
         {
-            if ( field != null )
-            {
-                field.PropertyChanged -= OnSelectedItemPropertyChanged;
-            }
+            field?.PropertyChanged -= OnSelectedItemPropertyChanged;
 
             SetProperty( ref field, value );
 
-            if ( field != null )
-            {
-                field.PropertyChanged += OnSelectedItemPropertyChanged;
-            }
+            field?.PropertyChanged += OnSelectedItemPropertyChanged;
 
             NotifyPropertyChanged( nameof( Hotkey ) );
         }

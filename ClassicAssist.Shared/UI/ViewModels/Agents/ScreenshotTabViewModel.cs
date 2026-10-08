@@ -258,12 +258,12 @@ public class ScreenshotTabViewModel : BaseViewModel, ISettingProvider
         }
 
         MobileDeathFilter = screenshot["MobileDeathFilter"] is JArray mobileIdArray
-            ? mobileIdArray.Cast<JObject>().Select( obj => new ScreenshotMobileFilterEntry
+            ? [.. mobileIdArray.Cast<JObject>().Select( obj => new ScreenshotMobileFilterEntry
             {
                 ID = obj["ID"]?.ToObject<int>() ?? 0,
                 Note = obj["Note"]?.ToObject<string>() ?? string.Empty,
                 Enabled = obj["Enabled"]?.ToObject<bool>() ?? false
-            } ).ToList()
+            } )]
             : GetDefaultMobileIDs();
     }
 
@@ -400,9 +400,9 @@ public class ScreenshotTabViewModel : BaseViewModel, ISettingProvider
     {
         TargetManager targetManager = TargetManager.GetInstance();
 
-        return targetManager.BodyData
+        return [.. targetManager.BodyData
             .Where( b => b.BodyType == TargetBodyType.Humanoid && !b.Name.Contains( "Dead" ) ).Select( b =>
-                new ScreenshotMobileFilterEntry { ID = b.Graphic, Note = b.Name, Enabled = true } ).ToList();
+                new ScreenshotMobileFilterEntry { ID = b.Graphic, Note = b.Name, Enabled = true } )];
     }
 
     private async Task ConfigureFilter( object obj )

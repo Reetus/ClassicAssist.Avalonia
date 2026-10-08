@@ -878,7 +878,10 @@ namespace ClassicAssist.Plugin
 
             try
             {
+                // The client's hotkey callback is synchronous and needs the answer before it returns.
+#pragma warning disable VSTHRD002
                 return plugin.OnHotkeyPressed( key, mod, pressed ).Result;
+#pragma warning restore VSTHRD002
             }
             catch ( Exception e )
             {
@@ -1170,7 +1173,11 @@ namespace ClassicAssist.Plugin
 
             try
             {
+                // The client's packet callback is synchronous and must return the (possibly rewritten)
+                // packet before it returns.
+#pragma warning disable VSTHRD002
                 ( result, newPacket, newLength ) = call( plugin, buffer, sentAt ).Result;
+#pragma warning restore VSTHRD002
             }
             catch ( Exception e )
             {

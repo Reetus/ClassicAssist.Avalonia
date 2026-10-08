@@ -11,15 +11,14 @@ namespace ClassicAssist.Mcp;
 
 public static class McpCommandInvoker
 {
-    private static readonly Type[] _commandClasses = Assembly.GetExecutingAssembly().GetTypes()
+    private static readonly Type[] _commandClasses = [.. Assembly.GetExecutingAssembly().GetTypes()
         .Where( t => t.Namespace != null && t.IsPublic && t.IsClass &&
-                     t.Namespace.EndsWith( "Macros.Commands" ) )
-        .ToArray();
+                     t.Namespace.EndsWith( "Macros.Commands" ) )];
 
     public static IReadOnlyList<McpTool> GetTools()
     {
-        return new List<McpTool>
-        {
+        return
+        [
             new()
             {
                 Name = "invokeCommand",
@@ -42,7 +41,7 @@ public static class McpCommandInvoker
                 InputSchema = McpTools.ObjectSchema(
                     new JObject { ["filter"] = McpTools.StringProperty( "Optional case-insensitive substring to filter command names." ) } )
             }
-        };
+        ];
     }
 
     public static CallToolResult Invoke( string name, JObject args )
@@ -74,10 +73,9 @@ public static class McpCommandInvoker
             throw new InvalidOperationException( "Missing required argument 'command'." );
         }
 
-        MethodInfo[] methods = _commandClasses
+        MethodInfo[] methods = [.. _commandClasses
             .SelectMany( t => t.GetMethods( BindingFlags.Public | BindingFlags.Static ) )
-            .Where( m => m.Name.Equals( command, StringComparison.OrdinalIgnoreCase ) )
-            .ToArray();
+            .Where( m => m.Name.Equals( command, StringComparison.OrdinalIgnoreCase ) )];
 
         if ( methods.Length == 0 )
         {

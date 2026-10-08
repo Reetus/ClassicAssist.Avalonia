@@ -112,7 +112,7 @@ public class AvaloniaScreenshotComposer : IScreenshotComposer
             height = Math.Max( 1, (int) Math.Round( height * ( width / (double) request.Width ) ) );
 
             resized = bitmap.Resize( new SKImageInfo( width, height, SKColorType.Rgba8888, SKAlphaType.Opaque ),
-                SKBitmapResizeMethod.Lanczos3 );
+                SKFilterQuality.High );
 
             output = resized;
         }

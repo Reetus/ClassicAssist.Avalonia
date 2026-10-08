@@ -180,7 +180,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
         if ( SelectedProfile.Groups.Count > 0 )
         {
-            return SelectedProfile.Groups.ToList();
+            return [.. SelectedProfile.Groups];
         }
 
         return
@@ -951,7 +951,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
     private static ItemCollection FilterItems( IEnumerable<AutolootConstraintEntry> items, ItemCollection source )
     {
         IEnumerable<AutolootConstraintEntry> enabled =
-            items?.Where( i => i != null && i.Enabled ) ?? Enumerable.Empty<AutolootConstraintEntry>();
+            items?.Where( i => i != null && i.Enabled ) ?? [];
 
         List<Predicate<Item>> predicates = [.. AutolootHelpers.ConstraintsToPredicates( enabled )];
 
@@ -1501,7 +1501,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
     {
         EntityCollectionFilterGroup group = new()
         {
-            Items = new ObservableCollection<AutolootConstraintEntry>()
+            Items = []
         };
 
         if ( SelectedProfile.Groups.Count == 0 )
@@ -1527,7 +1527,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
     {
         EntityCollectionFilterGroup group = new()
         {
-            Items = new ObservableCollection<AutolootConstraintEntry>()
+            Items = []
         };
 
         SelectedGroup?.Children.Add( group );

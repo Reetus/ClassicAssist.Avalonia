@@ -26,10 +26,7 @@ public class CountersManager : INotifyPropertyChanged
 
         Engine.DisconnectedEvent += () =>
         {
-            if ( Engine.Player != null )
-            {
-                Engine.Player.Backpack.Container.CollectionChanged -= OnBackpackContentsChanged;
-            }
+            Engine.Player?.Backpack.Container.CollectionChanged -= OnBackpackContentsChanged;
 
             _listening = false;
         };

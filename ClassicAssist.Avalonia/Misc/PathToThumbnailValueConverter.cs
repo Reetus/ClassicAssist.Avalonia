@@ -34,7 +34,7 @@ public class PathToThumbnailValueConverter : IValueConverter
 {
     private const int DEFAULT_WIDTH = 256;
 
-    private static readonly Dictionary<string, Bitmap> _cache = new();
+    private static readonly Dictionary<string, Bitmap> _cache = [];
 
     public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {

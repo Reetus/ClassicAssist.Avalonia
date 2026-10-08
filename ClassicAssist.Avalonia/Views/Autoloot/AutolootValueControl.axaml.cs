@@ -55,17 +55,11 @@ public partial class AutolootValueControl : UserControl
 
     private void OnDataContextChanged( object sender, EventArgs e )
     {
-        if ( _entry != null )
-        {
-            _entry.PropertyChanged -= OnEntryPropertyChanged;
-        }
+        _entry?.PropertyChanged -= OnEntryPropertyChanged;
 
         _entry = DataContext as AutolootConstraintEntry;
 
-        if ( _entry != null )
-        {
-            _entry.PropertyChanged += OnEntryPropertyChanged;
-        }
+        _entry?.PropertyChanged += OnEntryPropertyChanged;
 
         Rebuild();
     }

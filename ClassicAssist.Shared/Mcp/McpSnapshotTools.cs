@@ -20,8 +20,8 @@ public static class McpSnapshotTools
 {
     public static IReadOnlyList<McpTool> GetTools()
     {
-        return new List<McpTool>
-        {
+        return
+        [
             new()
             {
                 Name = "getSnapshot",
@@ -42,7 +42,7 @@ public static class McpSnapshotTools
                         }
                     } )
             }
-        };
+        ];
     }
 
     public static CallToolResult Invoke( string name, JObject args )

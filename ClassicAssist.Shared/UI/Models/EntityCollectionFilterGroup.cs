@@ -17,93 +17,74 @@ namespace ClassicAssist.UI.Models;
 /// </summary>
 public class EntityCollectionFilterGroup : SetPropertyNotifyChanged
 {
-    private ObservableCollection<EntityCollectionFilterGroup> _children = [];
-
-    private bool _isFirst = true;
-    private ObservableCollection<AutolootConstraintEntry> _items = [];
-    private string _name;
-    private BooleanOperation _operation;
-
     public EntityCollectionFilterGroup()
     {
-        _children.CollectionChanged += OnChildrenCollectionChanged;
-        _items.CollectionChanged += OnItemsCollectionChanged;
+        Children.CollectionChanged += OnChildrenCollectionChanged;
+        Items.CollectionChanged += OnItemsCollectionChanged;
     }
 
     public ObservableCollection<EntityCollectionFilterGroup> Children
     {
-        get => _children;
+        get;
         set
         {
-            if ( _children != null )
-            {
-                _children.CollectionChanged -= OnChildrenCollectionChanged;
-            }
+            field?.CollectionChanged -= OnChildrenCollectionChanged;
 
-            _children = value ?? [];
+            field = value ?? [];
 
             OnPropertyChanged( nameof( Children ) );
             OnPropertyChanged( nameof( HasChildren ) );
             OnPropertyChanged( nameof( Name ) );
 
-            if ( _children != null )
-            {
-                _children.CollectionChanged += OnChildrenCollectionChanged;
-            }
+            field?.CollectionChanged += OnChildrenCollectionChanged;
 
             UpdateChildrenFirstFlags();
         }
-    }
+    } = [];
 
     public bool IsFirst
     {
-        get => _isFirst;
-        set => SetProperty( ref _isFirst, value );
-    }
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
 
-    public bool HasChildren => _children.Count > 0;
+    public bool HasChildren => Children.Count > 0;
 
     public ObservableCollection<AutolootConstraintEntry> Items
     {
-        get => _items;
+        get;
         set
         {
-            if ( _items != null )
-            {
-                _items.CollectionChanged -= OnItemsCollectionChanged;
-            }
+            field?.CollectionChanged -= OnItemsCollectionChanged;
 
-            SetProperty( ref _items, value );
+            SetProperty( ref field, value );
 
-            if ( _items != null )
-            {
-                _items.CollectionChanged += OnItemsCollectionChanged;
-            }
+            field?.CollectionChanged += OnItemsCollectionChanged;
 
             OnPropertyChanged( nameof( Name ) );
         }
-    }
+    } = [];
 
     public string Name
     {
         get
         {
-            if ( !string.IsNullOrEmpty( _name ) )
+            if ( !string.IsNullOrEmpty( field ) )
             {
-                return _name;
+                return field;
             }
 
             return HasChildren
                 ? string.Format( Strings.Filter_Group_Subgroups, Children.Count )
                 : string.Format( Strings.Filter_Group_Filters, Items.Count );
         }
-        set => SetProperty( ref _name, value );
+        set => SetProperty( ref field, value );
     }
 
     public BooleanOperation Operation
     {
-        get => _operation;
-        set => SetProperty( ref _operation, value );
+        get;
+        set => SetProperty( ref field, value );
     }
 
     private void OnChildrenCollectionChanged( object sender, NotifyCollectionChangedEventArgs e )
@@ -123,9 +104,9 @@ public class EntityCollectionFilterGroup : SetPropertyNotifyChanged
 
     public void UpdateChildrenFirstFlags()
     {
-        for ( int i = 0; i < _children.Count; i++ )
+        for ( int i = 0; i < Children.Count; i++ )
         {
-            EntityCollectionFilterGroup child = _children[i];
+            EntityCollectionFilterGroup child = Children[i];
             child.IsFirst = i == 0;
             child.UpdateChildrenFirstFlags();
         }

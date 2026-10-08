@@ -23,8 +23,8 @@ public static class McpGameStateTools
 {
     public static IReadOnlyList<McpTool> GetTools()
     {
-        return new List<McpTool>
-        {
+        return
+        [
             new()
             {
                 Name = "getPlayer",
@@ -175,7 +175,7 @@ public static class McpGameStateTools
                 InputSchema = McpTools.ObjectSchema(
                     new JObject { ["name"] = McpTools.StringProperty( "The hotkey entry name." ) }, "name" )
             }
-        };
+        ];
     }
 
     public static CallToolResult Invoke( string name, JObject args )
@@ -240,13 +240,7 @@ public static class McpGameStateTools
 
     private static string GetPlayer()
     {
-        PlayerMobile player = Engine.Player;
-
-        if ( player == null )
-        {
-            throw new InvalidOperationException( "Not connected - no player information available." );
-        }
-
+        PlayerMobile player = Engine.Player ?? throw new InvalidOperationException( "Not connected - no player information available." );
         JObject result = new()
         {
             ["name"] = player.Name,
@@ -280,28 +274,12 @@ public static class McpGameStateTools
 
     private static string GetBackpack( string filter, int? limit, int? offset )
     {
-        PlayerMobile player = Engine.Player;
+        PlayerMobile player = Engine.Player ?? throw new InvalidOperationException( "Not connected - no player information available." );
 
-        if ( player == null )
-        {
-            throw new InvalidOperationException( "Not connected - no player information available." );
-        }
+        Item backpack = player.Backpack ?? throw new InvalidOperationException( "Backpack not found." );
 
-        Item backpack = player.Backpack;
-
-        if ( backpack == null )
-        {
-            throw new InvalidOperationException( "Backpack not found." );
-        }
-
-        ItemCollection container = backpack.Container;
-
-        if ( container == null )
-        {
-            throw new InvalidOperationException(
+        ItemCollection container = backpack.Container ?? throw new InvalidOperationException(
                 "Backpack is not open - no contents available. Use invokeCommand('UseObject') then invokeCommand('WaitForContents') first." );
-        }
-
         IEnumerable<Item> items = container.GetItems() ?? [];
 
         if ( !string.IsNullOrEmpty( filter ) )
@@ -491,13 +469,7 @@ public static class McpGameStateTools
             throw new InvalidOperationException( $"Invalid serial: {serialStr}" );
         }
 
-        Entity entity = FindEntity( serial );
-
-        if ( entity == null )
-        {
-            throw new InvalidOperationException( $"Entity 0x{serial:x8} not found." );
-        }
-
+        Entity entity = FindEntity( serial ) ?? throw new InvalidOperationException( $"Entity 0x{serial:x8} not found." );
         JObject result = new()
         {
             ["name"] = entity.Name,
@@ -707,7 +679,7 @@ public static class McpGameStateTools
 
         if ( !string.IsNullOrEmpty( filter ) )
         {
-            entries = entries.Where( e => e.Text?.IndexOf( filter, StringComparison.OrdinalIgnoreCase ) >= 0 ).ToList();
+            entries = [.. entries.Where( e => e.Text?.IndexOf( filter, StringComparison.OrdinalIgnoreCase ) >= 0 )];
         }
 
         int total = entries.Count;
@@ -818,13 +790,7 @@ public static class McpGameStateTools
                 s.Skill.Name?.IndexOf( name, StringComparison.OrdinalIgnoreCase ) >= 0 );
 
             return entry == null ? null : SkillToJObject( entry );
-        } );
-
-        if ( result == null )
-        {
-            throw new InvalidOperationException( $"Skill '{name}' not found." );
-        }
-
+        } ) ?? throw new InvalidOperationException( $"Skill '{name}' not found." );
         return JsonConvert.SerializeObject( result, Formatting.Indented );
     }
 
@@ -895,13 +861,7 @@ public static class McpGameStateTools
     private static string ExecuteHotkey( string name )
     {
         HotkeyEntry target = McpTools.OnUi( () => EnumerateHotkeys().FirstOrDefault( e =>
-            e.Action != null && string.Equals( e.Name, name, StringComparison.OrdinalIgnoreCase ) ) );
-
-        if ( target == null )
-        {
-            throw new InvalidOperationException( $"Hotkey '{name}' not found or has no action." );
-        }
-
+            e.Action != null && string.Equals( e.Name, name, StringComparison.OrdinalIgnoreCase ) ) ) ?? throw new InvalidOperationException( $"Hotkey '{name}' not found or has no action." );
         AliasCommands.SetDefaultAliases();
 
         // Fire and forget, matching a hotkey press: an action that throws must not fault the request,
@@ -910,7 +870,7 @@ public static class McpGameStateTools
         {
             try
             {
-                target.Action( target, Array.Empty<object>() );
+                target.Action( target, [] );
             }
             catch
             {

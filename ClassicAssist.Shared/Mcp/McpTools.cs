@@ -324,13 +324,7 @@ public static class McpTools
     {
         return OnUi( () =>
         {
-            MacroEntry entry = Find( name );
-
-            if ( entry == null )
-            {
-                throw new InvalidOperationException( $"Macro '{name}' not found." );
-            }
-
+            MacroEntry entry = Find( name ) ?? throw new InvalidOperationException( $"Macro '{name}' not found." );
             if ( code != null )
             {
                 entry.Macro = code;
@@ -362,13 +356,7 @@ public static class McpTools
     {
         return OnUi( () =>
         {
-            MacroEntry entry = Find( name );
-
-            if ( entry == null )
-            {
-                throw new InvalidOperationException( $"Macro '{name}' not found." );
-            }
-
+            MacroEntry entry = Find( name ) ?? throw new InvalidOperationException( $"Macro '{name}' not found." );
             string filePath = entry.IsFileBacked ? entry.FilePath : null;
 
             if ( entry.IsRunning )
@@ -400,13 +388,7 @@ public static class McpTools
 
     private static string PlayMacro( string name, string[] args, int? waitMs )
     {
-        MacroEntry entry = OnUi( () => Find( name ) );
-
-        if ( entry == null )
-        {
-            throw new InvalidOperationException( $"Macro '{name}' not found." );
-        }
-
+        MacroEntry entry = OnUi( () => Find( name ) ) ?? throw new InvalidOperationException( $"Macro '{name}' not found." );
         object[] parameters = args?.Cast<object>().ToArray();
 
         MacroManager.GetInstance().Execute( entry, parameters );
@@ -433,7 +415,7 @@ public static class McpTools
         }
 
         // Authoritative read on the UI thread - IsRunning and the captured exception are updated there.
-        (bool running, Exception exception) state = OnUi( () => ( entry.IsRunning, entry.MacroInvoker.Exception ) );
+        (bool running, Exception exception) state = OnUi( () => (entry.IsRunning, entry.MacroInvoker.Exception) );
 
         return new JObject
         {
@@ -503,21 +485,15 @@ public static class McpTools
 
             // No live foreground macro - fall back to a single running macro (which may be
             // background), but refuse to guess when several are running.
-            MacroEntry[] running = GetItems().Where( m => m.IsRunning || m.IsPaused ).ToArray();
+            MacroEntry[] running = [.. GetItems().Where( m => m.IsRunning || m.IsPaused )];
 
             return running.Length == 1 ? running[0] : null;
-        } );
-
-        if ( entry == null )
-        {
-            throw new InvalidOperationException( string.IsNullOrEmpty( name )
+        } ) ?? throw new InvalidOperationException( string.IsNullOrEmpty( name )
                 ? "No single running macro found - none are running, or several are (pass 'name' to choose one)."
                 : $"Macro '{name}' not found." );
-        }
-
         string condition = string.IsNullOrEmpty( until ) ? "finished" : until.ToLowerInvariant();
 
-        if ( condition != "finished" && condition != "paused" && condition != "error" )
+        if ( condition is not "finished" and not "paused" and not "error" )
         {
             throw new InvalidOperationException(
                 $"Invalid 'until' value '{until}'. Expected one of: finished, paused, error." );
@@ -591,13 +567,7 @@ public static class McpTools
                 return;
             }
 
-            MacroEntry entry = Find( name );
-
-            if ( entry == null )
-            {
-                throw new InvalidOperationException( $"Macro '{name}' not found." );
-            }
-
+            MacroEntry entry = Find( name ) ?? throw new InvalidOperationException( $"Macro '{name}' not found." );
             entry.Stop();
         } );
 
@@ -619,13 +589,7 @@ public static class McpTools
 
             if ( !string.IsNullOrEmpty( name ) )
             {
-                MacroEntry single = Find( name );
-
-                if ( single == null )
-                {
-                    throw new InvalidOperationException( $"Macro '{name}' not found." );
-                }
-
+                MacroEntry single = Find( name ) ?? throw new InvalidOperationException( $"Macro '{name}' not found." );
                 items = [single];
             }
 
@@ -825,7 +789,7 @@ public static class McpTools
     internal static (List<T> page, int total, int offset, int limit) Paginate<T>( IEnumerable<T> source, int? limit,
         int? offset )
     {
-        List<T> list = source as List<T> ?? source.ToList();
+        List<T> list = source as List<T> ?? [.. source];
         int total = list.Count;
         int offsetValue = Math.Max( 0, offset ?? 0 );
         int limitValue = Math.Max( 0, limit ?? DefaultListLimit );
@@ -925,7 +889,7 @@ public static class McpTools
             return null;
         }
 
-        return token.Select( t => t.ToObject<string>() ).ToArray();
+        return [.. token.Select( t => t.ToObject<string>() )];
     }
 
     internal static int? GetInt( JObject args, string name )
@@ -949,13 +913,7 @@ public static class McpTools
 
     internal static int RequireInt( JObject args, string name )
     {
-        int? value = GetInt( args, name );
-
-        if ( value == null )
-        {
-            throw new InvalidOperationException( $"Missing or invalid required argument '{name}'." );
-        }
-
+        int? value = GetInt( args, name ) ?? throw new InvalidOperationException( $"Missing or invalid required argument '{name}'." );
         return value.Value;
     }
 

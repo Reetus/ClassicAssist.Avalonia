@@ -16,12 +16,12 @@ namespace ClassicAssist.Mcp;
 public static class McpAgentTools
 {
     // Trap pouch isn't ported to the Avalonia build, so unlike WPF it isn't listed here.
-    private static readonly string[] _agents = { "dress", "organizer", "friends", "vendorbuy", "scavenger", "autoloot" };
+    private static readonly string[] _agents = ["dress", "organizer", "friends", "vendorbuy", "scavenger", "autoloot"];
 
     public static IReadOnlyList<McpTool> GetTools()
     {
-        return new List<McpTool>
-        {
+        return
+        [
             new()
             {
                 Name = "listAgents",
@@ -39,7 +39,7 @@ public static class McpAgentTools
                         ["filter"] = McpTools.StringProperty( "Optional case-insensitive substring to match entry name or serial (e.g. '0x006ec0dc')." )
                     }, "agent" )
             }
-        };
+        ];
     }
 
     public static CallToolResult Invoke( string name, JObject args )
@@ -129,170 +129,170 @@ public static class McpAgentTools
         switch ( agent )
         {
             case "friends":
-            {
-                foreach ( FriendEntry entry in Options.CurrentOptions.Friends ?? [] )
                 {
-                    JObject o = new()
+                    foreach ( FriendEntry entry in Options.CurrentOptions.Friends ?? [] )
                     {
-                        ["name"] = entry.Name,
-                        ["serial"] = $"0x{entry.Serial:x8}"
-                    };
+                        JObject o = new()
+                        {
+                            ["name"] = entry.Name,
+                            ["serial"] = $"0x{entry.Serial:x8}"
+                        };
 
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
                     }
-                }
 
-                break;
-            }
+                    break;
+                }
             case "dress":
-            {
-                foreach ( DressAgentEntry entry in DressManager.GetInstance().Items ?? [] )
                 {
-                    JArray items = [];
-
-                    foreach ( DressAgentItem item in entry.Items ?? [] )
+                    foreach ( DressAgentEntry entry in DressManager.GetInstance().Items ?? [] )
                     {
-                        items.Add( new JObject
+                        JArray items = [];
+
+                        foreach ( DressAgentItem item in entry.Items ?? [] )
                         {
-                            ["name"] = item.Name,
-                            ["serial"] = item.Serial != 0 ? $"0x{item.Serial:x8}" : null,
-                            ["graphic"] = $"0x{item.ID:x4}",
-                            ["layer"] = item.Layer.ToString()
-                        } );
+                            items.Add( new JObject
+                            {
+                                ["name"] = item.Name,
+                                ["serial"] = item.Serial != 0 ? $"0x{item.Serial:x8}" : null,
+                                ["graphic"] = $"0x{item.ID:x4}",
+                                ["layer"] = item.Layer.ToString()
+                            } );
+                        }
+
+                        JObject o = new()
+                        {
+                            ["name"] = entry.Name,
+                            ["undressContainer"] = entry.UndressContainer != 0 ? $"0x{entry.UndressContainer:x8}" : null,
+                            ["itemCount"] = items.Count,
+                            ["items"] = items
+                        };
+
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
                     }
 
-                    JObject o = new()
-                    {
-                        ["name"] = entry.Name,
-                        ["undressContainer"] = entry.UndressContainer != 0 ? $"0x{entry.UndressContainer:x8}" : null,
-                        ["itemCount"] = items.Count,
-                        ["items"] = items
-                    };
-
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
-                    }
+                    break;
                 }
-
-                break;
-            }
             case "organizer":
-            {
-                foreach ( OrganizerEntry entry in OrganizerManager.GetInstance().Items ?? [] )
                 {
-                    JArray items = [];
-
-                    IEnumerable<OrganizerItem> organizerItems = entry.Items ?? [];
-
-                    foreach ( OrganizerItem item in organizerItems )
+                    foreach ( OrganizerEntry entry in OrganizerManager.GetInstance().Items ?? [] )
                     {
-                        items.Add( new JObject
+                        JArray items = [];
+
+                        IEnumerable<OrganizerItem> organizerItems = entry.Items ?? [];
+
+                        foreach ( OrganizerItem item in organizerItems )
                         {
-                            ["item"] = item.Item,
-                            ["id"] = $"0x{item.ID:x4}",
-                            ["hue"] = item.Hue,
-                            ["amount"] = item.Amount
-                        } );
+                            items.Add( new JObject
+                            {
+                                ["item"] = item.Item,
+                                ["id"] = $"0x{item.ID:x4}",
+                                ["hue"] = item.Hue,
+                                ["amount"] = item.Amount
+                            } );
+                        }
+
+                        JObject o = new()
+                        {
+                            ["name"] = entry.Name,
+                            ["sourceContainer"] = entry.SourceContainer != 0 ? $"0x{entry.SourceContainer:x8}" : null,
+                            ["destinationContainer"] = entry.DestinationContainer != 0 ? $"0x{entry.DestinationContainer:x8}" : null,
+                            ["stack"] = entry.Stack,
+                            ["returnExcess"] = entry.ReturnExcess,
+                            ["itemCount"] = items.Count,
+                            ["items"] = items
+                        };
+
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
                     }
 
-                    JObject o = new()
-                    {
-                        ["name"] = entry.Name,
-                        ["sourceContainer"] = entry.SourceContainer != 0 ? $"0x{entry.SourceContainer:x8}" : null,
-                        ["destinationContainer"] = entry.DestinationContainer != 0 ? $"0x{entry.DestinationContainer:x8}" : null,
-                        ["stack"] = entry.Stack,
-                        ["returnExcess"] = entry.ReturnExcess,
-                        ["itemCount"] = items.Count,
-                        ["items"] = items
-                    };
-
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
-                    }
+                    break;
                 }
-
-                break;
-            }
             case "scavenger":
-            {
-                foreach ( ScavengerEntry entry in ScavengerManager.GetInstance().Items ?? [] )
                 {
-                    JObject o = new()
+                    foreach ( ScavengerEntry entry in ScavengerManager.GetInstance().Items ?? [] )
                     {
-                        ["name"] = entry.Name,
-                        ["enabled"] = entry.Enabled,
-                        ["graphic"] = $"0x{entry.Graphic:x4}",
-                        ["hue"] = entry.Hue
-                    };
-
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
-                    }
-                }
-
-                break;
-            }
-            case "vendorbuy":
-            {
-                foreach ( VendorBuyAgentEntry entry in VendorBuyManager.GetInstance().Items ?? [] )
-                {
-                    JArray items = [];
-
-                    IEnumerable<VendorBuyAgentItem> buyItems = entry.Items ?? [];
-
-                    foreach ( VendorBuyAgentItem item in buyItems )
-                    {
-                        items.Add( new JObject
+                        JObject o = new()
                         {
-                            ["name"] = item.Name,
-                            ["enabled"] = item.Enabled,
-                            ["graphic"] = $"0x{item.Graphic:x4}",
-                            ["hue"] = item.Hue,
-                            ["amount"] = item.Amount
-                        } );
+                            ["name"] = entry.Name,
+                            ["enabled"] = entry.Enabled,
+                            ["graphic"] = $"0x{entry.Graphic:x4}",
+                            ["hue"] = entry.Hue
+                        };
+
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
                     }
 
-                    JObject o = new()
-                    {
-                        ["name"] = entry.Name,
-                        ["enabled"] = entry.Enabled,
-                        ["itemCount"] = items.Count,
-                        ["items"] = items
-                    };
-
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
-                    }
+                    break;
                 }
-
-                break;
-            }
-            case "autoloot":
-            {
-                foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries() ?? [] )
+            case "vendorbuy":
                 {
-                    JObject o = new()
+                    foreach ( VendorBuyAgentEntry entry in VendorBuyManager.GetInstance().Items ?? [] )
                     {
-                        ["name"] = entry.Name,
-                        ["enabled"] = entry.Enabled,
-                        ["autoloot"] = entry.Autoloot,
-                        ["constraintCount"] = entry.Constraints?.Count ?? 0
-                    };
+                        JArray items = [];
 
-                    if ( Match( o ) )
-                    {
-                        array.Add( o );
+                        IEnumerable<VendorBuyAgentItem> buyItems = entry.Items ?? [];
+
+                        foreach ( VendorBuyAgentItem item in buyItems )
+                        {
+                            items.Add( new JObject
+                            {
+                                ["name"] = item.Name,
+                                ["enabled"] = item.Enabled,
+                                ["graphic"] = $"0x{item.Graphic:x4}",
+                                ["hue"] = item.Hue,
+                                ["amount"] = item.Amount
+                            } );
+                        }
+
+                        JObject o = new()
+                        {
+                            ["name"] = entry.Name,
+                            ["enabled"] = entry.Enabled,
+                            ["itemCount"] = items.Count,
+                            ["items"] = items
+                        };
+
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
                     }
-                }
 
-                break;
-            }
+                    break;
+                }
+            case "autoloot":
+                {
+                    foreach ( AutolootEntry entry in AutolootManager.GetInstance().GetEntries() ?? [] )
+                    {
+                        JObject o = new()
+                        {
+                            ["name"] = entry.Name,
+                            ["enabled"] = entry.Enabled,
+                            ["autoloot"] = entry.Autoloot,
+                            ["constraintCount"] = entry.Constraints?.Count ?? 0
+                        };
+
+                        if ( Match( o ) )
+                        {
+                            array.Add( o );
+                        }
+                    }
+
+                    break;
+                }
         }
 
         return array;

@@ -388,13 +388,7 @@ public static partial class Engine
 
     public static void Initialize()
     {
-        StartupPath = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location );
-
-        if ( StartupPath == null )
-        {
-            throw new InvalidOperationException();
-        }
-
+        StartupPath = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location ) ?? throw new InvalidOperationException();
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
 
         PacketWaitEntries = new PacketWaitEntries();

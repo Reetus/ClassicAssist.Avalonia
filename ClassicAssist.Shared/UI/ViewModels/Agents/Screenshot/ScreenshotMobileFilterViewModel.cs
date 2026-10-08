@@ -89,7 +89,7 @@ public class ScreenshotMobileFilterViewModel : BaseViewModel
     /// </summary>
     private async Task Target( object arg )
     {
-        ( TargetType _, TargetFlags _, int serial, int _, int _, int _, int itemID ) =
+        (TargetType _, TargetFlags _, int serial, int _, int _, int _, int itemID) =
             await UOC.GetTargetInfoAsync();
 
         if ( !UOMath.IsMobile( serial ) )

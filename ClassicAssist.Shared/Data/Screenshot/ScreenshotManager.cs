@@ -13,6 +13,7 @@
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.UO.Objects;
 
@@ -25,7 +26,7 @@ namespace ClassicAssist.Data.Screenshot;
 public class ScreenshotManager
 {
     private static ScreenshotManager _instance;
-    private static readonly object _instanceLock = new();
+    private static readonly Lock _instanceLock = new();
 
     private ScreenshotManager()
     {

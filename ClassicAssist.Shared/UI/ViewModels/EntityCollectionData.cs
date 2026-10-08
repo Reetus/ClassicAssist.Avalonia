@@ -31,7 +31,6 @@ namespace ClassicAssist.UI.ViewModels;
 public class EntityCollectionData : SetPropertyNotifyChanged
 {
     private readonly Dictionary<int, Pixmap> _cache = [];
-    private bool _isLocked;
 
     public Entity Entity { get; set; }
 
@@ -45,8 +44,8 @@ public class EntityCollectionData : SetPropertyNotifyChanged
     // flips it on rows already on screen rather than rebuilding them.
     public bool IsLocked
     {
-        get => _isLocked;
-        set => SetProperty( ref _isLocked, value );
+        get;
+        set => SetProperty( ref field, value );
     }
 
     public string Name => GetName( Entity );

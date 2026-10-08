@@ -87,7 +87,9 @@ namespace ClassicAssist.Plugin
         // Process-scheduling readouts for the interval. A response that takes 300 ms to get back to a
         // fast handler looks like the plugin process not being scheduled - these say whether it was.
         private static long _stallMs;
+#if !NETFRAMEWORK
         private static double _lastGcPauseMs;
+#endif
         private static int _lastGen2;
 
         /// <summary>
