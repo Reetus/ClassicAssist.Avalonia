@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -51,6 +52,15 @@ public partial class EditTextBlock : UserControl
     public static readonly DirectProperty<EditTextBlock, object> ButtonsProperty =
         AvaloniaProperty.RegisterDirect<EditTextBlock, object>( nameof( Buttons ), o => o.Buttons,
             ( o, v ) => o.Buttons = v );
+
+    /// <summary>
+    ///     When set (the default), a committed edit of the form <c>0x59</c> is rewritten to its decimal
+    ///     equivalent (<c>89</c>) before it reaches the binding, so integer-bound fields (IDs, hues,
+    ///     amounts) accept hex. Set it to false on a free-text field that must keep "0x..." verbatim.
+    /// </summary>
+    public static readonly DirectProperty<EditTextBlock, bool> AcceptHexProperty =
+        AvaloniaProperty.RegisterDirect<EditTextBlock, bool>( nameof( AcceptHex ), o => o.AcceptHex,
+            ( o, v ) => o.AcceptHex = v, true );
 
     private readonly Button _pencilButton;
     private readonly StackPanel _buttonsPanel;
@@ -122,6 +132,12 @@ public partial class EditTextBlock : UserControl
         set => SetAndRaise( ShowIconProperty, ref field, value );
     }
 
+    public bool AcceptHex
+    {
+        get;
+        set => SetAndRaise( AcceptHexProperty, ref field, value );
+    } = true;
+
     public object Buttons
     {
         get;
@@ -175,10 +191,30 @@ public partial class EditTextBlock : UserControl
 
     private void HideTextBox()
     {
+        if ( AcceptHex )
+        {
+            ConvertHexInput();
+        }
+
         _textBlock.IsVisible = true;
         _buttonsPanel.IsVisible = true;
         _textBox.IsVisible = false;
         _textBox.SelectionStart = _textBox.SelectionEnd = 0;
+    }
+
+    private void ConvertHexInput()
+    {
+        string text = _textBox.Text?.Trim();
+
+        if ( text == null || !text.StartsWith( "0x", StringComparison.OrdinalIgnoreCase ) )
+        {
+            return;
+        }
+
+        if ( long.TryParse( text[2..], NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture, out long value ) )
+        {
+            _textBox.Text = value.ToString( CultureInfo.InvariantCulture );
+        }
     }
 
     private void InsertText( string text )
