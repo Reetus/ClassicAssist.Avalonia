@@ -1309,9 +1309,30 @@ namespace ClassicAssist.Plugin
                 return Task.FromResult( PluginEngine.GetUOFilePath() );
             }
 
+            /// <summary>
+            ///     The client's RequestMove is <c>World.Player.Walk</c>, which mutates the walker's step
+            ///     queue, runs the client pathfinder's shared scratch state and sends the walk packet - none
+            ///     of it thread-safe. RPC calls arrive on a pool thread, so run it on the client thread via
+            ///     the tick queue and complete the RPC once it has run (at most one frame later). Calling it
+            ///     directly raced the game loop and could hang the client mid-walk.
+            /// </summary>
             public Task<bool> RequestMove( int dir, bool run )
             {
-                return Task.FromResult( PluginEngine.RequestMove( dir, run ) );
+                var tcs = new TaskCompletionSource<bool>( TaskCreationOptions.RunContinuationsAsynchronously );
+
+                ReflectionImpl.Enqueue( () =>
+                {
+                    try
+                    {
+                        tcs.TrySetResult( PluginEngine.RequestMove( dir, run ) );
+                    }
+                    catch ( Exception e )
+                    {
+                        tcs.TrySetException( e );
+                    }
+                } );
+
+                return tcs.Task;
             }
 
             public void SetTitle( string title )

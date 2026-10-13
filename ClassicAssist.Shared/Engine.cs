@@ -227,7 +227,14 @@ public static partial class Engine
         _packetLengthCache.Clear();
         _sendToClient = SendPacketToClientPlugin;
         _sendToServer = SendPacketToServerPlugin;
-        _requestMove = ( dir, run ) => Host.RequestMove( dir, run ).Result;
+        // The host runs the move on the client thread at its next tick, so a stalled client would
+        // otherwise block the caller forever; treat no answer within a second as refused.
+        _requestMove = ( dir, run ) =>
+        {
+            Task<bool> move = Host.RequestMove( dir, run );
+
+            return move.Wait( 1000 ) && move.Result;
+        };
 
         Installed = true;
 
