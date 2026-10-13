@@ -92,6 +92,12 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         }
     }
 
+    public int ActionDelayMS
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = 1000;
+
     public ICommand ClipboardCopyCommand => field ??= new RelayCommand( ClipboardCopy, o => true );
 
     public ICommand ClipboardPasteCommand => field ??= new RelayCommand( ClipboardPaste, o => true );
@@ -228,6 +234,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             { "DisableInGuardzone", DisableInGuardzone },
             { "Container", ContainerSerial },
             { "RequeueFailedItems", RequeueFailedItems },
+            { "ActionDelayMS", ActionDelayMS },
             { "LootHumanoids", LootHumanoids },
             { "MatchTextValue", MatchTextValue },
             { "Groups", groupArray }
@@ -280,6 +287,9 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     {
         Items.Clear();
         Draggables.Clear();
+
+        // Default to the profile's global action delay, read from json so it doesn't depend on settings provider load order
+        ActionDelayMS = json?["Autoloot"]?["ActionDelayMS"]?.ToObject<int>() ?? json?["General"]?["ActionDelayMS"]?.ToObject<int>() ?? 1000;
 
         if ( json?["Autoloot"] == null )
         {
@@ -529,7 +539,8 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
                     CheckRange = true,
                     CheckExisting = true,
                     RequeueFailure = RequeueFailedItems,
-                    SuccessPredicate = CheckItemContainer
+                    SuccessPredicate = CheckItemContainer,
+                    ActionDelayMS = ActionDelayMS
                 };
 
                 Task t = ActionPacketQueue.EnqueueDragDrop( lootItem.Serial, lootItem.Count, containerSerial, QueuePriority.Medium, options: options );
