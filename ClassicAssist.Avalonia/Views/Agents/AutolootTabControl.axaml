@@ -35,8 +35,6 @@
         <CheckBox Content="{x:Static resources:Strings.Disable_inside_guardzone}"
                   IsChecked="{Binding DisableInGuardzone}" />
         <CheckBox Content="{x:Static resources:Strings.Loot_humanoids}" IsChecked="{Binding LootHumanoids}" />
-        <CheckBox Content="{x:Static resources:Strings.Match_text_value_of_property__UOAlive_}"
-                  IsChecked="{Binding MatchTextValue}" />
         <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
           <TextBlock Text="{x:Static resources:Strings.Action_Delay_}" VerticalAlignment="Center"/>
           <TextBox Width="40" Margin="10,0,10,0" Text="{Binding ActionDelayMS}"/>
@@ -185,6 +183,8 @@
                   IsChecked="{Binding SelectedItem.Autoloot}" />
         <CheckBox Content="{x:Static resources:Strings.Requeue_failed_items}"
                   IsChecked="{Binding RequeueFailedItems}" />
+        <CheckBox Content="{x:Static resources:Strings.Match_text_value_of_property__UOAlive_}"
+                  IsChecked="{Binding MatchTextValue}" />
       </StackPanel>
     </Grid>    
   </Grid>
