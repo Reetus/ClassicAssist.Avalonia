@@ -432,7 +432,7 @@ public class MainViewModel : BaseViewModel
 
         try
         {
-            pluginPath = PluginPathResolver.Resolve( format );
+            pluginPath = PluginPathResolver.Resolve( format, ClassicOptions.ForceManagedPlugin );
         }
         catch ( InvalidOperationException e )
         {

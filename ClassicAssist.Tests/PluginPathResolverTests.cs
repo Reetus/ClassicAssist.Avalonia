@@ -54,6 +54,18 @@ namespace ClassicAssist.Tests
         }
 
         [TestMethod]
+        public void Resolve_NativeAot_ForceManaged_IgnoresTheShim()
+        {
+            string directory = CreateTempDirectory();
+
+            File.WriteAllText( Path.Combine( directory, "ClassicAssistNE" + ShimExtension ), "" );
+
+            string result = PluginPathResolver.Resolve( ClientRuntimeFormat.NativeAot, directory, true );
+
+            Assert.AreEqual( Path.Combine( directory, "ClassicAssist.dll" ), result );
+        }
+
+        [TestMethod]
         public void Resolve_Unknown_Throws()
         {
             Assert.ThrowsException<InvalidOperationException>( () => PluginPathResolver.Resolve( ClientRuntimeFormat.Unknown ) );

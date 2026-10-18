@@ -6,7 +6,7 @@
         xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
         mc:Ignorable="d" WindowStartupLocation="CenterOwner"
         x:Class="ClassicAssist.Launcher.Views.OptionsWindow"
-        Title="Options" Height="400" Width="400">
+        Title="Options" Height="430" Width="400">
   <Window.DataContext>
     <viewModels:OptionsViewModel />
   </Window.DataContext>
@@ -43,6 +43,8 @@
           <Label Content="Client Version" Margin="0,0,10,0" Padding="0" />
           <TextBox MinWidth="80" Text="{Binding ClassicOptions.ClientVersion, Mode=TwoWay}" />
         </StackPanel>
+        <CheckBox Content="Force Managed Plugin DLL" IsChecked="{Binding ClassicOptions.ForceManagedPlugin}"
+                  ToolTip.Tip="Load the managed ClassicAssist.dll instead of the ClassicAssistNE native shim, for NativeAOT clients." />
       </StackPanel>
     </controls:GroupBox>
     <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Right" Margin="10,0,10,10">

@@ -11,18 +11,23 @@ namespace ClassicAssist.Launcher.Client;
 /// </summary>
 public static class PluginPathResolver
 {
-    public static string Resolve( ClientRuntimeFormat format )
+    /// <param name="format">The client's detected runtime format.</param>
+    /// <param name="forceManaged">
+    ///     For a NativeAOT client, skip the DNNE shim and use the managed net10.0 build even when the
+    ///     shim exists. Has no effect on the other formats, which already load a managed build.
+    /// </param>
+    public static string Resolve( ClientRuntimeFormat format, bool forceManaged = false )
     {
-        return Resolve( format, AppContext.BaseDirectory );
+        return Resolve( format, AppContext.BaseDirectory, forceManaged );
     }
 
-    internal static string Resolve( ClientRuntimeFormat format, string baseDirectory )
+    internal static string Resolve( ClientRuntimeFormat format, string baseDirectory, bool forceManaged = false )
     {
         return format switch
         {
             ClientRuntimeFormat.Framework => FrameworkPath( baseDirectory ),
-            ClientRuntimeFormat.Managed => Path.Combine( baseDirectory, "ClassicAssist.dll" ),
-            ClientRuntimeFormat.NativeAot => ResolveNativeAot( baseDirectory ),
+            ClientRuntimeFormat.Managed => ManagedPath( baseDirectory ),
+            ClientRuntimeFormat.NativeAot => forceManaged ? ManagedPath( baseDirectory ) : ResolveNativeAot( baseDirectory ),
             _ => throw new InvalidOperationException( "Could not determine the client's runtime format." )
         };
     }
@@ -48,6 +53,11 @@ public static class PluginPathResolver
         string shim = Path.Combine( baseDirectory, "ClassicAssistNE" + NativeShimExtension() );
 
         return File.Exists( shim ) ? shim : FrameworkPath( baseDirectory );
+    }
+
+    private static string ManagedPath( string baseDirectory )
+    {
+        return Path.Combine( baseDirectory, "ClassicAssist.dll" );
     }
 
     private static string FrameworkPath( string baseDirectory )

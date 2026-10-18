@@ -14,6 +14,12 @@ public class ClassicOptions
     [ClassicOption( "-debug", IncludeIfFalse = false )]
     public bool Debug { get; set; }
 
+    /// <summary>
+    ///     Launcher-only (no client argument): load the net10.0 ClassicAssist.dll into a NativeAOT
+    ///     client instead of the ClassicAssistNE native shim. See <see cref="Client.PluginPathResolver" />.
+    /// </summary>
+    public bool ForceManagedPlugin { get; set; }
+
     public bool OverrideClientVersion { get; set; }
 
     [ClassicOption( "-reconnect_time", CanIncludeProperty = nameof( AutoReconnect ), DefaultValue = 60 )]
