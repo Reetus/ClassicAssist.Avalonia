@@ -2,6 +2,7 @@
 using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Gumps;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects.Gumps;
@@ -102,6 +103,36 @@ public static class GumpCommands
     public static bool ConfirmPrompt( string message, bool closable = false )
     {
         return ConfirmPromptGump.ConfirmPrompt( message, closable );
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Gumps ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.StringArray ), nameof( ParameterType.String ), nameof( ParameterType.Boolean )
+        } )]
+    public static (bool Result, int Index) SelectionPrompt( IEnumerable<string> options,
+        string message = "Please choose an option...", bool closable = false )
+    {
+        string[] enumerable = [.. options];
+
+        if ( enumerable.Length > 0 )
+        {
+            return SelectionPromptGump.SelectionPrompt( enumerable, message, closable );
+        }
+
+        UOC.SystemMessage( Strings.Atleast_one_option_must_be_provided___, SystemMessageHues.Red );
+        return (false, 0);
+    }
+
+    [CommandsDisplay( Category = nameof( Strings.Gumps ),
+        Parameters = new[]
+        {
+            nameof( ParameterType.String ), nameof( ParameterType.String ), nameof( ParameterType.Boolean )
+        } )]
+    public static (bool Result, string Message) MessagePrompt( string message, string initialText = "",
+        bool closable = false )
+    {
+        return MessagePromptGump.MessagePrompt( message, initialText, closable );
     }
 
     [CommandsDisplay( Category = nameof( Strings.Gumps ) )]
