@@ -1,0 +1,69 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
+        xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
+        xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
+        xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
+        mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="160"
+        x:Class="ClassicAssist.Avalonia.Views.Filters.LightLevelFilterConfigureWindow"
+        Title="{x:Static resources:Strings.Light_Level}" Width="400" SizeToContent="Height"
+        Topmost="True">
+  <!-- DataContext is supplied by the UI invoker (LightLevelFilterConfigureViewModel). -->
+  <Grid Margin="10" RowDefinitions="*,Auto">
+    <controls:GroupBox Grid.Row="0" Header="{x:Static resources:Strings.Options}">
+      <StackPanel Margin="10" Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <RadioButton Content="{x:Static resources:Strings.Fixed}" IsChecked="{Binding Options.IsFixed}" />
+          <RadioButton Content="{x:Static resources:Strings.Min___Max}" IsChecked="{Binding Options.IsMinMax}" />
+        </StackPanel>
+        <Grid ColumnDefinitions="Auto,*,30" RowDefinitions="Auto,Auto,Auto">
+          <Grid.Styles>
+            <Style Selector="Slider">
+              <Setter Property="Minimum" Value="0" />
+              <Setter Property="Maximum" Value="31" />
+              <Setter Property="IsDirectionReversed" Value="True" />
+              <Setter Property="IsSnapToTickEnabled" Value="True" />
+              <Setter Property="TickFrequency" Value="1" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <Style Selector="TextBlock">
+              <Setter Property="VerticalAlignment" Value="Center" />
+              <Setter Property="Margin" Value="0,0,10,0" />
+            </Style>
+          </Grid.Styles>
+
+          <!-- Fixed -->
+          <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static resources:Strings.Light_Level_}"
+                     IsVisible="{Binding Options.IsFixed}" />
+          <Slider Grid.Row="0" Grid.Column="1" Value="{Binding Options.FixedLevel}"
+                  IsVisible="{Binding Options.IsFixed}" />
+          <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Options.FixedLevel}" HorizontalAlignment="Right"
+                     Margin="0" IsVisible="{Binding Options.IsFixed}" />
+
+          <!-- Min / Max, sliders are reversed so the brightest level (0) is on the right -->
+          <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static resources:Strings.Brightest_}"
+                     IsVisible="{Binding Options.IsMinMax}" />
+          <Slider Grid.Row="1" Grid.Column="1" Value="{Binding Options.MinLevel}"
+                  IsVisible="{Binding Options.IsMinMax}" />
+          <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Options.MinLevel}" HorizontalAlignment="Right"
+                     Margin="0" IsVisible="{Binding Options.IsMinMax}" />
+          <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static resources:Strings.Darkest_}"
+                     IsVisible="{Binding Options.IsMinMax}" />
+          <Slider Grid.Row="2" Grid.Column="1" Value="{Binding Options.MaxLevel}"
+                  IsVisible="{Binding Options.IsMinMax}" />
+          <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Options.MaxLevel}" HorizontalAlignment="Right"
+                     Margin="0" IsVisible="{Binding Options.IsMinMax}" />
+        </Grid>
+      </StackPanel>
+    </controls:GroupBox>
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <Button Content="{x:Static resources:Strings.Close}" IsDefault="True" Padding="20,4">
+        <Interaction.Behaviors>
+          <misc:CloseOnClickBehaviour/>
+        </Interaction.Behaviors>
+      </Button>
+    </StackPanel>
+  </Grid>
+</Window>

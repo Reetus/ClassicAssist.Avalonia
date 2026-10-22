@@ -4256,5 +4256,35 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Snapshot failed", resourceCulture);
             }
         }
+
+        public static string Brightest_ {
+            get {
+                return ResourceManager.GetString("Brightest:", resourceCulture);
+            }
+        }
+
+        public static string Darkest_ {
+            get {
+                return ResourceManager.GetString("Darkest:", resourceCulture);
+            }
+        }
+
+        public static string Fixed {
+            get {
+                return ResourceManager.GetString("Fixed", resourceCulture);
+            }
+        }
+
+        public static string Light_Level_ {
+            get {
+                return ResourceManager.GetString("Light Level:", resourceCulture);
+            }
+        }
+
+        public static string Min___Max {
+            get {
+                return ResourceManager.GetString("Min / Max", resourceCulture);
+            }
+        }
     }
 }
