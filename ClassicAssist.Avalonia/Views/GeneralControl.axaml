@@ -14,7 +14,7 @@
     <viewModels:GeneralControlViewModel/>
   </UserControl.DataContext>
   <Grid ColumnDefinitions="200,*">
-    <Grid Grid.Column="0" RowDefinitions="*,Auto">
+    <Grid Grid.Column="0">
       <ListBox ItemsSource="{Binding Filters}" Grid.Row="0">
         <ListBox.ItemTemplate>
           <DataTemplate>
@@ -33,14 +33,6 @@
           </DataTemplate>
         </ListBox.ItemTemplate>
       </ListBox>
-      <Grid ColumnDefinitions="Auto,*" Grid.Row="1">
-        <TextBlock Text="{x:Static resources:Strings.Light}" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,5,0" />
-        <Slider Value="{Binding Options.LightLevel}" Minimum="0" Maximum="31" Grid.Column="1">
-          <Slider.RenderTransform>
-            <RotateTransform Angle="180"/>
-          </Slider.RenderTransform>
-        </Slider>
-      </Grid>
     </Grid>
     <Grid Grid.Column="1" Margin="10, 0, 0, 0" RowDefinitions="*,Auto,Auto">
       <StackPanel Orientation="Vertical" Grid.Row="0" VerticalAlignment="Top">

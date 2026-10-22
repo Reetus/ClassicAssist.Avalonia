@@ -35,6 +35,8 @@ public static class IncomingPacketFilters
     {
         Register( 0x1C, OnASCIIMessage, RepeatedMessagesRules( 0x1C ) );
         Register( 0x20, OnMobileUpdate, () => MobileRehueRules( 0x20, MOBILE_UPDATE_SERIAL ) );
+        // Only watched, never dropped or rewritten here - LightLevelFilter's own rules cover that
+        Register( 0x4F, OnGlobalLightLevel, () => [] );
         Register( 0x77, OnMobileMoving, () => MobileRehueRules( 0x77, MOBILE_MOVING_SERIAL ) );
         Register( 0x78, OnMobileIncoming, () => MobileRehueRules( 0x78, MOBILE_INCOMING_SERIAL ) );
         Register( 0xC1, OnLocalizedMessage, () => LocalizedMessageRules( 0xC1 ) );
@@ -358,6 +360,13 @@ public static class IncomingPacketFilters
         }
 
         return block || ClilocFilter.CheckMessageAffix( journalEntry, affixType, affix );
+    }
+
+    private static bool OnGlobalLightLevel( ref byte[] packet, ref int length )
+    {
+        LightLevelFilter.SetServerLightLevel( packet[1] );
+
+        return false;
     }
 
     private static void Register( byte packetId, OnReceive action, Func<IEnumerable<PacketWaitRule>> waitRules )

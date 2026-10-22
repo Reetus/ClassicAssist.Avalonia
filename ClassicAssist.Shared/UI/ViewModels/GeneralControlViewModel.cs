@@ -108,7 +108,6 @@ public class GeneralControlViewModel : BaseViewModel, ISettingProvider
         JObject obj = new()
         {
             ["AlwaysOnTop"] = Options.CurrentOptions.AlwaysOnTop,
-            ["LightLevel"] = Options.CurrentOptions.LightLevel,
             ["ActionDelay"] = Options.CurrentOptions.ActionDelay,
             ["ActionDelayMS"] = Options.CurrentOptions.ActionDelayMS,
             ["DragDelay"] = Options.CurrentOptions.DragDelay,
@@ -170,13 +169,15 @@ public class GeneralControlViewModel : BaseViewModel, ISettingProvider
 
         JToken general = json["General"];
 
-        Options.LightLevel = general["LightLevel"]?.ToObject<int>() ?? 100;
         Options.ActionDelay = general["ActionDelay"]?.ToObject<bool>() ?? false;
         Options.ActionDelayMS = general["ActionDelayMS"]?.ToObject<int>() ?? 900;
         Options.DragDelay = general["DragDelay"]?.ToObject<bool>() ?? false;
         Options.DragDelayMS = general["DragDelayMS"]?.ToObject<int>() ?? 450;
         Options.AlwaysOnTop = general["AlwaysOnTop"]?.ToObject<bool>() ?? false;
         Options.Debug = general["Debug"]?.ToObject<bool>() ?? false;
+
+        // Overwritten below if the profile has light level filter options
+        LightLevelFilter.MigrateLegacyLightLevel( general["LightLevel"] );
 
         if ( general["Filters"] == null )
         {

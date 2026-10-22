@@ -17,15 +17,6 @@ public class Options : INotifyPropertyChanged
 {
     public delegate void dLoad( JObject json, Options options );
 
-    public delegate void dLightLevelChanged( int level );
-
-    /// <summary>
-    ///     Raised when <see cref="LightLevel" /> changes. <see cref="ClassicAssist.Data.Filters.LightLevelFilter" />
-    ///     listens and pushes the level to the client only while it is enabled - sending it from the
-    ///     setter unconditionally overrode the server's light level even with the filter switched off.
-    /// </summary>
-    public static event dLightLevelChanged LightLevelChanged;
-
     public const string DEFAULT_SETTINGS_FILENAME = "settings.json";
     private static string _profilePath;
 
@@ -211,20 +202,6 @@ public class Options : INotifyPropertyChanged
     {
         get;
         set => SetProperty( ref field, value );
-    }
-
-    public int LightLevel
-    {
-        get;
-        set
-        {
-            if ( field != value )
-            {
-                LightLevelChanged?.Invoke( value );
-            }
-
-            SetProperty( ref field, value );
-        }
     }
 
     public bool LimitHotkeyTrigger
