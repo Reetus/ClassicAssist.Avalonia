@@ -26,6 +26,7 @@ public static class IncomingPacketFilters
     private const int MOBILE_UPDATE_SERIAL = 1;
     private const int MOBILE_MOVING_SERIAL = 1;
     private const int MOBILE_INCOMING_SERIAL = 3;
+    private const int WORN_ITEM_MOBILE_SERIAL = 9;
     private const int SA_WORLD_ITEM_SERIAL = 4;
 
     // Cliloc number offset in 0xC1 and 0xCC: id, length, serial, graphic, type, hue, font, cliloc
@@ -35,6 +36,7 @@ public static class IncomingPacketFilters
     {
         Register( 0x1C, OnASCIIMessage, RepeatedMessagesRules( 0x1C ) );
         Register( 0x20, OnMobileUpdate, () => MobileRehueRules( 0x20, MOBILE_UPDATE_SERIAL ) );
+        Register( 0x2E, OnWornItem, WornItemRehueRules );
         // Only watched, never dropped or rewritten here - LightLevelFilter's own rules cover that
         Register( 0x4F, OnGlobalLightLevel, () => [] );
         Register( 0x77, OnMobileMoving, () => MobileRehueRules( 0x77, MOBILE_MOVING_SERIAL ) );
@@ -109,6 +111,20 @@ public static class IncomingPacketFilters
         return serials.Distinct().Select( serial => PacketWaitRegistry.IntAt( packetId, serialOffset, serial ) );
     }
 
+    /// <summary>A worn item is rehued when friends are rehued and it is being equipped on one.</summary>
+    private static IEnumerable<PacketWaitRule> WornItemRehueRules()
+    {
+        Options options = Options.CurrentOptions;
+
+        if ( options is not { RehueFriends: true, Friends: not null } )
+        {
+            return [];
+        }
+
+        return options.Friends.ToArray().Where( f => f != null ).Select( f => f.Serial ).Distinct()
+            .Select( serial => PacketWaitRegistry.IntAt( 0x2E, WORN_ITEM_MOBILE_SERIAL, serial ) );
+    }
+
     private static bool OnASCIIMessage( ref byte[] packet, ref int length )
     {
         PacketReader reader = new( packet, length, false );
@@ -161,6 +177,17 @@ public static class IncomingPacketFilters
         };
 
         if ( !Engine.RehueList.CheckMobileUpdate( mobile ) )
+        {
+            return false;
+        }
+
+        Engine.IncomingQueue.Enqueue( new Packet( packet, length ) );
+        return true;
+    }
+
+    private static bool OnWornItem( ref byte[] packet, ref int length )
+    {
+        if ( !Engine.RehueList.CheckWornItem( packet, length ) )
         {
             return false;
         }

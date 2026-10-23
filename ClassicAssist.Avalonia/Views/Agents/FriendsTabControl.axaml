@@ -33,8 +33,44 @@
         <CheckBox Content="{x:Static resources:Strings.Rehue_friends}"
                   IsChecked="{Binding Options.CurrentOptions.RehueFriends}" Command="{Binding ChangeRehueOption}" />
         <Button Margin="10,0,0,0" Command="{Binding SelectHueCommand}">
+          <ToolTip.Tip>
+            <TextBlock>
+              <Run Text="{x:Static resources:Strings.Hue}" /><Run Text=": " /><Run
+                Text="{Binding Options.CurrentOptions.RehueFriendsHue, Mode=OneWay}" />
+            </TextBlock>
+          </ToolTip.Tip>
           <Image Source="{StaticResource ColorWheelIcon}" Height="12" Width="12" />
         </Button>
+        <!-- The toggle and the popup share RehueLayersOpen, so light dismiss unchecks the toggle and
+             opening rebuilds the list from the current profile. -->
+        <ToggleButton x:Name="RehueLayersButton" Margin="5,0,0,0" ToolTip.Tip="{x:Static resources:Strings.Layers}"
+                      IsEnabled="{Binding Options.CurrentOptions.RehueFriends}"
+                      IsChecked="{Binding RehueLayersOpen}">
+          <Image Source="{StaticResource FilterIcon}" Height="12" Width="12" />
+        </ToggleButton>
+        <Popup IsLightDismissEnabled="True" Placement="Bottom" PlacementTarget="{Binding #RehueLayersButton}"
+               IsOpen="{Binding RehueLayersOpen}">
+          <Border Background="{DynamicResource ThemeBackgroundBrush}" BorderBrush="{DynamicResource ThemeBorderBrush}"
+                  BorderThickness="1" Padding="5">
+            <StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,0,5">
+                <Button Content="{x:Static resources:Strings.Select_All}" Padding="5,2"
+                        Command="{Binding SelectAllLayersCommand}" />
+                <Button Content="{x:Static resources:Strings.Deselect_All}" Padding="5,2"
+                        Command="{Binding DeselectAllLayersCommand}" />
+              </StackPanel>
+              <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding RehueLayers}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <CheckBox Content="{Binding Name}" IsChecked="{Binding Enabled}" Margin="0,1" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </StackPanel>
+          </Border>
+        </Popup>
       </StackPanel>
     </StackPanel>
 

@@ -2185,4 +2185,19 @@ Are you sure you wish to continue?</value>
   <data name="Min / Max" xml:space="preserve">
     <value>Min / Max</value>
   </data>
+  <data name="Hue" xml:space="preserve">
+    <value>Hue</value>
+  </data>
+  <data name="Body" xml:space="preserve">
+    <value>Body</value>
+  </data>
+  <data name="Layers" xml:space="preserve">
+    <value>Layers</value>
+  </data>
+  <data name="Select All" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="Deselect All" xml:space="preserve">
+    <value>Deselect All</value>
+  </data>
 </root>
