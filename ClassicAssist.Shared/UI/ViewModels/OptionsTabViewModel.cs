@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Hotkeys;
@@ -9,6 +11,7 @@ using ClassicAssist.Mcp;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
+using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Gumps;
 using Newtonsoft.Json.Linq;
 
@@ -80,6 +83,9 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
         options.Add( "ShowResurrectionWaypoints", CurrentOptions.ShowResurrectionWaypoints );
         options.Add( "RehueFriends", CurrentOptions.RehueFriends );
         options.Add( "RehueFriendsHue", CurrentOptions.RehueFriendsHue );
+        options.Add( "RehueFriendsBody", CurrentOptions.RehueFriendsBody );
+        options.Add( "RehueFriendsExcludedLayers",
+            new JArray( CurrentOptions.RehueFriendsExcludedLayers.Select( l => (int) l ) ) );
         options.Add( "CheckHandsPotions", CurrentOptions.CheckHandsPotions );
         options.Add( "MacrosGump", CurrentOptions.MacrosGump );
         options.Add( "MacrosGumpX", CurrentOptions.MacrosGumpX );
@@ -181,6 +187,9 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
         CurrentOptions.ShowResurrectionWaypoints = config?["ShowResurrectionWaypoints"]?.ToObject<bool>() ?? true;
         CurrentOptions.RehueFriends = config?["RehueFriends"]?.ToObject<bool>() ?? false;
         CurrentOptions.RehueFriendsHue = config?["RehueFriendsHue"]?.ToObject<int>() ?? 35;
+        CurrentOptions.RehueFriendsBody = config?["RehueFriendsBody"]?.ToObject<bool>() ?? true;
+        CurrentOptions.RehueFriendsExcludedLayers =
+            [.. config?["RehueFriendsExcludedLayers"]?.ToObject<int[]>()?.Select( l => (Layer) l ) ?? []];
         CurrentOptions.CheckHandsPotions = config?["CheckHandsPotions"]?.ToObject<bool>() ?? false;
         CurrentOptions.MacrosGump = config?["MacrosGump"]?.ToObject<bool>() ?? true;
         CurrentOptions.MacrosGumpX = config?["MacrosGumpX"]?.ToObject<int>() ?? 100;

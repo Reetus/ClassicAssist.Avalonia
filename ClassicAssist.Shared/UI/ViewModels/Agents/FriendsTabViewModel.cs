@@ -1,10 +1,16 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Friends;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Misc;
+using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
+using ClassicAssist.UO.Data;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Agents;
@@ -15,10 +21,33 @@ public class FriendsTabViewModel : BaseViewModel, ISettingProvider
 
     public ICommand ChangeRehueOption => field ??= new RelayCommand( ChangeRehue, o => true );
 
+    public ICommand DeselectAllLayersCommand => field ??= new RelayCommand( o => SetAllLayers( false ), o => true );
+
     public Options Options
     {
         get;
         set => SetProperty( ref field, value );
+    }
+
+    public ObservableCollection<RehueLayerEntry> RehueLayers
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = [];
+
+    public bool RehueLayersOpen
+    {
+        get;
+        set
+        {
+            // Rebuild on open so the list always reflects the current profile
+            if ( value )
+            {
+                RefreshRehueLayers();
+            }
+
+            SetProperty( ref field, value );
+        }
     }
 
     public ICommand RemoveFriendCommand => field ??=
@@ -30,6 +59,8 @@ public class FriendsTabViewModel : BaseViewModel, ISettingProvider
         get;
         set => SetProperty( ref field, value );
     }
+
+    public ICommand SelectAllLayersCommand => field ??= new RelayCommand( o => SetAllLayers( true ), o => true );
 
     public ICommand SelectHueCommand => field ??=
             new RelayCommandAsync( SelectHue, o => Options?.RehueFriends ?? false );
@@ -91,6 +122,49 @@ public class FriendsTabViewModel : BaseViewModel, ISettingProvider
     private static void ChangeRehue( object obj )
     {
         MainCommands.Resync();
+    }
+
+    private void RefreshRehueLayers()
+    {
+        List<RehueLayerEntry> entries =
+        [
+            new( Strings.Body, null, Options.CurrentOptions.RehueFriendsBody, OnLayerChanged )
+        ];
+
+        IEnumerable<Layer> layers = Enum.GetValues<Layer>().Where( l => l is > Layer.Invalid and <= Layer.Mount and not Layer.Unused_xF );
+
+        entries.AddRange( layers.Select( l => new RehueLayerEntry( l.ToString(), l,
+            !Options.CurrentOptions.RehueFriendsExcludedLayers.Contains( l ), OnLayerChanged ) ) );
+
+        RehueLayers = new ObservableCollection<RehueLayerEntry>( entries );
+
+        void OnLayerChanged( RehueLayerEntry entry )
+        {
+            ApplyRehueLayers();
+        }
+    }
+
+    private void SetAllLayers( bool enabled )
+    {
+        foreach ( RehueLayerEntry entry in RehueLayers )
+        {
+            entry.SetEnabledSilent( enabled );
+        }
+
+        ApplyRehueLayers();
+    }
+
+    private void ApplyRehueLayers()
+    {
+        // Replace rather than mutate, the set is read from the packet thread
+        Options.CurrentOptions.RehueFriendsExcludedLayers =
+            [.. RehueLayers.Where( e => e.Layer.HasValue && !e.Enabled ).Select( e => e.Layer.Value )];
+        Options.CurrentOptions.RehueFriendsBody = RehueLayers.Any( e => !e.Layer.HasValue && e.Enabled );
+
+        if ( Options.CurrentOptions.RehueFriends )
+        {
+            MainCommands.Resync();
+        }
     }
 
     private static async Task SelectHue( object obj )

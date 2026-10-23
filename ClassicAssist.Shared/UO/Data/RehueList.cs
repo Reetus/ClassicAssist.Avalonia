@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using ClassicAssist.Shared;
@@ -113,11 +114,10 @@ public class RehueList
             return true;
         }
 
-        if ( Options.CurrentOptions.RehueFriends &&
-             Options.CurrentOptions.Friends.Any( e => e.Serial == mobile.Serial ) )
+        if ( IsRehuedFriend( mobile.Serial ) )
         {
-            Engine.SendPacketToClient( new MobileIncoming( mobile, equipment,
-                Options.CurrentOptions.RehueFriendsHue ) );
+            Engine.SendPacketToClient( new MobileIncoming( mobile, equipment, Options.CurrentOptions.RehueFriendsHue,
+                Options.CurrentOptions.RehueFriendsExcludedLayers, Options.CurrentOptions.RehueFriendsBody ) );
             return true;
         }
 
@@ -136,8 +136,7 @@ public class RehueList
             return true;
         }
 
-        if ( !Options.CurrentOptions.RehueFriends ||
-             Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
+        if ( !Options.CurrentOptions.RehueFriendsBody || !IsRehuedFriend( mobile.Serial ) )
         {
             return false;
         }
@@ -146,6 +145,42 @@ public class RehueList
             Options.CurrentOptions.RehueFriendsHue, mobile.Status, mobile.X, mobile.Y, mobile.Z,
             mobile.Direction ) );
         return true;
+    }
+
+    /// <summary>
+    ///     0x2E: an item equipped on a friend after they came on screen gets the friend hue too, unless its
+    ///     layer is excluded. The client gets a rehued copy; the original carries on to the handlers so the
+    ///     item keeps its real hue, as equipment from 0x78 does.
+    /// </summary>
+    public bool CheckWornItem( byte[] packet, int length )
+    {
+        if ( !Options.CurrentOptions.RehueFriends || length < 15 ||
+             Options.CurrentOptions.RehueFriendsExcludedLayers.Contains( (Layer) packet[8] ) )
+        {
+            return false;
+        }
+
+        int mobileSerial = ( packet[9] << 24 ) | ( packet[10] << 16 ) | ( packet[11] << 8 ) | packet[12];
+
+        if ( !IsRehuedFriend( mobileSerial ) )
+        {
+            return false;
+        }
+
+        byte[] rehued = new byte[length];
+        Array.Copy( packet, rehued, length );
+
+        rehued[13] = (byte) ( Options.CurrentOptions.RehueFriendsHue >> 8 );
+        rehued[14] = (byte) Options.CurrentOptions.RehueFriendsHue;
+
+        Engine.SendPacketToClient( rehued, length );
+        return true;
+    }
+
+    private static bool IsRehuedFriend( int serial )
+    {
+        return Options.CurrentOptions.RehueFriends &&
+               Options.CurrentOptions.Friends.Any( e => e.Serial == serial && e.Serial != Engine.Player?.Serial );
     }
 
     public void CheckContainer( ItemCollection collection )
@@ -171,8 +206,7 @@ public class RehueList
             return true;
         }
 
-        if ( !Options.CurrentOptions.RehueFriends ||
-             Options.CurrentOptions.Friends.All( e => e.Serial != mobile.Serial ) )
+        if ( !Options.CurrentOptions.RehueFriendsBody || !IsRehuedFriend( mobile.Serial ) )
         {
             return false;
         }

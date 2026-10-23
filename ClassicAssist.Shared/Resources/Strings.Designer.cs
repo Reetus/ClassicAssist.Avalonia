@@ -4286,5 +4286,35 @@ namespace ClassicAssist.Shared.Resources {
                 return ResourceManager.GetString("Min / Max", resourceCulture);
             }
         }
+
+        public static string Hue {
+            get {
+                return ResourceManager.GetString("Hue", resourceCulture);
+            }
+        }
+
+        public static string Body {
+            get {
+                return ResourceManager.GetString("Body", resourceCulture);
+            }
+        }
+
+        public static string Layers {
+            get {
+                return ResourceManager.GetString("Layers", resourceCulture);
+            }
+        }
+
+        public static string Select_All {
+            get {
+                return ResourceManager.GetString("Select All", resourceCulture);
+            }
+        }
+
+        public static string Deselect_All {
+            get {
+                return ResourceManager.GetString("Deselect All", resourceCulture);
+            }
+        }
     }
 }

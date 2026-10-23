@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -9,6 +10,7 @@ using ClassicAssist.Data.Macros;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Scavenger;
 using ClassicAssist.Shared;
+using ClassicAssist.UO.Data;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Data;
@@ -367,6 +369,19 @@ public class Options : INotifyPropertyChanged
         get;
         set => SetProperty( ref field, value );
     }
+
+    /// <summary>Whether a friend's body is rehued as well as their equipment.</summary>
+    public bool RehueFriendsBody
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = true;
+
+    /// <summary>
+    ///     Equipment layers left at their own hue on friends. Replaced rather than mutated, as it is read
+    ///     from the packet thread.
+    /// </summary>
+    public HashSet<Layer> RehueFriendsExcludedLayers { get; set; } = [];
 
     public bool ShowProfileNameWindowTitle
     {
