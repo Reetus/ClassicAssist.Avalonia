@@ -118,7 +118,7 @@
                                  ShowLineNumbers="True"
                                  Background="{DynamicResource ThemeInnerControlBackgroundBrush}">
             <Interaction.Behaviors>
-              <misc:AvalonEditBehaviour Text="{Binding SelectedItem.Macro}" />
+              <misc:AvalonEditBehaviour MacroEntry="{Binding SelectedItem}" />
               <misc:AvalonEditCompletionBehaviour IsPaused="{Binding SelectedItem.IsPaused}"
                                                   FrameVariables="{Binding SelectedItem.FrameVariables}" />
               <misc:AvalonEditBreakpointMarginBehaviour Breakpoints="{Binding SelectedItem.Breakpoints}" />
