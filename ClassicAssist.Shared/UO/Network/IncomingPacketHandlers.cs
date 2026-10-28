@@ -1436,9 +1436,16 @@ public static class IncomingPacketHandlers
     {
         Map map = (Map) reader.ReadByte();
 
+        // The map is sent again at the end of the login sequence, after the multis around the player,
+        // so only an actual facet change may drop them.
+        bool facetChanged = Engine.Player != null && Engine.Player.Map != map;
+
         Engine.Player?.Map = map;
 
-        Engine.Items.ClearMultis();
+        if ( facetChanged )
+        {
+            Engine.Items.ClearMultis();
+        }
 
         MapChangedEvent?.Invoke( map );
     }

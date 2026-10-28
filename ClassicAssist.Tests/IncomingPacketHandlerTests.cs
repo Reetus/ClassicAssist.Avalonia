@@ -126,5 +126,46 @@ namespace ClassicAssist.Tests
 
             Engine.Player = null;
         }
+
+        [TestMethod]
+        public void MapChangeToSameMapKeepsMultis()
+        {
+            Engine.Player.Map = Map.Trammel;
+            Engine.Items.Add( new Item( 0x40000010 ) { ArtDataID = 2, X = 100, Y = 100 } );
+
+            SendMapChange( Map.Trammel );
+
+            Assert.IsNotNull( Engine.Items.GetItem( 0x40000010 ), "the same map again must not drop multis" );
+            Assert.AreEqual( Map.Trammel, Engine.Player.Map );
+
+            Engine.Items.Clear();
+        }
+
+        [TestMethod]
+        public void MapChangeToOtherMapClearsMultisOnly()
+        {
+            Engine.Player.Map = Map.Trammel;
+            Engine.Items.Add( new Item( 0x40000010 ) { ArtDataID = 2, X = 100, Y = 100 } );
+            Engine.Items.Add( new Item( 0x40000011 ) { X = 100, Y = 100 } );
+
+            SendMapChange( Map.Felucca );
+
+            Assert.IsNull( Engine.Items.GetItem( 0x40000010 ), "a facet change drops the previous facet's multis" );
+            Assert.IsNotNull( Engine.Items.GetItem( 0x40000011 ), "non-multis are left alone" );
+            Assert.AreEqual( Map.Felucca, Engine.Player.Map );
+
+            Engine.Items.Clear();
+        }
+
+        private static void SendMapChange( Map map )
+        {
+            byte[] packet = { 0xBF, 0x00, 0x06, 0x00, 0x08, (byte) map };
+
+            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xBF );
+
+            Assert.IsNotNull( handler );
+
+            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+        }
     }
 }
