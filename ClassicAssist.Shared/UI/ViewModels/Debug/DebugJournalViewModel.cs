@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Text;
 using System.Windows.Input;
 using ClassicAssist.Data;
@@ -7,8 +8,31 @@ using ClassicAssist.UO.Network;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-public class DebugJournalViewModel : BaseViewModel
+public class DebugJournalViewModel : BaseViewModel, IDisposable
 {
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
+
+    /// <summary>
+    ///     Unsubscribes the journal notifications for this window and drops the collected entries.
+    ///     Called once from <c>DebugWindow.OnClosed</c>. Unsubscribes whether or not
+    ///     <see cref="Enabled" /> is on - a plain <c>-=</c>, harmless when nothing is subscribed - so
+    ///     a capture left running at close cannot keep handling journal traffic forever; the setter
+    ///     then becomes inert rather than re-subscribing, so disposal wins over the toggle.
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        IncomingPacketHandlers.JournalEntryAddedEvent -= OnJournalEntryAddedEvent;
+        Items.Clear();
+    }
+
     public ICommand ClearCommand => field ??= new RelayCommand( Clear, o => true );
 
     public ICommand CopyCommand => field ??= new RelayCommand( Copy, o => o != null );
@@ -22,6 +46,13 @@ public class DebugJournalViewModel : BaseViewModel
         get;
         set
         {
+            // Inert once disposed - see Dispose: a late toggle must not resurrect the subscription
+            // on a torn-down window.
+            if ( _disposed )
+            {
+                return;
+            }
+
             if ( value != field )
             {
                 if ( value )

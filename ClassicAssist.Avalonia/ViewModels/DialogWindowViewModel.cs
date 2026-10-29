@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Controls;
 using ClassicAssist.Misc;
@@ -35,11 +36,40 @@ public class DialogWindowViewModel : BaseViewModel
     private void OnButtonClick( object obj )
     {
         Result = (MessageBoxResult) obj;
-        ( (Window) _window.Window ).Close();
+
+        // SharedWindow.Window is a view-agnostic object; guard the cast so a mis-wired host cannot
+        // throw out of a button handler.
+        if ( _window.Window is Window window )
+        {
+            window.Close();
+        }
     }
 
     public async Task Copy()
     {
-        await ( (Window) _window.Window ).Clipboard?.SetTextAsync( _window.Text );
+        if ( _window.Window is not Window window )
+        {
+            return;
+        }
+
+        // A null task means the platform has no clipboard - the old ?. chain awaited null and threw
+        // NullReferenceException. Failures are observed here for the same reason as in
+        // AvaloniaUIInvoker.SetClipboardText: Copy is bound straight to Ctrl+C, so a locked or
+        // missing clipboard has no other handler to catch the faulted task.
+        Task setText = window.Clipboard?.SetTextAsync( _window.Text );
+
+        if ( setText == null )
+        {
+            return;
+        }
+
+        try
+        {
+            await setText;
+        }
+        catch ( Exception e )
+        {
+            Console.WriteLine( $"Failed to set clipboard text: {e}" );
+        }
     }
 }

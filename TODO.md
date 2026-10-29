@@ -120,7 +120,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   fatal). `DebugViewModel` now self-guards, but the loop-level guard belongs here so no future
   provider can repeat the failure. Same for the load/deserialise path.
 
-- [ ] **`DebugJournalViewModel` / `DebugVendorBuyViewModel` need the same `IDisposable` teardown.**
+- [x] **`DebugJournalViewModel` / `DebugVendorBuyViewModel` need the same `IDisposable` teardown.**
   Residual from the Debug window teardown work. `ClassicAssist.Shared\UI\ViewModels\Debug\DebugJournalViewModel.cs:64,69`
   (`IncomingPacketHandlers.JournalEntryAddedEvent`) and `Debug\DebugVendorBuyViewModel.cs:40,44`
   (`VendorBuyDisplayEvent`) subscribe/unsubscribe only inside their `Enabled` setter, which nothing
@@ -444,7 +444,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ---
 
-- [ ] **Single-instance DebugWindow drops the Object Inspector's pre-navigation.**
+- [x] **Single-instance DebugWindow drops the Object Inspector's pre-navigation.**
   `ClassicAssist.Shared\UI\ViewModels\ObjectInspectorViewModel.cs:437` opens `DebugWindow` with ctor
   params (`[typeof( DebugPropertiesViewModel ), properties]`, via the `DebugWindow( Type, object )`
   ctor at `Views\DebugWindow.axaml.cs:58`) to pre-select the Properties tab. The new single-instance
@@ -452,7 +452,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   "Inspect object" while the Debug window is open just focuses it instead of navigating. Needs a
   public "select tab + populate" API on `DebugWindow`.
 
-- [ ] **`DialogWindowViewModel` awaits a possibly-null clipboard task.**
+- [x] **`DialogWindowViewModel` awaits a possibly-null clipboard task.**
   `ClassicAssist.Avalonia\ViewModels\DialogWindowViewModel.cs:43` —
   `await ( (Window) _window.Window ).Clipboard?.SetTextAsync( ... )` NREs when there is no platform
   clipboard. Same null-`Task` shape as the `SetClipboardText` bug now fixed in `AvaloniaUIInvoker`;

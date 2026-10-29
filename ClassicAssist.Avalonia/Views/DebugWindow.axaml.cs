@@ -36,6 +36,12 @@ namespace ClassicAssist.Avalonia.Views;
 /// </summary>
 public partial class DebugWindow : Window
 {
+    /// <summary>
+    ///     Set once <see cref="OnClosed" /> has torn the tab view models down;
+    ///     <see cref="NavigateTo" /> must not re-populate a disposed view model.
+    /// </summary>
+    private bool _closed;
+
     public DebugWindow()
     {
         InitializeComponent();
@@ -50,13 +56,37 @@ public partial class DebugWindow : Window
     }
 
     /// <summary>
-    ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
-    ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
-    ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
-    ///     pre-populated with that entity's properties. Mirrors the WPF build's matching constructor.
+    ///     Opens the window already on the tab for <paramref name="viewModelType" />, populated with
+    ///     <paramref name="value" /> - the WPF build's matching constructor. Delegates to
+    ///     <see cref="NavigateTo" />.
     /// </summary>
     public DebugWindow( Type viewModelType, object value ) : this()
     {
+        NavigateTo( viewModelType, value );
+    }
+
+    /// <summary>
+    ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
+    ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
+    ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
+    ///     pre-populated with that entity's properties.
+    ///     <para>
+    ///         Also called from <see cref="AvaloniaUIInvoker" />'s single-instance reuse, which
+    ///         re-targets this window with the second request's constructor parameters instead of
+    ///         constructing a second window and dropping them - "Inspect object" while the Debug
+    ///         window is already open must still navigate, not merely focus. Inert once
+    ///         <see cref="OnClosed" /> has run: tab view models are disposed there and must not be
+    ///         re-populated. A live window's view models are always safe to target - disposal only
+    ///         ever happens on close, and the reuse registry drops the window when it closes.
+    ///     </para>
+    /// </summary>
+    public void NavigateTo( Type viewModelType, object value )
+    {
+        if ( _closed )
+        {
+            return;
+        }
+
         if ( Content is not TabControl tabControl )
         {
             return;
@@ -126,6 +156,7 @@ public partial class DebugWindow : Window
     private void OnClosed( object sender, EventArgs e )
     {
         Closed -= OnClosed;
+        _closed = true;
 
         HashSet<IDisposable> seen = new( ReferenceEqualityComparer.Instance );
 

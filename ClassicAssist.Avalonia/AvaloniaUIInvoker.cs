@@ -90,10 +90,21 @@ public class AvaloniaUIInvoker : IUIInvoker
         {
             try
             {
-                // Reuse an already-open window instead of stacking another instance of it.
+                // Reuse an already-open window instead of stacking another instance of it. The
+                // request's constructor parameters carry the same pre-navigation the fresh path
+                // applies through the window's constructor - DebugWindow's ( Type, object ) pair
+                // selects a tab and populates it - so replay them on the open window rather than
+                // dropping them and merely focusing it. A window without that constructor shape
+                // just takes the focus.
                 if ( _singleInstanceWindowTypes.Contains( typeName ) &&
                      _openWindows.TryGetValue( typeName, out Window openWindow ) )
                 {
+                    if ( openWindow is DebugWindow debugWindow && ctorParam is { Length: 2 } &&
+                         ctorParam[0] is Type viewModelType )
+                    {
+                        debugWindow.NavigateTo( viewModelType, ctorParam[1] );
+                    }
+
                     openWindow.Activate();
 
                     return;
