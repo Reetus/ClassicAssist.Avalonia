@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UO;
@@ -10,7 +11,10 @@ namespace ClassicAssist.Data.Macros.Commands;
 
 public static class AliasCommands
 {
-    public static Dictionary<string, int> _aliases = [];
+    // ConcurrentDictionary rather than a lock around a plain Dictionary: macro threads, hotkey
+    // dispatch, MCP and the UI thread all read and write these without a shared lock (and
+    // Options.cs clears the field directly), so every operation has to be safe on its own.
+    public static ConcurrentDictionary<string, int> _aliases = [];
 
     internal static void SetDefaultAliases()
     {
@@ -70,14 +74,8 @@ public static class AliasCommands
 
         int value = ResolveSerial( obj );
 
-        if ( _aliases.ContainsKey( aliasName ) )
-        {
-            _aliases[aliasName] = value;
-        }
-        else
-        {
-            _aliases.Add( aliasName, value );
-        }
+        // The indexer is an atomic upsert, so the ContainsKey/Add pair cannot race another writer.
+        _aliases[aliasName] = value;
     }
 
     [CommandsDisplay( Category = nameof( Strings.Aliases ),
@@ -122,10 +120,7 @@ public static class AliasCommands
             }
         }
 
-        if ( _aliases.ContainsKey( aliasName ) )
-        {
-            _aliases.Remove( aliasName );
-        }
+        _aliases.TryRemove( aliasName, out _ );
     }
 
     [CommandsDisplay( Category = nameof( Strings.Aliases ),
@@ -144,17 +139,14 @@ public static class AliasCommands
             }
         }
 
-        if ( _aliases.ContainsKey( aliasName ) )
-        {
-            return _aliases[aliasName];
-        }
-
-        return -1;
+        return _aliases.TryGetValue( aliasName, out int alias ) ? alias : -1;
     }
 
     public static Dictionary<string, int> GetAllAliases()
     {
-        return _aliases;
+        // A copy: callers walk the whole set (the Active Objects window, profile saves) while
+        // macro threads keep mutating it.
+        return new Dictionary<string, int>( _aliases );
     }
 
     #region Player aliases
@@ -168,7 +160,7 @@ public static class AliasCommands
     ///         back to it, matching upstream - player aliases are read with <see cref="GetPlayerAlias" />.
     ///     </para>
     /// </summary>
-    public static Dictionary<int, Dictionary<string, int>> _playerAliases =
+    public static ConcurrentDictionary<int, ConcurrentDictionary<string, int>> _playerAliases =
         [];
 
     /// <summary>Sets an alias against an explicit player serial; used when loading a profile.</summary>
@@ -176,11 +168,8 @@ public static class AliasCommands
     {
         aliasName = aliasName.ToLower();
 
-        if ( !_playerAliases.TryGetValue( serial, out Dictionary<string, int> aliases ) )
-        {
-            aliases = [];
-            _playerAliases.Add( serial, aliases );
-        }
+        ConcurrentDictionary<string, int> aliases =
+            _playerAliases.GetOrAdd( serial, _ => new() );
 
         aliases[aliasName] = ResolveSerial( obj );
     }
@@ -204,12 +193,12 @@ public static class AliasCommands
         aliasName = aliasName.ToLower();
 
         if ( Engine.Player == null ||
-             !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+             !_playerAliases.TryGetValue( Engine.Player.Serial, out ConcurrentDictionary<string, int> aliases ) )
         {
             return;
         }
 
-        aliases.Remove( aliasName );
+        aliases.TryRemove( aliasName, out _ );
     }
 
     /// <summary>
@@ -223,7 +212,7 @@ public static class AliasCommands
         aliasName = aliasName.ToLower();
 
         if ( Engine.Player == null ||
-             !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+             !_playerAliases.TryGetValue( Engine.Player.Serial, out ConcurrentDictionary<string, int> aliases ) )
         {
             return -1;
         }
@@ -255,19 +244,28 @@ public static class AliasCommands
 
     public static Dictionary<int, Dictionary<string, int>> GetAllPlayerAliases()
     {
-        return _playerAliases;
+        // A deep copy for the same reason as GetAllAliases: profile saves walk the whole set while
+        // macro threads keep mutating it.
+        Dictionary<int, Dictionary<string, int>> result = [];
+
+        foreach ( KeyValuePair<int, ConcurrentDictionary<string, int>> kvp in _playerAliases )
+        {
+            result.Add( kvp.Key, new Dictionary<string, int>( kvp.Value ) );
+        }
+
+        return result;
     }
 
     /// <summary>The current character's aliases, or an empty set when not logged in.</summary>
     public static Dictionary<string, int> GetPlayerAliases()
     {
         if ( Engine.Player == null ||
-             !_playerAliases.TryGetValue( Engine.Player.Serial, out Dictionary<string, int> aliases ) )
+             !_playerAliases.TryGetValue( Engine.Player.Serial, out ConcurrentDictionary<string, int> aliases ) )
         {
             return [];
         }
 
-        return aliases;
+        return new Dictionary<string, int>( aliases );
     }
 
     #endregion

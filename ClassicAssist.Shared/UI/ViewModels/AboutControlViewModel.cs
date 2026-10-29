@@ -19,6 +19,7 @@ namespace ClassicAssist.UI.ViewModels;
 public class AboutControlViewModel : BaseViewModel
 {
     private Timer _pingTimer;
+    private PlayerMobile _subscribedPlayer;
     private Timer _timer;
 
     public string Framework { get; } = RuntimeInformation.FrameworkDescription;
@@ -174,6 +175,18 @@ public class AboutControlViewModel : BaseViewModel
         PlayerName = player.Name;
         PlayerStatus = player.Status.ToString();
         ShardFeatures = Engine.Features.ToString();
+
+        // OnMobileUpdatedEvent routes every player update (war-mode toggles included) here, so the
+        // two subscriptions have to be idempotent: detaching first means repeated calls - and a new
+        // player instance across reconnects - end up with exactly one handler each.
+        if ( _subscribedPlayer != null )
+        {
+            _subscribedPlayer.LastTargetChangedEvent -= LastTargetChangedEvent;
+            _subscribedPlayer.MobileStatusUpdated -= OnMobileStatusUpdated;
+        }
+
+        _subscribedPlayer = player;
+
         player.LastTargetChangedEvent += LastTargetChangedEvent;
         player.MobileStatusUpdated += OnMobileStatusUpdated;
         ShardName = Engine.CurrentShard?.Name ?? "Unknown";
@@ -188,7 +201,16 @@ public class AboutControlViewModel : BaseViewModel
     {
         Connected = false;
 
-        _timer?.Stop();
+        // Both timers, not just the clock: the ping timer is AutoReset and would otherwise keep
+        // sending ping packets (each parked for up to 5 s in PingServer) while disconnected.
+        StopTimers();
+
+        if ( _subscribedPlayer != null )
+        {
+            _subscribedPlayer.LastTargetChangedEvent -= LastTargetChangedEvent;
+            _subscribedPlayer.MobileStatusUpdated -= OnMobileStatusUpdated;
+            _subscribedPlayer = null;
+        }
     }
 
     private static void CheckForUpdates( object obj )
@@ -219,7 +241,8 @@ public class AboutControlViewModel : BaseViewModel
             ( !string.IsNullOrWhiteSpace( version ) ? $" --version \"{version}\"" : "" ) )
         { UseShellExecute = false, WorkingDirectory = installPath };
 
-        Process.Start( psi );
+        // Disposing releases our handle to the process; it never terminates the updater itself.
+        using Process process = Process.Start( psi );
     }
 
     /// <summary>
@@ -252,6 +275,10 @@ public class AboutControlViewModel : BaseViewModel
         Connected = true;
         ConnectedTime = DateTime.Now;
 
+        // A reconnect must not orphan the previous pair: both are AutoReset and would keep firing
+        // (and keep this instance rooted through their Elapsed handlers) for the rest of the session.
+        StopTimers();
+
         _timer = new Timer( 1000 ) { AutoReset = true };
         _timer.Elapsed += ( sender, args ) => { NotifyPropertyChanged( nameof( ConnectedTime ) ); };
         _timer.Start();
@@ -261,9 +288,40 @@ public class AboutControlViewModel : BaseViewModel
         _pingTimer.Start();
     }
 
+    /// <summary>Stops and disposes both timers; safe to call when they were never created.</summary>
+    private void StopTimers()
+    {
+        Timer timer = _timer;
+        _timer = null;
+
+        if ( timer != null )
+        {
+            timer.Stop();
+            timer.Dispose();
+        }
+
+        Timer pingTimer = _pingTimer;
+        _pingTimer = null;
+
+        if ( pingTimer != null )
+        {
+            pingTimer.Stop();
+            pingTimer.Dispose();
+        }
+    }
+
     private void PingServer()
     {
-        _pingTimer.Interval = 30000;
+        Timer pingTimer = _pingTimer;
+
+        // A tick can already be in flight when the disconnect handler disposes the timer; there is
+        // nothing to ping (and no timer to re-arm) until the next connection.
+        if ( !Connected || pingTimer == null )
+        {
+            return;
+        }
+
+        pingTimer.Interval = 30000;
 
         Random random = new();
 

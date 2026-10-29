@@ -30,8 +30,10 @@ namespace ClassicAssist.Data.Filters;
 [FilterOptions( Name = "ItemID Filter", DefaultEnabled = false )]
 public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 {
+    // LockedObservableCollection: mutated from the configure dialog on the UI thread while
+    // CheckPacket/GetWaitRules read it from the packet threads.
     public ObservableCollection<ItemIDFilterEntry> Items { get; set; } =
-        [];
+        new LockedObservableCollection<ItemIDFilterEntry>();
 
     public async Task Configure()
     {
@@ -65,7 +67,8 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 
         JArray items = [];
 
-        foreach ( ItemIDFilterEntry item in Items )
+        // Snapshot: profile saves run this on RPC threads while the UI edits the list.
+        foreach ( ItemIDFilterEntry item in Items.ToArray() )
         {
             items.Add( new JObject
             {
@@ -302,11 +305,12 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 
     private ItemIDFilterEntry FindEnabledEntry( int sourceId )
     {
-        for ( int i = 0; i < Items.Count; i++ )
+        // Snapshot: CheckPacket runs on the packet thread while the configure dialog edits the list.
+        foreach ( ItemIDFilterEntry entry in Items.ToArray() )
         {
-            if ( Items[i].SourceID == sourceId && Items[i].Enabled )
+            if ( entry.SourceID == sourceId && entry.Enabled )
             {
-                return Items[i];
+                return entry;
             }
         }
 

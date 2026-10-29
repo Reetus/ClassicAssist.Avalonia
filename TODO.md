@@ -148,14 +148,14 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   The skills grid re-runs `Convert` on every packet-driven skill update while the tab is open →
   unbounded native bitmap + stream growth. Cache the three brushes/bitmaps in statics and dispose the streams.
 
-- [ ] **`AliasCommands` static dictionaries are mutated with no synchronisation.**
+- [x] **`AliasCommands` static dictionaries are mutated with no synchronisation.**
   `ClassicAssist.Shared\Data\Macros\Commands\AliasCommands.cs:13` (`_aliases`), `:171` (`_playerAliases`).
   Writers: macro threads (`:73-127`), hotkey dispatch (`HotkeyManager.cs:171`), MCP. Reader/writer on the
   UI thread: `ActiveObjectsViewModel.RefreshPlayerAliases` (`ActiveObjectsViewModel.cs:159-169`,
   `GetAllAliases().ToList()` while a macro mutates). Plain `Dictionary` → torn buckets,
   `IndexOutOfRangeException`, lost aliases. Use `ConcurrentDictionary` or a lock.
 
-- [ ] **`ClilocFilter.Filters` / `SoundFilter.Items` / `ItemIDFilter.Items`: static `ObservableCollection`
+- [x] **`ClilocFilter.Filters` / `SoundFilter.Items` / `ItemIDFilter.Items`: static `ObservableCollection`
   mutated on the UI thread while enumerated on packet threads.**
   `ClassicAssist.Shared\Data\Filters\ClilocFilter.cs:16`, enumerated at `:80-134` from
   `IncomingPacketHandlers` on the `IncomingQueue` worker; mutated from
@@ -185,7 +185,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `_workerThread.Join()` (`ThreadPriorityQueue.cs:131-148`). Queue actions are long loops with per-item
   `WaitOne( 3000 )` retries (`:2069-2121`) — the UI can park for minutes on a large selection.
 
-- [ ] **`AboutControlViewModel`: timers leak across reconnects; per-player handlers accumulate.**
+- [x] **`AboutControlViewModel`: timers leak across reconnects; per-player handlers accumulate.**
   `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:250-262` — `OnConnectedEvent` creates new
   `Timer`/`_pingTimer` every connect and never disposes the previous ones; `OnDisconnectedEvent`
   (`:187-192`) stops only `_timer`, so `_pingTimer` keeps sending ping packets while disconnected
@@ -362,8 +362,8 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   - [x] `ClassicAssist.Avalonia\Views\MacrosTabControl.axaml.cs:26-29` — `AssetLoader.Open` stream + `XmlTextReader`, once per tab.
   - [x] `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:181-185` — `Ping` not disposed.
   - [x] `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` — `Process.Start` result (disposed via `using`; disposal releases only our handle and never terminates the launched client).
-  - [ ] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` result.
-  - [ ] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
+  - [x] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` result.
+  - [x] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
   - [ ] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` — thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
 
 - [ ] **`async void` outside genuine event handlers.**
@@ -450,6 +450,26 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `await ( (Window) _window.Window ).Clipboard?.SetTextAsync( ... )` NREs when there is no platform
   clipboard. Same null-`Task` shape as the `SetClipboardText` bug now fixed in `AvaloniaUIInvoker`;
   this file was outside that work's ownership.
+
+- [ ] **`LockedObservableCollection.CopyTo` can leave a `null` tail after a concurrent shrink.**
+  Empirically confirmed (scratch probe against the same design): `Enumerable.ToArray` sizes its
+  buffer from `ICollection<T>.Count` and then calls `CopyTo` in a *separate* call. Growth between the
+  two is handled (the bounded copy avoids `ArgumentException`), but **shrink** leaves the tail as
+  `default(T)`, so `foreach ( var f in Filters.ToArray() ) { f.Cliloc }` NREs. `ClilocFilter.Serialize`
+  (`Filters.ToArray()` on RPC threads while the UI edits the list) and
+  `IncomingPacketFilters.cs:92` are exposed.
+  Narrow window and strictly rarer than the `InvalidOperationException` it replaces, and both paths
+  are caught upstream (`ProcessIncomingQueue`'s catch; and the per-provider `UiHost` guard) — but it
+  should not rely on that. Recommended fix: give the class an explicit `Snapshot()` returning
+  `List<T>` and migrate the racing call sites off `ToArray()`, or make `CopyTo` pad the tail from the
+  snapshot so no slot is ever `default(T)`. Note the two calls cannot be made atomic — `Buffer<T>`
+  assumes a non-concurrent collection.
+
+- [ ] **`MacroEntry.Aliases` has the same unsynchronised-dictionary race.**
+  Per-macro plain `Dictionary` mutated by `SetMacroAlias`/`UnsetAlias` and read by
+  `ActiveObjectsViewModel.RefreshInstanceAliases`. Same shape as the `AliasCommands` item now fixed,
+  but the type and call sites live in `MacroEntry.cs` / `MacrosTabViewModel.cs`, outside that work's
+  ownership. (Raised by the static-state work.)
 
 ## Build & dependencies
 
