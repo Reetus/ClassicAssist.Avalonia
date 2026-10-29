@@ -492,36 +492,52 @@ public class HotkeysTabViewModel : BaseViewModel, IGlobalSettingProvider
         _searching = false;
     }
 
+    /// <summary>
+    ///     Guarded like <see cref="RelayCommandAsync.Execute" />: this is an async void invoked from
+    ///     the <see cref="Hotkey" /> property setter, so anything the prompt throws after the first
+    ///     await would escape to the dispatcher unhandled. The entry being edited is the
+    ///     <paramref name="selectedItem" /> captured at call time - <see cref="SelectedItem" /> can
+    ///     change while the overwrite prompt is open, and reading it after the await used to assign
+    ///     the hotkey to whatever entry is selected by then instead of the one being edited.
+    /// </summary>
     private async void CheckOverwriteHotkey( HotkeyEntry selectedItem, ShortcutKeys hotkey )
     {
-        HotkeyEntry conflict = null;
-
-        foreach ( HotkeyCommand hotkeyEntry in Items )
+        try
         {
-            foreach ( HotkeyEntry entry in hotkeyEntry.Children )
+            HotkeyEntry conflict = null;
+
+            foreach ( HotkeyCommand hotkeyEntry in Items )
             {
-                if ( entry.Hotkey.Equals( hotkey ) )
+                foreach ( HotkeyEntry entry in hotkeyEntry.Children )
                 {
-                    conflict = entry;
+                    if ( entry.Hotkey.Equals( hotkey ) )
+                    {
+                        conflict = entry;
+                    }
                 }
             }
-        }
 
-        if ( conflict != null && !ReferenceEquals( selectedItem, conflict ) )
-        {
-            MessageBoxResult result = await Engine.MessageBoxProvider.Show(
-                string.Format( Strings.Overwrite_existing_hotkey___0____, conflict ), Strings.Warning,
-                MessageBoxButtons.YesNo );
-
-            if ( result == MessageBoxResult.No )
+            if ( conflict != null && !ReferenceEquals( selectedItem, conflict ) )
             {
-                NotifyPropertyChanged( nameof( Hotkey ) );
-                return;
-            }
-        }
+                MessageBoxResult result = await Engine.MessageBoxProvider.Show(
+                    string.Format( Strings.Overwrite_existing_hotkey___0____, conflict ), Strings.Warning,
+                    MessageBoxButtons.YesNo );
 
-        SelectedItem.Hotkey = hotkey;
-        NotifyPropertyChanged( nameof( Hotkey ) );
+                if ( result == MessageBoxResult.No )
+                {
+                    NotifyPropertyChanged( nameof( Hotkey ) );
+                    return;
+                }
+            }
+
+            selectedItem?.Hotkey = hotkey;
+
+            NotifyPropertyChanged( nameof( Hotkey ) );
+        }
+        catch ( Exception e ) when ( !CommandExceptionPolicy.IsFatal( e ) )
+        {
+            CommandExceptionPolicy.Report( e );
+        }
     }
 
     private void ClearAllHotkeys()

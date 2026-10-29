@@ -267,6 +267,12 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
         MacrosGump.ResendGump( true );
     }
 
+    /// <summary>
+    ///     Guarded like the <c>Toggle*</c> handlers below: this is an async void command handler, so
+    ///     anything the dialog throws after the first await would escape to the dispatcher unhandled.
+    ///     Failures are reported to the user (see <see cref="CommandExceptionPolicy.Report" />);
+    ///     fatal faults still propagate.
+    /// </summary>
     private async void SelectMacroTextColor( object obj )
     {
         if ( CurrentOptions == null )
@@ -274,20 +280,33 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        MacrosGumpTextColorSelectorViewModel vm = new()
+        try
         {
-            SelectedColor = CurrentOptions.MacrosGumpTextColor
-        };
+            MacrosGumpTextColorSelectorViewModel vm = new()
+            {
+                SelectedColor = CurrentOptions.MacrosGumpTextColor
+            };
 
-        await Engine.UIInvoker.InvokeDialog( "MacrosGumpTextColorWindow", dataContext: vm );
+            await Engine.UIInvoker.InvokeDialog( "MacrosGumpTextColorWindow", dataContext: vm );
 
-        if ( vm.Result )
+            if ( vm.Result )
+            {
+                CurrentOptions.MacrosGumpTextColor = vm.SelectedColor;
+                MacrosGump.ResendGump( true );
+            }
+        }
+        catch ( Exception e ) when ( !CommandExceptionPolicy.IsFatal( e ) )
         {
-            CurrentOptions.MacrosGumpTextColor = vm.SelectedColor;
-            MacrosGump.ResendGump( true );
+            CommandExceptionPolicy.Report( e );
         }
     }
 
+    /// <summary>
+    ///     Guarded like the <c>Toggle*</c> handlers below: this is an async void command handler, so
+    ///     anything thrown here - culture assignment included - would otherwise escape to the
+    ///     dispatcher unhandled. Failures are reported to the user
+    ///     (see <see cref="CommandExceptionPolicy.Report" />); fatal faults still propagate.
+    /// </summary>
     private static async void SetLanguageOverride( object obj )
     {
         if ( obj is not Language language )
@@ -295,10 +314,17 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        AssistantOptions.LanguageOverride = language;
+        try
+        {
+            AssistantOptions.LanguageOverride = language;
 
-        await Engine.MessageBoxProvider.Show( Strings.Restart_game_for_changes_to_take_effect___,
-            Strings.Restart_game_for_changes_to_take_effect___ );
+            await Engine.MessageBoxProvider.Show( Strings.Restart_game_for_changes_to_take_effect___,
+                Strings.Restart_game_for_changes_to_take_effect___ );
+        }
+        catch ( Exception e ) when ( !CommandExceptionPolicy.IsFatal( e ) )
+        {
+            CommandExceptionPolicy.Report( e );
+        }
     }
 
     private async void ToggleDebugAdapter( object obj )

@@ -21,7 +21,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.UI.ViewModels;
 
-public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProvider
+public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProvider, IDisposable
 {
     private const int FILE_SCAN_INTERVAL_SECONDS = 5;
     private readonly Dictionary<string, DateTime> _fileSyncTimes =
@@ -31,6 +31,7 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
 
     //TODO
     //private TextDocument _document;
+    private bool _disposed;
     private ObservableCollectionEx<MacroEntry> _filterItems;
     private bool _scanning;
     private bool _searching;
@@ -43,7 +44,20 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
         _manager = MacroManager.GetInstance();
 
         _manager.IsRecording = () => IsRecording;
-        _manager.InsertDocument = str => { _dispatcher.Invoke( () => { SelectedItem.Macro += str; } ); };
+
+        // IDispatcher.Invoke is a fire-and-forget Post (see AvaloniaDispatcher), so the delegate
+        // runs later - capture the recording target now and guard it. SelectedItem can be null (or
+        // change) before the delegate gets to run, and the NRE would escape into the dispatcher.
+        _manager.InsertDocument = str =>
+        {
+            MacroEntry target = SelectedItem;
+
+            _dispatcher.Invoke( () =>
+            {
+                target?.Macro += str;
+            } );
+        };
+
         _manager.NewMacro = NewMacro;
         _manager.Items = Items;
 
@@ -168,6 +182,32 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
             new RelayCommandAsync( Stop, o => SelectedItem != null && SelectedItem.IsRunning );
 
     public ICommand ToggleSearchCommand => field ??= new RelayCommand( ToggleSearch, o => true );
+
+    /// <summary>
+    ///     Stops and disposes the folder-scan timer and detaches the Engine event handlers, so a
+    ///     torn-down instance stops scanning the Macros folder and reacting to connection changes.
+    ///     <para>
+    ///         Nothing calls this yet - like <c>VendorSellTabViewModel</c>, this tab is constructed
+    ///         in XAML and the owning window never disposes its tab view models (unlike
+    ///         <c>DebugWindow.OnClosed</c>, which disposes every tab view model implementing
+    ///         <see cref="IDisposable" />). The wiring lives outside this file; until it exists,
+    ///         this is safe to call at any time and more than once.
+    ///     </para>
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        Engine.DisconnectedEvent -= OnDisconnectedEvent;
+        Engine.ConnectedEvent -= OnConnectedEvent;
+
+        _fileScanTimer.Dispose();
+    }
 
     public void Serialize( JObject json )
     {
@@ -402,7 +442,8 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
     {
         _dispatcher.Invoke( () =>
         {
-            if ( _scanning )
+            // A tick can already be posted when Dispose runs - don't scan a torn-down view model.
+            if ( _scanning || _disposed )
             {
                 return;
             }

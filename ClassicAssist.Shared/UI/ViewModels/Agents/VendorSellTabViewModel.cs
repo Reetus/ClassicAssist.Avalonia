@@ -19,13 +19,34 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents;
 
 public class VendorSellTabViewModel : BaseViewModel, ISettingProvider, IDisposable
 {
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
+
     public VendorSellTabViewModel()
     {
         IncomingPacketHandlers.VendorSellDisplayEvent += OnVendorSellDisplayEvent;
     }
 
+    /// <summary>
+    ///     Detaches the packet subscription so a torn-down instance stops handling live vendor sell
+    ///     traffic (the handler runs on the packet worker and matches against <see cref="Items" />).
+    ///     <para>
+    ///         Nothing calls this yet - the view model is constructed in XAML by
+    ///         <c>VendorSellTabControl</c> and the owning window never disposes its tab view models
+    ///         (unlike <c>DebugWindow.OnClosed</c>, which disposes every tab view model implementing
+    ///         <see cref="IDisposable" />). The missing wiring is outside this file; until it
+    ///         exists, this is safe to call at any time and more than once.
+    ///     </para>
+    /// </summary>
     public void Dispose()
     {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
         IncomingPacketHandlers.VendorSellDisplayEvent -= OnVendorSellDisplayEvent;
     }
 

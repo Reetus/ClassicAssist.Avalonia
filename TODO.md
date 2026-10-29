@@ -383,7 +383,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   - [x] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
   - [x] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` - thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
 
-- [ ] **`async void` outside genuine event handlers.**
+- [x] **`async void` outside genuine event handlers.**
   `ClassicAssist.Shared\Data\Hotkeys\Commands\ObjectInspector.cs:6` — `public override async void Execute()`
   invoked from `Task.Run` (`HotkeyManager.cs:173`) with **no SynchronizationContext**: an exception after
   the first `await` is unhandled on a threadpool thread → process crash. Unprotected UI-context handlers:
@@ -405,7 +405,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   (what `DebugPropertiesControl` uses). Also `FindControl<MenuItem>("ContextCopy")` (`:22,48`) results are
   used without null checks.
 
-- [ ] **`IDisposable` never disposed.**
+- [x] **`IDisposable` never disposed.**
   `ClassicAssist.Shared\UI\ViewModels\Agents\VendorSellTabViewModel.cs:20,27` (implements `IDisposable`,
   unsubscribes `VendorSellDisplayEvent`, but no caller ever disposes it);
   `MacrosTabViewModel._fileScanTimer` (`MacrosTabViewModel.cs:54`);
@@ -497,7 +497,9 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   clipboard. Same null-`Task` shape as the `SetClipboardText` bug now fixed in `AvaloniaUIInvoker`;
   this file was outside that work's ownership.
 
-- [ ] **`LockedObservableCollection.CopyTo` can leave a `null` tail after a concurrent shrink.**
+- [ ] **`LockedObservableCollection` / `LockedDictionary` `CopyTo` can leave a `null` tail after a concurrent shrink.**
+  Applies to both snapshot-collection types (`ClilocFilter.cs` and `MacroEntry.cs`), which share the
+  design.
   Empirically confirmed (scratch probe against the same design): `Enumerable.ToArray` sizes its
   buffer from `ICollection<T>.Count` and then calls `CopyTo` in a *separate* call. Growth between the
   two is handled (the bounded copy avoids `ArgumentException`), but **shrink** leaves the tail as
@@ -511,11 +513,22 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   snapshot so no slot is ever `default(T)`. Note the two calls cannot be made atomic — `Buffer<T>`
   assumes a non-concurrent collection.
 
-- [ ] **`MacroEntry.Aliases` has the same unsynchronised-dictionary race.**
+- [x] **`MacroEntry.Aliases` has the same unsynchronised-dictionary race.**
   Per-macro plain `Dictionary` mutated by `SetMacroAlias`/`UnsetAlias` and read by
   `ActiveObjectsViewModel.RefreshInstanceAliases`. Same shape as the `AliasCommands` item now fixed,
   but the type and call sites live in `MacroEntry.cs` / `MacrosTabViewModel.cs`, outside that work's
   ownership. (Raised by the static-state work.)
+
+- [ ] **`MainWindow` never disposes its tab view models.**
+  `VendorSellTabViewModel` and `MacrosTabViewModel` now have safe, idempotent `Dispose`
+  implementations (VendorSell unsubscribes `VendorSellDisplayEvent`; Macros stops/disposes
+  `_fileScanTimer` and detaches its `Engine.Connected`/`DisconnectedEvent` handlers — both of which
+  also leaked), but nothing calls them: both VMs are constructed in XAML
+  (`Views\MacrosTabControl.axaml:20`, `Views\Agents\VendorSellTabControl.axaml:11`) and hosted by
+  `MainWindow`, which only closes at app shutdown. Needed fix: walk the tab controls on window close
+  and `Dispose()` every `DataContext is IDisposable`, exactly as `DebugWindow.OnClosed`
+  (`Views\DebugWindow.axaml.cs:126-151`) already does. Low urgency — these are app-lifetime views —
+  but the wiring is what makes the `IDisposable` implementations meaningful.
 
 ## Build & dependencies
 

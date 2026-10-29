@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -204,23 +205,36 @@ public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
         }
     }
 
+    /// <summary>
+    ///     Guarded like <c>OptionsTabViewModel.Toggle*</c>: this is an async void command handler,
+    ///     so anything the dialog throws after the first await would escape to the dispatcher
+    ///     unhandled. Failures are reported to the user (see
+    ///     <see cref="CommandExceptionPolicy.Report" />); fatal faults still propagate.
+    /// </summary>
     private async void OpenClilocFilter( object obj )
     {
-        ScavengerClilocFilterViewModel vm = new( FilterEnabled, Filters );
-
-        await Engine.UIInvoker.InvokeDialog( "ScavengerClilocFilterWindow", dataContext: vm );
-
-        if ( !vm.Result )
+        try
         {
-            return;
+            ScavengerClilocFilterViewModel vm = new( FilterEnabled, Filters );
+
+            await Engine.UIInvoker.InvokeDialog( "ScavengerClilocFilterWindow", dataContext: vm );
+
+            if ( !vm.Result )
+            {
+                return;
+            }
+
+            FilterEnabled = vm.Enabled;
+            Filters.Clear();
+
+            foreach ( ScavengerClilocFilterEntry entry in vm.Items )
+            {
+                Filters.Add( entry );
+            }
         }
-
-        FilterEnabled = vm.Enabled;
-        Filters.Clear();
-
-        foreach ( ScavengerClilocFilterEntry entry in vm.Items )
+        catch ( Exception e ) when ( !CommandExceptionPolicy.IsFatal( e ) )
         {
-            Filters.Add( entry );
+            CommandExceptionPolicy.Report( e );
         }
     }
 

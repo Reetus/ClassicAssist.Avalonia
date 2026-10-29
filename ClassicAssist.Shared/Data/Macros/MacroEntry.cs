@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -120,7 +121,18 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         }
     }
 
-    public Dictionary<string, int> Aliases
+    /// <summary>
+    ///     Per-macro aliases. Mutated by the macro commands (<c>SetMacroAlias</c>/<c>UnsetAlias</c>)
+    ///     on macro threads and hotkey dispatch while the UI thread walks it (the Active Objects
+    ///     window) and profile save enumerates it - the same race that <c>AliasCommands._aliases</c>
+    ///     had - so it is a <see cref="LockedDictionary{TKey,TValue}" /> rather than a plain
+    ///     <see cref="Dictionary{TKey,TValue}" />. The type is still a
+    ///     <see cref="Dictionary{TKey,TValue}" />, so every existing call site
+    ///     (<c>AliasCommands</c>, <c>ActiveObjectsViewModel</c>, the tests) compiles unchanged and
+    ///     binds the synchronised members; see <see cref="LockedDictionary{TKey,TValue}" /> for the
+    ///     one caveat.
+    /// </summary>
+    public LockedDictionary<string, int> Aliases
     {
         get;
         set => SetProperty( ref field, value );
@@ -470,5 +482,222 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     public void Step()
     {
         AutoResetEvent?.Set();
+    }
+}
+
+/// <summary>
+///     A <see cref="Dictionary{TKey,TValue}" /> whose operations are serialised on a private lock
+///     and whose enumeration is snapshot-based - the dictionary counterpart of
+///     <c>LockedObservableCollection&lt;T&gt;</c> (ClilocFilter.cs), introduced for the same
+///     reason: macro threads write per-macro aliases through <c>SetMacroAlias</c>/<c>UnsetAlias</c>
+///     while the UI thread (Active Objects) and profile save read them.
+///     <para>
+///         Unlike <c>LockedObservableCollection&lt;T&gt;</c>, the mutators of
+///         <see cref="Dictionary{TKey,TValue}" /> are not virtual, so they are hidden with
+///         <c>new</c> rather than overridden. That intercepts every call made through a
+///         <see cref="LockedDictionary{TKey,TValue}" />-typed reference - which is what
+///         <c>MacroEntry.Aliases</c> and all call sites in this repo use (verified by grep for
+///         <c>\.Aliases</c>) - but a call through a <see cref="Dictionary{TKey,TValue}" />-typed
+///         reference would reach the base implementation directly and is not synchronised.
+///     </para>
+///     <para>
+///         <see cref="IEnumerable{T}" /> and <see cref="ICollection{T}" /> are re-implemented so
+///         interface-dispatched use - LINQ, <c>ToList()</c>/<c>ToArray()</c>, and
+///         <c>List&lt;T&gt;</c>'s constructor's <c>ICollection&lt;T&gt;</c> fast path - gets the
+///         snapshot enumerator and a bounded <c>CopyTo</c>; the base's interface implementations
+///         are sealed and cannot be overridden, so re-implementation is the only hook.
+///         <see cref="Snapshot" /> is the thread-safe way to take a whole copy.
+///     </para>
+/// </summary>
+public sealed class LockedDictionary<TKey, TValue> : Dictionary<TKey, TValue>,
+    ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable
+    where TKey : notnull
+{
+    private readonly Lock _lock = new();
+
+    public new int Count
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return base.Count;
+            }
+        }
+    }
+
+    public new TValue this[TKey key]
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return base[key];
+            }
+        }
+        set
+        {
+            lock ( _lock )
+            {
+                base[key] = value;
+            }
+        }
+    }
+
+    public new ICollection<TKey> Keys
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return [.. base.Keys];
+            }
+        }
+    }
+
+    public new ICollection<TValue> Values
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return [.. base.Values];
+            }
+        }
+    }
+
+    public new void Add( TKey key, TValue value )
+    {
+        lock ( _lock )
+        {
+            base.Add( key, value );
+        }
+    }
+
+    public new void Clear()
+    {
+        lock ( _lock )
+        {
+            base.Clear();
+        }
+    }
+
+    public new bool ContainsKey( TKey key )
+    {
+        lock ( _lock )
+        {
+            return base.ContainsKey( key );
+        }
+    }
+
+    public new IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+    {
+        return Snapshot().GetEnumerator();
+    }
+
+    public new bool Remove( TKey key )
+    {
+        lock ( _lock )
+        {
+            return base.Remove( key );
+        }
+    }
+
+    /// <summary>
+    ///     A copy of the current contents, taken under the lock - the thread-safe way to walk or
+    ///     persist the whole map while other threads mutate it.
+    /// </summary>
+    public Dictionary<TKey, TValue> Snapshot()
+    {
+        lock ( _lock )
+        {
+            Dictionary<TKey, TValue> copy = new( base.Count );
+
+            foreach ( KeyValuePair<TKey, TValue> kvp in (Dictionary<TKey, TValue>) this )
+            {
+                copy.Add( kvp.Key, kvp.Value );
+            }
+
+            return copy;
+        }
+    }
+
+    public new bool TryGetValue( TKey key, out TValue value )
+    {
+        lock ( _lock )
+        {
+            return base.TryGetValue( key, out value );
+        }
+    }
+
+    void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item )
+    {
+        Add( item.Key, item.Value );
+    }
+
+    void ICollection<KeyValuePair<TKey, TValue>>.Clear()
+    {
+        Clear();
+    }
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.Contains( KeyValuePair<TKey, TValue> item )
+    {
+        lock ( _lock )
+        {
+            return base.TryGetValue( item.Key, out TValue value ) &&
+                   EqualityComparer<TValue>.Default.Equals( value, item.Value );
+        }
+    }
+
+    int ICollection<KeyValuePair<TKey, TValue>>.Count => Count;
+
+    void ICollection<KeyValuePair<TKey, TValue>>.CopyTo( KeyValuePair<TKey, TValue>[] array, int index )
+    {
+        lock ( _lock )
+        {
+            // Same bound as LockedObservableCollection.CopyTo: callers such as List<T>'s
+            // constructor and ToArray() size their buffer from Count in a separate call, so the
+            // map can grow before the copy runs - copy what fits instead of throwing, restarting
+            // the very exception this type exists to stop.
+            int count = Math.Min( base.Count, array.Length - index );
+            int i = 0;
+
+            foreach ( KeyValuePair<TKey, TValue> kvp in (Dictionary<TKey, TValue>) this )
+            {
+                if ( i >= count )
+                {
+                    break;
+                }
+
+                array[index + i] = kvp;
+                i++;
+            }
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return ( (IEnumerable<KeyValuePair<TKey, TValue>>) this ).GetEnumerator();
+    }
+
+    IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+    {
+        return Snapshot().GetEnumerator();
+    }
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.Remove( KeyValuePair<TKey, TValue> item )
+    {
+        lock ( _lock )
+        {
+            if ( base.TryGetValue( item.Key, out TValue value ) &&
+                 EqualityComparer<TValue>.Default.Equals( value, item.Value ) )
+            {
+                return base.Remove( item.Key );
+            }
+
+            return false;
+        }
     }
 }
