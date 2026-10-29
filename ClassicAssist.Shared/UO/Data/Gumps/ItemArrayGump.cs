@@ -38,6 +38,10 @@ public class ItemArrayGump : Gump
     private const int _maxRows = 4;
     private const int _perPage = 5 * _maxRows;
 
+    // Generous because this waits on a human noticing and clicking a dialog - the limit exists only
+    // so a lost or unanswered gump cannot park the calling macro thread forever.
+    private const int _defaultResponseTimeoutMS = 5 * 60 * 1000;
+
     public ItemArrayGump( IReadOnlyCollection<Item> items, uint gumpId, bool multiSelect, int xpos, int ypos,
         bool fixedSize ) : base( xpos, ypos, 0, gumpId )
     {
@@ -133,7 +137,14 @@ public class ItemArrayGump : Gump
         AutoResetEvent.Set();
     }
 
-    public static int[] SendGump( object[] objects, bool multiSelect, int x, int y, bool fixedSize )
+    /// <summary>
+    ///     Shows the item picker and blocks until the user responds or <paramref name="timeoutMS" /> elapses.
+    ///     A timeout is reported exactly like closing the gump without selecting anything - an empty
+    ///     array, the same value callers already treat as "nothing chosen" - so callers cannot tell the
+    ///     difference and a lost or unanswered gump cannot block the calling thread forever.
+    /// </summary>
+    public static int[] SendGump( object[] objects, bool multiSelect, int x, int y, bool fixedSize,
+        int timeoutMS = _defaultResponseTimeoutMS )
     {
         List<Item> items = [];
 
@@ -167,9 +178,18 @@ public class ItemArrayGump : Gump
 
         gump.SendGump();
 
-        gump.AutoResetEvent.WaitOne();
+        bool answered = gump.AutoResetEvent.WaitOne( timeoutMS );
 
         Engine.RemoveSendPostFilter( pfi );
+
+        if ( !answered )
+        {
+            // Nobody answered in time: close the abandoned prompt so a late click cannot send a
+            // response nobody is waiting on any more, and report an empty selection.
+            gump.CloseGump();
+
+            return [];
+        }
 
         return gump.Result;
     }

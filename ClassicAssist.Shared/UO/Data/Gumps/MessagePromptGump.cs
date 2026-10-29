@@ -27,6 +27,10 @@ namespace ClassicAssist.UO.Gumps;
 
 public class MessagePromptGump : Gump
 {
+    // Generous because this waits on a human noticing and clicking a dialog - the limit exists only
+    // so a lost or unanswered gump cannot park the calling macro thread forever.
+    private const int _defaultResponseTimeoutMS = 5 * 60 * 1000;
+
     public MessagePromptGump( string message, string initialText = "", bool closable = false ) : base( 500, 500 )
     {
         const int width = 300;
@@ -69,8 +73,14 @@ public class MessagePromptGump : Gump
         AutoResetEvent.Set();
     }
 
+    /// <summary>
+    ///     Shows the prompt and blocks until the user responds or <paramref name="timeoutMS" /> elapses.
+    ///     A timeout is reported exactly like declining an empty prompt - <c>(false, string.Empty)</c>,
+    ///     the same values the cancel button produces when nothing was typed - so callers cannot tell
+    ///     the difference and a lost or unanswered gump cannot block the calling thread forever.
+    /// </summary>
     public static (bool Result, string Message) MessagePrompt( string message, string initialText = "",
-        bool closable = false )
+        bool closable = false, int timeoutMS = _defaultResponseTimeoutMS )
     {
         MessagePromptGump gump = new( message, initialText, closable );
 
@@ -81,9 +91,18 @@ public class MessagePromptGump : Gump
 
         gump.SendGump();
 
-        gump.AutoResetEvent.WaitOne();
+        bool answered = gump.AutoResetEvent.WaitOne( timeoutMS );
 
         Engine.RemoveSendPostFilter( pfi );
+
+        if ( !answered )
+        {
+            // Nobody answered in time: close the abandoned prompt so a late click cannot send a
+            // response nobody is waiting on any more, and report a decline of an empty message.
+            gump.CloseGump();
+
+            return (false, string.Empty);
+        }
 
         return (gump.Result, gump.Message);
     }

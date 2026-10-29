@@ -178,7 +178,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   UI freezes per call; a wedged plugin = indefinite freeze (no timeout on the `.Result`).
   Also one subscriber away from a lock-order inversion with `_autolootLock`.
 
-- [ ] **Closing an EntityCollectionViewer freezes the UI thread until the in-flight queue action finishes.**
+- [x] **Closing an EntityCollectionViewer freezes the UI thread until the in-flight queue action finishes.**
   `ClassicAssist.Shared\UI\ViewModels\EntityCollectionViewerViewModel.cs:530-538` (`Cleanup` →
   `_threadQueue?.Dispose()`) runs from `OnClosed` on the **UI thread**
   (`Views\EntityCollectionViewer.axaml.cs:60-67`); `ThreadPriorityQueue.StopThread` does
@@ -215,7 +215,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   (`SplashWindow` is only closed in the `finally`, `App.axaml.cs:61-66`). StreamJsonRpc has no default
   request timeout — add one.
 
-- [ ] **Gump prompts block forever on no response.**
+- [x] **Gump prompts block forever on no response.**
   `SelectionPromptGump.cs:88`, `MessagePromptGump.cs:74`, `ConfirmPromptGump.cs:68`, `ItemArrayGump.cs:170` —
   `AutoResetEvent.WaitOne()` with no timeout; a lost/unanswered gump hangs the calling macro thread
   indefinitely. (Same as upstream WPF.) Add a timeout with a documented failure result.
@@ -232,12 +232,12 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `AutolootViewModel.cs:719-721`. Cancelling overwrites the previous hue with 0. Return a nullable /
   dialog result.
 
-- [ ] **`AssistantOptions.SetLanguage` assigns `DefaultThreadCurrentUICulture` twice; `DefaultThreadCurrentCulture` never set.**
+- [x] **`AssistantOptions.SetLanguage` assigns `DefaultThreadCurrentUICulture` twice; `DefaultThreadCurrentCulture` never set.**
   `ClassicAssist.Shared\Data\AssistantOptions.cs:311-312` — the duplicated line is a straight porting
   typo. Only the calling thread gets `CurrentCulture`, so RPC dispatch, macro threads and timers keep the
   OS culture after a language override → divergent numeric/date formatting per thread.
 
-- [ ] **`AudioPlayback.Play` disposes the `SoundPlayer` immediately after starting async playback.**
+- [x] **`AudioPlayback.Play` disposes the `SoundPlayer` immediately after starting async playback.**
   `ClassicAssist.Shared\Misc\AudioPlayback.cs:32-40` + `:54-64` — `using (SoundPlayer player = ...)` calls
   `player.Play()` (asynchronous) for `sync == false` then disposes it at end of `using`, cutting off or
   preventing playback. Reachable from macro `PlaySound( path, playSync=False )`

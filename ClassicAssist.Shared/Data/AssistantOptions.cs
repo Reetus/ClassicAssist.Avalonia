@@ -308,7 +308,10 @@ public static class AssistantOptions
                 throw new ArgumentOutOfRangeException();
         }
 
-        CultureInfo.DefaultThreadCurrentUICulture = locale;
+        // Both defaults are needed: DefaultThreadCurrent* apply the language to every thread created
+        // from here on (RPC dispatch, macro threads, timers keep the OS culture otherwise), while
+        // Current* only affect the calling thread.
+        CultureInfo.DefaultThreadCurrentCulture = locale;
         CultureInfo.DefaultThreadCurrentUICulture = locale;
         CultureInfo.CurrentCulture = locale;
         CultureInfo.CurrentUICulture = locale;

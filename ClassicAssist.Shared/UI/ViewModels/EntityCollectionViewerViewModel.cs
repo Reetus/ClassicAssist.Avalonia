@@ -534,6 +534,31 @@ public class EntityCollectionViewerViewModel : BaseViewModel
         SelectedItems.CollectionChanged -= OnSelectedItemsChanged;
         QueueActions.CollectionChanged -= QueueActions_CollectionChanged;
         IncomingPacketHandlers.ItemPropertiesUpdatedEvent -= OnItemPropertiesUpdated;
+
+        // Teardown runs on the UI thread and disposing the queue waits on its worker, so signal every
+        // queued and in-flight action to bail out first rather than freezing the window close until a
+        // long move loop has ground through the rest of its items. This is the same cancellation the
+        // rows' own Cancel button triggers: it is observed at item granularity, so an item move that
+        // has already started either completes or is aborted before its drop is confirmed
+        // (ActionPacketQueue.EnqueueDragDrop takes the token), items already moved stay in the
+        // destination, and the remaining items are skipped - a partial move, never a corrupt one,
+        // exactly the state the Cancel button produces mid-run.
+        // Snapshot and fence each Cancel individually: a registered cancellation callback could
+        // mutate QueueActions re-entrantly, and a throw out of window close is fatal.
+        QueueAction[] pending = [.. QueueActions];
+
+        foreach ( QueueAction queueAction in pending )
+        {
+            try
+            {
+                queueAction.CancellationTokenSource?.Cancel();
+            }
+            catch ( Exception e )
+            {
+                SentrySdk.CaptureException( e );
+            }
+        }
+
         _threadQueue?.Dispose();
     }
 
@@ -1826,9 +1851,10 @@ public class EntityCollectionViewerViewModel : BaseViewModel
 
     private void ProcessQueue( QueueAction obj )
     {
-        // ThreadPriorityQueue's worker loop has no try/catch around this call - an unhandled
-        // exception here (including a plain cancellation) would kill the worker thread and silently
-        // stop every future queued action for this window, not just this one.
+        // ThreadPriorityQueue's worker loop wraps this call in its own try/catch now, but the inner
+        // handling here is still wanted: it flattens the aggregate the awaited task throws and keeps
+        // plain cancellation (an action aborted at Cleanup/Cancel is normal, not an error) out of the
+        // error log.
         try
         {
             if ( obj != null && !obj.CancellationTokenSource.IsCancellationRequested )
