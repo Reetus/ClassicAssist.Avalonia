@@ -52,7 +52,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   fault on disconnect escapes. The hazard is already documented in
   `EntityCollectionViewerViewModel.cs:1829-1831`. Wrap each callback invocation in try/catch and log.
 
-- [ ] **Launcher: NRE crash on Start with no shard selected.**
+- [x] **Launcher: NRE crash on Start with no shard selected.**
   `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:422` — `await Utility.ResolveAddress( SelectedShard.Address )`,
   while `StartCommand.CanExecute` (`:225`) only checks client/data paths. `SelectedShard` is set only
   from config (`:142-150`) or user pick, and Avalonia's ComboBox does **no** auto-selection when only
@@ -236,7 +236,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   preventing playback. Reachable from macro `PlaySound( path, playSync=False )`
   (`Data\Macros\Commands\MainCommands.cs:214-235`). The `PlaySync` path is fine.
 
-- [ ] **`ShardsViewModel.GetStatus`: `ReadTimeout` does not apply to `ReadAsync`.**
+- [x] **`ShardsViewModel.GetStatus`: `ReadTimeout` does not apply to `ReadAsync`.**
   `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:163-169` — `stream.ReadTimeout = 60000;` then
   `await stream.ReadAsync(...)`. `ReadTimeout` only affects synchronous `Read`; the connect is guarded by
   `Task.WhenAny(..., Task.Delay(5s))` (`:153`) but the read is not, so a server that accepts and goes
@@ -278,7 +278,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   reads zip. A release shipping only `.tar.gz` fails at extraction. Either add tar support or filter the
   asset list.
 
-- [ ] **Launcher config save can throw out of `OnClosing`; save is non-atomic.**
+- [x] **Launcher config save can throw out of `OnClosing`; save is non-atomic.**
   `ClassicAssist.Launcher\Views\MainWindow.axaml.cs:19-27` calls `ClosingCommand.Execute(null)` directly;
   `MainViewModel.Closing` (`MainViewModel.cs:643`) writes `new StreamWriter(...)` with no try/catch — an
   IO error (read-only install dir) throws out of window-close, and a mid-write crash truncates
@@ -353,8 +353,9 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 - **Undisposed resources.**
   - [x] `ClassicAssist.Avalonia\Misc\StringToResourceConverter.cs:26` — resource stream per `new Bitmap` (bounded: 3 icons, cached).
   - [x] `ClassicAssist.Avalonia\Views\MacrosTabControl.axaml.cs:26-29` — `AssetLoader.Open` stream + `XmlTextReader`, once per tab.
-  - [ ] `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:181-185` — `Ping` not disposed.
-  - [ ] `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` and `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` results.
+  - [x] `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:181-185` — `Ping` not disposed.
+  - [x] `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` — `Process.Start` result (disposed via `using`; disposal releases only our handle and never terminates the launched client).
+  - [ ] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` result.
   - [ ] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
   - [ ] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` — thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
 

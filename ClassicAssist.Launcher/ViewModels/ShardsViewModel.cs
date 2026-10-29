@@ -59,7 +59,10 @@ public class ShardsViewModel : BaseViewModel
         }
 
         ProcessStartInfo psi = new() { FileName = shardEntry.Website, UseShellExecute = true };
-        Process.Start( psi );
+
+        // Disposing the Process only releases our handle to it - the launched browser keeps
+        // running (and Process.Start can legitimately return null for shell-executed URLs).
+        Process.Start( psi )?.Dispose();
     }
 
     private void Remove( object obj )
@@ -163,8 +166,23 @@ public class ShardsViewModel : BaseViewModel
         NetworkStream stream = client.GetStream();
         byte[] buffer = new byte[256];
 
-        stream.ReadTimeout = 60000;
-        int read = await stream.ReadAsync( buffer, 0, buffer.Length );
+        // NetworkStream.ReadTimeout only bounds the synchronous Read - the previous
+        // stream.ReadTimeout = 60000 never applied to this await, so a server that accepted and
+        // then went silent hung this status task until TCP gave up. Bound the read with
+        // Task.WhenAny the same way the connect above is bounded, keeping the original 60 s budget.
+        Task<int> readTask = stream.ReadAsync( buffer, 0, buffer.Length );
+
+        await Task.WhenAny( readTask, Task.Delay( TimeSpan.FromSeconds( 60 ) ) );
+
+        // Same policy as the connect guard above: never await a task that may have faulted - a
+        // timed out, reset or refused read is just "no status" (disposing the client when this
+        // method returns also releases the abandoned read).
+        if ( readTask.Status != TaskStatus.RanToCompletion )
+        {
+            return "Unknown";
+        }
+
+        int read = readTask.Result;
 
         return Encoding.ASCII.GetString( buffer, 0, read ).TrimEnd( '\0' );
     }
@@ -178,7 +196,9 @@ public class ShardsViewModel : BaseViewModel
             return "-";
         }
 
-        Ping ping = new();
+        // Ping is a Component (IDisposable) - the send has completed by this point, and disposing
+        // only releases its handles, never the reply already held in result.
+        using Ping ping = new();
 
         PingReply result = ping.Send( ip.ToString() );
 

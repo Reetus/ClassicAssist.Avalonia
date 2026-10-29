@@ -222,7 +222,7 @@ public class MainViewModel : BaseViewModel
 
     public ICommand ShowShardsWindowCommand => field ??= new RelayCommandAsync( ShowShardsWindow, o => true );
 
-    public ICommand StartCommand => field ??= new RelayCommandAsync( Start, o => !string.IsNullOrEmpty( SelectedClientPath ) && !string.IsNullOrEmpty( SelectedDataPath ) );
+    public ICommand StartCommand => field ??= new RelayCommandAsync( Start, o => !string.IsNullOrEmpty( SelectedClientPath ) && !string.IsNullOrEmpty( SelectedDataPath ) && SelectedShard != null );
 
     private async Task CheckPresets()
     {
@@ -419,6 +419,16 @@ public class MainViewModel : BaseViewModel
      */
     private async Task Start( object obj )
     {
+        // StartCommand.CanExecute normally keeps this unreachable, but RelayCommandAsync.Execute
+        // is async void and never re-checks CanExecute - and SelectedShard is null on first run or
+        // when the saved shard name no longer matches any shard - so guard here rather than NRE on
+        // SelectedShard.Address and take the process down with it.
+        if ( SelectedShard == null )
+        {
+            await MessageBoxWindow.ShowAsync( OwnerWindow, "No shard selected - select a shard before starting." );
+            return;
+        }
+
         IPAddress ip = await Utility.ResolveAddress( SelectedShard.Address );
 
         if ( ip == null )
@@ -485,7 +495,9 @@ public class MainViewModel : BaseViewModel
 
         BuildClassicOptions( psi.ArgumentList );
 
-        Process p = Process.Start( psi );
+        // Disposing the Process only releases our handle to it - it does not terminate the
+        // launched client, which must keep running after the launcher exits.
+        using Process p = Process.Start( psi );
 
         SelectedShard.LastPlayed = DateTime.Now;
 
@@ -493,7 +505,15 @@ public class MainViewModel : BaseViewModel
 
         if ( p != null && !p.HasExited )
         {
-            Closing( null );
+            Exception error = TrySaveConfig();
+
+            if ( error != null )
+            {
+                // Unlike the OnClosing path, the window is still alive here, so a save failure
+                // can be surfaced to the user before the launcher shuts down.
+                await MessageBoxWindow.ShowAsync( OwnerWindow, $"Unable to save settings:\n{error.Message}" );
+            }
+
             RequestShutdown?.Invoke();
         }
     }
@@ -556,70 +576,45 @@ public class MainViewModel : BaseViewModel
 
     private void Closing( object obj )
     {
-        JObject config = [];
+        Exception error = TrySaveConfig();
 
-        JArray clientPathArray = [.. ClientPaths];
-
-        config.Add( "ClientPaths", clientPathArray );
-        config.Add( "SelectedClientPath", SelectedClientPath ?? string.Empty );
-
-        JArray dataPathArray = [.. DataPaths];
-
-        config.Add( "DataPaths", dataPathArray );
-        config.Add( "SelectedDataPath", SelectedDataPath ?? string.Empty );
-        config.Add( "SelectedShard", SelectedShard?.Name );
-
-        IEnumerable<ShardEntry> shards = ShardManager.Shards.Where( s => !s.IsPreset );
-
-        JArray shardArray = [];
-
-        foreach ( ShardEntry shard in shards )
+        if ( error != null )
         {
-            JObject shardObj = new()
-            {
-                { "Name", shard.Name },
-                { "Address", shard.Address },
-                { "Port", shard.Port },
-                { "HasStatusProtocol", shard.HasStatusProtocol },
-                { "Encryption", shard.Encryption }
-            };
-
-            shardArray.Add( shardObj );
+            // Called from MainWindow.OnClosing, where any dialog would be torn down with the
+            // window (ShutdownMode.OnExplicitShutdown - the app shuts down on window.Closed), so
+            // a save failure can only be logged here. Start's own save call reports to the user.
+            Debug.WriteLine( $"Unable to save {CONFIG_FILENAME}: {error}" );
         }
+    }
 
-        config.Add( "Shards", shardArray );
-
-        IEnumerable<ShardEntry> deletedPresets = ShardManager.Shards.Where( s => s.IsPreset && s.Deleted );
-
-        JArray deletedArray = [];
-
-        foreach ( ShardEntry shard in deletedPresets )
+    /// <summary>
+    ///     Serialises the current configuration and writes Launcher.json atomically (temp file +
+    ///     rename), so a crash mid-write can never truncate an existing config. Returns the
+    ///     failure rather than throwing: this runs on the window-close path, where an escaping IO
+    ///     error would break the close.
+    /// </summary>
+    private Exception TrySaveConfig()
+    {
+        try
         {
-            deletedArray.Add( new JObject { { "Name", shard.Name } } );
-        }
+            JObject config = [];
 
-        config.Add( "DeletedPresets", deletedArray );
+            JArray clientPathArray = [.. ClientPaths];
 
-        JArray pluginsArray = [];
+            config.Add( "ClientPaths", clientPathArray );
+            config.Add( "SelectedClientPath", SelectedClientPath ?? string.Empty );
 
-        foreach ( PluginEntry plugin in Plugins )
-        {
-            pluginsArray.Add( plugin.FullPath );
-        }
+            JArray dataPathArray = [.. DataPaths];
 
-        config.Add( "Plugins", pluginsArray );
+            config.Add( "DataPaths", dataPathArray );
+            config.Add( "SelectedDataPath", SelectedDataPath ?? string.Empty );
+            config.Add( "SelectedShard", SelectedShard?.Name );
 
-        config.Add( "OverridePresets", ShardManager.OverridePresets );
-        config.Add( "ShardsHash", ShardsHash );
-        config.Add( "ShardsDateTime", ShardsDateTime );
+            IEnumerable<ShardEntry> shards = ShardManager.Shards.Where( s => !s.IsPreset );
 
-        if ( ShardManager.OverridePresets )
-        {
-            IEnumerable<ShardEntry> presets = ShardManager.Shards.Where( s => s.IsPreset );
+            JArray shardArray = [];
 
-            JArray presetsArray = [];
-
-            foreach ( ShardEntry shard in presets )
+            foreach ( ShardEntry shard in shards )
             {
                 JObject shardObj = new()
                 {
@@ -627,20 +622,92 @@ public class MainViewModel : BaseViewModel
                     { "Address", shard.Address },
                     { "Port", shard.Port },
                     { "HasStatusProtocol", shard.HasStatusProtocol },
-                    { "Website", shard.Website },
-                    { "Encryption", shard.Encryption },
-                    { "LastPlayed", shard.LastPlayed }
+                    { "Encryption", shard.Encryption }
                 };
 
-                presetsArray.Add( shardObj );
+                shardArray.Add( shardObj );
             }
 
-            config.Add( "Presets", presetsArray );
+            config.Add( "Shards", shardArray );
+
+            IEnumerable<ShardEntry> deletedPresets = ShardManager.Shards.Where( s => s.IsPreset && s.Deleted );
+
+            JArray deletedArray = [];
+
+            foreach ( ShardEntry shard in deletedPresets )
+            {
+                deletedArray.Add( new JObject { { "Name", shard.Name } } );
+            }
+
+            config.Add( "DeletedPresets", deletedArray );
+
+            JArray pluginsArray = [];
+
+            foreach ( PluginEntry plugin in Plugins )
+            {
+                pluginsArray.Add( plugin.FullPath );
+            }
+
+            config.Add( "Plugins", pluginsArray );
+
+            config.Add( "OverridePresets", ShardManager.OverridePresets );
+            config.Add( "ShardsHash", ShardsHash );
+            config.Add( "ShardsDateTime", ShardsDateTime );
+
+            if ( ShardManager.OverridePresets )
+            {
+                IEnumerable<ShardEntry> presets = ShardManager.Shards.Where( s => s.IsPreset );
+
+                JArray presetsArray = [];
+
+                foreach ( ShardEntry shard in presets )
+                {
+                    JObject shardObj = new()
+                    {
+                        { "Name", shard.Name },
+                        { "Address", shard.Address },
+                        { "Port", shard.Port },
+                        { "HasStatusProtocol", shard.HasStatusProtocol },
+                        { "Website", shard.Website },
+                        { "Encryption", shard.Encryption },
+                        { "LastPlayed", shard.LastPlayed }
+                    };
+
+                    presetsArray.Add( shardObj );
+                }
+
+                config.Add( "Presets", presetsArray );
+            }
+
+            WriteClassicOptions( config );
+
+            string configPath = Path.Combine( AppContext.BaseDirectory, CONFIG_FILENAME );
+            string tempPath = configPath + ".tmp";
+
+            WriteConfig( config, tempPath );
+
+            // Write to a temp file first and rename over the old config only once the new one is
+            // complete - overwriting in place risks a mid-write crash truncating Launcher.json.
+            File.Move( tempPath, configPath, overwrite: true );
+
+            return null;
         }
+        catch ( Exception e )
+        {
+            return e;
+        }
+    }
 
-        WriteClassicOptions( config );
+    /// <summary>
+    ///     Serialises <paramref name="config" /> to <paramref name="path" />. Kept as its own method
+    ///     so the writer is disposed before returning: <see cref="File.Move" /> cannot rename a file
+    ///     that is still held open, so the write cannot share a scope with the move.
+    /// </summary>
+    private static void WriteConfig( JObject config, string path )
+    {
+        using StreamWriter sw = new( path );
+        using JsonTextWriter jtw = new( sw );
 
-        using JsonTextWriter jtw = new( new StreamWriter( Path.Combine( AppContext.BaseDirectory, CONFIG_FILENAME ) ) );
         jtw.Formatting = Formatting.Indented;
         config.WriteTo( jtw );
     }
