@@ -481,10 +481,14 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 ## Build & dependencies
 
 - [ ] **`MessagePack` 2.5.302 has a known moderate-severity vulnerability (NU1902, GHSA-qhrr-8q5h-9q3h).**
+  *Decision recorded: to be done as a **focused follow-up**, not in parallel with other work.* It
+  touches the MessagePack RPC contract shared between the UI process and the plugin across four
+  projects, including `ClassicAssist.Plugin` (multi-targets `net472` + `net10.0`), so it needs the
+  RPC boundary verified end-to-end in isolation.
   Reported 7× across `ClassicAssist.Avalonia`, `ClassicAssist.HeadlessTests`, `ClassicAssist.Plugin`,
   `Tools\PacketTransportBenchmark` — the only warnings in a clean build. Upgrade MessagePack.
 
-- [ ] **`ClassicAssist.Avalonia.csproj:55-57` references a non-existent `AvaloniaEdit.dll`.**
+- [x] **`ClassicAssist.Avalonia.csproj:55-57` references a non-existent `AvaloniaEdit.dll`.**
   `<Reference Include="AvaloniaEdit"><HintPath>AvaloniaEdit.dll</HintPath></Reference>` points at
   `ClassicAssist.Avalonia\AvaloniaEdit.dll`, which does not exist on disk, while `Avalonia.AvaloniaEdit`
   11.3.0 is also package-referenced (`:32`). `App.axaml:4`'s
