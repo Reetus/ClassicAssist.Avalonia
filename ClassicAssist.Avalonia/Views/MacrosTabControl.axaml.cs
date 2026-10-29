@@ -23,10 +23,12 @@ public partial class MacrosTabControl : UserControl
         textEditor.ShowLineNumbers = true;
         textEditor.Options.ConvertTabsToSpaces = true;
 
-        Stream stream = AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
+        // HighlightingLoader.Load fully parses the definition before returning, so the reader (and
+        // the asset stream it wraps) can be disposed immediately afterwards.
+        using Stream stream = AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
+        using XmlTextReader reader = new( stream );
 
-        textEditor.SyntaxHighlighting = HighlightingLoader.Load(
-            new XmlTextReader( stream ), HighlightingManager.Instance );
+        textEditor.SyntaxHighlighting = HighlightingLoader.Load( reader, HighlightingManager.Instance );
 
         // Wires up Ctrl+F (and Ctrl+H for replace) the same as the WPF build's AvalonEdit editor.
         SearchPanel.Install( textEditor );

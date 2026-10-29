@@ -23,7 +23,7 @@ public class DialogWindowViewModel : BaseViewModel
     public string ImagePath =>
         _window.Icon == MessageBoxImage.Error ? "dialog-error.png" :
         _window.Icon == MessageBoxImage.Warning ? "dialog-warn.png" :
-        _window.Icon == MessageBoxImage.Warning ? "dialog-info.png" : null;
+        _window.Icon == MessageBoxImage.Information ? "dialog-info.png" : null;
 
     public bool IsNoShowed => _window.Buttons == MessageBoxButtons.YesNo;
     public bool IsOkShowed => _window.Buttons == MessageBoxButtons.OK;

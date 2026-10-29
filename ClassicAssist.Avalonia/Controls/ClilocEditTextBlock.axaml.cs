@@ -12,7 +12,6 @@
 
 #endregion
 
-using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
@@ -101,7 +100,9 @@ public partial class ClilocEditTextBlock : UserControl
 
         Item item = Engine.Items.GetItem( serial );
 
-        Cliloc = item?.Properties?.Select( p => p.Cliloc ).FirstOrDefault() ?? -1;
+        // FirstOrDefault() over an empty property list is 0, an invalid cliloc - an item with no
+        // properties has to map to "Any" (-1), the same as a null item/Properties.
+        Cliloc = item?.Properties is { Length: > 0 } properties ? properties[0].Cliloc : -1;
     }
 
     private void InitializeComponent()

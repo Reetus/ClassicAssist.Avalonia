@@ -28,13 +28,20 @@ public partial class FilterControl : UserControl
         AvaloniaProperty.Register<FilterControl, bool>( nameof( ShowCloseButton ), true );
     private TextBox _textBox;
 
+    // AvaloniaProperty.Changed is property-wide static state: registering in the instance constructor
+    // adds one subscription per control ever constructed and none of them are ever removed, so every
+    // change would invoke every past registration. A class handler is meant to be registered once per
+    // type - it receives the instance whose property changed, so no attach/detach pairing is needed.
+    static FilterControl()
+    {
+        IsFilterVisibleProperty.Changed.AddClassHandler<FilterControl>( ( o, e ) => o.OnIsFilterVisibleChanged( e ) );
+    }
+
     public FilterControl()
     {
         InitializeComponent();
 
         _textBox = this.FindControl<TextBox>( "FilterTextBox" );
-
-        IsFilterVisibleProperty.Changed.AddClassHandler<FilterControl>( ( o, e ) => o.OnIsFilterVisibleChanged( e ) );
     }
 
     public ICommand CloseCommand => field ??= new RelayCommand( Close );

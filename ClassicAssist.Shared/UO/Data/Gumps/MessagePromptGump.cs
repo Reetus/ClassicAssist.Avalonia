@@ -54,7 +54,17 @@ public class MessagePromptGump : Gump
 
     public override void OnResponse( int buttonID, int[] switches, List<(int Key, string Value)> textEntries = null )
     {
-        Message = textEntries?[0].Value ?? string.Empty;
+        // Same guard as SelectionPromptGump: a null or empty list (malformed/cancelled response)
+        // must not index [0].
+        if ( textEntries != null && textEntries.Count > 0 )
+        {
+            Message = textEntries[0].Value ?? string.Empty;
+        }
+        else
+        {
+            Message = string.Empty;
+        }
+
         Result = buttonID == 1;
         AutoResetEvent.Set();
     }

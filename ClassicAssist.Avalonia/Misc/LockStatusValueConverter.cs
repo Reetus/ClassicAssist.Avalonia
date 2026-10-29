@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Globalization;
+using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -7,8 +8,18 @@ using ClassicAssist.UO.Data;
 
 namespace ClassicAssist.Avalonia.Misc;
 
+/// <summary>
+///     Binds a <see cref="LockStatus" /> onto its arrow/lock icon. The skills grid re-runs Convert on
+///     every packet-driven skill update, so the three bitmaps are decoded once and shared - a per-call
+///     Bitmap would leak native bitmaps (and the asset stream they were decoded from) as fast as
+///     packets arrive.
+/// </summary>
 public class LockStatusValueConverter : IValueConverter
 {
+    private static readonly Bitmap _up = LoadBitmap( "arrow_up.png" );
+    private static readonly Bitmap _down = LoadBitmap( "arrow_down.png" );
+    private static readonly Bitmap _locked = LoadBitmap( "lock.png" );
+
     public object Convert( object value, Type targetType, object parameter, CultureInfo culture )
     {
         if ( value is not LockStatus )
@@ -22,14 +33,14 @@ public class LockStatusValueConverter : IValueConverter
         {
             case LockStatus.Up:
 
-                return new Bitmap( AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/arrow_up.png" ) ) );
+                return _up;
             case LockStatus.Down:
 
-                return new Bitmap( AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/arrow_down.png" ) ) );
+                return _down;
 
             case LockStatus.Locked:
 
-                return new Bitmap( AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/lock.png" ) ) );
+                return _locked;
 
             default:
 
@@ -40,5 +51,13 @@ public class LockStatusValueConverter : IValueConverter
     public object ConvertBack( object value, Type targetType, object parameter, CultureInfo culture )
     {
         throw new NotImplementedException();
+    }
+
+    private static Bitmap LoadBitmap( string fileName )
+    {
+        using Stream stream =
+            AssetLoader.Open( new Uri( $"avares://ClassicAssist.Avalonia/Assets/{fileName}" ) );
+
+        return new Bitmap( stream );
     }
 }

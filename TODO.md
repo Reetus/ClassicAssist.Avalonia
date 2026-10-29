@@ -121,13 +121,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   that can never be unsubscribed — so every session leaks a VM and does title-update work twice. Remove
   one of the two constructions.
 
-- [ ] **`FilterControl` registers a global `AvaloniaProperty` class handler per instance.**
+- [x] **`FilterControl` registers a global `AvaloniaProperty` class handler per instance.**
   `ClassicAssist.Avalonia\Controls\FilterControl.axaml.cs:37` —
   `IsFilterVisibleProperty.Changed.AddClassHandler<FilterControl>(...)` inside the **instance**
   constructor. `AvaloniaProperty.Changed` is property-wide static state: one subscription per control
   ever constructed, never removed, and every change invokes all of them. Move to a static constructor.
 
-- [ ] **`LockStatusValueConverter` leaks a `Bitmap` and an undisposed asset stream on every conversion.**
+- [x] **`LockStatusValueConverter` leaks a `Bitmap` and an undisposed asset stream on every conversion.**
   `ClassicAssist.Avalonia\Misc\LockStatusValueConverter.cs:25,28,32` — `return new Bitmap( AssetLoader.Open(...) )`
   with no caching (contrast `PathToThumbnailValueConverter` / `PixmapValueConverter`, which do cache).
   The skills grid re-runs `Convert` on every packet-driven skill update while the tab is open →
@@ -234,29 +234,29 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `Task.WhenAny(..., Task.Delay(5s))` (`:153`) but the read is not, so a server that accepts and goes
   silent hangs that ping task until TCP gives up. Wrap the read in `Task.WhenAny` too.
 
-- [ ] **`DialogWindowViewModel.ImagePath` ternary repeats `MessageBoxImage.Warning` — the Information
+- [x] **`DialogWindowViewModel.ImagePath` ternary repeats `MessageBoxImage.Warning` — the Information
   icon can never render.** `ClassicAssist.Avalonia\ViewModels\DialogWindowViewModel.cs:23-26` — third
   branch must be `MessageBoxImage.Information`; `dialog-info.png` is unreachable and the image area
   renders empty. Porting typo.
 
-- [ ] **`ConfirmDeleteBehaviour` leaves the button stuck on `PendingIcon`.**
+- [x] **`ConfirmDeleteBehaviour` leaves the button stuck on `PendingIcon`.**
   `ClassicAssist.Avalonia\Misc\ConfirmDeleteBehaviour.cs:94-106` — the confirm branch cancels the 2-second
   icon revert (`:80-92`) but never restores `image.Source = originalIcon`; if the row survives (or
   `_deleteCommand.CanExecute` is false) the icon stays "armed" forever.
 
-- [ ] **`MultiValueSelector.Values` styled property shares one default `ObservableCollection` across all
+- [x] **`MultiValueSelector.Values` styled property shares one default `ObservableCollection` across all
   controls.** `ClassicAssist.Avalonia\Controls\MultiValueSelector.axaml.cs:44-46` —
   `Register<MultiValueSelector, ObservableCollection<int>>( nameof( Values ), [] )` creates the default
   once; `Values ??= []` in `OnTextBoxKeyDown` (`:186`) sees the shared non-null default and mutates it,
   leaking values between unbound controls.
 
-- [ ] **`MessagePromptGump.OnResponse` indexes `textEntries[0]` without a count check.**
+- [x] **`MessagePromptGump.OnResponse` indexes `textEntries[0]` without a count check.**
   `ClassicAssist.Shared\UO\Data\Gumps\MessagePromptGump.cs:57` — `textEntries?[0].Value` throws
   `ArgumentOutOfRangeException` for a non-null empty list (malformed/cancelled response), escaping into
   the packet response path. `SelectionPromptGump.cs:68-71` guards its `switches[0]` correctly — make these
   consistent.
 
-- [ ] **`ClilocEditTextBlock.OnTargetClick` maps "no properties" to cliloc 0 instead of "Any" (-1).**
+- [x] **`ClilocEditTextBlock.OnTargetClick` maps "no properties" to cliloc 0 instead of "Any" (-1).**
   `ClassicAssist.Avalonia\Controls\ClilocEditTextBlock.axaml.cs:104` — `?? -1` only covers a null
   `item`/`Properties`; an empty `Properties` list yields `FirstOrDefault() == 0`, an invalid cliloc.
 
@@ -342,16 +342,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ## P4 — hygiene
 
-- [ ] **Undisposed resources.**
-  `ClassicAssist.Avalonia\Misc\StringToResourceConverter.cs:26` (resource stream per `new Bitmap`, bounded —
-  3 icons, cached); `Views\MacrosTabControl.axaml.cs:26-29` (`AssetLoader.Open` stream + `XmlTextReader`,
-  once per tab); `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:181-185` (`Ping` not disposed);
-  `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` and
-  `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` (`Process.Start` results);
-  `AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and
-  `Views\AboutControl.axaml.cs:32` (new timer per pointer-enter);
-  `Misc\PathToThumbnailValueConverter.cs:37-63` (thumbnail cache keyed `path|width|mtime`, never evicted —
-  a large screenshot gallery grows memory indefinitely).
+- **Undisposed resources.**
+  - [x] `ClassicAssist.Avalonia\Misc\StringToResourceConverter.cs:26` — resource stream per `new Bitmap` (bounded: 3 icons, cached).
+  - [x] `ClassicAssist.Avalonia\Views\MacrosTabControl.axaml.cs:26-29` — `AssetLoader.Open` stream + `XmlTextReader`, once per tab.
+  - [ ] `ClassicAssist.Launcher\ViewModels\ShardsViewModel.cs:181-185` — `Ping` not disposed.
+  - [ ] `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` and `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` results.
+  - [ ] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
+  - [ ] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` — thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
 
 - [ ] **`async void` outside genuine event handlers.**
   `ClassicAssist.Shared\Data\Hotkeys\Commands\ObjectInspector.cs:6` — `public override async void Execute()`
@@ -363,13 +360,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `SelectedItem` after the await at `:523`, so it can assign the hotkey to a different entry than the one
   being edited).
 
-- [ ] **`MacrosGump` static 250 ms timer outlives its purpose.**
+- [x] **`MacrosGump` static 250 ms timer outlives its purpose.**
   `ClassicAssist.Shared\UO\Data\Gumps\MacrosGump.cs:33,132-138` — `Initialize()` (from
   `OptionsTabViewModel.Deserialize:233-236`) starts `new Timer( o => ResendGump(), null, 1000, 250 )`;
   turning the option off only makes `ResendGump` early-return (`:99-104`) — the timer is never stopped or
   disposed except by the next `Initialize()`. It spins 4×/second for the rest of the process lifetime.
 
-- [ ] **`HexDumpControl` "Copy byte[] declaration" does nothing.**
+- [x] **`HexDumpControl` "Copy byte[] declaration" does nothing.**
   `ClassicAssist.Avalonia\Controls\HexDumpControl.axaml.cs:22-46` — the handler builds `prepend` then only
   contains a commented-out `IClipboard` block (`:43-45`). Wire it to `Engine.UIInvoker.SetClipboardText`
   (what `DebugPropertiesControl` uses). Also `FindControl<MenuItem>("ContextCopy")` (`:22,48`) results are

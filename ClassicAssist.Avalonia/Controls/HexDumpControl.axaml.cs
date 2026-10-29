@@ -19,7 +19,9 @@ public partial class HexDumpControl : UserControl
     {
         InitializeComponent();
 
-        this.FindControl<MenuItem>( "ContextCopy" ).PointerPressed += ( sender, args ) =>
+        MenuItem contextCopy = this.FindControl<MenuItem>( "ContextCopy" );
+
+        contextCopy?.PointerPressed += ( sender, args ) =>
         {
             if ( Packet == null )
             {
@@ -43,9 +45,13 @@ public partial class HexDumpControl : UserControl
             // IClipboard service = (IClipboard) AvaloniaLocator.Current.GetService( typeof( IClipboard ) );
             //
             // service.SetTextAsync( prepend ).ConfigureAwait( false );
+
+            Engine.UIInvoker?.SetClipboardText( prepend );
         };
 
-        this.FindControl<MenuItem>( "ContextReplay" ).PointerPressed += ( sender, args ) =>
+        MenuItem contextReplay = this.FindControl<MenuItem>( "ContextReplay" );
+
+        contextReplay?.PointerPressed += ( sender, args ) =>
         {
             if ( Packet == null )
             {

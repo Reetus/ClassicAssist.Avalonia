@@ -30,6 +30,7 @@ namespace ClassicAssist.UO.Gumps;
 
 public class MacrosGump : ReflectionRepositionableGump
 {
+    private static readonly Lock _timerLock = new();
     private static Timer _timer;
     private static int _serial = 0x0fe00000;
     private static IEnumerable<MacroEntry> _lastMacros;
@@ -89,6 +90,18 @@ public class MacrosGump : ReflectionRepositionableGump
 
     public static void ResendGump( bool force = false )
     {
+        if ( !Options.CurrentOptions.MacrosGump )
+        {
+            // The option is off - there is nothing left to refresh, so stop the periodic resend
+            // instead of letting the timer spin 4x/second for the rest of the process lifetime.
+            // Toggling the option back on re-enters this method and restarts the timer below.
+            StopTimer();
+        }
+        else
+        {
+            StartTimer();
+        }
+
         if ( !Engine.Connected || Engine.Player == null )
         {
             return;
@@ -133,8 +146,30 @@ public class MacrosGump : ReflectionRepositionableGump
     {
         Shared.UO.Commands.CloseClientGump( typeof( MacrosGump ) );
 
-        _timer?.Dispose();
-        _timer = new Timer( o => ResendGump(), null, 1000, 250 );
+        StopTimer();
+        StartTimer();
+    }
+
+    private static void StartTimer()
+    {
+        lock ( _timerLock )
+        {
+            if ( _timer != null )
+            {
+                return;
+            }
+
+            _timer = new Timer( o => ResendGump(), null, 1000, 250 );
+        }
+    }
+
+    private static void StopTimer()
+    {
+        lock ( _timerLock )
+        {
+            _timer?.Dispose();
+            _timer = null;
+        }
     }
 
     public override void SetPosition( int x, int y )
