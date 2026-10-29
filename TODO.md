@@ -170,7 +170,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   synchronously from the macro thread (`AgentCommands.cs:122`). Serialises unrelated callers, and
   combined with the Scavenger packet-thread stall the `WaitOne(2000)` can time out and silently miss items.
 
-- [ ] **`Engine.SendPacketToServer`/`SendPacketToClient`: rate-limit spin + blocking RPC `.Result` inside
+- [x] **`Engine.SendPacketToServer`/`SendPacketToClient`: rate-limit spin + blocking RPC `.Result` inside
   `lock`, callable from the UI thread.**
   `ClassicAssist.Shared\Engine.cs:611-657` (locks `:613`/`:636`, `Thread.Sleep(1)` spins `:615-618`/`:640-643`,
   RPC `.Result` at `:1203-1211`). UI-thread-reachable via `UOC.SystemMessage` from
@@ -206,7 +206,14 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   and shutdown (`Engine.cs:336`) → `UiHost.OnOptionsSave/OnOptionsLoad` do `[.. _viewModels]`
   (`BaseViewModel.cs:57`) unsynchronised.
 
-- [ ] **Startup blocks the UI thread on unbounded RPC `.Result` + full data-file load.**
+- [x] **`PacketWaitRegistry.Push` holds `_pushLock` across a blocking RPC.**
+  *Not in the original list — an omission when the audit reports were consolidated; the threading
+  audit raised it as Medium. Recorded here for completeness now that it is fixed.*
+  `ClassicAssist.Shared\UO\Network\PacketWaitRegistry.cs` held `_pushLock` across `task.Wait( timeout )`,
+  so a debounce-timer background push held the lock up to 2 s and `PushNow` (packet thread via
+  `RehueList.Add`, macro/filter setup via `Filters.cs`) stalled for that plus its own 500 ms budget.
+
+- [x] **Startup blocks the UI thread on unbounded RPC `.Result` + full data-file load.**
   `ClassicAssist.Avalonia\App.axaml.cs:44-67` → `Engine.InstallRPC` (`Engine.cs:191-244`):
   `GetClientPath().Result`, `GetClientVersion().Result`, `GetWindowHandle().Result`,
   `IsReflectionAvailable().Result` (`:198-201`) have **no timeout**, then `Art/Hues/Cliloc/TileData/Statics/MapInfo.Initialize`
