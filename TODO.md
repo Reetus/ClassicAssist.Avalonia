@@ -113,6 +113,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   forever), `DebugBuffIconsViewModel.cs:19`, `DebugMenusViewModel.cs:39`, `DebugSpecialMovesViewModel.cs:18`.
   If capture is enabled, `Items` grows without bound (`:250-258`). Unsubscribe + dispose on close.
 
+- [ ] **`UiHost` settings save/load should guard each provider individually.**
+  `ClassicAssist.Avalonia\UiHost.cs:41-47` serialises every `ISettingProvider` reached through
+  `BaseViewModel._viewModels` with no per-provider `try/catch`, so one bad provider still aborts the
+  whole profile save (and `Options.Save` runs inside MainWindow's `OnClosing`, where an exception is
+  fatal). `DebugViewModel` now self-guards, but the loop-level guard belongs here so no future
+  provider can repeat the failure. Same for the load/deserialise path.
+
 - [ ] **`DebugJournalViewModel` / `DebugVendorBuyViewModel` need the same `IDisposable` teardown.**
   Residual from the Debug window teardown work. `ClassicAssist.Shared\UI\ViewModels\Debug\DebugJournalViewModel.cs:64,69`
   (`IncomingPacketHandlers.JournalEntryAddedEvent`) and `Debug\DebugVendorBuyViewModel.cs:40,44`
