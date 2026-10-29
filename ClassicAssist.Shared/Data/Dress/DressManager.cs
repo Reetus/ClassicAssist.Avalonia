@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
@@ -18,8 +19,7 @@ namespace ClassicAssist.Data.Dress;
 
 public class DressManager : INotifyPropertyChanged
 {
-    private static DressManager _instance;
-    private static readonly Lock _instanceLock = new();
+    private static readonly Lazy<DressManager> _instance = new( () => new DressManager() );
 
     private readonly Layer[] _validLayers =
     [
@@ -63,16 +63,7 @@ public class DressManager : INotifyPropertyChanged
 
     public static DressManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new DressManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     // ReSharper disable once RedundantAssignment

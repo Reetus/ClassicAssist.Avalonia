@@ -17,6 +17,7 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -74,7 +75,15 @@ public class SelectionPromptGump : Gump
             Index = switches[0];
         }
 
-        AutoResetEvent.Set();
+        try
+        {
+            AutoResetEvent.Set();
+        }
+        catch ( ObjectDisposedException )
+        {
+            // The prompt already finished - it timed out or this is a duplicate response - and
+            // disposed its wait handle; a late response must not throw into the packet path.
+        }
     }
 
     /// <summary>
@@ -98,6 +107,10 @@ public class SelectionPromptGump : Gump
         bool answered = gump.AutoResetEvent.WaitOne( timeoutMS );
 
         Engine.RemoveSendPostFilter( pfi );
+
+        // The wait is over either way - release the wait handle instead of leaving it to the
+        // finaliser. OnResponse tolerates the disposed handle for late or duplicate responses.
+        gump.AutoResetEvent.Dispose();
 
         if ( !answered )
         {

@@ -154,6 +154,9 @@ public static partial class Engine
     ///     <c>OnTick</c> callback instead. Mirrors upstream ClassicAssist's <c>Engine.TickWorkQueue</c> -
     ///     unlike <c>PluginEngine.TickWorkQueue</c>, which drains reflection calls on the client's own thread,
     ///     this one drains on the UI process's tick thread, which each inbound RPC <c>OnTick</c> wakes.
+    ///     Producers off the tick thread must lock the queue instance around <c>Enqueue</c> - the same
+    ///     discipline <c>ReflectionImpl</c> uses for the plugin-side tick queue - because the drain in
+    ///     <c>OnTick</c> takes that same lock around <c>Count</c>/<c>Dequeue</c>.
     /// </summary>
     public static Queue<Action> TickWorkQueue { get; set; } = new();
 
@@ -838,9 +841,25 @@ public static partial class Engine
     {
         try
         {
-            while ( TickWorkQueue.Count > 0 )
+            // A plain unlocked Queue<T> would tear against a producer enqueueing off the tick
+            // thread, so Count/Dequeue run under the same lock producers must take (see the
+            // TickWorkQueue doc). Actions are invoked outside the lock so tick work cannot stall
+            // producers, and actions queued while draining still run in this tick.
+            Queue<Action> tickWorkQueue = TickWorkQueue;
+
+            while ( true )
             {
-                Action action = TickWorkQueue.Dequeue();
+                Action action;
+
+                lock ( tickWorkQueue )
+                {
+                    if ( tickWorkQueue.Count == 0 )
+                    {
+                        break;
+                    }
+
+                    action = tickWorkQueue.Dequeue();
+                }
 
                 action?.Invoke();
             }

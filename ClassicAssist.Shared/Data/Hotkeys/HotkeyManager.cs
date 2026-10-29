@@ -14,8 +14,7 @@ namespace ClassicAssist.Data.Hotkeys;
 
 public class HotkeyManager : INotifyPropertyChanged
 {
-    private static HotkeyManager _instance;
-    private static readonly Lock _instanceLock = new();
+    private static readonly Lazy<HotkeyManager> _instance = new( () => new HotkeyManager() );
     private readonly Lock _lock = new();
 
     private readonly Key[] _modifierKeys =
@@ -95,16 +94,7 @@ public class HotkeyManager : INotifyPropertyChanged
 
     public static HotkeyManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new HotkeyManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )

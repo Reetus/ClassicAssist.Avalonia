@@ -1,14 +1,13 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using ClassicAssist.UI.Misc;
 
 namespace ClassicAssist.Data.Skills;
 
 public class SkillManager : INotifyPropertyChanged
 {
-    private static readonly Lock _lock = new();
-    private static SkillManager _instance;
+    private static readonly Lazy<SkillManager> _instance = new( () => new SkillManager() );
 
     private SkillManager()
     {
@@ -24,22 +23,7 @@ public class SkillManager : INotifyPropertyChanged
 
     public static SkillManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _lock )
-            {
-                if ( _instance != null )
-                {
-                    return _instance;
-                }
-
-                _instance = new SkillManager();
-                return _instance;
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )

@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
@@ -13,8 +12,7 @@ namespace ClassicAssist.Data.Counters;
 
 public class CountersManager : INotifyPropertyChanged
 {
-    private static CountersManager _instance;
-    private static readonly Lock _instanceLock = new();
+    private static readonly Lazy<CountersManager> _instance = new( () => new CountersManager() );
     private bool _listening;
 
     private CountersManager()
@@ -94,16 +92,7 @@ public class CountersManager : INotifyPropertyChanged
 
     public static CountersManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new CountersManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )

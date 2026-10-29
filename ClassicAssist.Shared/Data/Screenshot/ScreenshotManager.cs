@@ -13,7 +13,6 @@
 #endregion
 
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.UO.Objects;
 
@@ -25,8 +24,7 @@ namespace ClassicAssist.Data.Screenshot;
 /// </summary>
 public class ScreenshotManager
 {
-    private static ScreenshotManager _instance;
-    private static readonly Lock _instanceLock = new();
+    private static readonly Lazy<ScreenshotManager> _instance = new( () => new ScreenshotManager() );
 
     private ScreenshotManager()
     {
@@ -45,15 +43,6 @@ public class ScreenshotManager
 
     public static ScreenshotManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new ScreenshotManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 }
