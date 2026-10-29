@@ -47,6 +47,7 @@ public class App : Application
             {
                 SEngine.InstallRPC( Program.Host, new AvaloniaMessageBoxProvider() );
                 UiHost.Initialize();
+                ClassicAssist.Mcp.McpAutoStart.Initialize();
 
                 MainWindow mainWindow = new() { DataContext = new MainWindowViewModel() };
 
