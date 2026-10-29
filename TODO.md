@@ -16,7 +16,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ## P0 — crashes, deadlocks and hangs
 
-- [ ] **`GetClipboardText()` deadlocks the UI thread.**
+- [x] **`GetClipboardText()` deadlocks the UI thread.**
   `ClassicAssist.Avalonia\AvaloniaUIInvoker.cs:159-162` — `return _dispatcher.InvokeAsync( () => Engine.MainWindow.Clipboard?.TryGetTextAsync() ).Result;`
   The lambda resolves to `InvokeAsync<TResult>(Func<Task<TResult>>)`, so `.Result` blocks the UI thread
   on work queued to that same thread → waits forever. Only caller today is
@@ -27,7 +27,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   dispatcher hop. Secondary: `Clipboard?.TryGetTextAsync()` can return a null `Task<string>`
   (no clipboard platform) which faults the operation with NRE.
 
-- [ ] **Autoloot copy/paste is silently missing from the UI.**
+- [x] **Autoloot copy/paste is silently missing from the UI.**
   Same root: `AutolootViewModel.cs:101-103` defines `ClipboardPasteCommand` / `ClipboardCopyCommand`
   and nothing binds them. Confirm the intended binding (Ctrl+C/V on the autoloot grid) and restore it —
   *after* the deadlock above is fixed.
@@ -82,7 +82,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `Views\DebugWindow.axaml.cs:87-88`). Repro: open Debug, close, open again, then exit or switch
   linked profile. Fix both: guard the key, and make DebugWindow single-instance.
 
-- [ ] **`AvaloniaMessageBoxProvider.Show` can hang every awaiter forever.**
+- [x] **`AvaloniaMessageBoxProvider.Show` can hang every awaiter forever.**
   `ClassicAssist.Avalonia\Misc\AvaloniaMessageBoxProvider.cs:22-38` — fire-and-forget `Action` running
   an async lambda; if `ShowDialog` throws (e.g. `Engine.MainWindow` is null — `UiHost.MainWindow` is
   assigned at `App.axaml.cs:55`, *after* `MessageBoxProvider` is installed at `:48`), the exception
@@ -163,7 +163,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   modified` inside the packet path (swallowed, message dropped). Same shape for
   `AutolootViewModel.CheckItems`' `Filters.Select(...)` (`AutolootViewModel.cs:256`). Snapshot or lock.
 
-- [ ] **`AutolootViewModel.OnCorpseEvent` holds `lock` across multi-second blocking waits.**
+- [x] **`AutolootViewModel.OnCorpseEvent` holds `lock` across multi-second blocking waits.**
   `ClassicAssist.Shared\UI\ViewModels\Agents\AutolootViewModel.cs:491-550` — `lock (_autolootLock)`
   around `we.Lock.WaitOne( 2000 )` (`:510`), `Thread.Sleep( 1000 )` (`:522`) and `t.Wait( LOOT_TIMEOUT )`
   (`:548`, 5 s per item). Reachable from `Task.Run` (`IncomingPacketHandlers.cs:711`) **and**
@@ -224,7 +224,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ## P2 — port correctness bugs
 
-- [ ] **Hue picker "Cancel" silently applies hue 0 — dialog result never observed.**
+- [x] **Hue picker "Cancel" silently applies hue 0 — dialog result never observed.**
   `ClassicAssist.Avalonia\AvaloniaUIInvoker.cs:126-136` returns `window.SelectedHue` after `ShowDialog`
   with no OK/Cancel distinction; `HuePickerWindow.SelectedHue` defaults to 0 (`Views\HuePickerWindow.axaml.cs:53-57`).
   Callers write it straight into settings: `FriendsTabViewModel.cs:170-176`
@@ -291,7 +291,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   IO error (read-only install dir) throws out of window-close, and a mid-write crash truncates
   `Launcher.json` (no temp-file + rename).
 
-- [ ] **`AvaloniaUIInvoker.FindWindowType` scans the assembly with `GetTypes()` per call, on the caller's
+- [x] **`AvaloniaUIInvoker.FindWindowType` scans the assembly with `GetTypes()` per call, on the caller's
   thread.** `AvaloniaUIInvoker.cs:164-175` — reflection-heavy scan before the dispatcher hop; from UI
   commands (`AboutControlViewModel.ShowItems`) this is jank per window open, and `:171` calls
   `MessageBoxProvider.Show` without `?.` (null until `InstallRPC`, `Engine.cs:121,194`) where `:185` uses `?.`.
@@ -397,7 +397,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 - **`SetProperty` raises `PropertyChanged` unconditionally (no equality check).**
   - [x] `ClassicAssist.Shared\UI\ViewModels\DebugViewModel.cs` (`PacketEnabledEntry.SetProperty`) — now
     returns early on equality; `EnableDisable` previously fired 256 notifications per click.
-  - [ ] `ClassicAssist.Avalonia\Views\HuePickerWindow.axaml.cs` — same unconditional `SetProperty`; it
+  - [x] `ClassicAssist.Avalonia\Views\HuePickerWindow.axaml.cs` — same unconditional `SetProperty`; it
     also hides Avalonia's `PropertyChanged` name with `new event PropertyChangedEventHandler PropertyChanged`.
 
 - [ ] **`AvaloniaDispatcher.Invoke` is fire-and-forget `Post` despite the "Invoke" name.**
@@ -408,7 +408,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   swapping profiles (`Data\AssistantOptions.cs:271-277`). Audit callers or provide a genuinely
   synchronous `Invoke` for those that need it.
 
-- [ ] **`AvaloniaUIInvoker.SetClipboardText` drops the clipboard task.**
+- [x] **`AvaloniaUIInvoker.SetClipboardText` drops the clipboard task.**
   `AvaloniaUIInvoker.cs:154-157` — `_dispatcher.InvokeAsync( () => ...SetTextAsync( text ) )` discards the
   inner `Task` (unobserved failures; back-to-back calls can land out of order). Same null-`Task` risk as
   `GetClipboardText`, and in `DialogWindowViewModel.cs:43` (`await ...Clipboard?.SetTextAsync(...)`).
@@ -436,6 +436,20 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   Works today; breaks silently if names/templates change.
 
 ---
+
+- [ ] **Single-instance DebugWindow drops the Object Inspector's pre-navigation.**
+  `ClassicAssist.Shared\UI\ViewModels\ObjectInspectorViewModel.cs:437` opens `DebugWindow` with ctor
+  params (`[typeof( DebugPropertiesViewModel ), properties]`, via the `DebugWindow( Type, object )`
+  ctor at `Views\DebugWindow.axaml.cs:58`) to pre-select the Properties tab. The new single-instance
+  reuse in `AvaloniaUIInvoker.Invoke` activates an already-open window and discards those params, so
+  "Inspect object" while the Debug window is open just focuses it instead of navigating. Needs a
+  public "select tab + populate" API on `DebugWindow`.
+
+- [ ] **`DialogWindowViewModel` awaits a possibly-null clipboard task.**
+  `ClassicAssist.Avalonia\ViewModels\DialogWindowViewModel.cs:43` —
+  `await ( (Window) _window.Window ).Clipboard?.SetTextAsync( ... )` NREs when there is no platform
+  clipboard. Same null-`Task` shape as the `SetClipboardText` bug now fixed in `AvaloniaUIInvoker`;
+  this file was outside that work's ownership.
 
 ## Build & dependencies
 

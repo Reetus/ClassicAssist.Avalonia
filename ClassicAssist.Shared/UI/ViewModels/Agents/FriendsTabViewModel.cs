@@ -169,9 +169,15 @@ public class FriendsTabViewModel : BaseViewModel, ISettingProvider
 
     private static async Task SelectHue( object obj )
     {
-        int hue = await Engine.UIInvoker.GetHueAsync();
+        HueChoice hue = await Engine.UIInvoker.GetHueAsync();
 
-        Options.CurrentOptions.RehueFriendsHue = hue;
+        // Cancel must leave the configured hue alone - it used to be written back as hue 0.
+        if ( hue.Cancelled )
+        {
+            return;
+        }
+
+        Options.CurrentOptions.RehueFriendsHue = hue.Hue.Value;
         MainCommands.Resync();
     }
 

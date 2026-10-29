@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -13,6 +14,7 @@ namespace ClassicAssist.Avalonia.Views;
 public partial class HuePickerWindow : Window, INotifyPropertyChanged
 {
     private RelayCommand _okCommand;
+    private PropertyChangedEventHandler _propertyChanged;
 
     public HuePickerWindow()
     {
@@ -50,7 +52,11 @@ public partial class HuePickerWindow : Window, INotifyPropertyChanged
 
     public ICommand OKCommand => _okCommand ??= new RelayCommand( OK, o => SelectedItem != null );
 
-    public int SelectedHue
+    /// <summary>
+    ///     The hue the user accepted, or null while the dialog has not been accepted - a genuine
+    ///     hue 0 and "no choice made" must stay distinguishable to callers writing settings.
+    /// </summary>
+    public int? SelectedHue
     {
         get;
         set => SetProperty( ref field, value );
@@ -68,16 +74,28 @@ public partial class HuePickerWindow : Window, INotifyPropertyChanged
         }
     }
 
-    public new event PropertyChangedEventHandler PropertyChanged;
+    // INotifyPropertyChanged is re-implemented explicitly: a plain `new event` here would hide
+    // AvaloniaObject.PropertyChanged (an EventHandler<AvaloniaPropertyChangedEventArgs>) and leave
+    // two subtly different PropertyChanged events alive on one object.
+    event PropertyChangedEventHandler INotifyPropertyChanged.PropertyChanged
+    {
+        add => _propertyChanged += value;
+        remove => _propertyChanged -= value;
+    }
 
     protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )
     {
-        PropertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
+        _propertyChanged?.Invoke( this, new PropertyChangedEventArgs( propertyName ) );
     }
 
     // ReSharper disable once RedundantAssignment
     public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
     {
+        if ( EqualityComparer<T>.Default.Equals( obj, value ) )
+        {
+            return;
+        }
+
         obj = value;
         OnPropertyChanged( propertyName );
     }

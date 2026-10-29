@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Engine = ClassicAssist.Avalonia.UiHost;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
@@ -21,20 +22,37 @@ internal class AvaloniaMessageBoxProvider : IMessageBoxProvider
 
         SEngine.Dispatcher.Invoke( async () =>
         {
-            DialogWindow window = new();
-            DialogWindowViewModel model = new( new SharedWindow
-            {
-                Window = window,
-                Type = WindowType.Avalonia,
-                Caption = caption,
-                Text = text,
-                Buttons = buttons,
-                Icon = icon
-            } );
-            window.DataContext = model;
+            DialogWindowViewModel model = null;
 
-            await window.ShowDialog( Engine.MainWindow );
-            promise.TrySetResult( model.Result );
+            try
+            {
+                DialogWindow window = new();
+                model = new DialogWindowViewModel( new SharedWindow
+                {
+                    Window = window,
+                    Type = WindowType.Avalonia,
+                    Caption = caption,
+                    Text = text,
+                    Buttons = buttons,
+                    Icon = icon
+                } );
+                window.DataContext = model;
+
+                await window.ShowDialog( Engine.MainWindow );
+            }
+            catch ( Exception e )
+            {
+                // ShowDialog throws when Engine.MainWindow is null - it is assigned after this
+                // provider is installed. The exception must not vanish into the async void
+                // dispatcher delegate and leave the promise unresolved.
+                Console.WriteLine( $"Failed to show message box: {e}" );
+            }
+            finally
+            {
+                // Always resolve - every awaiter of Show(...) hangs forever otherwise. Cancel is
+                // the safe direction: callers asking for confirmation simply take no action.
+                promise.TrySetResult( model?.Result ?? MessageBoxResult.Cancel );
+            }
         } );
 
         return promise.Task;

@@ -136,6 +136,14 @@
                   SelectedItem="{Binding SelectedItem.Priority, Mode=TwoWay}"/>
       </Grid>
       <DataGrid Grid.Row="2" ItemsSource="{Binding SelectedItem.Constraints}" SelectedItem="{Binding SelectedProperty, Mode=TwoWay}" Margin="0,5">
+        <!-- The WPF build wired copy/paste through a clipboard behaviour on this grid; match the
+             DebugPropertiesControl KeyBindings pattern instead. Copy serialises the selected
+             entry's constraints, paste merges them into the currently selected entry. -->
+        <DataGrid.KeyBindings>
+          <KeyBinding Gesture="Ctrl+C" Command="{Binding ClipboardCopyCommand}"
+                      CommandParameter="{Binding SelectedItem.Constraints}" />
+          <KeyBinding Gesture="Ctrl+V" Command="{Binding ClipboardPasteCommand}" />
+        </DataGrid.KeyBindings>
         <DataGrid.Columns>
           <DataGridTextColumn Header="{x:Static resources:Strings.Property}" Binding="{Binding Property.Name}" Width="1*"/>
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Operator}" Width="1*">
