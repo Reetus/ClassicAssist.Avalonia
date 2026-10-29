@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using ClassicAssist.Data;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
@@ -30,6 +31,11 @@ namespace ClassicAssist.Mcp;
 ///         </item>
 ///     </list>
 ///     Unticking the option drops the character from the list.
+///     <para>
+///         All of this needs the per-machine consent in <see cref="AssistantOptions.McpAutoStart" />
+///         ("Start automatically" in the options tab), which also makes the server require a bearer
+///         token: a server that starts on its own must only answer agents configured for it.
+///     </para>
 ///     <para>
 ///         Self-contained on purpose: it only hooks <see cref="Options.LoadEvent" />,
 ///         <see cref="Options.SaveEvent" /> and <see cref="Engine.PlayerInitializedEvent" />, so
@@ -61,15 +67,47 @@ public static class McpAutoStart
 
         _initialized = true;
 
+        ApplyToken();
+
         Options.LoadEvent += OnOptionsLoad;
         Options.SaveEvent += OnOptionsSave;
         Engine.PlayerInitializedEvent += OnPlayerInitialized;
+    }
+
+    /// <summary>
+    ///     Gives or withdraws consent (the "Start automatically" option). Enabling creates the bearer
+    ///     token every request then needs; disabling drops it, so enabling again issues a new one.
+    /// </summary>
+    public static void SetEnabled( bool enabled )
+    {
+        AssistantOptions.McpAutoStart = enabled;
+        AssistantOptions.McpToken = enabled ? AssistantOptions.McpToken ?? NewToken() : null;
+        McpServer.Token = AssistantOptions.McpToken;
+
+        AssistantOptions.Save();
+    }
+
+    private static void ApplyToken()
+    {
+        if ( AssistantOptions.McpAutoStart && string.IsNullOrEmpty( AssistantOptions.McpToken ) )
+        {
+            AssistantOptions.McpToken = NewToken();
+            AssistantOptions.Save();
+        }
+
+        McpServer.Token = AssistantOptions.McpAutoStart ? AssistantOptions.McpToken : null;
+    }
+
+    private static string NewToken()
+    {
+        return Convert.ToHexStringLower( RandomNumberGenerator.GetBytes( 32 ) );
     }
 
     private static void OnOptionsLoad( JObject json, Options options )
     {
         _ports = json?[KEY]?["Ports"] as JObject ?? [];
 
+        ApplyToken();
         Apply();
     }
 
@@ -81,6 +119,11 @@ public static class McpAutoStart
 
     private static void Apply()
     {
+        if ( !AssistantOptions.McpAutoStart )
+        {
+            return;
+        }
+
         if ( !McpServer.IsRunning )
         {
             _startedHere = false;
@@ -214,7 +257,8 @@ public static class McpAutoStart
         // the ports on disk so this save doesn't drop the other characters' entries.
         JObject ports = ReadPortsOnDisk( obj["Name"]?.ToObject<string>() ) ?? _ports;
 
-        if ( serial != 0 )
+        // Without consent the ports are kept as they are: neither recorded nor dropped.
+        if ( serial != 0 && AssistantOptions.McpAutoStart )
         {
             if ( McpServer.IsRunning )
             {

@@ -225,6 +225,22 @@
                          IsEnabled="{Binding CurrentOptions.McpEnabled, Converter={StaticResource InverseBooleanConverter}}" />
               </StackPanel>
             </CheckBox>
+            <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+              <!-- Enabled once MCP is on, and stays enabled while ticked so consent can always be withdrawn. -->
+              <CheckBox IsChecked="{Binding McpAutoStartEnabled}"
+                        Command="{Binding ToggleMcpAutoStartCommand}"
+                        Content="{x:Static resources:Strings.MCP_autostart}"
+                        ToolTip.Tip="{x:Static resources:Strings.MCP_autostart_tooltip}">
+                <CheckBox.IsEnabled>
+                  <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                    <Binding Path="CurrentOptions.McpEnabled" />
+                    <Binding Path="McpAutoStartEnabled" />
+                  </MultiBinding>
+                </CheckBox.IsEnabled>
+              </CheckBox>
+              <Button Margin="10,0,0,0" Content="{x:Static resources:Strings.MCP_copy_config}"
+                      Command="{Binding CopyMcpConfigCommand}" IsVisible="{Binding McpAutoStartEnabled}" />
+            </StackPanel>
           </StackPanel>
         </controls:GroupBox>
 

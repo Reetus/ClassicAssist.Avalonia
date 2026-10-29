@@ -23,6 +23,8 @@ namespace ClassicAssist.Tests.Mcp
         private Options _originalCurrentOptions;
         private PlayerMobile _originalPlayer;
         private IDispatcher _originalDispatcher;
+        private bool _originalAutoStart;
+        private string _originalToken;
         private string _tempDir;
 
         [TestInitialize]
@@ -33,6 +35,12 @@ namespace ClassicAssist.Tests.Mcp
             _originalCurrentOptions = Options.CurrentOptions;
             _originalPlayer = Engine.Player;
             _originalDispatcher = Engine.Dispatcher;
+            _originalAutoStart = AssistantOptions.McpAutoStart;
+            _originalToken = AssistantOptions.McpToken;
+
+            // Consent given, with a token already set so nothing writes Assistant.json.
+            AssistantOptions.McpAutoStart = true;
+            AssistantOptions.McpToken = "test-token";
             Engine.Dispatcher = new InlineDispatcher();
 
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistMcpAutoStart", Guid.NewGuid().ToString( "N" ) );
@@ -55,6 +63,9 @@ namespace ClassicAssist.Tests.Mcp
 
             Engine.Player = _originalPlayer;
             Engine.Dispatcher = _originalDispatcher;
+            AssistantOptions.McpAutoStart = _originalAutoStart;
+            AssistantOptions.McpToken = _originalToken;
+            McpServer.Token = null;
             Options.CurrentOptions = _originalCurrentOptions;
             AssistantOptions.ProfileDirectory = _originalProfileDirectory;
             Engine.StartupPath = _originalStartupPath;
@@ -231,6 +242,48 @@ namespace ClassicAssist.Tests.Mcp
 
             Assert.IsFalse( McpServer.IsRunning );
             Assert.IsFalse( Options.CurrentOptions.McpEnabled );
+        }
+
+        [TestMethod]
+        public void LoadRequiresTheTokenWithConsent()
+        {
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.AreEqual( "test-token", McpServer.Token );
+        }
+
+        [TestMethod]
+        public void NothingStartsWithoutConsent()
+        {
+            AssistantOptions.McpAutoStart = false;
+            WriteProfile( new JObject { [SERIAL_KEY] = FreePort() } );
+
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.IsFalse( McpServer.IsRunning );
+            Assert.IsNull( McpServer.Token );
+
+            Engine.Player = null;
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.IsFalse( McpServer.IsRunning );
+        }
+
+        [TestMethod]
+        public void SaveLeavesPortsAloneWithoutConsent()
+        {
+            AssistantOptions.McpAutoStart = false;
+            WriteProfile( new JObject { [SERIAL_KEY] = 5000 } );
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Options.Save( Options.CurrentOptions );
+
+            Assert.AreEqual( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
+
+            McpServer.Initialize( FreePort() );
+            Options.Save( Options.CurrentOptions );
+
+            Assert.AreEqual( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
         }
 
         [TestMethod]

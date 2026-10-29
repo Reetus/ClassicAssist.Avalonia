@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +30,13 @@ public static class McpServer
     public static bool IsRunning => _listener != null;
 
     public static int Port { get; private set; }
+
+    /// <summary>
+    ///     When set, every request must carry <c>Authorization: Bearer &lt;token&gt;</c>. Set while the
+    ///     server may start on its own (see <see cref="McpAutoStart" />): a server nobody ticked this
+    ///     session must only answer an agent that was configured for it.
+    /// </summary>
+    public static string Token { get; set; }
 
     public static void Initialize( int port )
     {
@@ -202,6 +210,14 @@ public static class McpServer
         string method = requestParts.Length > 0 ? requestParts[0] : string.Empty;
         string path = requestParts.Length > 1 ? requestParts[1] : "/";
 
+        // Binding to loopback doesn't stop a web page in the user's browser from posting here.
+        // Browsers always send Origin on those requests and agents (CLI / desktop clients) don't; a
+        // Host that isn't loopback means DNS rebinding.
+        if ( GetHeader( lines, "Origin" ) != null || !IsLoopbackHost( GetHeader( lines, "Host" ) ) )
+        {
+            return HttpResponse( 403, "Forbidden", [] );
+        }
+
         if ( method.Equals( "OPTIONS", StringComparison.OrdinalIgnoreCase ) )
         {
             return HttpResponse( 204, "No Content", [] );
@@ -216,6 +232,26 @@ public static class McpServer
              !path.Equals( "/mcp", StringComparison.OrdinalIgnoreCase ) )
         {
             return HttpResponse( 404, "Not Found", [] );
+        }
+
+        if ( !IsJsonContentType( GetHeader( lines, "Content-Type" ) ) )
+        {
+            return HttpResponse( 415, "Unsupported Media Type", [] );
+        }
+
+        if ( Token != null && !IsAuthorized( GetHeader( lines, "Authorization" ), Token ) )
+        {
+            JsonRpcResponse unauthorized = new()
+            {
+                Error = new JsonRpcError
+                {
+                    Code = -32001,
+                    Message = "Missing or invalid bearer token. Copy the agent config from ClassicAssist's Options tab."
+                }
+            };
+
+            return HttpResponse( 401, "Unauthorized",
+                Encoding.UTF8.GetBytes( JsonConvert.SerializeObject( unauthorized ) ), "WWW-Authenticate: Bearer\r\n" );
         }
 
         int bodyStart = headerEnd + 4;
@@ -356,9 +392,6 @@ public static class McpServer
         header.Append( $"HTTP/1.1 {statusCode} {statusText}\r\n" );
         header.Append( "Content-Type: application/json\r\n" );
         header.Append( $"MCP-Protocol-Version: {PROTOCOL_VERSION}\r\n" );
-        header.Append( "Access-Control-Allow-Origin: *\r\n" );
-        header.Append( "Access-Control-Allow-Methods: POST, OPTIONS\r\n" );
-        header.Append( "Access-Control-Allow-Headers: content-type, mcp-protocol-version, mcp-session-id, accept\r\n" );
 
         if ( extraHeaders != null )
         {
@@ -375,6 +408,54 @@ public static class McpServer
         body.CopyTo( result, headerBytes.Length );
 
         return result;
+    }
+
+    private static string GetHeader( string[] lines, string name )
+    {
+        for ( int i = 1; i < lines.Length; i++ )
+        {
+            int colon = lines[i].IndexOf( ':' );
+
+            if ( colon > 0 && lines[i].AsSpan( 0, colon ).Trim().Equals( name, StringComparison.OrdinalIgnoreCase ) )
+            {
+                return lines[i][( colon + 1 )..].Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsLoopbackHost( string host )
+    {
+        if ( host == null )
+        {
+            return true; // HTTP/1.0 without Host; DNS rebinding always sends one.
+        }
+
+        string name = host.StartsWith( '[' ) ? host[..( host.IndexOf( ']' ) + 1 )] : host.Split( ':' )[0];
+
+        return name.Equals( "localhost", StringComparison.OrdinalIgnoreCase ) || name is "127.0.0.1" or "[::1]";
+    }
+
+    private static bool IsJsonContentType( string contentType )
+    {
+        // A browser can only send application/json cross-origin after a CORS preflight, which fails
+        // here; text/plain would skip it.
+        return contentType != null &&
+               contentType.Split( ';' )[0].Trim().Equals( "application/json", StringComparison.OrdinalIgnoreCase );
+    }
+
+    private static bool IsAuthorized( string authorization, string token )
+    {
+        const string SCHEME = "Bearer ";
+
+        if ( authorization == null || !authorization.StartsWith( SCHEME, StringComparison.OrdinalIgnoreCase ) )
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals( Encoding.UTF8.GetBytes( authorization[SCHEME.Length..].Trim() ),
+            Encoding.UTF8.GetBytes( token ) );
     }
 
     private static int IndexOfHeaderTerminator( byte[] data, int length )

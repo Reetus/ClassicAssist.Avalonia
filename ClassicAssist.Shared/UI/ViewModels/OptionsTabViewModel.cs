@@ -36,6 +36,20 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
 
     public ICommand ToggleMcpCommand => field ??= new RelayCommand( ToggleMcp, o => true );
 
+    public ICommand ToggleMcpAutoStartCommand => field ??= new RelayCommand( ToggleMcpAutoStart, o => true );
+
+    public ICommand CopyMcpConfigCommand => field ??= new RelayCommand( CopyMcpConfig, o => true );
+
+    /// <summary>
+    ///     Mirrors <see cref="AssistantOptions.McpAutoStart" />; only written back once the warning is
+    ///     accepted, by <see cref="ToggleMcpAutoStart" />.
+    /// </summary>
+    public bool McpAutoStartEnabled
+    {
+        get;
+        set => SetProperty( ref field, value );
+    } = AssistantOptions.McpAutoStart;
+
     public void Serialize( JObject json )
     {
         JObject options = [];
@@ -121,6 +135,7 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
         // Same session-only handling for the MCP server - never persisted, so its state is
         // reflected here rather than read from the profile.
         CurrentOptions.McpEnabled = McpServer.IsRunning;
+        McpAutoStartEnabled = AssistantOptions.McpAutoStart;
 
         if ( McpServer.IsRunning )
         {
@@ -346,5 +361,52 @@ public class OptionsTabViewModel : BaseViewModel, ISettingProvider
             CurrentOptions.McpEnabled = false;
             await Engine.MessageBoxProvider.Show( e.Message, Strings.Error );
         }
+    }
+
+    private async void ToggleMcpAutoStart( object obj )
+    {
+        try
+        {
+            if ( McpAutoStartEnabled )
+            {
+                MessageBoxResult result = await Engine.MessageBoxProvider.Show( Strings.MCP_autostart_warning,
+                    Strings.Warning, MessageBoxButtons.YesNo, MessageBoxImage.Warning );
+
+                if ( result != MessageBoxResult.Yes )
+                {
+                    McpAutoStartEnabled = false;
+                    return;
+                }
+            }
+
+            McpAutoStart.SetEnabled( McpAutoStartEnabled );
+
+            if ( McpAutoStartEnabled )
+            {
+                CopyMcpConfig( null );
+                await Engine.MessageBoxProvider.Show( Strings.MCP_config_copied, Strings.MCP );
+            }
+        }
+        catch ( Exception e )
+        {
+            McpAutoStartEnabled = AssistantOptions.McpAutoStart;
+            await Engine.MessageBoxProvider.Show( e.Message, Strings.Error );
+        }
+    }
+
+    private void CopyMcpConfig( object obj )
+    {
+        int port = McpServer.IsRunning ? McpServer.Port : CurrentOptions?.McpPort ?? 4713;
+
+        JObject server = new() { ["type"] = "http", ["url"] = $"http://127.0.0.1:{port}/mcp" };
+
+        if ( McpServer.Token != null )
+        {
+            server["headers"] = new JObject { ["Authorization"] = $"Bearer {McpServer.Token}" };
+        }
+
+        JObject config = new() { ["mcpServers"] = new JObject { ["classicassist"] = server } };
+
+        Engine.UIInvoker?.SetClipboardText( config.ToString() );
     }
 }

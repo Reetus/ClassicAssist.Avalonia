@@ -33,6 +33,14 @@ public static class AssistantOptions
     public static string GlobalDirectory { get; set; } = ".";
     public static Language LanguageOverride { get; set; }
     public static string LastProfile { get; set; }
+
+    /// <summary>
+    ///     Consent for the MCP server to start without being ticked. Per machine, not per profile, so
+    ///     a profile copied from someone else can't switch the server on.
+    /// </summary>
+    public static bool McpAutoStart { get; set; }
+
+    public static string McpToken { get; set; }
     public static string ProfileDirectory { get; set; } = "Profiles";
     public static Dictionary<string, string> SavedPasswords { get; set; } = [];
     public static bool SavePasswords { get; set; }
@@ -87,6 +95,8 @@ public static class AssistantOptions
             { "SavePasswordsOnlyBlank", SavePasswordsOnlyBlank },
             { "UserId", UserId },
             { "DebugWindowOptions", DebugWindowOptions },
+            { "McpAutoStart", McpAutoStart },
+            { "McpToken", McpToken },
 #if !DEVELOP
             { "WindowWidth", WindowWidth },
             { "WindowHeight", WindowHeight },
@@ -154,6 +164,8 @@ public static class AssistantOptions
         WindowHeight = json?["WindowHeight"]?.ToObject<int>() ?? 500;
         Assemblies = json?["Assemblies"]?.ToObject<string[]>() ?? [];
         DebugWindowOptions = json?["DebugWindowOptions"]?.ToObject<JObject>() ?? [];
+        McpAutoStart = json?["McpAutoStart"]?.ToObject<bool>() ?? false;
+        McpToken = json?["McpToken"]?.ToObject<string>();
         SessionId = Guid.NewGuid().ToString();
 
         if ( json?["Profiles"] != null )
