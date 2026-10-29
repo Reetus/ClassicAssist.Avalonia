@@ -70,7 +70,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   handled), `MainViewModel.CheckPresets`' JSON parse. Either wrap `Execute` in try/catch + user-visible
   error, or register a global handler.
 
-- [ ] **Profile save throws "duplicate key" once the Debug window has been opened twice.**
+- [x] **Profile save throws "duplicate key" once the Debug window has been opened twice.**
   `ClassicAssist.Shared\UI\ViewModels\DebugViewModel.cs:138` — `json.Add( "Packets", options )` on a
   fixed key throws `ArgumentException` on the second call. `Views\DebugWindow.axaml:15-17` constructs a
   fresh `DebugViewModel` per window and `MainWindowViewModel.ShowDebugWindow`
@@ -103,7 +103,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   crash above). Every dialog/window VM stays pinned (`EntityCollectionViewerViewModel` cleans up in
   `OnClosed` and is rooted anyway). Needs a weak list or explicit deregistration on window close.
 
-- [ ] **Debug window VM graph leaks and keeps processing live packet traffic forever.**
+- [x] **Debug window VM graph leaks and keeps processing live packet traffic forever.**
   `ClassicAssist.Shared\UI\ViewModels\DebugViewModel.cs:47-50` subscribes
   `Engine.PacketReceivedEvent / PacketSentEvent / InternalPacketReceivedEvent / InternalPacketSentEvent`
   with **no `-=` anywhere** (verified); `Queue = new ThreadQueue<PacketEntry>(...)` (`:46`) is
@@ -113,7 +113,15 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   forever), `DebugBuffIconsViewModel.cs:19`, `DebugMenusViewModel.cs:39`, `DebugSpecialMovesViewModel.cs:18`.
   If capture is enabled, `Items` grows without bound (`:250-258`). Unsubscribe + dispose on close.
 
-- [ ] **Two `MainWindowViewModel`s are constructed; the orphan is pinned by static events.**
+- [ ] **`DebugJournalViewModel` / `DebugVendorBuyViewModel` need the same `IDisposable` teardown.**
+  Residual from the Debug window teardown work. `ClassicAssist.Shared\UI\ViewModels\Debug\DebugJournalViewModel.cs:64,69`
+  (`IncomingPacketHandlers.JournalEntryAddedEvent`) and `Debug\DebugVendorBuyViewModel.cs:40,44`
+  (`VendorBuyDisplayEvent`) subscribe/unsubscribe only inside their `Enabled` setter, which nothing
+  calls on window close — so if capture is on at close they keep handling traffic forever. Neither
+  class implements `IDisposable` (`: BaseViewModel` only). `DebugWindow.OnClosed` already disposes any
+  tab VM that implements `IDisposable`, so adding the interface is all that is needed.
+
+- [x] **Two `MainWindowViewModel`s are constructed; the orphan is pinned by static events.**
   `ClassicAssist.Avalonia\App.axaml.cs:52` sets `DataContext = new MainWindowViewModel()` while
   `Views\MainWindow.axaml:19-21` already declares `<Window.DataContext><viewModels:MainWindowViewModel/></Window.DataContext>`.
   The replaced instance keeps `Engine.UpdateWindowTitleEvent += OnUpdateWindowTitleEvent`
@@ -378,10 +386,11 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `MacrosTabViewModel._fileScanTimer` (`MacrosTabViewModel.cs:54`);
   `DebugViewModel.Queue` (`DebugViewModel.cs:46`).
 
-- [ ] **`SetProperty` raises `PropertyChanged` unconditionally (no equality check).**
-  `DebugViewModel.PacketEnabledEntry.SetProperty` (`DebugViewModel.cs:353-357`) and `Views\HuePickerWindow.axaml.cs`;
-  `HuePickerWindow` also hides Avalonia's `PropertyChanged` name with
-  `new event PropertyChangedEventHandler PropertyChanged`.
+- **`SetProperty` raises `PropertyChanged` unconditionally (no equality check).**
+  - [x] `ClassicAssist.Shared\UI\ViewModels\DebugViewModel.cs` (`PacketEnabledEntry.SetProperty`) — now
+    returns early on equality; `EnableDisable` previously fired 256 notifications per click.
+  - [ ] `ClassicAssist.Avalonia\Views\HuePickerWindow.axaml.cs` — same unconditional `SetProperty`; it
+    also hides Avalonia's `PropertyChanged` name with `new event PropertyChangedEventHandler PropertyChanged`.
 
 - [ ] **`AvaloniaDispatcher.Invoke` is fire-and-forget `Post` despite the "Invoke" name.**
   `ClassicAssist.Avalonia\AvaloniaDispatcher.cs:35-38` — diverges from WPF's synchronous `Dispatcher.Invoke`.

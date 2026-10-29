@@ -15,7 +15,7 @@ using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Shared.UI.ViewModels;
 
-public class DebugViewModel : BaseViewModel, ISettingProvider
+public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
 {
 
     /// <summary>
@@ -24,6 +24,9 @@ public class DebugViewModel : BaseViewModel, ISettingProvider
     ///     network hot path and a LINQ scan of 256 entries per packet is not free.
     /// </summary>
     private readonly bool[] _packetEnabled = new bool[256];
+
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
 
     public DebugViewModel()
     {
@@ -115,27 +118,43 @@ public class DebugViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        JObject options = new()
+        // Wrapped because profile save must not die for one bad provider: Options.Save runs with no
+        // caller-side guard - including from MainWindow's OnClosing, where an exception is fatal -
+        // and can be reached from RPC threads while the UI thread is mutating PacketEntries.
+        try
         {
-            { "Enabled", Enabled },
-            { "IncludeInternal", IncludeInternal },
-            { "Direction", Direction.ToString() },
-            { "Topmost", Topmost }
-        };
-
-        JArray packets = [];
-
-        foreach ( PacketEnabledEntry packetEntry in PacketEntries )
-        {
-            packets.Add( new JObject
+            JObject options = new()
             {
-                { "PacketID", packetEntry.PacketID }, { "Enabled", packetEntry.Enabled }
-            } );
+                { "Enabled", Enabled },
+                { "IncludeInternal", IncludeInternal },
+                { "Direction", Direction.ToString() },
+                { "Topmost", Topmost }
+            };
+
+            JArray packets = [];
+
+            foreach ( PacketEnabledEntry packetEntry in PacketEntries )
+            {
+                packets.Add( new JObject
+                {
+                    { "PacketID", packetEntry.PacketID }, { "Enabled", packetEntry.Enabled }
+                } );
+            }
+
+            options.Add( "Packets", packets );
+
+            // Assignment rather than Add: nothing ever unregisters a view model, so every
+            // DebugViewModel ever constructed - one per Debug window - is serialised into the same
+            // JObject on every profile save. json.Add( "Packets", options ) threw ArgumentException
+            // (duplicate key) from the second instance on, and that exception escaped into the save
+            // path. Overwriting is idempotent, and because instances serialise in construction
+            // order the most recently opened Debug window wins - the state the user saw last.
+            json["Packets"] = options;
         }
-
-        options.Add( "Packets", packets );
-
-        json.Add( "Packets", options );
+        catch ( Exception ex )
+        {
+            Console.WriteLine( $"Failed to serialize debug packet settings: {ex}" );
+        }
     }
 
     public void Deserialize( JObject json, Options options )
@@ -175,6 +194,45 @@ public class DebugViewModel : BaseViewModel, ISettingProvider
             // Setting this raises PropertyChanged, which keeps _packetEnabled in step.
             entry?.Enabled = packet["Enabled"].ToObject<bool>();
         }
+    }
+
+    /// <summary>
+    ///     Tears the capture pipeline down: stops the four packet subscriptions, the queue's worker
+    ///     thread and the per-entry change notifications, and drops the captured packets.
+    ///     <para>
+    ///         Called once from <c>DebugWindow.OnClosed</c>. Unsubscribing first means no new work is
+    ///         scheduled; a handler already in flight can still reach <c>Queue.Enqueue</c>
+    ///         after the queue is disposed, which <see cref="ThreadQueue{T}" /> tolerates (the wake-up
+    ///         failure is caught there), so the ordering is safe. The <see cref="Enabled" /> and
+    ///         <see cref="PacketEntries" /> state is deliberately left intact: the instance stays
+    ///         registered for settings serialisation, so a later profile save still round-trips the
+    ///         window's configuration.
+    ///     </para>
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        Engine.PacketReceivedEvent -= OnPacketReceivedEvent;
+        Engine.PacketSentEvent -= OnPacketSentEvent;
+        Engine.InternalPacketReceivedEvent -= OnInternalPacketReceivedEvent;
+        Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
+
+        foreach ( PacketEnabledEntry entry in PacketEntries )
+        {
+            entry.PropertyChanged -= OnPacketEntryPropertyChanged;
+        }
+
+        Queue?.Dispose();
+
+        // The capture buffer can be the whole session's traffic; clear it so it doesn't stay
+        // reachable through the static view model list after the window has closed.
+        Items.Clear();
     }
 
     private void ExportLog( object obj )
@@ -352,6 +410,13 @@ public class DebugViewModel : BaseViewModel, ISettingProvider
         // ReSharper disable once RedundantAssignment
         public virtual void SetProperty<T>( ref T obj, T value, [CallerMemberName] string propertyName = "" )
         {
+            // Raise only on an actual change: EnableDisable assigns every entry on each toggle and
+            // would otherwise fire 256 notifications (and 256 _packetEnabled writes) for one click.
+            if ( EqualityComparer<T>.Default.Equals( obj, value ) )
+            {
+                return;
+            }
+
             obj = value;
             OnPropertyChanged( propertyName );
         }

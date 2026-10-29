@@ -15,7 +15,10 @@ public class MainWindowViewModel : BaseViewModel
     public MainWindowViewModel()
     {
         Engine.UpdateWindowTitleEvent += OnUpdateWindowTitleEvent;
-        AssistantOptions.ProfileChangedEvent += _ => OnPropertyChanged( nameof( CurrentOptions ) );
+
+        // Named rather than a lambda so it can be unsubscribed; the lambda it replaces could never
+        // be removed from the static event.
+        AssistantOptions.ProfileChangedEvent += OnProfileChangedEvent;
     }
 
     public Options CurrentOptions => Options.CurrentOptions;
@@ -46,6 +49,11 @@ public class MainWindowViewModel : BaseViewModel
         Title = string.IsNullOrEmpty( Engine.Player?.Name )
             ? Strings.ProductName
             : $"{Engine.Player?.Name} - {( Options.CurrentOptions.ShowProfileNameWindowTitle ? $"({Options.CurrentOptions.Name}) - " : "" )}{Strings.ProductName}";
+    }
+
+    private void OnProfileChangedEvent( string profile )
+    {
+        OnPropertyChanged( nameof( CurrentOptions ) );
     }
 
     private static void ShowDebugWindow( object obj )

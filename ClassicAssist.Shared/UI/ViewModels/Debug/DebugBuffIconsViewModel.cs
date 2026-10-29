@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using ClassicAssist.Data.BuffIcons;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Network;
@@ -6,9 +7,12 @@ using Microsoft.Scripting.Utils;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-public class DebugBuffIconsViewModel : BaseViewModel
+public class DebugBuffIconsViewModel : BaseViewModel, IDisposable
 {
     private readonly BuffIconManager _manager;
+
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
 
     public DebugBuffIconsViewModel()
     {
@@ -17,6 +21,24 @@ public class DebugBuffIconsViewModel : BaseViewModel
         Items.AddRange( _manager.GetEnabledNames() );
 
         IncomingPacketHandlers.BufficonEnabledDisabledEvent += OnBufficonEnabledDisabledEvent;
+    }
+
+    /// <summary>
+    ///     Unsubscribes the buff-icon notifications for this window and drops the collected state.
+    ///     Called once from <c>DebugWindow.OnClosed</c>.
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        IncomingPacketHandlers.BufficonEnabledDisabledEvent -= OnBufficonEnabledDisabledEvent;
+        Items.Clear();
+        Messages.Clear();
     }
 
     public ObservableCollection<string> Items

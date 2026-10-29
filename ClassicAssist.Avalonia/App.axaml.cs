@@ -49,6 +49,10 @@ public class App : Application
                 UiHost.Initialize();
                 ClassicAssist.Mcp.McpAutoStart.Initialize();
 
+                // The one and only MainWindowViewModel: MainWindow.axaml deliberately declares no
+                // Window.DataContext, because a XAML-declared instance here was constructed first and
+                // then replaced by this one, leaving the orphan pinned to Engine/AssistantOptions
+                // static events and doing the title-update work twice.
                 MainWindow mainWindow = new() { DataContext = new MainWindowViewModel() };
 
                 desktop.MainWindow = mainWindow;

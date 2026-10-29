@@ -46,6 +46,7 @@ public partial class DebugWindow : Window
         }
 
         Closing += OnClosing;
+        Closed += OnClosed;
     }
 
     /// <summary>
@@ -104,6 +105,48 @@ public partial class DebugWindow : Window
         catch ( Exception ex )
         {
             Console.WriteLine( $"Failed to save debug window settings: {ex}" );
+        }
+    }
+
+    /// <summary>
+    ///     Tears down every view model this window constructed - the window's own DebugViewModel and
+    ///     the tab view models - now that the window is really gone. Their subscriptions into Engine
+    ///     events, packet handlers and managers are process-wide statics or singletons, so without
+    ///     this each closed window's graph keeps handling live packet traffic forever (and
+    ///     DebugViewModel's queue thread keeps running).
+    ///     <para>
+    ///         Timing and double-dispose: settings were already serialised in <see cref="OnClosing" />,
+    ///         so the intact state a disposed view model leaves behind still round-trips; <c>Closed</c>
+    ///         fires exactly once per window; and the walk below de-duplicates by reference (the Main
+    ///         tab's Grid inherits the window's DataContext, exactly as in
+    ///         <see cref="GetSettingProviders" />), so no instance is disposed twice even though every
+    ///         <c>Dispose</c> is idempotent anyway.
+    ///     </para>
+    /// </summary>
+    private void OnClosed( object sender, EventArgs e )
+    {
+        Closed -= OnClosed;
+
+        HashSet<IDisposable> seen = new( ReferenceEqualityComparer.Instance );
+
+        if ( DataContext is IDisposable windowViewModel )
+        {
+            seen.Add( windowViewModel );
+            windowViewModel.Dispose();
+        }
+
+        if ( Content is not TabControl tabControl )
+        {
+            return;
+        }
+
+        foreach ( object item in tabControl.Items )
+        {
+            if ( item is TabItem tabItem && tabItem.Content is Control control &&
+                 control.DataContext is IDisposable tabViewModel && seen.Add( tabViewModel ) )
+            {
+                tabViewModel.Dispose();
+            }
         }
     }
 
