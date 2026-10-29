@@ -18,9 +18,6 @@ public class DialogWindowViewModel : BaseViewModel
 
     public string Caption => _window.Caption;
 
-    // Maybe make this dynamic, since SizeToContext=Height is having problems...
-    public int Height => 200;
-
     public bool Icon => _window.Icon != null;
 
     public string ImagePath =>
