@@ -22,6 +22,7 @@ namespace ClassicAssist.Tests.Mcp
         private string _originalProfileDirectory;
         private Options _originalCurrentOptions;
         private PlayerMobile _originalPlayer;
+        private IDispatcher _originalDispatcher;
         private string _tempDir;
 
         [TestInitialize]
@@ -31,9 +32,12 @@ namespace ClassicAssist.Tests.Mcp
             _originalProfileDirectory = AssistantOptions.ProfileDirectory;
             _originalCurrentOptions = Options.CurrentOptions;
             _originalPlayer = Engine.Player;
+            _originalDispatcher = Engine.Dispatcher;
+            Engine.Dispatcher = new InlineDispatcher();
 
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistMcpAutoStart", Guid.NewGuid().ToString( "N" ) );
-            Engine.StartupPath = _tempDir;
+            // StartupPath stays: logging in (Engine.SetPlayer) loads data files from it. The profile
+            // directory is absolute, so it doesn't depend on it.
             AssistantOptions.ProfileDirectory = Path.Combine( _tempDir, "Profiles" );
             Directory.CreateDirectory( AssistantOptions.ProfileDirectory );
 
@@ -50,6 +54,7 @@ namespace ClassicAssist.Tests.Mcp
             McpServer.Shutdown();
 
             Engine.Player = _originalPlayer;
+            Engine.Dispatcher = _originalDispatcher;
             Options.CurrentOptions = _originalCurrentOptions;
             AssistantOptions.ProfileDirectory = _originalProfileDirectory;
             Engine.StartupPath = _originalStartupPath;
@@ -154,6 +159,111 @@ namespace ClassicAssist.Tests.Mcp
 
             Assert.IsNull( ports[SERIAL_KEY] );
             Assert.AreEqual( 5000, ports[OTHER_KEY]?.ToObject<int>() );
+        }
+
+        [TestMethod]
+        public void LoadBeforeLoginStartsOnTheLowestSavedPort()
+        {
+            ( int low, int high ) = TwoFreePorts();
+            WriteProfile( new JObject { [SERIAL_KEY] = high, [OTHER_KEY] = low } );
+            Engine.Player = null;
+
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.IsTrue( McpServer.IsRunning );
+            Assert.AreEqual( low, McpServer.Port );
+            Assert.IsTrue( Options.CurrentOptions.McpEnabled );
+        }
+
+        [TestMethod]
+        public void LoadBeforeLoginDoesNothingWithoutSavedPorts()
+        {
+            WriteProfile( [] );
+            Engine.Player = null;
+
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.IsFalse( McpServer.IsRunning );
+        }
+
+        [TestMethod]
+        public void LoginMovesToTheCharactersOwnPort()
+        {
+            ( int low, int high ) = TwoFreePorts();
+            WriteProfile( new JObject { [SERIAL_KEY] = high, [OTHER_KEY] = low } );
+            Engine.Player = null;
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Engine.SetPlayer( new PlayerMobile( SERIAL ) );
+
+            Assert.IsTrue( McpServer.IsRunning );
+            Assert.AreEqual( high, McpServer.Port );
+            Assert.AreEqual( high, Options.CurrentOptions.McpPort );
+        }
+
+        [TestMethod]
+        public void LoginKeepsThePortWhenTheCharactersOwnIsTaken()
+        {
+            ( int low, int high ) = TwoFreePorts();
+            WriteProfile( new JObject { [SERIAL_KEY] = high, [OTHER_KEY] = low } );
+            Engine.Player = null;
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            using TcpListener taken = new( IPAddress.Loopback, high );
+            taken.Start();
+
+            Engine.SetPlayer( new PlayerMobile( SERIAL ) );
+
+            Assert.IsTrue( McpServer.IsRunning );
+            Assert.AreEqual( low, McpServer.Port );
+        }
+
+        [TestMethod]
+        public void LoginStopsAServerTheCharacterDoesNotUse()
+        {
+            WriteProfile( new JObject { [OTHER_KEY] = FreePort() } );
+            Engine.Player = null;
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Assert.IsTrue( McpServer.IsRunning );
+
+            Engine.SetPlayer( new PlayerMobile( SERIAL ) );
+
+            Assert.IsFalse( McpServer.IsRunning );
+            Assert.IsFalse( Options.CurrentOptions.McpEnabled );
+        }
+
+        [TestMethod]
+        public void LoginLeavesAServerStartedByHandAlone()
+        {
+            ( int byHand, int saved ) = TwoFreePorts();
+            McpServer.Initialize( byHand );
+
+            WriteProfile( new JObject { [SERIAL_KEY] = saved } );
+            Engine.Player = null;
+            Options.Load( "test.json", Options.CurrentOptions );
+
+            Engine.SetPlayer( new PlayerMobile( SERIAL ) );
+
+            Assert.IsTrue( McpServer.IsRunning );
+            Assert.AreEqual( byHand, McpServer.Port );
+        }
+
+        private static ( int Low, int High ) TwoFreePorts()
+        {
+            using TcpListener first = new( IPAddress.Loopback, 0 );
+            using TcpListener second = new( IPAddress.Loopback, 0 );
+
+            first.Start();
+            second.Start();
+
+            int a = ( (IPEndPoint) first.LocalEndpoint ).Port;
+            int b = ( (IPEndPoint) second.LocalEndpoint ).Port;
+
+            first.Stop();
+            second.Stop();
+
+            return ( Math.Min( a, b ), Math.Max( a, b ) );
         }
 
         private void WriteProfile( JObject ports )

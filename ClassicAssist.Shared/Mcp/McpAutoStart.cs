@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using ClassicAssist.Data;
 using ClassicAssist.Shared;
@@ -9,11 +10,26 @@ using Newtonsoft.Json.Linq;
 namespace ClassicAssist.Mcp;
 
 /// <summary>
-///     Restarts the MCP server for a character that had it running last session. Upstream keeps
-///     the MCP toggle session-only so several instances don't fight over one port; this keeps
-///     that, but remembers the port per character in the profile ("McpAutoStart": {"Ports":
-///     {"&lt;serial&gt;": port}}), and when that port is taken takes the next free one. Unticking
-///     the option drops the character from the list.
+///     Restarts the MCP server across sessions. Upstream keeps the MCP toggle session-only so
+///     several instances don't fight over one port; this keeps that, but remembers the port per
+///     character in the profile ("McpAutoStart": {"Ports": {"&lt;serial&gt;": port}}).
+///     <list type="bullet">
+///         <item>
+///             Before any character is logged in (login screen, server list) the server starts on
+///             the first free port from the lowest one the profile has saved, so it is reachable
+///             from the start.
+///         </item>
+///         <item>
+///             When a character logs in, a server started that way moves to the character's own
+///             port if that port is free (connected MCP clients reconnect), or is stopped if the
+///             character has no entry. A server started by hand is left alone.
+///         </item>
+///         <item>
+///             With no server running, the character's port is used, or the next free one when it
+///             is taken.
+///         </item>
+///     </list>
+///     Unticking the option drops the character from the list.
 ///     <para>
 ///         Self-contained on purpose: it only hooks <see cref="Options.LoadEvent" />,
 ///         <see cref="Options.SaveEvent" /> and <see cref="Engine.PlayerInitializedEvent" />, so
@@ -28,6 +44,9 @@ public static class McpAutoStart
     private static JObject _ports = [];
     private static int _serial;
     private static bool _initialized;
+
+    // The running server was started here (not by the checkbox): only that one is moved or stopped.
+    private static bool _startedHere;
 
     /// <summary>
     ///     Call after the UI's own <see cref="Options.LoadEvent" /> handler is registered: the
@@ -51,38 +70,70 @@ public static class McpAutoStart
     {
         _ports = json?[KEY]?["Ports"] as JObject ?? [];
 
-        TryStart();
+        Apply();
     }
 
     private static void OnPlayerInitialized( PlayerMobile player )
     {
         // Raised off the UI thread; the server and the bound options are only touched on it.
-        Engine.Dispatcher.InvokeAsync( TryStart );
+        Engine.Dispatcher.InvokeAsync( Apply );
     }
 
-    private static void TryStart()
+    private static void Apply()
     {
+        if ( !McpServer.IsRunning )
+        {
+            _startedHere = false;
+        }
+
         PlayerMobile player = Engine.Player;
 
         if ( player == null )
         {
-            return; // Again on PlayerInitializedEvent.
+            // No character yet: any port this profile has used, so the server is up from the start.
+            if ( !McpServer.IsRunning && LowestSavedPort() is { } lowest )
+            {
+                Start( lowest );
+            }
+
+            return;
         }
 
         _serial = player.Serial;
 
-        if ( McpServer.IsRunning || _ports[SerialKey( _serial )] is not { Type: JTokenType.Integer } token )
+        int? wanted = SavedPort( _serial );
+
+        if ( !McpServer.IsRunning )
+        {
+            if ( wanted != null )
+            {
+                Start( wanted.Value );
+            }
+
+            return;
+        }
+
+        if ( !_startedHere )
         {
             return;
         }
 
-        int port = token.ToObject<int>();
-
-        if ( port is < 1 or > 65535 )
+        if ( wanted == null )
         {
-            return;
+            // Started before the character was known, and this character doesn't use it.
+            McpServer.Shutdown();
+            _startedHere = false;
+            Options.CurrentOptions.McpEnabled = false;
         }
+        else if ( McpServer.Port != wanted.Value && IsFree( wanted.Value ) )
+        {
+            McpServer.Shutdown();
+            Start( wanted.Value );
+        }
+    }
 
+    private static void Start( int port )
+    {
         for ( int candidate = port; candidate < port + PORT_TRIES && candidate <= 65535; candidate++ )
         {
             try
@@ -96,14 +147,63 @@ public static class McpAutoStart
             }
             catch ( Exception )
             {
-                return;
+                break;
             }
 
+            _startedHere = true;
             Options.CurrentOptions.McpPort = McpServer.Port;
             Options.CurrentOptions.McpEnabled = true;
 
             return;
         }
+
+        Options.CurrentOptions.McpEnabled = false;
+    }
+
+    private static bool IsFree( int port )
+    {
+        try
+        {
+            TcpListener listener = new( IPAddress.Loopback, port );
+
+            listener.Start();
+            listener.Stop();
+
+            return true;
+        }
+        catch ( SocketException )
+        {
+            return false;
+        }
+    }
+
+    private static int? SavedPort( int serial )
+    {
+        return _ports[SerialKey( serial )] is { Type: JTokenType.Integer } token && ValidPort( token.ToObject<int>() )
+            ? token.ToObject<int>()
+            : null;
+    }
+
+    private static int? LowestSavedPort()
+    {
+        int? lowest = null;
+
+        foreach ( JProperty property in _ports.Properties() )
+        {
+            if ( property.Value is { Type: JTokenType.Integer } token && ValidPort( token.ToObject<int>() ) )
+            {
+                int port = token.ToObject<int>();
+
+                lowest = lowest == null ? port : Math.Min( lowest.Value, port );
+            }
+        }
+
+        return lowest;
+    }
+
+    private static bool ValidPort( int port )
+    {
+        return port is >= 1 and <= 65535;
     }
 
     private static void OnOptionsSave( JObject obj )
