@@ -61,7 +61,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `async void` `RelayCommandAsync.Execute` → process crash. Add `&& SelectedShard != null` to
   `CanExecute` and guard `Start`.
 
-- [ ] **Async-void `ICommand.Execute` turns any command exception into a process crash.**
+- [x] **Async-void `ICommand.Execute` turns any command exception into a process crash.**
   `ClassicAssist.Shared\UI\ViewModels\BaseViewModel.cs:174-177` and
   `ClassicAssist.Launcher\ViewModels\BaseViewModel.cs:101-104` — `public async void Execute(...)`,
   no try/catch anywhere in the chain, and no global `DispatcherUnhandledException` handler in
@@ -96,7 +96,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ## P1 — leaks, races and data loss
 
-- [ ] **`BaseViewModel` roots every ViewModel ever created in a static list.**
+- [x] **`BaseViewModel` roots every ViewModel ever created in a static list.**
   `ClassicAssist.Shared\UI\ViewModels\BaseViewModel.cs:37,50` — `_viewModels.Add( this )` in the ctor,
   no `Remove`/`Clear` anywhere in the repo (verified). `UiHost.cs:41-61` uses it as a service locator for
   profile save/load, so stale instances also participate in settings serialisation (→ the duplicate-key
@@ -113,7 +113,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   forever), `DebugBuffIconsViewModel.cs:19`, `DebugMenusViewModel.cs:39`, `DebugSpecialMovesViewModel.cs:18`.
   If capture is enabled, `Items` grows without bound (`:250-258`). Unsubscribe + dispose on close.
 
-- [ ] **`UiHost` settings save/load should guard each provider individually.**
+- [x] **`UiHost` settings save/load should guard each provider individually.**
   `ClassicAssist.Avalonia\UiHost.cs:41-47` serialises every `ISettingProvider` reached through
   `BaseViewModel._viewModels` with no per-provider `try/catch`, so one bad provider still aborts the
   whole profile save (and `Options.Save` runs inside MainWindow's `OnClosing`, where an exception is
@@ -193,14 +193,14 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `OnMobileUpdatedEvent` re-adds `player.LastTargetChangedEvent` / `MobileStatusUpdated` handlers on every
   player mobile update / war-mode packet → duplicate handlers accumulate per session.
 
-- [ ] **`Options.CurrentOptions.PropertyChanged` subscription goes stale after profile switch.**
+- [x] **`Options.CurrentOptions.PropertyChanged` subscription goes stale after profile switch.**
   `ClassicAssist.Shared\UI\ViewModels\BaseViewModel.cs:53` binds to the instance current at construction,
   but `Options.CurrentOptions` is **replaced** on profile change (`Data\AssistantOptions.cs:274`,
   `GeneralControlViewModel.cs:340`, `NewProfileViewModel.cs:57`). Consequence: `[OptionsBinding( Property = "AlwaysOnTop" )]`
   on `MainWindowViewModel` (`:23-28`, bound as `Topmost` in `Views\MainWindow.axaml:14`) stops tracking
   after a linked-profile switch, and every old `Options` instance stays rooted by the accumulated handlers.
 
-- [ ] **`BaseViewModel._viewModels` (`List<T>`) is mutated on the UI thread while save/load iterates it
+- [x] **`BaseViewModel._viewModels` (`List<T>`) is mutated on the UI thread while save/load iterates it
   from RPC threads.** Constructors run on the UI thread (`BaseViewModel.cs:50`); `Options.Save` is called
   from MCP tool handlers on StreamJsonRpc threads (`ClassicAssist.Shared\Mcp\McpTools.cs:314,346,381`)
   and shutdown (`Engine.cs:336`) → `UiHost.OnOptionsSave/OnOptionsLoad` do `[.. _viewModels]`
