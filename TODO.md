@@ -371,7 +371,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   - [x] `ClassicAssist.Launcher\ViewModels\MainViewModel.cs:488` — `Process.Start` result (disposed via `using`; disposal releases only our handle and never terminates the launched client).
   - [x] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:222` — `Process.Start` result.
   - [x] `ClassicAssist.Shared\UI\ViewModels\AboutControlViewModel.cs:255-261` (new `System.Timers.Timer`s per `OnConnectedEvent`) and `ClassicAssist.Avalonia\Views\AboutControl.axaml.cs:32` (new timer per pointer-enter).
-  - [ ] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` — thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
+  - [x] `ClassicAssist.Avalonia\Misc\PathToThumbnailValueConverter.cs:37-63` - thumbnail cache keyed `path|width|mtime`, never evicted; a large screenshot gallery grows memory indefinitely.
 
 - [ ] **`async void` outside genuine event handlers.**
   `ClassicAssist.Shared\Data\Hotkeys\Commands\ObjectInspector.cs:6` — `public override async void Execute()`
@@ -407,7 +407,36 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   - [x] `ClassicAssist.Avalonia\Views\HuePickerWindow.axaml.cs` — same unconditional `SetProperty`; it
     also hides Avalonia's `PropertyChanged` name with `new event PropertyChangedEventHandler PropertyChanged`.
 
-- [ ] **`AvaloniaDispatcher.Invoke` is fire-and-forget `Post` despite the "Invoke" name.**
+- [x] **`AvaloniaDispatcher.Invoke` is fire-and-forget `Post` despite the "Invoke" name.**
+  *Naming/docs half done:* `Invoke` now documents that it posts and is not WPF's synchronous
+  `Dispatcher.Invoke`, and `AvaloniaDispatcher` gained a genuinely synchronous `InvokeSynchronous`
+  (class-only — `IDispatcher` lives in `ClassicAssist.Shared` and cannot be changed here). The
+  caller-side races are tracked separately below.
+
+- [ ] **`IDispatcher.Invoke` call sites that assume synchronous completion.**
+  The `Invoke`→`Post` divergence is documented now, but these callers still race because they read or
+  gate state that only changes inside the posted delegate. Enumerated by the dispatcher work; files
+  were owned by other work that round.
+  1. `ClassicAssist.Shared\Data\Macros\MacroEntry.cs:343` — `Execute()` posts `IsRunning = true` then
+     starts the macro; `Stop()` (`:356`) gates on `IsRunning`, so a prompt `Stop()` silently does
+     nothing and callers cannot observe `IsRunning` after `Execute` returns.
+  2. `MacroEntry.cs:298-306` (`OnStoppedEvent`) vs `:280-287` (`OnPausedEvent`) — the stop path reads
+     `IsPaused`/`AutoResetEvent` that the pause path only sets inside a posted delegate, so a stop
+     racing a pause skips `AutoResetEvent?.Set()` and the debugger's wait handle is never released.
+  3. `MacroEntry.cs:359` / `:467` — posted `IsRunning = false` / `IsPaused = false`; UI state briefly
+     stale after `Stop()`/`Resume()` (same family, milder).
+  4. `ClassicAssist.Shared\Data\AssistantOptions.cs:271-277` — `PlayerInitialized` posts the whole
+     `Options.Save` / `CurrentOptions` swap / `Options.Load` / `ProfileChangedEvent`; the RPC thread
+     continues immediately, so the rest of the connection flow reads the old profile.
+  5. `ClassicAssist.Shared\UI\ViewModels\SkillsTabViewModel.cs:249-272` + `:288-306` —
+     `OnSkillsListEvent` posts `Items.Clear()` + per-item `Add` while `OnSkillUpdatedEvent` (on the
+     same packet worker) searches `Items` and mutates the *old* entry the in-flight rebuild discards,
+     so the rebuilt entry never receives the update.
+  Adjacent/mild: `ScreenshotTabViewModel.cs:517-525` (watcher thread reads `Screenshots` before posting
+  `Remove`), `GeneralControlViewModel.cs:265` (safe via FIFO ordering today, fragile).
+  Also: `InvokeSynchronous` is only reachable through the concrete `AvaloniaDispatcher`;
+  `Engine.Dispatcher` is typed `IDispatcher` in `ClassicAssist.Shared`, so Shared call sites need a
+  cast or an interface member (plus `InlineDispatcher`) before they can use it.
   `ClassicAssist.Avalonia\AvaloniaDispatcher.cs:35-38` — diverges from WPF's synchronous `Dispatcher.Invoke`.
   Callers that assume synchronous completion now race: `MacrosTabViewModel.cs:46`
   (`SelectedItem.Macro += str` in a posted delegate — `SelectedItem` can be null and the NRE escapes into
@@ -420,7 +449,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   inner `Task` (unobserved failures; back-to-back calls can land out of order). Same null-`Task` risk as
   `GetClipboardText`, and in `DialogWindowViewModel.cs:43` (`await ...Clipboard?.SetTextAsync(...)`).
 
-- [ ] **Wait-handle leaks / misleading API.**
+- [x] **Wait-handle leaks / misleading API.**
   `UO\Commands.cs:232` (`GetTargetInfoAsync` allocates an `AutoResetEvent` per call, never disposed);
   every `*PromptGump` allocates one per prompt (`SelectionPromptGump.cs:60` etc.);
   `Engine.TickWorkQueue` is a plain unlocked `Queue<Action>` (`Engine.cs:805-810`) — no producers found
@@ -429,7 +458,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `Thread.Sleep(ActionDelayMS)` despite being `async Task` — currently has no callers (dead in this port),
   but any future UI-thread caller would freeze the UI per drag.
 
-- [ ] **Singleton `GetInstance()` double-checked locking without `volatile`.**
+- [x] **Singleton `GetInstance()` double-checked locking without `volatile`.**
   `TargetManager.cs:293-311`, `HotkeyManager.cs:96-108`, `OrganizerManager.cs:340-358`, and
   `CountersManager` / `ChatManager` / `ScavengerManager` / `DressManager` / `SkillManager` /
   `SpellManager` / `ScreenshotManager` / `VendorBuyManager`. Benign on the .NET memory model in practice.
@@ -497,7 +526,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `HintPath` was meant to pin a locally patched `AvaloniaEdit.dll`, its absence silently drops the patch —
   **clarify intent, then either commit the DLL or delete the reference.**
 
-- [ ] **AGENTS.md / BUILDING.md contradictions to reconcile** (from `AGENTS.md` itself): a bare
+- [x] **AGENTS.md / BUILDING.md contradictions to reconcile** (from `AGENTS.md` itself): a bare
   `dotnet format ClassicAssist.slnx` is *not* safe to commit despite what `BUILDING.md` suggests. Update
   `BUILDING.md` to point at the scoped procedure in `AGENTS.md` so nobody runs the destructive version.
 
