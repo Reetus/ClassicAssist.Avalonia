@@ -286,14 +286,14 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
 
 ## P3 — XAML / markup
 
-- [ ] **`CSVImportWindow` link colour references a resource key that does not exist.**
+- [x] **`CSVImportWindow` link colour references a resource key that does not exist.**
   `ClassicAssist.Avalonia\Views\Autoloot\CSVImportWindow.axaml:41` —
   `Foreground="{DynamicResource AccentColor}"`. Avalonia's Fluent theme has no standalone `AccentColor`
   key (only `SystemAccentColor*`), and the repo dictionaries define only `SystemAccentColor*`.
   `DynamicResource` to a missing key silently yields null → the "hyperlink" renders in the inherited
   default foreground. Use an accent brush key that actually resolves.
 
-- [ ] **`CustomPropertiesWindow` Arguments checkbox can almost certainly never be toggled.**
+- [x] **`CustomPropertiesWindow` Arguments checkbox can almost certainly never be toggled.**
   `ClassicAssist.Avalonia\Views\Autoloot\CustomPropertiesWindow.axaml:18` declares the `DataGrid` with no
   `IsReadOnly`, while the app-wide style sets it
   (`ClassicAssist.Avalonia\App.axaml:49-52`, `ClassicAssist.Launcher\App.axaml:31-34` —
@@ -316,23 +316,23 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   but it is exactly the class of defect that stays invisible here. Consider enabling compiled bindings
   per-file as files are touched.
 
-- [ ] **Dead WPF remnant: `Tag="Colored"`.** `ClassicAssist.Avalonia\Views\DialogWindow.axaml:30` — nothing
+- [x] **Dead WPF remnant: `Tag="Colored"`.** `ClassicAssist.Avalonia\Views\DialogWindow.axaml:30` — nothing
   reads `Tag` anywhere. Remove.
 
-- [ ] **Divergent `StringFormat` escaping in one file.**
+- [x] **Divergent `StringFormat` escaping in one file.**
   `ClassicAssist.Avalonia\Views\Agents\ScavengerTabControl.axaml:44` uses `StringFormat=0x\{0:x\}` (WPF-style
   backslash escaping — works via XamlX's ported `MeScanner`), while the five other hex-format bindings
   (`CountersTabControl.axaml:29`, `OrganizerTabControl.axaml:44`, `VendorSellTabControl.axaml:23`,
   `DebugGumpControl.axaml:16`, `DebugMenusControl.axaml:16`) use the idiomatic `StringFormat={}0x{0:x}`.
   Normalise to the latter.
 
-- [ ] **Unused `xmlns` prefixes pointing at non-existent namespaces.**
+- [x] **Unused `xmlns` prefixes pointing at non-existent namespaces.**
   `Views\SkillsTabControl.axaml:9` (`clr-namespace:ClassicAssist.Avalonia.Properties` — no such namespace);
   `Views\Agents\CountersTabControl.axaml:7` and `Views\Agents\ScavengerTabControl.axaml:7`
   (`clr-namespace:ClassicAssist.UI.Misc.ValueConverters` — `ClassicAssist.UI.Misc` exists, `ValueConverters`
   does not). All unused, so they compile. Remove.
 
-- [ ] **Duplicate `xmlns` for the same CLR namespace.**
+- [x] **Duplicate `xmlns` for the same CLR namespace.**
   `Views\ObjectInspectorWindow.axaml:5-6` — `r:` and `resources:` both map to
   `ClassicAssist.Shared.Resources`; `resources:` is never used. Also
   `Controls\TextBoxKey.axaml:5-6,14-19` — `xmlns:i`/`xmlns:ia` used only by a commented-out

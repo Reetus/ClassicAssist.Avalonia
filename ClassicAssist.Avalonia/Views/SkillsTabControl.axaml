@@ -6,7 +6,6 @@
              xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
              xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
              xmlns:data="clr-namespace:ClassicAssist.UO.Data;assembly=ClassicAssist.Shared"
-             xmlns:properties="clr-namespace:ClassicAssist.Avalonia.Properties"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.SkillsTabControl">
   <UserControl.DataContext>
