@@ -282,12 +282,22 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `ClassicAssist.Avalonia\Controls\ClilocEditTextBlock.axaml.cs:104` — `?? -1` only covers a null
   `item`/`Properties`; an empty `Properties` list yields `FirstOrDefault() == 0`, an invalid cliloc.
 
-- [ ] **Zip-slip in updater module extraction.**
+- [x] **Zip-slip in updater module extraction.**
   `ClassicAssist.Updater\ViewModels\MainViewModel.cs:216-220` + `:230-248` — `entry.FullName.Split('/')`
   segments are `Path.Combine`d without rejecting `..` or rooted segments, so a crafted `Modules.zip` entry
   writes outside `Modules/`. Packages come from GitHub releases (moderately trusted) — hardening gap.
 
-- [ ] **Updater accepts `.tar.gz` assets but extracts with `ZipFile`.**
+- [x] **Updater accepts `.tar.gz` assets but extracts with `ZipFile`.**
+  *Note:* the real path is `ClassicAssist.Updater\Services\PlatformPackage.cs` (not
+  `ClassicAssist.Updater\PlatformPackage.cs` as originally written). It needed no change — with tar
+  supported end-to-end, its `IsArchive` acceptance is now truthful.
+
+- [ ] **Updater extraction needs unit tests.**
+  The zip-slip rejection table and the tar.gz round-trip were verified with a scratch harness against
+  the compiled assembly (traversal names, rooted paths, backslash separators, `.. ` / `...`
+  Win32-normalisation spoofs, symlink/fifo entries) but `ClassicAssist.Tests\UpdaterTests.cs` was
+  outside that work's ownership. Add: a traversal-rejection table for `TryResolveEntryPath`, and a
+  tar.gz round-trip covering a good file plus hostile and non-regular entries.
   `PlatformPackage.cs:118-122` treats `.tar.gz` as a package; `MainViewModel.ExtractPackage` (`:466`) only
   reads zip. A release shipping only `.tar.gz` fails at extraction. Either add tar support or filter the
   asset list.
