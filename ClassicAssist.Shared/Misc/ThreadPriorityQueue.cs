@@ -21,6 +21,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using Priority_Queue;
+using Sentry;
 
 namespace ClassicAssist.Misc;
 
@@ -95,7 +96,17 @@ public class ThreadPriorityQueue<T> : IDisposable
                     return;
                 }
 
-                _onAction( queueItem );
+                try
+                {
+                    _onAction( queueItem );
+                }
+                catch ( Exception e )
+                {
+                    // An unhandled exception on this thread would terminate the process, and
+                    // letting it escape would kill the worker and silently stop every future
+                    // queued item - log it and keep processing.
+                    SentrySdk.CaptureException( e );
+                }
             }
             else
             {

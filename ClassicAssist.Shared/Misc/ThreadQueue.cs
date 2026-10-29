@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using Sentry;
 
 namespace ClassicAssist.Misc;
 
@@ -43,7 +44,17 @@ public class ThreadQueue<T> : IDisposable
                     return;
                 }
 
-                _onAction( queueItem );
+                try
+                {
+                    _onAction( queueItem );
+                }
+                catch ( Exception e )
+                {
+                    // An unhandled exception on this thread would terminate the process, and
+                    // letting it escape would kill the worker and silently stop every future
+                    // queued item - log it and keep processing.
+                    SentrySdk.CaptureException( e );
+                }
             }
             else
             {

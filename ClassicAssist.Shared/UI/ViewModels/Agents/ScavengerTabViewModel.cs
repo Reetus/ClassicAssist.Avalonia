@@ -20,6 +20,18 @@ namespace ClassicAssist.Shared.UI.ViewModels.Agents;
 public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
 {
     private const int SCAVENGER_DISTANCE = 2;
+
+    // Upper bound on waiting for a single drag/drop to complete. A drag normally finishes in one
+    // action delay (Options.ActionDelayMS, 900ms by default) plus DROP_DELAY (50ms) and two packet
+    // sends, so 5000ms leaves room for a handful of other queued actions (autoloot etc.) to drain
+    // ahead of it first. The wait must be bounded because CheckArea also runs on the packet-
+    // processing thread (via ItemsOnCollectionChanged), which is the only thread that delivers
+    // PacketWaitEntries.CheckWait for the whole app - an unbounded wait here can deadlock against
+    // ActionPacketQueue requeue actions that wait for a 0x3C packet only that thread can deliver.
+    // On timeout the item stays claimed, so its still-queued drag runs at most once later; this
+    // thread just stops waiting for it instead of parking forever.
+    private const int SCAVENGE_DRAG_DROP_TIMEOUT_MS = 5000;
+
     private readonly List<int> _ignoreList;
     private readonly Lock _scavengeLock = new();
 
@@ -262,27 +274,46 @@ public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
 
                 scavengerItems.AddRange( matches );
             }
+        }
 
-            if ( scavengerItems.Count == 0 )
+        if ( scavengerItems.Count == 0 )
+        {
+            return;
+        }
+
+        Item container = Engine.Items.GetItem( ContainerSerial ) ?? Engine.Player.Backpack;
+
+        if ( container == null )
+        {
+            return;
+        }
+
+        foreach ( Item scavengerItem in scavengerItems.Where( scavengerItem =>
+            scavengerItem.Distance <= SCAVENGER_DISTANCE ).Distinct() )
+        {
+            lock ( _scavengeLock )
             {
-                return;
-            }
+                // Claim the serial under the lock so overlapping passes can never enqueue a second
+                // drag for the same item - each item is scavenged at most once, and the drag/drop
+                // actions themselves still run one at a time on ActionPacketQueue's single worker.
+                if ( _ignoreList.Contains( scavengerItem.Serial ) )
+                {
+                    continue;
+                }
 
-            Item container = Engine.Items.GetItem( ContainerSerial ) ?? Engine.Player.Backpack;
-
-            if ( container == null )
-            {
-                return;
-            }
-
-            foreach ( Item scavengerItem in scavengerItems.Where( scavengerItem =>
-                scavengerItem.Distance <= SCAVENGER_DISTANCE ).Distinct() )
-            {
                 _ignoreList.Add( scavengerItem.Serial );
-                UOC.SystemMessage( string.Format( Strings.Scavenging___0__, scavengerItem.Name ?? "Unknown" ), 61 );
-                ActionPacketQueue.EnqueueDragDrop( scavengerItem.Serial, scavengerItem.Count, container.Serial,
-                    QueuePriority.Low, options: new DragDropOptions { CheckRange = true } ).Wait();
             }
+
+            UOC.SystemMessage( string.Format( Strings.Scavenging___0__, scavengerItem.Name ?? "Unknown" ), 61 );
+
+            Task<bool> scavengeTask = ActionPacketQueue.EnqueueDragDrop( scavengerItem.Serial, scavengerItem.Count,
+                container.Serial, QueuePriority.Low, options: new DragDropOptions { CheckRange = true } );
+
+            // _scavengeLock is deliberately NOT held across this wait - waiting under the lock would
+            // park any other CheckArea caller (including the packet-processing thread) for the whole
+            // drag. The wait is bounded per SCAVENGE_DRAG_DROP_TIMEOUT_MS above; it keeps the scavenge
+            // drags of one pass strictly one-at-a-time as before.
+            scavengeTask.Wait( SCAVENGE_DRAG_DROP_TIMEOUT_MS );
         }
     }
 

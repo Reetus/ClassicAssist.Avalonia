@@ -32,7 +32,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   and nothing binds them. Confirm the intended binding (Ctrl+C/V on the autoloot grid) and restore it —
   *after* the deadlock above is fixed.
 
-- [ ] **Packet-processing thread can block indefinitely in Scavenger `CheckArea`.**
+- [x] **Packet-processing thread can block indefinitely in Scavenger `CheckArea`.**
   `ClassicAssist.Shared\UI\ViewModels\Agents\ScavengerTabViewModel.cs:283-284` —
   `ActionPacketQueue.EnqueueDragDrop(...).Wait()` with no timeout, inside `lock (_scavengeLock)`.
   Reached from `ItemsOnCollectionChanged` (`:215-228`) on the single `IncomingQueue` worker
@@ -42,7 +42,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   deliver (`ActionPacketQueue.cs:323-343` → `UO\Commands.cs:644-659`). Give the wait a timeout and
   release the lock while waiting.
 
-- [ ] **Queue worker loops have no try/catch — one throwing action kills the worker or the process.**
+- [x] **Queue worker loops have no try/catch — one throwing action kills the worker or the process.**
   `ClassicAssist.Shared\Misc\ThreadPriorityQueue.cs:98` (`_onAction( queueItem )`, unguarded in the
   loop — the only try/catch in the file is `ObjectDisposedException` at `:114`/`:138`),
   `ClassicAssist.Shared\Misc\ThreadQueue.cs:46`,
