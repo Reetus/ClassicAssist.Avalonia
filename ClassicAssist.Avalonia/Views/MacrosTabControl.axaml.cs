@@ -18,7 +18,17 @@ public partial class MacrosTabControl : UserControl
     {
         InitializeComponent();
 
+        // The name comes from MacrosTabControl.axaml; if it is missing (renamed) the editor keeps
+        // its defaults instead of throwing here.
         TextEditor textEditor = this.FindControl<TextEditor>( "Editor" );
+
+        if ( textEditor == null )
+        {
+            Console.WriteLine( "MacrosTabControl: named TextEditor 'Editor' was not found, editor setup skipped" );
+
+            return;
+        }
+
         textEditor.Background = Brushes.Transparent;
         textEditor.ShowLineNumbers = true;
         textEditor.Options.ConvertTabsToSpaces = true;

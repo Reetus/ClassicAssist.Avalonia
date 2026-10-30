@@ -487,7 +487,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `CountersManager` / `ChatManager` / `ScavengerManager` / `DressManager` / `SkillManager` /
   `SpellManager` / `ScreenshotManager` / `VendorBuyManager`. Benign on the .NET memory model in practice.
 
-- [ ] **Code-behind reaching into controls by name (fragile under Avalonia template lifetimes).**
+- [x] **Code-behind reaching into controls by name (fragile under Avalonia template lifetimes).**
   `Views\DebugWindow.axaml.cs:43-46,83-108` (settings serialisation in the window),
   `Views\SkillsTabControl.axaml.cs` (sort persistence),
   `Views\Agents\AutolootTabControl.axaml.cs:29-54,79` (`FindControl<TreeView>("treeView")`, drag/drop,
@@ -543,6 +543,11 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   and `Dispose()` every `DataContext is IDisposable`, exactly as `DebugWindow.OnClosed`
   (`Views\DebugWindow.axaml.cs:126-151`) already does. Low urgency — these are app-lifetime views —
   but the wiring is what makes the `IDisposable` implementations meaningful.
+
+- [ ] **Two more unguarded `FindControl` lookups, outside the hardening pass's file ownership.**
+  `ClassicAssist.Avalonia\Controls\FilterControl.axaml.cs:44` and
+  `Controls\MultiValueSelector.axaml.cs:72-74` — same shape as the ones now hardened: a renamed
+  `x:Name` would NRE rather than degrade. Raised by that pass.
 
 ## Build & dependencies
 

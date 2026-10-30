@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Data;
+using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.Misc;
@@ -21,57 +22,63 @@ public partial class HexDumpControl : UserControl
 
         MenuItem contextCopy = this.FindControl<MenuItem>( "ContextCopy" );
 
-        contextCopy?.PointerPressed += ( sender, args ) =>
-        {
-            if ( Packet == null )
-            {
-                return;
-            }
-
-            string prepend = "byte[] packet = new byte[] { ";
-
-            for ( int i = 0; i < Packet.Data.Length; i++ )
-            {
-                prepend += $"0x{Packet.Data[i]:X2}";
-
-                if ( i + 1 < Packet.Data.Length )
-                {
-                    prepend += ", ";
-                }
-            }
-
-            prepend += " };";
-
-            // IClipboard service = (IClipboard) AvaloniaLocator.Current.GetService( typeof( IClipboard ) );
-            //
-            // service.SetTextAsync( prepend ).ConfigureAwait( false );
-
-            Engine.UIInvoker?.SetClipboardText( prepend );
-        };
+        // Names come from HexDumpControl.axaml - a rename must not throw at construction, the menu
+        // entry simply stops working.
+        contextCopy?.PointerPressed += OnContextCopyPointerPressed;
 
         MenuItem contextReplay = this.FindControl<MenuItem>( "ContextReplay" );
 
-        contextReplay?.PointerPressed += ( sender, args ) =>
-        {
-            if ( Packet == null )
-            {
-                return;
-            }
+        contextReplay?.PointerPressed += OnContextReplayPointerPressed;
+    }
 
-            switch ( Packet.Direction )
+    private void OnContextCopyPointerPressed( object sender, PointerPressedEventArgs args )
+    {
+        if ( Packet == null )
+        {
+            return;
+        }
+
+        string prepend = "byte[] packet = new byte[] { ";
+
+        for ( int i = 0; i < Packet.Data.Length; i++ )
+        {
+            prepend += $"0x{Packet.Data[i]:X2}";
+
+            if ( i + 1 < Packet.Data.Length )
             {
-                case PacketDirection.Incoming:
-                    Engine.SendPacketToClient( Packet.Data, Packet.Data.Length );
-                    break;
-                case PacketDirection.Outgoing:
-                    Engine.SendPacketToServer( Packet.Data, Packet.Data.Length );
-                    break;
-                case PacketDirection.Any:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                prepend += ", ";
             }
-        };
+        }
+
+        prepend += " };";
+
+        // IClipboard service = (IClipboard) AvaloniaLocator.Current.GetService( typeof( IClipboard ) );
+        //
+        // service.SetTextAsync( prepend ).ConfigureAwait( false );
+
+        Engine.UIInvoker?.SetClipboardText( prepend );
+    }
+
+    private void OnContextReplayPointerPressed( object sender, PointerPressedEventArgs args )
+    {
+        if ( Packet == null )
+        {
+            return;
+        }
+
+        switch ( Packet.Direction )
+        {
+            case PacketDirection.Incoming:
+                Engine.SendPacketToClient( Packet.Data, Packet.Data.Length );
+                break;
+            case PacketDirection.Outgoing:
+                Engine.SendPacketToServer( Packet.Data, Packet.Data.Length );
+                break;
+            case PacketDirection.Any:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
     }
 
     public PacketEntry Packet

@@ -47,13 +47,23 @@ public partial class SkillsTabControl : UserControl
             return;
         }
 
+        SkillSortBy? sortBy = MapSortMember( member );
+
+        // A SortMemberPath that no longer maps (renamed in SkillsTabControl.axaml) leaves the
+        // grid's own default sort in place but persists nothing, rather than silently recording
+        // SkillSortBy.Name for the wrong column.
+        if ( sortBy == null )
+        {
+            return;
+        }
+
         if ( _sortDirections.TryGetValue( member, out ListSortDirection current ) )
         {
             switch ( current )
             {
                 case ListSortDirection.Ascending:
                     _sortDirections[member] = ListSortDirection.Descending;
-                    vm.SetSort( MapSortMember( member ), ListSortDirection.Descending );
+                    vm.SetSort( sortBy.Value, ListSortDirection.Descending );
 
                     return;
                 case ListSortDirection.Descending:
@@ -66,7 +76,7 @@ public partial class SkillsTabControl : UserControl
 
         _sortDirections.Clear();
         _sortDirections[member] = ListSortDirection.Ascending;
-        vm.SetSort( MapSortMember( member ), ListSortDirection.Ascending );
+        vm.SetSort( sortBy.Value, ListSortDirection.Ascending );
     }
 
     private void ApplyPersistedSort( DataGrid dataGrid )
@@ -76,7 +86,16 @@ public partial class SkillsTabControl : UserControl
             return;
         }
 
-        DataGridColumn column = dataGrid.Columns.FirstOrDefault( c => c.SortMemberPath == MapSortMember( vm.SortInfo.SortBy ) );
+        string sortMember = MapSortMember( vm.SortInfo.SortBy );
+
+        // A persisted SkillSortBy with no matching column (enum value added or SortMemberPath
+        // renamed since it was saved) must not match a nameless column - skip restoring the sort.
+        if ( sortMember == null )
+        {
+            return;
+        }
+
+        DataGridColumn column = dataGrid.Columns.FirstOrDefault( c => c.SortMemberPath == sortMember );
 
         if ( column == null )
         {
@@ -121,7 +140,12 @@ public partial class SkillsTabControl : UserControl
         return null;
     }
 
-    private static SkillSortBy MapSortMember( string member )
+    /// <summary>
+    ///     Maps a column's <c>SortMemberPath</c> (as declared in SkillsTabControl.axaml) to the
+    ///     persisted <see cref="SkillSortBy" />; returns null for a path that no longer maps so the
+    ///     caller can skip persisting rather than recording the wrong sort.
+    /// </summary>
+    private static SkillSortBy? MapSortMember( string member )
     {
         switch ( member )
         {
@@ -139,6 +163,6 @@ public partial class SkillsTabControl : UserControl
                 return SkillSortBy.LockStatus;
         }
 
-        return SkillSortBy.Name;
+        return null;
     }
 }
