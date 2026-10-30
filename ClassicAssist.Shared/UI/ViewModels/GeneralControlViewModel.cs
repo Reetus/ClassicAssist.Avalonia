@@ -14,6 +14,7 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.Shared.UI.ViewModels;
 using ClassicAssist.Shared.UO;
 using ClassicAssist.UI.Misc;
+using ClassicAssist.UO.Objects;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.UI.ViewModels;
@@ -262,13 +263,20 @@ public class GeneralControlViewModel : BaseViewModel, ISettingProvider
 
     private void OnProfileChangedEvent( string profile )
     {
+        // Capture the options instance and player the event was raised for before posting: the
+        // delegate runs later, and a second profile switch (or a login) may already have replaced
+        // Options.CurrentOptions / Engine.Player by then. Reading them inside the delegate paired
+        // the newest options with this event's profile name (or a different player's link state).
+        Options currentOptions = Options.CurrentOptions;
+        PlayerMobile player = Engine.Player;
+
         _dispatcher.Invoke( () =>
         {
-            Options = Options.CurrentOptions;
+            Options = currentOptions;
 
-            if ( Engine.Player != null )
+            if ( player != null )
             {
-                IsLinkedProfile = AssistantOptions.GetLinkedProfile( Engine.Player.Serial ) == profile;
+                IsLinkedProfile = AssistantOptions.GetLinkedProfile( player.Serial ) == profile;
             }
 
             SelectedProfile = profile;

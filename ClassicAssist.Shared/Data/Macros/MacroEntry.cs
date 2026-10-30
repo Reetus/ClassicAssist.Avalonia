@@ -23,6 +23,17 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     //private readonly Dispatcher _dispatcher;
     private string _name;
 
+    // Volatile backing fields for the execution-state properties (AutoResetEvent, FrameVariables,
+    // IsPaused, IsRunning, PausedLineNumber). The state machine writes and reads them across the
+    // macro thread, hotkey/packet threads and the UI thread, so the values are committed
+    // synchronously to these fields (volatile for cross-thread visibility and publish ordering)
+    // and only the change notifications are marshalled - see NotifyOnDispatcher.
+    private volatile AutoResetEvent _autoResetEvent;
+    private volatile Dictionary<string, object> _frameVariables;
+    private volatile bool _isPaused;
+    private volatile bool _isRunning;
+    private volatile int _pausedLineNumber;
+
     public MacroEntry( JToken token = null )
     {
         //TODO
@@ -141,8 +152,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public AutoResetEvent AutoResetEvent
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _autoResetEvent;
+        set
+        {
+            _autoResetEvent = value;
+            NotifyOnDispatcher( nameof( AutoResetEvent ) );
+        }
     }
 
     /// <summary>
@@ -201,8 +216,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public Dictionary<string, object> FrameVariables
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _frameVariables;
+        set
+        {
+            _frameVariables = value;
+            NotifyOnDispatcher( nameof( FrameVariables ) );
+        }
     }
 
     public bool Global
@@ -235,15 +254,23 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public bool IsPaused
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _isPaused;
+        set
+        {
+            _isPaused = value;
+            NotifyOnDispatcher( nameof( IsPaused ) );
+        }
     }
 
     [JsonIgnore]
     public bool IsRunning
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _isRunning;
+        set
+        {
+            _isRunning = value;
+            NotifyOnDispatcher( nameof( IsRunning ) );
+        }
     }
 
     public bool Loop
@@ -276,8 +303,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public int PausedLineNumber
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _pausedLineNumber;
+        set
+        {
+            _pausedLineNumber = value;
+            NotifyOnDispatcher( nameof( PausedLineNumber ) );
+        }
     }
 
     public int CompareTo( MacroEntry other )
@@ -285,21 +316,71 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         return string.Compare( Name, other.Name, StringComparison.OrdinalIgnoreCase );
     }
 
+    /// <summary>
+    ///     Raises <see cref="HotkeyEntry.OnPropertyChanged" /> on the UI thread for the execution
+    ///     state properties (<see cref="IsRunning" />, <see cref="IsPaused" />,
+    ///     <see cref="PausedLineNumber" />, <see cref="AutoResetEvent" />,
+    ///     <see cref="FrameVariables" />).
+    ///     <para>
+    ///         Those properties are written from the macro thread
+    ///         (<see cref="OnPausedEvent" />/<see cref="OnStoppedEvent" />), from hotkey and packet
+    ///         threads (<see cref="Execute" />/<see cref="Stop" />) and from the UI thread
+    ///         (<see cref="Resume" />), while their change notifications drive bindings and command
+    ///         re-query. The state itself is committed synchronously to the volatile backing fields
+    ///         so observers see it the moment the mutating call returns; only the notification is
+    ///         marshalled, because <see cref="IDispatcher.Invoke" /> posts fire-and-forget (it is
+    ///         not WPF's blocking Dispatcher.Invoke) and Avalonia bindings throw "Call from invalid
+    ///         thread" for notifications raised off the UI thread. This mirrors the marshalling in
+    ///         <c>BaseViewModel.OnPropertyChanged</c>.
+    ///     </para>
+    /// </summary>
+    private void NotifyOnDispatcher( string propertyName )
+    {
+        IDispatcher dispatcher = Engine.Dispatcher;
+
+        if ( dispatcher == null )
+        {
+            OnPropertyChanged( propertyName );
+
+            return;
+        }
+
+        dispatcher.Invoke( () => OnPropertyChanged( propertyName ) );
+    }
+
     private void OnPausedEvent( int lineNumber, AutoResetEvent autoResetEvent, Dictionary<string, object> frameVariables )
     {
         Shared.UO.Commands.SystemMessage( string.Format( Strings.Debugger_paused_on_line__0_, lineNumber ), SystemMessageHues.Yellow );
 
-        Engine.Dispatcher.Invoke( () =>
-        {
-            IsPaused = true;
-            PausedLineNumber = lineNumber;
-            AutoResetEvent = autoResetEvent;
-            FrameVariables = frameVariables;
-        } );
+        // Commit the pause state synchronously instead of inside a posted delegate: OnStoppedEvent,
+        // Resume and Step race this event and used to observe a half-committed pause (notably a
+        // missing AutoResetEvent), skipping the Set() that releases the debugger's wait handle and
+        // leaving the macro parked on it forever. AutoResetEvent, PausedLineNumber and
+        // FrameVariables are committed first and IsPaused last: IsPaused is the flag every observer
+        // gates on (OnStoppedEvent's wasPaused, the Resume/Step CanExecute delegates,
+        // MacroInvoker.OnTrace's re-pause check) and the volatile writes publish in order, so
+        // anything that observes IsPaused == true is guaranteed to observe the rest.
+        AutoResetEvent = autoResetEvent;
+        PausedLineNumber = lineNumber;
+        FrameVariables = frameVariables;
+        IsPaused = true;
     }
 
     private void OnStoppedEvent()
     {
+        // A stop can arrive from a run that has already been superseded: Execute stops and joins
+        // the entry's previous run before starting the replacement, but those joins are bounded
+        // (MacroInvoker.Stop's Join( 100 ) / MacroInvoker.Execute's Join( 2000 )) and the old
+        // thread's finally - where StoppedEvent is raised - can run after the replacement run has
+        // started. That stop belongs to the old run; clearing state here would mark the live run
+        // as stopped and its next Stop() would silently do nothing (MacroInvoker.Thread is the
+        // invoker's current run, and equals Thread.CurrentThread for every run that isn't
+        // superseded).
+        if ( !ReferenceEquals( Thread.CurrentThread, MacroInvoker.Thread ) )
+        {
+            return;
+        }
+
         bool wasPaused = IsPaused;
 
         if ( wasPaused )
@@ -307,15 +388,14 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
             AutoResetEvent?.Set();
         }
 
-        Engine.Dispatcher.Invoke( () =>
-        {
-            IsRunning = false;
+        // Synchronous, like the pause commit above: the UI state must be current when Stop()
+        // returns, not whenever the posted delegate gets scheduled.
+        IsRunning = false;
 
-            if ( wasPaused )
-            {
-                IsPaused = false;
-            }
-        } );
+        if ( wasPaused )
+        {
+            IsPaused = false;
+        }
 
         if ( IsBackground && !MacroManager.QuietMode )
         {
@@ -352,7 +432,24 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
 
     public void Execute( object[] parameters = null )
     {
-        Engine.Dispatcher.Invoke( () => IsRunning = true );
+        // Reap a still-running previous run of this entry before publishing IsRunning = true.
+        // StoppedEvent is raised at thread exit, so if the old run's finally lands after this
+        // assignment it would clear IsRunning out from under the new run (and the next Stop()
+        // would silently do nothing). MacroInvoker.Execute joins the previous run too, but only
+        // after this call has already set the flag - this moves the reap in front of the publish.
+        // The bound matches MacroInvoker.Execute's own join.
+        Thread previousThread = MacroInvoker.Thread;
+
+        if ( previousThread != null && previousThread.IsAlive )
+        {
+            MacroInvoker.Stop();
+            previousThread.Join( 2000 );
+        }
+
+        // Synchronous: Stop() gates on IsRunning and callers must be able to observe the running
+        // state as soon as Execute returns. It used to be set inside a posted delegate (which is
+        // fire-and-forget), so a prompt Stop() silently did nothing.
+        IsRunning = true;
 
         if ( IsBackground && !MacroManager.QuietMode )
         {
@@ -368,7 +465,7 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         if ( IsRunning )
         {
             MacroInvoker.Stop();
-            Engine.Dispatcher.Invoke( () => IsRunning = false );
+            IsRunning = false;
         }
     }
 
@@ -474,9 +571,15 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
 
     public void Resume()
     {
-        AutoResetEvent?.Set();
+        // Clear IsPaused before releasing the macro thread: MacroInvoker.OnTrace re-pauses at
+        // every line while IsPaused is set, so clearing after the Set() (or posting the clear, as
+        // this used to) can land after the released thread has already re-committed a new pause -
+        // leaving IsPaused false while the macro sits on its wait handle with the Resume/Step
+        // commands disabled. Cleared first, the released thread runs free past the next line; a
+        // genuine re-pause (breakpoint) commits IsPaused again after this and stays consistent.
+        IsPaused = false;
 
-        Engine.Dispatcher.Invoke( () => IsPaused = false );
+        AutoResetEvent?.Set();
     }
 
     public void Step()

@@ -248,7 +248,14 @@ public class SkillsTabViewModel : BaseViewModel, IGlobalSettingProvider
 
     private void OnSkillsListEvent( SkillInfo[] skills )
     {
-        _dispatcher.Invoke( () => { Items.Clear(); } );
+        // Build the replacement entries here on the packet worker (they are not yet in Items, so
+        // nothing observes them), then swap them in as a single posted operation. The rebuild used
+        // to be posted as one Clear plus one Add per skill, while OnSkillUpdatedEvent searched
+        // Items from this same packet worker and mutated whichever entry it found - usually the
+        // old entry the in-flight rebuild was about to discard, so the rebuilt entry never
+        // received the update. One delegate per packet keeps the effects FIFO-ordered on the
+        // dispatcher and confines every Items access to the dispatcher thread.
+        List<SkillEntry> entries = [];
 
         foreach ( SkillInfo si in skills )
         {
@@ -268,8 +275,18 @@ public class SkillsTabViewModel : BaseViewModel, IGlobalSettingProvider
                 LockStatus = si.LockStatus
             };
 
-            _dispatcher.Invoke( () => { Items.Add( se ); } );
+            entries.Add( se );
         }
+
+        _dispatcher.Invoke( () =>
+        {
+            Items.Clear();
+
+            foreach ( SkillEntry se in entries )
+            {
+                Items.Add( se );
+            }
+        } );
     }
 
     private void UseSkill( object obj )
@@ -288,15 +305,21 @@ public class SkillsTabViewModel : BaseViewModel, IGlobalSettingProvider
     private void OnSkillUpdatedEvent( int skillID, float value, float baseValue, LockStatus lockStatus,
         float skillCap )
     {
-        SkillEntry entry = Items.FirstOrDefault( se => se.Skill.ID == skillID );
-
-        if ( entry == null )
-        {
-            return;
-        }
-
+        // Look the entry up inside the posted delegate, not on the packet worker: both handlers
+        // run on the same packet worker and OnSkillsListEvent posts a full rebuild, so a lookup
+        // here could find the old entry the rebuild is about to discard (the update was lost) or
+        // enumerate Items mid-mutation ("Collection was modified"). Posted, the lookup runs after
+        // any earlier rebuild completes - the dispatcher is FIFO, so effects apply in packet
+        // order - and finds the rebuilt entry.
         _dispatcher.Invoke( () =>
         {
+            SkillEntry entry = Items.FirstOrDefault( se => se.Skill.ID == skillID );
+
+            if ( entry == null )
+            {
+                return;
+            }
+
             entry.Delta += baseValue - entry.Base;
             entry.Value = value;
             entry.Base = baseValue;

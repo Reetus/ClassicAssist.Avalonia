@@ -268,6 +268,21 @@ public static class AssistantOptions
 
         string profile = _linkedProfiles[player.Serial];
 
+        // Deliberately posted as one block, and deliberately not made synchronous. The block must
+        // run on the UI thread: Options.Save/Load dispatch SaveEvent/LoadEvent to the setting
+        // providers, which serialise and rebuild UI-bound collections and would throw "Call from
+        // invalid thread" anywhere else. Blocking this thread until the UI thread drains the post
+        // is not safe either - SetPlayer is reached from a packet handler and the client's game
+        // thread waits on it (see BaseViewModel.OnPropertyChanged: "Post rather than block"), and
+        // the UI thread can be waiting on the client. Keeping Save/swap/Load in a single delegate
+        // is what makes the block atomic against UI-thread profile switches (FIFO on the
+        // dispatcher serialises them). The residual race is that the connection flow continuing
+        // on this thread can still read the pre-switch profile until the post runs; closing that
+        // needs the connection flow to defer until ProfileChangedEvent fires (or an awaitable
+        // dispatcher hop with the packet-handler constraint lifted) - a change outside this file.
+        // Moving only the Options.CurrentOptions swap ahead of the post is worse, not better: it
+        // breaks the block's atomicity and leaves readers with mixed state (new profile identity,
+        // default values).
         Engine.Dispatcher.Invoke( () =>
         {
             Options.Save( Options.CurrentOptions );

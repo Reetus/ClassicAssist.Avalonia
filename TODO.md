@@ -429,7 +429,15 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   (class-only — `IDispatcher` lives in `ClassicAssist.Shared` and cannot be changed here). The
   caller-side races are tracked separately below.
 
-- [ ] **`IDispatcher.Invoke` call sites that assume synchronous completion.**
+- [x] **`IDispatcher.Invoke` call sites that assume synchronous completion.**
+  *Two residues deliberately left and documented in code:* (a) `AssistantOptions.PlayerInitialized`
+  cannot be made locally correct — the block must run on the UI thread (its providers serialise
+  UI-bound collections), blocking the packet thread would violate the documented
+  "the caller may be a packet handler the game thread is waiting on" invariant, and splitting the
+  block would break its atomicity against UI-thread manual profile switches. It needs a
+  continuation-based completion signal instead of a post. (b) a narrow supersede window in
+  `MacroEntry.Execute` (~2-4 s if a previous run fails to die within the bounded joins) — closing it
+  needs run identity on `StoppedEvent`, which is an interface change.
   The `Invoke`→`Post` divergence is documented now, but these callers still race because they read or
   gate state that only changes inside the posted delegate. Enumerated by the dispatcher work; files
   were owned by other work that round.
