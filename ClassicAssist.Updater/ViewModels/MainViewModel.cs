@@ -189,7 +189,7 @@ public class MainViewModel : BaseViewModel
     ///     Modules ship as a nested zip so the macro module tree can be replaced wholesale without the
     ///     per-file copy above walking it.
     /// </summary>
-    private void ExtractModules( string updatePath, string destinationPath )
+    internal void ExtractModules( string updatePath, string destinationPath )
     {
         string modulesZip = Directory.EnumerateFiles( updatePath, "Modules.zip" ).FirstOrDefault();
 
@@ -252,7 +252,7 @@ public class MainViewModel : BaseViewModel
     ///     entry may name "..", a rooted path such as "C:/evil.dll", or '\' separators, all of which
     ///     a naive segment combine walks straight past.
     /// </summary>
-    private static bool TryResolveEntryPath( string root, string entryName, out string destination )
+    internal static bool TryResolveEntryPath( string root, string entryName, out string destination )
     {
         destination = null;
 
@@ -289,15 +289,18 @@ public class MainViewModel : BaseViewModel
             // The authoritative check, on where the entry would actually be written rather than on
             // what it claims: Path.GetFullPath collapses whatever ".." or separators slipped past
             // the segment walk above. The trailing separator keeps a sibling such as "Modules-old"
-            // from passing as being under "Modules".
+            // from passing as being under "Modules", and the length check keeps the root itself
+            // from passing either - a ".. " or "..." spoof, whose trailing dots and spaces
+            // collapse to nothing rather than to a name, resolves to exactly this.
             string rootFull = Path.GetFullPath( root );
             string destinationFull = Path.GetFullPath( combined );
+            string prefix = rootFull + Path.DirectorySeparatorChar;
 
             StringComparison comparison = RuntimeInformation.IsOSPlatform( OSPlatform.Linux )
                 ? StringComparison.Ordinal
                 : StringComparison.OrdinalIgnoreCase;
 
-            if ( !destinationFull.StartsWith( rootFull + Path.DirectorySeparatorChar, comparison ) )
+            if ( destinationFull.Length <= prefix.Length || !destinationFull.StartsWith( prefix, comparison ) )
             {
                 return false;
             }
@@ -549,7 +552,7 @@ public class MainViewModel : BaseViewModel
     ///     as Modules.zip above, and anything that is not a plain file or directory - a tar can
     ///     carry links and device nodes - is skipped instead of recreated on disk.
     /// </summary>
-    private void ExtractTarGz( string fileName, string path )
+    internal void ExtractTarGz( string fileName, string path )
     {
         Directory.CreateDirectory( path );
 

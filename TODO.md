@@ -292,7 +292,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   `ClassicAssist.Updater\PlatformPackage.cs` as originally written). It needed no change — with tar
   supported end-to-end, its `IsArchive` acceptance is now truthful.
 
-- [ ] **Updater extraction needs unit tests.**
+- [x] **Updater extraction needs unit tests.**
+  *Also corrected a false claim in the `b7efd6bf` commit message.* It said the `.. ` / `...`
+  Win32 trailing-dot/space spoofs "normalise to a parent and fail the prefix test". Measured on
+  .NET 10 Windows, they collapse to **the root itself** (`root\`), which trivially passes
+  `StartsWith( root + \ )` — so `TryResolveEntryPath` **accepted** them. The write then threw
+  mid-loop and aborted the extraction. The final gate now also rejects names resolving to exactly
+  the root (`destinationFull.Length <= prefix.Length`), which no legitimate entry does.
   The zip-slip rejection table and the tar.gz round-trip were verified with a scratch harness against
   the compiled assembly (traversal names, rooted paths, backslash separators, `.. ` / `...`
   Win32-normalisation spoofs, symlink/fifo entries) but `ClassicAssist.Tests\UpdaterTests.cs` was
