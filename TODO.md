@@ -511,9 +511,13 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   clipboard. Same null-`Task` shape as the `SetClipboardText` bug now fixed in `AvaloniaUIInvoker`;
   this file was outside that work's ownership.
 
-- [ ] **`LockedObservableCollection` / `LockedDictionary` `CopyTo` can leave a `null` tail after a concurrent shrink.**
+- [x] **`LockedObservableCollection` / `LockedDictionary` `CopyTo` can leave a `null` tail after a concurrent shrink.**
   Applies to both snapshot-collection types (`ClilocFilter.cs` and `MacroEntry.cs`), which share the
-  design.
+  design. *Resolved at the call sites, because it cannot be resolved in the type* — `Buffer<T>` reads
+  `Count` and `CopyTo` in two separate calls and there is no way to make them atomic from inside the
+  collection. Both types now expose `Snapshot()`, every racing call site was migrated off
+  `ToArray()`/`ToList()` onto it, and the class docs state that `Snapshot()` is the required idiom.
+  The hazard is inherent and stays documented rather than deleted.
   Empirically confirmed (scratch probe against the same design): `Enumerable.ToArray` sizes its
   buffer from `ICollection<T>.Count` and then calls `CopyTo` in a *separate* call. Growth between the
   two is handled (the bounded copy avoids `ArgumentException`), but **shrink** leaves the tail as

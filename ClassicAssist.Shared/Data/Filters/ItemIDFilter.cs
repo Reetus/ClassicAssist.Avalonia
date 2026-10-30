@@ -32,8 +32,7 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 {
     // LockedObservableCollection: mutated from the configure dialog on the UI thread while
     // CheckPacket/GetWaitRules read it from the packet threads.
-    public ObservableCollection<ItemIDFilterEntry> Items { get; set; } =
-        new LockedObservableCollection<ItemIDFilterEntry>();
+    public LockedObservableCollection<ItemIDFilterEntry> Items { get; set; } = [];
 
     public async Task Configure()
     {
@@ -68,7 +67,7 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
         JArray items = [];
 
         // Snapshot: profile saves run this on RPC threads while the UI edits the list.
-        foreach ( ItemIDFilterEntry item in Items.ToArray() )
+        foreach ( ItemIDFilterEntry item in Items.Snapshot() )
         {
             items.Add( new JObject
             {
@@ -97,7 +96,7 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
     /// </summary>
     public override IEnumerable<PacketWaitRule> GetWaitRules()
     {
-        int[] sourceIds = [.. Items.ToArray().Where( e => e is { Enabled: true } ).Select( e => e.SourceID ).Distinct()];
+        int[] sourceIds = [.. Items.Snapshot().Where( e => e is { Enabled: true } ).Select( e => e.SourceID ).Distinct()];
 
         if ( sourceIds.Length == 0 )
         {
@@ -306,7 +305,7 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
     private ItemIDFilterEntry FindEnabledEntry( int sourceId )
     {
         // Snapshot: CheckPacket runs on the packet thread while the configure dialog edits the list.
-        foreach ( ItemIDFilterEntry entry in Items.ToArray() )
+        foreach ( ItemIDFilterEntry entry in Items.Snapshot() )
         {
             if ( entry.SourceID == sourceId && entry.Enabled )
             {

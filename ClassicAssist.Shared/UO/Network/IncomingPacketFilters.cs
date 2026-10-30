@@ -89,7 +89,9 @@ public static class IncomingPacketFilters
             return [];
         }
 
-        return ClilocFilter.Filters.ToArray().Where( f => f != null && f.Cliloc != 0 ).Select( f => f.Cliloc ).Distinct()
+        // Snapshot(), not ToArray(): this runs on packet threads while the UI edits the list, and
+        // ToArray() can leave a null tail after a concurrent shrink - see LockedObservableCollection.
+        return ClilocFilter.Filters.Snapshot().Where( f => f != null && f.Cliloc != 0 ).Select( f => f.Cliloc ).Distinct()
             .Select( cliloc => PacketWaitRegistry.IntAt( packetId, LOCALIZED_CLILOC, cliloc ) );
     }
 

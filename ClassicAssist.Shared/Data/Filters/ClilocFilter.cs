@@ -19,8 +19,7 @@ public class ClilocFilter : FilterEntry, IConfigurableFilter
 {
     // LockedObservableCollection rather than the plain one: this list is mutated from the configure
     // dialog on the UI thread while CheckMessage/FindByCliloc enumerate it on the packet thread.
-    public static ObservableCollection<FilterClilocEntry> Filters { get; set; } =
-        new LockedObservableCollection<FilterClilocEntry>();
+    public static LockedObservableCollection<FilterClilocEntry> Filters { get; set; } = [];
 
     public static bool IsEnabled { get; set; }
 
@@ -59,8 +58,9 @@ public class ClilocFilter : FilterEntry, IConfigurableFilter
     {
         JArray itemsArray = [];
 
-        // Snapshot: profile saves run this on RPC threads while the UI edits the list.
-        foreach ( FilterClilocEntry filter in Filters.ToArray() )
+        // Snapshot(), not ToArray(): profile saves run this on RPC threads while the UI edits the
+        // list, and ToArray() can leave a null tail after a concurrent shrink - see the class remarks.
+        foreach ( FilterClilocEntry filter in Filters.Snapshot() )
         {
             itemsArray.Add( new JObject
             {
@@ -163,16 +163,25 @@ public class ClilocFilter : FilterEntry, IConfigurableFilter
 ///     <para>
 ///         Enumeration is snapshot-based and cannot observe a concurrent edit.
 ///         <see cref="IEnumerable{T}" /> and <see cref="ICollection{T}" /> are re-implemented so
-///         that interface-dispatched enumeration - <c>foreach</c> over the interface, LINQ and
-///         <c>ToArray()</c>, the only way the callers outside this assembly reach these lists from
-///         other threads - gets a private copy. The base's <c>GetEnumerator</c>/<c>CopyTo</c> are
-///         sealed interface implementations and cannot be overridden, so re-implementation is the
-///         only hook; note that a plain <c>foreach</c> over an
-///         <see cref="ObservableCollection{T}" />-typed reference binds to the base enumerator
-///         directly and is therefore iterated as <c>...ToArray()</c> or through LINQ instead.
+///         that interface-dispatched enumeration - <c>foreach</c> over the interface and LINQ - gets
+///         a private copy. The base's <c>GetEnumerator</c>/<c>CopyTo</c> are sealed interface
+///         implementations and cannot be overridden, so re-implementation is the only hook; note
+///         that a plain <c>foreach</c> over an <see cref="ObservableCollection{T}" />-typed reference
+///         binds to the base enumerator directly and must therefore go through
+///         <see cref="Snapshot" /> or LINQ instead.
+///     </para>
+///     <para>
+///         <b>Prefer <see cref="Snapshot" /> over <c>ToArray()</c>/<c>ToList()</c>.</b> Those reach
+///         the collection through <see cref="ICollection{T}.CopyTo" />, and LINQ sizes the target
+///         buffer from <c>Count</c> in a call separate from the copy. Growth between the two is
+///         handled (the bounded <c>CopyTo</c> below avoids <c>ArgumentException</c>), but a
+///         concurrent <b>shrink</b> leaves the tail as <c>default(T)</c> - so
+///         <c>foreach ( var f in Filters.ToArray() )</c> can dereference null.
+///         <c>Buffer&lt;T&gt;</c> assumes a non-concurrent collection, so the two calls cannot be
+///         made atomic from inside this type; the safe fix is at the call site.
 ///     </para>
 /// </summary>
-internal sealed class LockedObservableCollection<T> : ObservableCollection<T>, IEnumerable<T>, ICollection<T>
+public sealed class LockedObservableCollection<T> : ObservableCollection<T>, IEnumerable<T>, ICollection<T>
 {
     private readonly Lock _lock = new();
 
@@ -197,6 +206,21 @@ internal sealed class LockedObservableCollection<T> : ObservableCollection<T>, I
         lock ( _lock )
         {
             base.MoveItem( oldIndex, newIndex );
+        }
+    }
+
+    /// <summary>
+    ///     A copy of the current contents, taken under the lock - the thread-safe way to walk or
+    ///     persist the whole list while other threads mutate it. Prefer this to
+    ///     <c>ToArray()</c>/<c>ToList()</c>, which reach the collection through
+    ///     <see cref="ICollection{T}.CopyTo" /> and cannot be made atomic against a concurrent
+    ///     shrink - see the class remarks.
+    /// </summary>
+    public List<T> Snapshot()
+    {
+        lock ( _lock )
+        {
+            return [.. Items];
         }
     }
 
