@@ -533,7 +533,7 @@ Priority key: **P0** crash / permanent hang · **P1** leak, race or data loss ·
   but the type and call sites live in `MacroEntry.cs` / `MacrosTabViewModel.cs`, outside that work's
   ownership. (Raised by the static-state work.)
 
-- [ ] **`MainWindow` never disposes its tab view models.**
+- [x] **`MainWindow` never disposes its tab view models.**
   `VendorSellTabViewModel` and `MacrosTabViewModel` now have safe, idempotent `Dispose`
   implementations (VendorSell unsubscribes `VendorSellDisplayEvent`; Macros stops/disposes
   `_fileScanTimer` and detaches its `Engine.Connected`/`DisconnectedEvent` handlers — both of which
