@@ -2394,11 +2394,10 @@ public static class EntityCollectionDataExtensions
             return [];
         }
 
-        Item[] items = itemCollection.GetItems();
+        // Convert before sorting - conversion applies name overrides/fallback names, which the comparers sort on.
+        List<EntityCollectionData> data = [.. itemCollection.GetItems().Select( item => item.ToEntityCollectionData( nameOverrides ) )];
 
-        IEnumerable<Item> ordered = comparer == null ? items : items.OrderBy( i => i, comparer );
-
-        return [.. ordered.Select( item => item.ToEntityCollectionData( nameOverrides ) )];
+        return comparer == null ? data : [.. data.OrderBy( d => d.Entity, comparer )];
     }
 
     public static EntityCollectionData ToEntityCollectionData( this Item item,
