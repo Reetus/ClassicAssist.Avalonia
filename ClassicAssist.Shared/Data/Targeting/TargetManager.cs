@@ -13,7 +13,6 @@ using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
 using Newtonsoft.Json;
 using UOC = ClassicAssist.Shared.UO.Commands;
-using System.Threading;
 
 namespace ClassicAssist.Data.Targeting;
 
@@ -22,8 +21,7 @@ public class TargetManager
     public delegate void dTargetChanged( int newSerial, int oldSerial );
 
     private const int MAX_DISTANCE = 18;
-    private static TargetManager _instance;
-    private static readonly Lock _lock = new();
+    private static readonly Lazy<TargetManager> _instance = new( () => new TargetManager() );
     private static readonly List<Mobile> _ignoreList = [];
     private readonly List<TargetBodyData> _bodyData;
 
@@ -292,22 +290,7 @@ public class TargetManager
 
     public static TargetManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _lock )
-            {
-                if ( _instance != null )
-                {
-                    return _instance;
-                }
-
-                _instance = new TargetManager();
-                return _instance;
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     public bool GetEnemy( TargetNotoriety notoFlags, TargetBodyType bodyType, TargetDistance targetDistance,

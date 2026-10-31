@@ -7,6 +7,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.VisualTree;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
+using ClassicAssist.UI.ViewModels;
 
 namespace ClassicAssist.Avalonia.Views.Agents;
 
@@ -76,6 +77,14 @@ public partial class AutolootTabControl : UserControl
         }
     }
 
+    /// <summary>
+    ///     Guarded like <see cref="RelayCommandAsync.Execute" />: this is an async void event
+    ///     handler, so anything the drag/drop throws after the first await would escape to the
+    ///     dispatcher unhandled. Failures are reported to the user (see
+    ///     <see cref="CommandExceptionPolicy.Report" />); fatal faults still propagate. The finally
+    ///     still clears the pending <c>_draggedEntry</c> so a failed drag cannot leave a stale entry
+    ///     targeting the next drop.
+    /// </summary>
     private async void OnPointerMoved( object sender, PointerEventArgs e )
     {
         if ( _dragEntry == null || _dragStartArgs == null )
@@ -105,6 +114,10 @@ public partial class AutolootTabControl : UserControl
         try
         {
             await DragDrop.DoDragDropAsync( startArgs, data, DragDropEffects.Move );
+        }
+        catch ( Exception exception ) when ( !CommandExceptionPolicy.IsFatal( exception ) )
+        {
+            CommandExceptionPolicy.Report( exception );
         }
         finally
         {

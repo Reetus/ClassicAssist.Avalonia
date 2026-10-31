@@ -71,18 +71,23 @@ running clients first (detected via `/proc/<pid>/maps` on Linux).
 ## Code style
 
 `.editorconfig` is enforced during build (`EnforceCodeStyleInBuild` in `Directory.Build.props`), so
-style violations surface as build warnings rather than IDE-only hints. To apply the fixes:
+style violations surface as build warnings rather than IDE-only hints.
 
-```bash
-dotnet format ClassicAssist.slnx                      # apply
-dotnet format ClassicAssist.slnx --verify-no-changes  # check only, for CI
-```
+**Do not apply them with a bare `dotnet format ClassicAssist.slnx`.** That runs whitespace, style
+**and analyzer** fixers over every project in the solution - including the out-of-scope ones listed
+below - and the result is not safe to commit: it has rewritten `PluginEngine.Install` into
+`async Task InstallAsync` (a VSTHRD analyzer fix) in the multi-targeted plugin project, and deleted
+comment blocks and XML doc comments in `ClassicAssist.Shared`. Use the scoped procedure in
+`AGENTS.md` instead - whitespace one enforced project at a time, then style rules one diagnostic at a
+time, with damage checks after every step. `dotnet format ... --verify-no-changes` is read-only and
+safe to run, but as a solution-wide command it proposes the same fixers a bare apply would
+destructively install, so treat its output as advisory.
 
 Rules are enforced for **`ClassicAssist.Avalonia`, `ClassicAssist.Launcher` and
 `ClassicAssist.Shared`** — the projects that target `net10.0` only. Everywhere else the `Style`
-category is `none`, so those projects build without style warnings and `dotnet format` leaves them
-alone. Within the enforced scope each rule is opted in individually in `.editorconfig`, with a
-comment explaining why.
+category is `none`, so those projects build without style warnings and the scoped, per-project runs
+leave them alone. Within the enforced scope each rule is opted in individually in `.editorconfig`,
+with a comment explaining why.
 
 The WPF tree is net48 / C# 7.3 and cannot use the modern constructs enabled here — collection
 expressions, `new()`, `not` patterns, file-scoped namespaces — so expect those to differ when

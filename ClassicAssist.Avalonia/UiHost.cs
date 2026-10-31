@@ -12,6 +12,7 @@
 
 #endregion
 
+using System;
 using System.IO;
 using ClassicAssist.Avalonia.Views;
 using ClassicAssist.Data;
@@ -42,20 +43,39 @@ public static class UiHost
 
         foreach ( BaseViewModel instance in instances )
         {
+            // Each provider is guarded individually: one bad provider must not abort the whole
+            // profile save. Options.Save runs with no caller-side guard - including from
+            // MainWindow's OnClosing (via WindowInitializedBehaviour), where an exception is
+            // fatal - and is reached from RPC threads as well as the UI thread.
             if ( instance is ISettingProvider settingProvider )
             {
-                settingProvider.Serialize( obj );
+                try
+                {
+                    settingProvider.Serialize( obj );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( $"Failed to serialize settings provider {instance.GetType().Name}: {ex}" );
+                }
             }
 
             if ( instance is IGlobalSettingProvider globalSettingProvider )
             {
-                JObject global = [];
+                try
+                {
+                    JObject global = [];
 
-                globalSettingProvider.Serialize( global, true );
+                    globalSettingProvider.Serialize( global, true );
 
-                File.WriteAllText(
-                    Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() ),
-                    global.ToString() );
+                    File.WriteAllText(
+                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() ),
+                        global.ToString() );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine(
+                        $"Failed to serialize global settings provider {instance.GetType().Name}: {ex}" );
+                }
             }
         }
     }
@@ -66,24 +86,41 @@ public static class UiHost
 
         foreach ( BaseViewModel instance in instances )
         {
+            // Same per-provider guard on the way back in: a provider that can't deserialize its
+            // own slice must not stop the remaining providers from loading the profile.
             if ( instance is ISettingProvider settingProvider )
             {
-                settingProvider.Deserialize( json, options );
+                try
+                {
+                    settingProvider.Deserialize( json, options );
+                }
+                catch ( Exception ex )
+                {
+                    Console.WriteLine( $"Failed to deserialize settings provider {instance.GetType().Name}: {ex}" );
+                }
             }
 
             if ( instance is IGlobalSettingProvider globalSettingProvider )
             {
-                string filePath =
-                    Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() );
-
-                if ( !File.Exists( filePath ) )
+                try
                 {
-                    continue;
+                    string filePath =
+                        Path.Combine( AssistantOptions.GetGlobalPath(), globalSettingProvider.GetGlobalFilename() );
+
+                    if ( !File.Exists( filePath ) )
+                    {
+                        continue;
+                    }
+
+                    JObject global = JObject.Parse( File.ReadAllText( filePath ) );
+
+                    globalSettingProvider.Deserialize( global, options, true );
                 }
-
-                JObject global = JObject.Parse( File.ReadAllText( filePath ) );
-
-                globalSettingProvider.Deserialize( global, options, true );
+                catch ( Exception ex )
+                {
+                    Console.WriteLine(
+                        $"Failed to deserialize global settings provider {instance.GetType().Name}: {ex}" );
+                }
             }
         }
     }

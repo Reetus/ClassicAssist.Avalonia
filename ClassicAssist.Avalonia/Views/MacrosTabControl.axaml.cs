@@ -18,15 +18,27 @@ public partial class MacrosTabControl : UserControl
     {
         InitializeComponent();
 
+        // The name comes from MacrosTabControl.axaml; if it is missing (renamed) the editor keeps
+        // its defaults instead of throwing here.
         TextEditor textEditor = this.FindControl<TextEditor>( "Editor" );
+
+        if ( textEditor == null )
+        {
+            Console.WriteLine( "MacrosTabControl: named TextEditor 'Editor' was not found, editor setup skipped" );
+
+            return;
+        }
+
         textEditor.Background = Brushes.Transparent;
         textEditor.ShowLineNumbers = true;
         textEditor.Options.ConvertTabsToSpaces = true;
 
-        Stream stream = AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
+        // HighlightingLoader.Load fully parses the definition before returning, so the reader (and
+        // the asset stream it wraps) can be disposed immediately afterwards.
+        using Stream stream = AssetLoader.Open( new Uri( "avares://ClassicAssist.Avalonia/Assets/Python.Dark.xshd" ) );
+        using XmlTextReader reader = new( stream );
 
-        textEditor.SyntaxHighlighting = HighlightingLoader.Load(
-            new XmlTextReader( stream ), HighlightingManager.Instance );
+        textEditor.SyntaxHighlighting = HighlightingLoader.Load( reader, HighlightingManager.Instance );
 
         // Wires up Ctrl+F (and Ctrl+H for replace) the same as the WPF build's AvalonEdit editor.
         SearchPanel.Install( textEditor );

@@ -1,3 +1,4 @@
+using System;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -14,6 +15,16 @@ public class App : Application
 {
     public override void Initialize()
     {
+        // Registered before anything is built so no failure can escape unlogged and unnamed. What
+        // is swallowed and what is let through is decided by CommandExceptionPolicy.IsFatal:
+        // ordinary faults (a binding handler NRE, a failing command) are logged and the process
+        // continues; out-of-memory, corrupted-state and unload faults are logged but NOT marked
+        // handled, because continuing on state that can no longer be trusted is worse than a
+        // clean crash. The AppDomain handler below is log-only - for unhandled exceptions on
+        // non-UI threads the runtime is already terminating the process and nothing can stop it.
+        Dispatcher.UIThread.UnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+
         AvaloniaXamlLoader.Load( this );
     }
 
@@ -49,6 +60,10 @@ public class App : Application
                 UiHost.Initialize();
                 ClassicAssist.Mcp.McpAutoStart.Initialize();
 
+                // The one and only MainWindowViewModel: MainWindow.axaml deliberately declares no
+                // Window.DataContext, because a XAML-declared instance here was constructed first and
+                // then replaced by this one, leaving the orphan pinned to Engine/AssistantOptions
+                // static events and doing the title-update work twice.
                 MainWindow mainWindow = new() { DataContext = new MainWindowViewModel() };
 
                 desktop.MainWindow = mainWindow;
@@ -67,5 +82,27 @@ public class App : Application
         }, DispatcherPriority.Background );
 
         SEngine.Shutdown += () => Dispatcher.UIThread.Post( () => desktop.Shutdown( 0 ) );
+    }
+
+    private static void OnDispatcherUnhandledException( object sender, DispatcherUnhandledExceptionEventArgs e )
+    {
+        if ( CommandExceptionPolicy.IsFatal( e.Exception ) )
+        {
+            Console.WriteLine( $"Fatal unhandled UI-thread exception, terminating: {e.Exception}" );
+
+            return;
+        }
+
+        Console.WriteLine( $"Unhandled UI-thread exception: {e.Exception}" );
+
+        e.Handled = true;
+    }
+
+    private static void OnDomainUnhandledException( object sender, System.UnhandledExceptionEventArgs e )
+    {
+        // Logging only: for an unhandled exception on a non-UI thread (packet worker, macro thread,
+        // RPC dispatch) the runtime has already decided to terminate and UnhandledException cannot
+        // reverse that - this exists purely to leave a breadcrumb beside the crash.
+        Console.WriteLine( $"Unhandled exception, process terminating: {e.ExceptionObject}" );
     }
 }

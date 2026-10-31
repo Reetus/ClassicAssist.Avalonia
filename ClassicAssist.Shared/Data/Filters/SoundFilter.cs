@@ -46,8 +46,9 @@ public class SoundFilter : DynamicFilterEntry, IConfigurableFilter
 
     public static bool IsEnabled { get; set; }
 
-    public ObservableCollection<SoundFilterEntry> Items { get; set; } =
-        [];
+    // LockedObservableCollection: mutated from the configure dialog on the UI thread while
+    // CheckPacket/GetWaitRules read it from the packet threads.
+    public LockedObservableCollection<SoundFilterEntry> Items { get; set; } = [];
 
     public async Task Configure()
     {
@@ -103,7 +104,8 @@ public class SoundFilter : DynamicFilterEntry, IConfigurableFilter
 
     public void ResetOptions()
     {
-        foreach ( SoundFilterEntry item in Items )
+        // Snapshot: the configure dialog edits the list while this runs.
+        foreach ( SoundFilterEntry item in Items.Snapshot() )
         {
             item.Enabled = item.DefaultEnabled;
         }
@@ -183,7 +185,7 @@ public class SoundFilter : DynamicFilterEntry, IConfigurableFilter
             return [];
         }
 
-        int[] soundIds = [.. Items.ToArray().Where( e => e is { Enabled: true, SoundIDs: not null } ).SelectMany( e => e.SoundIDs ).Distinct()];
+        int[] soundIds = [.. Items.Snapshot().Where( e => e is { Enabled: true, SoundIDs: not null } ).SelectMany( e => e.SoundIDs ).Distinct()];
 
         return soundIds.Length > MAX_SOUND_RULES
             ? [new PacketWaitRule( 0x54 )]
@@ -204,10 +206,9 @@ public class SoundFilter : DynamicFilterEntry, IConfigurableFilter
 
         int soundId = ( packet[2] << 8 ) | packet[3];
 
-        for ( int i = 0; i < Items.Count; i++ )
+        // Snapshot: CheckPacket runs on the packet thread while the configure dialog edits the list.
+        foreach ( SoundFilterEntry entry in Items.Snapshot() )
         {
-            SoundFilterEntry entry = Items[i];
-
             if ( entry.Enabled && entry.SoundIDs != null && Array.IndexOf( entry.SoundIDs, soundId ) >= 0 )
             {
                 return true;

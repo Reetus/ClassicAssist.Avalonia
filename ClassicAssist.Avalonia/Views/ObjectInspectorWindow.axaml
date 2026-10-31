@@ -3,7 +3,6 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:r="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
-        xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
         xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         xmlns:models="clr-namespace:ClassicAssist.UI.Models;assembly=ClassicAssist.Shared"
         xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"

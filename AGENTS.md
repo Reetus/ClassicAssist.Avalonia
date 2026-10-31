@@ -36,9 +36,9 @@ dotnet build ClassicAssist.slnx --no-incremental 2>&1 \
 
 ### Do not run `dotnet format ClassicAssist.slnx` unscoped
 
-Despite what `BUILDING.md` suggests, a bare `dotnet format` on the solution is not safe to commit
-as-is. It runs whitespace, style **and analyzer** fixers across every project, including the
-out-of-scope ones, and in practice it has:
+A bare `dotnet format` on the solution is not safe to commit as-is. It runs whitespace, style
+**and analyzer** fixers across every project, including the out-of-scope ones, and in practice it
+has:
 
 - rewritten `PluginEngine.Install` into `async Task InstallAsync` (a VSTHRD analyzer fix) in the
   multi-targeted plugin project;

@@ -38,7 +38,7 @@
                 IsChecked="{Binding IgnoreDuplicateEntries}"/>
       <TextBlock Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0" TextDecorations="Underline"
                  Cursor="Hand" PointerPressed="OnWikiLinkClick"
-                 Foreground="{DynamicResource AccentColor}"
+                 Foreground="{DynamicResource SystemControlForegroundAccentBrush}"
                  Text="{x:Static resources:Strings.Click_here_to_learn_how_to_use_CSV_Import_}"/>
     </Grid>
     <StackPanel Grid.Column="1" Margin="10,0,0,0">

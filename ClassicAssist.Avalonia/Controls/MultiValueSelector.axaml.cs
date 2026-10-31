@@ -41,9 +41,12 @@ namespace ClassicAssist.Avalonia.Controls;
 /// </summary>
 public partial class MultiValueSelector : UserControl
 {
+    // No default value here on purpose: the default supplied to AvaloniaProperty.Register is created
+    // once and shared by every control without a binding, so a mutable one ([]) would leak values
+    // between unbound controls via Values ??= [] below. Each instance gets its own collection in the
+    // constructor instead.
     public static readonly StyledProperty<ObservableCollection<int>> ValuesProperty =
-        AvaloniaProperty.Register<MultiValueSelector, ObservableCollection<int>>( nameof( Values ),
-            [] );
+        AvaloniaProperty.Register<MultiValueSelector, ObservableCollection<int>>( nameof( Values ) );
 
     public static readonly StyledProperty<bool> HexDisplayProperty =
         AvaloniaProperty.Register<MultiValueSelector, bool>( nameof( HexDisplay ) );
@@ -62,6 +65,9 @@ public partial class MultiValueSelector : UserControl
     public MultiValueSelector()
     {
         InitializeComponent();
+
+        // Give each instance its own collection - see the ValuesProperty comment.
+        Values = [];
 
         _valuesTextBlock = this.FindControl<TextBlock>( "valuesTextBlock" );
         _textBox = this.FindControl<TextBox>( "textBox" );

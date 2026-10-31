@@ -52,11 +52,6 @@
         <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="AvaloniaEdit">
-            <HintPath>AvaloniaEdit.dll</HintPath>
-        </Reference>
-    </ItemGroup>
-    <ItemGroup>
         <Compile Update="Views\AboutControl.axaml.cs">
             <DependentUpon>AboutControl.axaml</DependentUpon>
         </Compile>

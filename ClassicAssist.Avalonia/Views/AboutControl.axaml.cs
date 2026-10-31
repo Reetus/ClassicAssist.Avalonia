@@ -24,15 +24,23 @@ public partial class AboutControl : UserControl
 
     private void OnPointerLeave( object sender, PointerEventArgs e )
     {
-        _timer.Stop();
+        _timer?.Stop();
+        _timer?.Dispose();
+        _timer = null;
     }
 
     private void OnPointerEnter( object sender, PointerEventArgs e )
     {
-        _timer = new Timer( 1000 );
-        _timer.Elapsed += ( o, args ) =>
+        // Dispose any previous timer first - a new one per enter used to leave the old one (AutoReset)
+        // ticking forever, and its Elapsed lambda stopped whatever _timer pointed at by then, i.e. the
+        // next enter's timer. The handler now captures its own instance and disposes itself.
+        _timer?.Stop();
+        _timer?.Dispose();
+
+        Timer timer = new( 1000 ) { AutoReset = false };
+        timer.Elapsed += ( o, args ) =>
         {
-            _timer.Stop();
+            timer.Dispose();
 
             if ( !_control.IsPointerOver )
             {
@@ -42,7 +50,9 @@ public partial class AboutControl : UserControl
             AudioPlayback.Play( Engine.GetResourceStream( "kiss.wav" ), sync: false );
         };
 
-        _timer.Start();
+        _timer = timer;
+
+        timer.Start();
     }
 
     private void InitializeComponent()

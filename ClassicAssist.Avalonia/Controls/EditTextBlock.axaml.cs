@@ -76,31 +76,21 @@ public partial class EditTextBlock : UserControl
         _pencilButton = this.FindControl<Button>( "pencilButton" );
         _buttonsPanel = this.FindControl<StackPanel>( "buttonsPanel" );
 
-        DoubleTapped += ( sender, args ) => HideTextBlock();
-
-        _textBox.KeyDown += ( sender, args ) =>
+        // The names come from EditTextBlock.axaml; if one is missing (renamed) the control degrades
+        // to a read-only label instead of throwing here or later from the edit handlers.
+        if ( _textBox == null || _textBlock == null || _pencilButton == null || _buttonsPanel == null )
         {
-            if ( args.Key is Key.Enter or Key.Escape )
-            {
-                args.Handled = true;
-                HideTextBox();
-            }
-            else if ( args.Key == Key.Space )
-            {
-                // A ComboBox hosting this control handles Key.Space to toggle its dropdown before
-                // the TextBox can consume the key, so the space never reaches the text and the edit
-                // loses focus - insert the character here and stop it from bubbling up.
-                InsertText( " " );
-                args.Handled = true;
-            }
-        };
+            Console.WriteLine( "EditTextBlock: one or more named parts were not found, editing disabled" );
+            UpdateDisplay();
 
-        _pencilButton.Click += ( sender, args ) =>
-        {
-            _textBox.LostFocus -= OnLostFocus;
-            HideTextBlock();
-            _textBox.LostFocus += OnLostFocus;
-        };
+            return;
+        }
+
+        DoubleTapped += OnDoubleTapped;
+
+        _textBox.KeyDown += OnTextBoxKeyDown;
+
+        _pencilButton.Click += OnPencilClick;
 
         _textBox.LostFocus += OnLostFocus;
 
@@ -123,6 +113,13 @@ public partial class EditTextBlock : UserControl
     /// </summary>
     private void UpdateDisplay()
     {
+        // textBlock may be missing if EditTextBlock.axaml is renamed - the constructor degrades to
+        // a no-op display rather than throwing.
+        if ( _textBlock == null )
+        {
+            return;
+        }
+
         _textBlock.Text = string.IsNullOrEmpty( Label ) ? Text : Label;
     }
 
@@ -172,6 +169,35 @@ public partial class EditTextBlock : UserControl
     {
         get;
         set => SetAndRaise( TextProperty, ref field, value );
+    }
+
+    private void OnDoubleTapped( object sender, TappedEventArgs args )
+    {
+        HideTextBlock();
+    }
+
+    private void OnTextBoxKeyDown( object sender, KeyEventArgs args )
+    {
+        if ( args.Key is Key.Enter or Key.Escape )
+        {
+            args.Handled = true;
+            HideTextBox();
+        }
+        else if ( args.Key == Key.Space )
+        {
+            // A ComboBox hosting this control handles Key.Space to toggle its dropdown before
+            // the TextBox can consume the key, so the space never reaches the text and the edit
+            // loses focus - insert the character here and stop it from bubbling up.
+            InsertText( " " );
+            args.Handled = true;
+        }
+    }
+
+    private void OnPencilClick( object sender, RoutedEventArgs args )
+    {
+        _textBox.LostFocus -= OnLostFocus;
+        HideTextBlock();
+        _textBox.LostFocus += OnLostFocus;
     }
 
     private void OnLostFocus( object sender, RoutedEventArgs args )

@@ -17,6 +17,7 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -28,6 +29,10 @@ namespace ClassicAssist.UO.Gumps;
 
 public class SelectionPromptGump : Gump
 {
+    // Generous because this waits on a human noticing and clicking a dialog - the limit exists only
+    // so a lost or unanswered gump cannot park the calling macro thread forever.
+    private const int _defaultResponseTimeoutMS = 5 * 60 * 1000;
+
     public SelectionPromptGump( IEnumerable<string> options, string message, bool closable = false ) : base( 500,
         500 )
     {
@@ -70,11 +75,25 @@ public class SelectionPromptGump : Gump
             Index = switches[0];
         }
 
-        AutoResetEvent.Set();
+        try
+        {
+            AutoResetEvent.Set();
+        }
+        catch ( ObjectDisposedException )
+        {
+            // The prompt already finished - it timed out or this is a duplicate response - and
+            // disposed its wait handle; a late response must not throw into the packet path.
+        }
     }
 
+    /// <summary>
+    ///     Shows the prompt and blocks until the user responds or <paramref name="timeoutMS" /> elapses.
+    ///     A timeout is reported exactly like the user declining - <c>(false, 0)</c>, the same values
+    ///     callers already treat as "nothing chosen" - so callers cannot tell the difference and a lost
+    ///     or unanswered gump cannot block the calling thread forever.
+    /// </summary>
     public static (bool Result, int Index) SelectionPrompt( IEnumerable<string> options, string message,
-        bool closable = false )
+        bool closable = false, int timeoutMS = _defaultResponseTimeoutMS )
     {
         SelectionPromptGump gump = new( options, message, closable );
 
@@ -85,9 +104,22 @@ public class SelectionPromptGump : Gump
 
         gump.SendGump();
 
-        gump.AutoResetEvent.WaitOne();
+        bool answered = gump.AutoResetEvent.WaitOne( timeoutMS );
 
         Engine.RemoveSendPostFilter( pfi );
+
+        // The wait is over either way - release the wait handle instead of leaving it to the
+        // finaliser. OnResponse tolerates the disposed handle for late or duplicate responses.
+        gump.AutoResetEvent.Dispose();
+
+        if ( !answered )
+        {
+            // Nobody answered in time: close the abandoned prompt so a late click cannot send a
+            // response nobody is waiting on any more, and report a decline.
+            gump.CloseGump();
+
+            return (false, 0);
+        }
 
         return (gump.Result, gump.Index);
     }

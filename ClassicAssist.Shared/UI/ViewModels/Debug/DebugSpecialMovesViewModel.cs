@@ -1,13 +1,17 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using ClassicAssist.Data.SpecialMoves;
 using ClassicAssist.UI.ViewModels;
 using Microsoft.Scripting.Utils;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-public class DebugSpecialMovesViewModel : BaseViewModel
+public class DebugSpecialMovesViewModel : BaseViewModel, IDisposable
 {
     private readonly SpecialMovesManager _manager;
+
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
 
     public DebugSpecialMovesViewModel()
     {
@@ -16,6 +20,24 @@ public class DebugSpecialMovesViewModel : BaseViewModel
         Items.AddRange( _manager.GetEnabledNames() );
 
         _manager.SpecialMovesChanged += OnSpecialMovesChanged;
+    }
+
+    /// <summary>
+    ///     Unsubscribes the special-moves notifications for this window and drops the collected
+    ///     state. Called once from <c>DebugWindow.OnClosed</c>.
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        _manager.SpecialMovesChanged -= OnSpecialMovesChanged;
+        Items.Clear();
+        Messages.Clear();
     }
 
     public ObservableCollection<string> Items

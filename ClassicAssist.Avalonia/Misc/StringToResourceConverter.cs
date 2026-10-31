@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using Avalonia.Data.Converters;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -23,7 +24,12 @@ public class StringToResourceConverter : IValueConverter
                     return bitmap;
                 }
 
-                bitmap = new Bitmap( Engine.GetResourceStream( key ) );
+                // The bitmap keeps its decoded pixels; the resource stream is only the source.
+                using ( Stream stream = Engine.GetResourceStream( key ) )
+                {
+                    bitmap = new Bitmap( stream );
+                }
+
                 _bitmaps.Add( key, bitmap );
                 return bitmap;
             }

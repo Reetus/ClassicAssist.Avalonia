@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Media;
 using System.Runtime.Versioning;
+using System.Threading.Tasks;
 
 namespace ClassicAssist.Misc;
 
@@ -20,7 +21,9 @@ public static class AudioPlayback
     {
         if ( OperatingSystem.IsWindows() )
         {
-            using SoundPlayer player = new( path );
+            // Not a using block: PlayWindows takes ownership and disposes the player once playback
+            // has finished, which for asynchronous playback is after this method returns.
+            SoundPlayer player = new( path );
             PlayWindows( player, sync );
 
             return;
@@ -33,7 +36,9 @@ public static class AudioPlayback
     {
         if ( OperatingSystem.IsWindows() )
         {
-            using SoundPlayer player = new( stream );
+            // Not a using block: PlayWindows takes ownership and disposes the player once playback
+            // has finished, which for asynchronous playback is after this method returns.
+            SoundPlayer player = new( stream );
             PlayWindows( player, sync );
 
             return;
@@ -50,17 +55,41 @@ public static class AudioPlayback
         PlayExternal( tempFile, sync, deleteWhenDone: true );
     }
 
+    /// <summary>
+    ///     Plays on Windows, taking ownership of <paramref name="player" />: it is disposed once
+    ///     playback has finished. <see cref="SoundPlayer.Play" /> is fire-and-forget with no completion
+    ///     callback, so the asynchronous path runs <see cref="SoundPlayer.PlaySync" /> on a background
+    ///     thread instead - disposing the player (and cutting off its backing stream) as soon as
+    ///     asynchronous playback was started would cut off or prevent the sound entirely.
+    /// </summary>
     [SupportedOSPlatform( "windows" )]
     private static void PlayWindows( SoundPlayer player, bool sync )
     {
         if ( sync )
         {
-            player.PlaySync();
+            using ( player )
+            {
+                player.PlaySync();
+            }
+
+            return;
         }
-        else
+
+        Task.Run( () =>
         {
-            player.Play();
-        }
+            try
+            {
+                player.PlaySync();
+            }
+            catch ( Exception )
+            {
+                // ignored - a bad sound file must not escape as an unobserved task exception
+            }
+            finally
+            {
+                player.Dispose();
+            }
+        } );
     }
 
     private static void PlayExternal( string path, bool sync, bool deleteWhenDone = false )

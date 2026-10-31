@@ -1,5 +1,9 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
@@ -13,8 +17,9 @@ namespace ClassicAssist.Data.Filters;
 [FilterOptions( Name = "Cliloc Filter", DefaultEnabled = false )]
 public class ClilocFilter : FilterEntry, IConfigurableFilter
 {
-    public static ObservableCollection<FilterClilocEntry> Filters { get; set; } =
-        [];
+    // LockedObservableCollection rather than the plain one: this list is mutated from the configure
+    // dialog on the UI thread while CheckMessage/FindByCliloc enumerate it on the packet thread.
+    public static LockedObservableCollection<FilterClilocEntry> Filters { get; set; } = [];
 
     public static bool IsEnabled { get; set; }
 
@@ -53,7 +58,9 @@ public class ClilocFilter : FilterEntry, IConfigurableFilter
     {
         JArray itemsArray = [];
 
-        foreach ( FilterClilocEntry filter in Filters )
+        // Snapshot(), not ToArray(): profile saves run this on RPC threads while the UI edits the
+        // list, and ToArray() can leave a null tail after a concurrent shrink - see the class remarks.
+        foreach ( FilterClilocEntry filter in Filters.Snapshot() )
         {
             itemsArray.Add( new JObject
             {
@@ -136,14 +143,129 @@ public class ClilocFilter : FilterEntry, IConfigurableFilter
 
     private static FilterClilocEntry FindByCliloc( int cliloc )
     {
-        for ( int i = 0; i < Filters.Count; i++ )
+        // LINQ enumerates through IEnumerable<T>, which LockedObservableCollection maps to a
+        // snapshot - this runs on the packet thread while the UI edits the list.
+        return Filters.FirstOrDefault( f => f.Cliloc == cliloc );
+    }
+}
+
+/// <summary>
+///     An <see cref="ObservableCollection{T}" /> that can be edited on one thread while another
+///     enumerates it. The filter lists are mutated from the UI (the configure dialogs) but read
+///     from the packet threads, where a racing enumeration used to throw
+///     <see cref="InvalidOperationException" /> and cost the packet being processed.
+///     <para>
+///         Callers keep using the ordinary <see cref="ObservableCollection{T}" /> surface: every
+///         mutator (<c>Add</c>, <c>Remove</c>, <c>Clear</c>, the indexer) funnels through the
+///         protected <c>InsertItem</c>/<c>RemoveItem</c>/<c>SetItem</c>/<c>ClearItems</c>/
+///         <c>MoveItem</c> hooks, which are serialised on a private lock below.
+///     </para>
+///     <para>
+///         Enumeration is snapshot-based and cannot observe a concurrent edit.
+///         <see cref="IEnumerable{T}" /> and <see cref="ICollection{T}" /> are re-implemented so
+///         that interface-dispatched enumeration - <c>foreach</c> over the interface and LINQ - gets
+///         a private copy. The base's <c>GetEnumerator</c>/<c>CopyTo</c> are sealed interface
+///         implementations and cannot be overridden, so re-implementation is the only hook; note
+///         that a plain <c>foreach</c> over an <see cref="ObservableCollection{T}" />-typed reference
+///         binds to the base enumerator directly and must therefore go through
+///         <see cref="Snapshot" /> or LINQ instead.
+///     </para>
+///     <para>
+///         <b>Prefer <see cref="Snapshot" /> over <c>ToArray()</c>/<c>ToList()</c>.</b> Those reach
+///         the collection through <see cref="ICollection{T}.CopyTo" />, and LINQ sizes the target
+///         buffer from <c>Count</c> in a call separate from the copy. Growth between the two is
+///         handled (the bounded <c>CopyTo</c> below avoids <c>ArgumentException</c>), but a
+///         concurrent <b>shrink</b> leaves the tail as <c>default(T)</c> - so
+///         <c>foreach ( var f in Filters.ToArray() )</c> can dereference null.
+///         <c>Buffer&lt;T&gt;</c> assumes a non-concurrent collection, so the two calls cannot be
+///         made atomic from inside this type; the safe fix is at the call site.
+///     </para>
+/// </summary>
+public sealed class LockedObservableCollection<T> : ObservableCollection<T>, IEnumerable<T>, ICollection<T>
+{
+    private readonly Lock _lock = new();
+
+    protected override void ClearItems()
+    {
+        lock ( _lock )
         {
-            if ( Filters[i].Cliloc == cliloc )
+            base.ClearItems();
+        }
+    }
+
+    protected override void InsertItem( int index, T item )
+    {
+        lock ( _lock )
+        {
+            base.InsertItem( index, item );
+        }
+    }
+
+    protected override void MoveItem( int oldIndex, int newIndex )
+    {
+        lock ( _lock )
+        {
+            base.MoveItem( oldIndex, newIndex );
+        }
+    }
+
+    /// <summary>
+    ///     A copy of the current contents, taken under the lock - the thread-safe way to walk or
+    ///     persist the whole list while other threads mutate it. Prefer this to
+    ///     <c>ToArray()</c>/<c>ToList()</c>, which reach the collection through
+    ///     <see cref="ICollection{T}.CopyTo" /> and cannot be made atomic against a concurrent
+    ///     shrink - see the class remarks.
+    /// </summary>
+    public List<T> Snapshot()
+    {
+        lock ( _lock )
+        {
+            return [.. Items];
+        }
+    }
+
+    protected override void RemoveItem( int index )
+    {
+        lock ( _lock )
+        {
+            base.RemoveItem( index );
+        }
+    }
+
+    protected override void SetItem( int index, T item )
+    {
+        lock ( _lock )
+        {
+            base.SetItem( index, item );
+        }
+    }
+
+    void ICollection<T>.CopyTo( T[] array, int index )
+    {
+        lock ( _lock )
+        {
+            // ToArray() sizes its buffer from Count in a separate call, so the collection can grow
+            // before the copy runs; copy what fits instead of throwing like List<T>.CopyTo would,
+            // restarting the very exception this type exists to stop.
+            int count = Math.Min( Items.Count, array.Length - index );
+
+            for ( int i = 0; i < count; i++ )
             {
-                return Filters[i];
+                array[index + i] = Items[i];
             }
         }
+    }
 
-        return null;
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return ( (IEnumerable<T>) this ).GetEnumerator();
+    }
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
+    {
+        lock ( _lock )
+        {
+            return new List<T>( Items ).GetEnumerator();
+        }
     }
 }

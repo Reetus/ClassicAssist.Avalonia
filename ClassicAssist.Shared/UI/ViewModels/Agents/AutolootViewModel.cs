@@ -35,6 +35,8 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
     private const int LOOT_TIMEOUT = 5000;
     private readonly Lock _autolootLock = new();
 
+    private readonly Dictionary<int, CorpseGate> _corpseGates = [];
+
     private readonly string _propertiesFile = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.json" );
 
     private readonly string _propertiesFileCustom = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Data", "Properties.Custom.json" );
@@ -100,7 +102,7 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
     public ICommand ClipboardCopyCommand => field ??= new RelayCommand( ClipboardCopy, o => true );
 
-    public ICommand ClipboardPasteCommand => field ??= new RelayCommand( ClipboardPaste, o => true );
+    public ICommand ClipboardPasteCommand => field ??= new RelayCommandAsync( ClipboardPaste, o => true );
 
     public ObservableCollection<PropertyEntry> Constraints
     {
@@ -442,12 +444,25 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
         }
     }
 
-    private void ClipboardPaste( object obj )
+    private async Task ClipboardPaste( object obj )
     {
-        string text = Engine.UIInvoker.GetClipboardText();
+        // Captured before the await: the tree selection can change while the clipboard is read.
+        AutolootEntry target = SelectedItem;
+
+        if ( target == null )
+        {
+            return;
+        }
 
         try
         {
+            string text = await Engine.UIInvoker.GetClipboardText();
+
+            if ( string.IsNullOrEmpty( text ) )
+            {
+                return;
+            }
+
             IEnumerable<AutolootConstraintEntry> entries = JsonConvert.DeserializeObject<IEnumerable<AutolootConstraintEntry>>( text );
 
             if ( entries == null )
@@ -457,9 +472,9 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
             foreach ( AutolootConstraintEntry entry in entries )
             {
-                if ( !SelectedItem.Constraints.Contains( entry ) )
+                if ( !target.Constraints.Contains( entry ) )
                 {
-                    SelectedItem?.Constraints.Add( entry );
+                    target.Constraints.Add( entry );
                 }
             }
         }
@@ -488,65 +503,107 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
+        // Serialise passes over the same corpse only: two concurrent passes would enqueue the
+        // same items twice. Different corpses are independent and must not queue behind each
+        // other's multi-second waits, so the gate is per corpse and _autolootLock is never held
+        // across a wait - it used to be held across WaitOne/Sleep/t.Wait below.
+        CorpseGate gate;
+
         lock ( _autolootLock )
         {
-            Item item = Engine.Items.GetItem( serial );
-
-            if ( item == null || item.ID != 0x2006 )
+            if ( !_corpseGates.TryGetValue( serial, out gate ) )
             {
-                return;
+                gate = new CorpseGate();
+                _corpseGates.Add( serial, gate );
             }
 
-            if ( !LootHumanoids &&
-                 TargetManager.GetInstance().BodyData.Where( bd => bd.BodyType == TargetBodyType.Humanoid )
-                     .Select( bd => bd.Graphic ).Contains( item.Count ) )
+            gate.Users++;
+        }
+
+        gate.Semaphore.Wait();
+
+        try
+        {
+            LootCorpse( serial );
+        }
+        finally
+        {
+            gate.Semaphore.Release();
+
+            lock ( _autolootLock )
             {
-                return;
-            }
-
-            PacketWaitEntry we = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x3C, [PacketFilterConditions.IntAtPositionCondition( serial, 19 )] ),
-                PacketDirection.Incoming );
-
-            we.Lock.WaitOne( 2000 );
-
-            IEnumerable<Item> items = Engine.Items.GetItem( serial )?.Container?.GetItems();
-
-            if ( items == null )
-            {
-                return;
-            }
-
-            if ( Engine.Features.HasFlag( FeatureFlags.AOS ) )
-            {
-                Engine.SendPacketToServer( new BatchQueryProperties( [.. items.Select( i => i.Serial )] ) );
-                Thread.Sleep( 1000 );
-            }
-
-            List<Item> lootItems = CheckItems( items );
-
-            foreach ( Item lootItem in lootItems.Distinct() )
-            {
-                int containerSerial = ContainerSerial;
-
-                if ( containerSerial == 0 || Engine.Items.GetItem( containerSerial ) == null )
+                if ( --gate.Users == 0 )
                 {
-                    containerSerial = Engine.Player.GetLayer( Layer.Backpack );
+                    _corpseGates.Remove( serial );
                 }
-
-                UOC.SystemMessage( string.Format( Strings.Autolooting___0__, lootItem.Name ), 61 );
-                DragDropOptions options = new()
-                {
-                    CheckRange = true,
-                    CheckExisting = true,
-                    RequeueFailure = RequeueFailedItems,
-                    SuccessPredicate = CheckItemContainer,
-                    ActionDelayMS = ActionDelayMS
-                };
-
-                Task t = ActionPacketQueue.EnqueueDragDrop( lootItem.Serial, lootItem.Count, containerSerial, QueuePriority.Medium, options: options );
-
-                t.Wait( LOOT_TIMEOUT );
             }
+        }
+    }
+
+    /// <summary>
+    ///     One corpse's loot pass: wait for its container contents, then match and drag each item.
+    ///     Runs with the corpse's gate held but without <see cref="_autolootLock" />, so the waits
+    ///     below block only callers interested in the same corpse - reachable both from
+    ///     <c>Task.Run</c> (packet handler) and synchronously from the macro thread.
+    /// </summary>
+    private void LootCorpse( int serial )
+    {
+        Item item = Engine.Items.GetItem( serial );
+
+        if ( item == null || item.ID != 0x2006 )
+        {
+            return;
+        }
+
+        if ( !LootHumanoids &&
+             TargetManager.GetInstance().BodyData.Where( bd => bd.BodyType == TargetBodyType.Humanoid )
+                 .Select( bd => bd.Graphic ).Contains( item.Count ) )
+        {
+            return;
+        }
+
+        PacketWaitEntry we = Engine.PacketWaitEntries.Add( new PacketFilterInfo( 0x3C, [PacketFilterConditions.IntAtPositionCondition( serial, 19 )] ),
+            PacketDirection.Incoming );
+
+        we.Lock.WaitOne( 2000 );
+
+        IEnumerable<Item> items = Engine.Items.GetItem( serial )?.Container?.GetItems();
+
+        if ( items == null )
+        {
+            return;
+        }
+
+        if ( Engine.Features.HasFlag( FeatureFlags.AOS ) )
+        {
+            Engine.SendPacketToServer( new BatchQueryProperties( [.. items.Select( i => i.Serial )] ) );
+            Thread.Sleep( 1000 );
+        }
+
+        List<Item> lootItems = CheckItems( items );
+
+        foreach ( Item lootItem in lootItems.Distinct() )
+        {
+            int containerSerial = ContainerSerial;
+
+            if ( containerSerial == 0 || Engine.Items.GetItem( containerSerial ) == null )
+            {
+                containerSerial = Engine.Player.GetLayer( Layer.Backpack );
+            }
+
+            UOC.SystemMessage( string.Format( Strings.Autolooting___0__, lootItem.Name ), 61 );
+            DragDropOptions options = new()
+            {
+                CheckRange = true,
+                CheckExisting = true,
+                RequeueFailure = RequeueFailedItems,
+                SuccessPredicate = CheckItemContainer,
+                ActionDelayMS = ActionDelayMS
+            };
+
+            Task t = ActionPacketQueue.EnqueueDragDrop( lootItem.Serial, lootItem.Count, containerSerial, QueuePriority.Medium, options: options );
+
+            t.Wait( LOOT_TIMEOUT );
         }
     }
 
@@ -716,9 +773,15 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        int hue = await Engine.UIInvoker.GetHueAsync();
+        HueChoice hue = await Engine.UIInvoker.GetHueAsync();
 
-        entry.RehueHue = hue;
+        // Cancel must leave the entry's existing hue alone - it used to be written back as hue 0.
+        if ( hue.Cancelled )
+        {
+            return;
+        }
+
+        entry.RehueHue = hue.Hue.Value;
     }
 
     private void NewGroup( object obj )
@@ -932,5 +995,16 @@ public class AutolootViewModel : BaseViewModel, ISettingProvider
 
             Items.Add( entry );
         }
+    }
+
+    /// <summary>
+    ///     Serialisation gate for one corpse's loot pass. <see cref="Users" /> counts the running
+    ///     pass plus any callers queued behind it, so the entry is dropped from the map only once
+    ///     nobody is using it (corpses are not enumerable - serials arrive from packets).
+    /// </summary>
+    private sealed class CorpseGate
+    {
+        public readonly SemaphoreSlim Semaphore = new( 1, 1 );
+        public int Users;
     }
 }

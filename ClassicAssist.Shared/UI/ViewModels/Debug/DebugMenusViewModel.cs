@@ -17,6 +17,7 @@
 
 #endregion
 
+using System;
 using System.Collections.ObjectModel;
 using System.Text;
 using ClassicAssist.UI.ViewModels;
@@ -24,8 +25,11 @@ using ClassicAssist.UO.Objects;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-public class DebugMenusViewModel : BaseViewModel
+public class DebugMenusViewModel : BaseViewModel, IDisposable
 {
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
+
     public DebugMenusViewModel()
     {
         if ( Engine.Menus.GetMenus( out Menu[] menus ) )
@@ -37,6 +41,23 @@ public class DebugMenusViewModel : BaseViewModel
         }
 
         Engine.Menus.CollectionChangedEvent += OnCollectionChangedEvent;
+    }
+
+    /// <summary>
+    ///     Unsubscribes the menu-collection notifications for this window and drops the collected
+    ///     menus. Called once from <c>DebugWindow.OnClosed</c>.
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        Engine.Menus.CollectionChangedEvent -= OnCollectionChangedEvent;
+        Items.Clear();
     }
 
     public ObservableCollection<Menu> Items

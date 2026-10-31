@@ -37,7 +37,9 @@ public class ClilocFilterConfigureViewModel : BaseViewModel
 {
     public ClilocFilterConfigureViewModel()
     {
-        foreach ( FilterClilocEntry filter in ClilocFilter.Filters )
+        // Snapshot(): a plain foreach over the ObservableCollection<T>-typed property binds the
+        // base's sealed enumerator, not the snapshot one.
+        foreach ( FilterClilocEntry filter in ClilocFilter.Filters.Snapshot() )
         {
             Items.Add( new FilterClilocEntry
             {

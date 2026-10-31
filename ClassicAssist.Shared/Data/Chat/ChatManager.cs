@@ -17,10 +17,10 @@
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
-using System.Threading;
 using ClassicAssist.Shared.UO.Data;
 
 namespace ClassicAssist.Data.Chat;
@@ -43,8 +43,7 @@ public class ChatManager
 
     public delegate void dUserLeft( string username, string channel );
 
-    private static readonly Lock _instanceLock = new();
-    private static ChatManager _instance;
+    private static readonly Lazy<ChatManager> _instance = new( () => new ChatManager() );
     public List<string> Channels { get; set; } = [];
 
     public string CurrentChannel { get; set; }
@@ -64,16 +63,7 @@ public class ChatManager
 
     public static ChatManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new ChatManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     public void OnChatPacket( PacketReader reader )

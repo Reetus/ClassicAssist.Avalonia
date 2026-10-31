@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:resources="clr-namespace:ClassicAssist.Shared.Resources;assembly=ClassicAssist.Shared"
              xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
-             xmlns:ValueConverters="clr-namespace:ClassicAssist.UI.Misc.ValueConverters"
              xmlns:agents="clr-namespace:ClassicAssist.Shared.UI.ViewModels.Agents;assembly=ClassicAssist.Shared"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="ClassicAssist.Avalonia.Views.Agents.CountersTabControl">

@@ -30,6 +30,7 @@ using ClassicAssist.Shared.UO;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
+using Sentry;
 
 namespace ClassicAssist.UO.Network;
 
@@ -69,76 +70,92 @@ public static class ActionPacketQueue
 
     private static void ProcessActionPacketQueue( BaseQueueItem queueItem )
     {
-        switch ( queueItem )
+        try
         {
-            case PacketQueueItem actionQueueItem:
-                {
-                    actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
-                    ActionQueueEvent?.Invoke( ActionQueueEvents.Enter, actionQueueItem );
-
-                    WaitForActionDelay( actionQueueItem );
-
-                    if ( actionQueueItem.Token.IsCancellationRequested )
+            switch ( queueItem )
+            {
+                case PacketQueueItem actionQueueItem:
                     {
-                        actionQueueItem.Result = false;
-                        actionQueueItem.WaitHandle.Set();
-                        return;
-                    }
+                        actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
+                        ActionQueueEvent?.Invoke( ActionQueueEvents.Enter, actionQueueItem );
 
-                    actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
-                    ActionQueueEvent?.Invoke( ActionQueueEvents.Execute, actionQueueItem );
+                        WaitForActionDelay( actionQueueItem );
 
-                    byte[] data = actionQueueItem.Packet;
-                    int length = actionQueueItem.Length;
-
-                    Engine.LastActionPacket = DateTime.Now;
-                    Engine.SendPacketToServer( data, length );
-
-                    actionQueueItem.Result = true;
-                    actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
-                    ActionQueueEvent?.Invoke( ActionQueueEvents.Finish, actionQueueItem );
-                    actionQueueItem.WaitHandle.Set();
-                    break;
-                }
-            case ActionQueueItem actionItem:
-                {
-                    actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
-                    bool? result;
-
-                    ActionQueueEvent?.Invoke( ActionQueueEvents.Enter, actionItem );
-
-                    bool canPerformAction = true;
-
-                    if ( actionItem.Options?.CanPerformAction != null )
-                    {
-                        canPerformAction = actionItem.Options.CanPerformAction.Invoke();
-                    }
-
-                    if ( canPerformAction )
-                    {
-                        WaitForActionDelay( actionItem );
-
-                        actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
-                        ActionQueueEvent?.Invoke( ActionQueueEvents.Execute, actionItem );
-
-                        result = actionItem.Action?.Invoke( actionItem.Arguments );
-
-                        if ( result.HasValue && result.Value )
+                        if ( actionQueueItem.Token.IsCancellationRequested )
                         {
-                            Engine.LastActionPacket = DateTime.Now;
+                            actionQueueItem.Result = false;
+                            actionQueueItem.WaitHandle.Set();
+                            return;
                         }
-                    }
-                    else
-                    {
-                        result = false;
-                    }
 
-                    actionItem.Result = result ?? true;
-                    actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
-                    ActionQueueEvent?.Invoke( ActionQueueEvents.Finish, actionItem );
-                    actionItem.WaitHandle.Set();
-                    break;
-                }
+                        actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
+                        ActionQueueEvent?.Invoke( ActionQueueEvents.Execute, actionQueueItem );
+
+                        byte[] data = actionQueueItem.Packet;
+                        int length = actionQueueItem.Length;
+
+                        Engine.LastActionPacket = DateTime.Now;
+                        Engine.SendPacketToServer( data, length );
+
+                        actionQueueItem.Result = true;
+                        actionQueueItem.TimeSpan = DateTime.Now - actionQueueItem.DateTime;
+                        ActionQueueEvent?.Invoke( ActionQueueEvents.Finish, actionQueueItem );
+                        actionQueueItem.WaitHandle.Set();
+                        break;
+                    }
+                case ActionQueueItem actionItem:
+                    {
+                        actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
+                        bool? result;
+
+                        ActionQueueEvent?.Invoke( ActionQueueEvents.Enter, actionItem );
+
+                        bool canPerformAction = true;
+
+                        if ( actionItem.Options?.CanPerformAction != null )
+                        {
+                            canPerformAction = actionItem.Options.CanPerformAction.Invoke();
+                        }
+
+                        if ( canPerformAction )
+                        {
+                            WaitForActionDelay( actionItem );
+
+                            actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
+                            ActionQueueEvent?.Invoke( ActionQueueEvents.Execute, actionItem );
+
+                            result = actionItem.Action?.Invoke( actionItem.Arguments );
+
+                            if ( result.HasValue && result.Value )
+                            {
+                                Engine.LastActionPacket = DateTime.Now;
+                            }
+                        }
+                        else
+                        {
+                            result = false;
+                        }
+
+                        actionItem.Result = result ?? true;
+                        actionItem.TimeSpan = DateTime.Now - actionItem.DateTime;
+                        ActionQueueEvent?.Invoke( ActionQueueEvents.Finish, actionItem );
+                        actionItem.WaitHandle.Set();
+                        break;
+                    }
+            }
+        }
+        catch ( Exception e )
+        {
+            // A throwing action must never reach the worker thread unhandled - an unhandled
+            // exception on any thread terminates the process (reachable via the blocking Host RPC
+            // .Result calls inside Engine.SendPacketToServer/SendPacketToClient, which fault on
+            // disconnect). Log it and fall through as a failed item, releasing the wait handle so
+            // callers waiting on the enqueue task (e.g. Scavenger CheckArea, macro commands) get a
+            // result instead of hanging forever.
+            SentrySdk.CaptureException( e );
+
+            queueItem.Result = false;
+            queueItem.WaitHandle.Set();
         }
 
         LastProcess = DateTime.Now;

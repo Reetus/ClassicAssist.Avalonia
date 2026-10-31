@@ -6,7 +6,6 @@
         xmlns:local="clr-namespace:ClassicAssist.Avalonia"
         xmlns:misc="clr-namespace:ClassicAssist.Avalonia.Misc"
         xmlns:views="clr-namespace:ClassicAssist.Avalonia.Views"
-        xmlns:viewModels="clr-namespace:ClassicAssist.UI.ViewModels;assembly=ClassicAssist.Shared"
         xmlns:i="clr-namespace:Avalonia.Xaml.Interactivity;assembly=Avalonia.Xaml.Interactivity"
         mc:Ignorable="d"
         Height="400" Width="625"
@@ -16,9 +15,6 @@
     <misc:WindowInitializedBehaviour/>
     <misc:WindowResizeBehaviour/>
   </Interaction.Behaviors>
-  <Window.DataContext>
-    <viewModels:MainWindowViewModel />
-  </Window.DataContext>
   <Grid RowDefinitions="*">
     <TabControl Padding="10" Margin="5" Grid.Row="0" SelectedIndex="{Binding CurrentOptions.SelectedTabIndex}">
       <TabItem Header="{x:Static resources:Strings.General}">

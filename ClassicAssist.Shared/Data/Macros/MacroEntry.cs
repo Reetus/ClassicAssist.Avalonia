@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -21,6 +22,17 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
 {
     //private readonly Dispatcher _dispatcher;
     private string _name;
+
+    // Volatile backing fields for the execution-state properties (AutoResetEvent, FrameVariables,
+    // IsPaused, IsRunning, PausedLineNumber). The state machine writes and reads them across the
+    // macro thread, hotkey/packet threads and the UI thread, so the values are committed
+    // synchronously to these fields (volatile for cross-thread visibility and publish ordering)
+    // and only the change notifications are marshalled - see NotifyOnDispatcher.
+    private volatile AutoResetEvent _autoResetEvent;
+    private volatile Dictionary<string, object> _frameVariables;
+    private volatile bool _isPaused;
+    private volatile bool _isRunning;
+    private volatile int _pausedLineNumber;
 
     public MacroEntry( JToken token = null )
     {
@@ -120,7 +132,18 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         }
     }
 
-    public Dictionary<string, int> Aliases
+    /// <summary>
+    ///     Per-macro aliases. Mutated by the macro commands (<c>SetMacroAlias</c>/<c>UnsetAlias</c>)
+    ///     on macro threads and hotkey dispatch while the UI thread walks it (the Active Objects
+    ///     window) and profile save enumerates it - the same race that <c>AliasCommands._aliases</c>
+    ///     had - so it is a <see cref="LockedDictionary{TKey,TValue}" /> rather than a plain
+    ///     <see cref="Dictionary{TKey,TValue}" />. The type is still a
+    ///     <see cref="Dictionary{TKey,TValue}" />, so every existing call site
+    ///     (<c>AliasCommands</c>, <c>ActiveObjectsViewModel</c>, the tests) compiles unchanged and
+    ///     binds the synchronised members; see <see cref="LockedDictionary{TKey,TValue}" /> for the
+    ///     one caveat.
+    /// </summary>
+    public LockedDictionary<string, int> Aliases
     {
         get;
         set => SetProperty( ref field, value );
@@ -129,8 +152,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public AutoResetEvent AutoResetEvent
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _autoResetEvent;
+        set
+        {
+            _autoResetEvent = value;
+            NotifyOnDispatcher( nameof( AutoResetEvent ) );
+        }
     }
 
     /// <summary>
@@ -189,8 +216,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public Dictionary<string, object> FrameVariables
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _frameVariables;
+        set
+        {
+            _frameVariables = value;
+            NotifyOnDispatcher( nameof( FrameVariables ) );
+        }
     }
 
     public bool Global
@@ -223,15 +254,23 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public bool IsPaused
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _isPaused;
+        set
+        {
+            _isPaused = value;
+            NotifyOnDispatcher( nameof( IsPaused ) );
+        }
     }
 
     [JsonIgnore]
     public bool IsRunning
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _isRunning;
+        set
+        {
+            _isRunning = value;
+            NotifyOnDispatcher( nameof( IsRunning ) );
+        }
     }
 
     public bool Loop
@@ -264,8 +303,12 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
     [JsonIgnore]
     public int PausedLineNumber
     {
-        get;
-        set => SetProperty( ref field, value );
+        get => _pausedLineNumber;
+        set
+        {
+            _pausedLineNumber = value;
+            NotifyOnDispatcher( nameof( PausedLineNumber ) );
+        }
     }
 
     public int CompareTo( MacroEntry other )
@@ -273,21 +316,71 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         return string.Compare( Name, other.Name, StringComparison.OrdinalIgnoreCase );
     }
 
+    /// <summary>
+    ///     Raises <see cref="HotkeyEntry.OnPropertyChanged" /> on the UI thread for the execution
+    ///     state properties (<see cref="IsRunning" />, <see cref="IsPaused" />,
+    ///     <see cref="PausedLineNumber" />, <see cref="AutoResetEvent" />,
+    ///     <see cref="FrameVariables" />).
+    ///     <para>
+    ///         Those properties are written from the macro thread
+    ///         (<see cref="OnPausedEvent" />/<see cref="OnStoppedEvent" />), from hotkey and packet
+    ///         threads (<see cref="Execute" />/<see cref="Stop" />) and from the UI thread
+    ///         (<see cref="Resume" />), while their change notifications drive bindings and command
+    ///         re-query. The state itself is committed synchronously to the volatile backing fields
+    ///         so observers see it the moment the mutating call returns; only the notification is
+    ///         marshalled, because <see cref="IDispatcher.Invoke" /> posts fire-and-forget (it is
+    ///         not WPF's blocking Dispatcher.Invoke) and Avalonia bindings throw "Call from invalid
+    ///         thread" for notifications raised off the UI thread. This mirrors the marshalling in
+    ///         <c>BaseViewModel.OnPropertyChanged</c>.
+    ///     </para>
+    /// </summary>
+    private void NotifyOnDispatcher( string propertyName )
+    {
+        IDispatcher dispatcher = Engine.Dispatcher;
+
+        if ( dispatcher == null )
+        {
+            OnPropertyChanged( propertyName );
+
+            return;
+        }
+
+        dispatcher.Invoke( () => OnPropertyChanged( propertyName ) );
+    }
+
     private void OnPausedEvent( int lineNumber, AutoResetEvent autoResetEvent, Dictionary<string, object> frameVariables )
     {
         Shared.UO.Commands.SystemMessage( string.Format( Strings.Debugger_paused_on_line__0_, lineNumber ), SystemMessageHues.Yellow );
 
-        Engine.Dispatcher.Invoke( () =>
-        {
-            IsPaused = true;
-            PausedLineNumber = lineNumber;
-            AutoResetEvent = autoResetEvent;
-            FrameVariables = frameVariables;
-        } );
+        // Commit the pause state synchronously instead of inside a posted delegate: OnStoppedEvent,
+        // Resume and Step race this event and used to observe a half-committed pause (notably a
+        // missing AutoResetEvent), skipping the Set() that releases the debugger's wait handle and
+        // leaving the macro parked on it forever. AutoResetEvent, PausedLineNumber and
+        // FrameVariables are committed first and IsPaused last: IsPaused is the flag every observer
+        // gates on (OnStoppedEvent's wasPaused, the Resume/Step CanExecute delegates,
+        // MacroInvoker.OnTrace's re-pause check) and the volatile writes publish in order, so
+        // anything that observes IsPaused == true is guaranteed to observe the rest.
+        AutoResetEvent = autoResetEvent;
+        PausedLineNumber = lineNumber;
+        FrameVariables = frameVariables;
+        IsPaused = true;
     }
 
     private void OnStoppedEvent()
     {
+        // A stop can arrive from a run that has already been superseded: Execute stops and joins
+        // the entry's previous run before starting the replacement, but those joins are bounded
+        // (MacroInvoker.Stop's Join( 100 ) / MacroInvoker.Execute's Join( 2000 )) and the old
+        // thread's finally - where StoppedEvent is raised - can run after the replacement run has
+        // started. That stop belongs to the old run; clearing state here would mark the live run
+        // as stopped and its next Stop() would silently do nothing (MacroInvoker.Thread is the
+        // invoker's current run, and equals Thread.CurrentThread for every run that isn't
+        // superseded).
+        if ( !ReferenceEquals( Thread.CurrentThread, MacroInvoker.Thread ) )
+        {
+            return;
+        }
+
         bool wasPaused = IsPaused;
 
         if ( wasPaused )
@@ -295,15 +388,14 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
             AutoResetEvent?.Set();
         }
 
-        Engine.Dispatcher.Invoke( () =>
-        {
-            IsRunning = false;
+        // Synchronous, like the pause commit above: the UI state must be current when Stop()
+        // returns, not whenever the posted delegate gets scheduled.
+        IsRunning = false;
 
-            if ( wasPaused )
-            {
-                IsPaused = false;
-            }
-        } );
+        if ( wasPaused )
+        {
+            IsPaused = false;
+        }
 
         if ( IsBackground && !MacroManager.QuietMode )
         {
@@ -340,7 +432,24 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
 
     public void Execute( object[] parameters = null )
     {
-        Engine.Dispatcher.Invoke( () => IsRunning = true );
+        // Reap a still-running previous run of this entry before publishing IsRunning = true.
+        // StoppedEvent is raised at thread exit, so if the old run's finally lands after this
+        // assignment it would clear IsRunning out from under the new run (and the next Stop()
+        // would silently do nothing). MacroInvoker.Execute joins the previous run too, but only
+        // after this call has already set the flag - this moves the reap in front of the publish.
+        // The bound matches MacroInvoker.Execute's own join.
+        Thread previousThread = MacroInvoker.Thread;
+
+        if ( previousThread != null && previousThread.IsAlive )
+        {
+            MacroInvoker.Stop();
+            previousThread.Join( 2000 );
+        }
+
+        // Synchronous: Stop() gates on IsRunning and callers must be able to observe the running
+        // state as soon as Execute returns. It used to be set inside a posted delegate (which is
+        // fire-and-forget), so a prompt Stop() silently did nothing.
+        IsRunning = true;
 
         if ( IsBackground && !MacroManager.QuietMode )
         {
@@ -356,7 +465,7 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
         if ( IsRunning )
         {
             MacroInvoker.Stop();
-            Engine.Dispatcher.Invoke( () => IsRunning = false );
+            IsRunning = false;
         }
     }
 
@@ -462,13 +571,236 @@ public class MacroEntry : HotkeyEntry, IComparable<MacroEntry>
 
     public void Resume()
     {
-        AutoResetEvent?.Set();
+        // Clear IsPaused before releasing the macro thread: MacroInvoker.OnTrace re-pauses at
+        // every line while IsPaused is set, so clearing after the Set() (or posting the clear, as
+        // this used to) can land after the released thread has already re-committed a new pause -
+        // leaving IsPaused false while the macro sits on its wait handle with the Resume/Step
+        // commands disabled. Cleared first, the released thread runs free past the next line; a
+        // genuine re-pause (breakpoint) commits IsPaused again after this and stays consistent.
+        IsPaused = false;
 
-        Engine.Dispatcher.Invoke( () => IsPaused = false );
+        AutoResetEvent?.Set();
     }
 
     public void Step()
     {
         AutoResetEvent?.Set();
+    }
+}
+
+/// <summary>
+///     A <see cref="Dictionary{TKey,TValue}" /> whose operations are serialised on a private lock
+///     and whose enumeration is snapshot-based - the dictionary counterpart of
+///     <c>LockedObservableCollection&lt;T&gt;</c> (ClilocFilter.cs), introduced for the same
+///     reason: macro threads write per-macro aliases through <c>SetMacroAlias</c>/<c>UnsetAlias</c>
+///     while the UI thread (Active Objects) and profile save read them.
+///     <para>
+///         Unlike <c>LockedObservableCollection&lt;T&gt;</c>, the mutators of
+///         <see cref="Dictionary{TKey,TValue}" /> are not virtual, so they are hidden with
+///         <c>new</c> rather than overridden. That intercepts every call made through a
+///         <see cref="LockedDictionary{TKey,TValue}" />-typed reference - which is what
+///         <c>MacroEntry.Aliases</c> and all call sites in this repo use (verified by grep for
+///         <c>\.Aliases</c>) - but a call through a <see cref="Dictionary{TKey,TValue}" />-typed
+///         reference would reach the base implementation directly and is not synchronised.
+///     </para>
+///     <para>
+///         <see cref="IEnumerable{T}" /> and <see cref="ICollection{T}" /> are re-implemented so
+///         interface-dispatched use - LINQ, <c>ToList()</c>/<c>ToArray()</c>, and
+///         <c>List&lt;T&gt;</c>'s constructor's <c>ICollection&lt;T&gt;</c> fast path - gets the
+///         snapshot enumerator and a bounded <c>CopyTo</c>; the base's interface implementations
+///         are sealed and cannot be overridden, so re-implementation is the only hook.
+///         <see cref="Snapshot" /> is the thread-safe way to take a whole copy.
+///     </para>
+/// </summary>
+public sealed class LockedDictionary<TKey, TValue> : Dictionary<TKey, TValue>,
+    ICollection<KeyValuePair<TKey, TValue>>, IEnumerable<KeyValuePair<TKey, TValue>>, IEnumerable
+    where TKey : notnull
+{
+    private readonly Lock _lock = new();
+
+    public new int Count
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return base.Count;
+            }
+        }
+    }
+
+    public new TValue this[TKey key]
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return base[key];
+            }
+        }
+        set
+        {
+            lock ( _lock )
+            {
+                base[key] = value;
+            }
+        }
+    }
+
+    public new ICollection<TKey> Keys
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return [.. base.Keys];
+            }
+        }
+    }
+
+    public new ICollection<TValue> Values
+    {
+        get
+        {
+            lock ( _lock )
+            {
+                return [.. base.Values];
+            }
+        }
+    }
+
+    public new void Add( TKey key, TValue value )
+    {
+        lock ( _lock )
+        {
+            base.Add( key, value );
+        }
+    }
+
+    public new void Clear()
+    {
+        lock ( _lock )
+        {
+            base.Clear();
+        }
+    }
+
+    public new bool ContainsKey( TKey key )
+    {
+        lock ( _lock )
+        {
+            return base.ContainsKey( key );
+        }
+    }
+
+    public new IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
+    {
+        return Snapshot().GetEnumerator();
+    }
+
+    public new bool Remove( TKey key )
+    {
+        lock ( _lock )
+        {
+            return base.Remove( key );
+        }
+    }
+
+    /// <summary>
+    ///     A copy of the current contents, taken under the lock - the thread-safe way to walk or
+    ///     persist the whole map while other threads mutate it.
+    /// </summary>
+    public Dictionary<TKey, TValue> Snapshot()
+    {
+        lock ( _lock )
+        {
+            Dictionary<TKey, TValue> copy = new( base.Count );
+
+            foreach ( KeyValuePair<TKey, TValue> kvp in (Dictionary<TKey, TValue>) this )
+            {
+                copy.Add( kvp.Key, kvp.Value );
+            }
+
+            return copy;
+        }
+    }
+
+    public new bool TryGetValue( TKey key, out TValue value )
+    {
+        lock ( _lock )
+        {
+            return base.TryGetValue( key, out value );
+        }
+    }
+
+    void ICollection<KeyValuePair<TKey, TValue>>.Add( KeyValuePair<TKey, TValue> item )
+    {
+        Add( item.Key, item.Value );
+    }
+
+    void ICollection<KeyValuePair<TKey, TValue>>.Clear()
+    {
+        Clear();
+    }
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.Contains( KeyValuePair<TKey, TValue> item )
+    {
+        lock ( _lock )
+        {
+            return base.TryGetValue( item.Key, out TValue value ) &&
+                   EqualityComparer<TValue>.Default.Equals( value, item.Value );
+        }
+    }
+
+    int ICollection<KeyValuePair<TKey, TValue>>.Count => Count;
+
+    void ICollection<KeyValuePair<TKey, TValue>>.CopyTo( KeyValuePair<TKey, TValue>[] array, int index )
+    {
+        lock ( _lock )
+        {
+            // Same bound as LockedObservableCollection.CopyTo: callers such as List<T>'s
+            // constructor and ToArray() size their buffer from Count in a separate call, so the
+            // map can grow before the copy runs - copy what fits instead of throwing, restarting
+            // the very exception this type exists to stop.
+            int count = Math.Min( base.Count, array.Length - index );
+            int i = 0;
+
+            foreach ( KeyValuePair<TKey, TValue> kvp in (Dictionary<TKey, TValue>) this )
+            {
+                if ( i >= count )
+                {
+                    break;
+                }
+
+                array[index + i] = kvp;
+                i++;
+            }
+        }
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return ( (IEnumerable<KeyValuePair<TKey, TValue>>) this ).GetEnumerator();
+    }
+
+    IEnumerator<KeyValuePair<TKey, TValue>> IEnumerable<KeyValuePair<TKey, TValue>>.GetEnumerator()
+    {
+        return Snapshot().GetEnumerator();
+    }
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.IsReadOnly => false;
+
+    bool ICollection<KeyValuePair<TKey, TValue>>.Remove( KeyValuePair<TKey, TValue> item )
+    {
+        lock ( _lock )
+        {
+            if ( base.TryGetValue( item.Key, out TValue value ) &&
+                 EqualityComparer<TValue>.Default.Equals( value, item.Value ) )
+            {
+                return base.Remove( item.Key );
+            }
+
+            return false;
+        }
     }
 }

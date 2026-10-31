@@ -36,6 +36,12 @@ namespace ClassicAssist.Avalonia.Views;
 /// </summary>
 public partial class DebugWindow : Window
 {
+    /// <summary>
+    ///     Set once <see cref="OnClosed" /> has torn the tab view models down;
+    ///     <see cref="NavigateTo" /> must not re-populate a disposed view model.
+    /// </summary>
+    private bool _closed;
+
     public DebugWindow()
     {
         InitializeComponent();
@@ -46,16 +52,41 @@ public partial class DebugWindow : Window
         }
 
         Closing += OnClosing;
+        Closed += OnClosed;
+    }
+
+    /// <summary>
+    ///     Opens the window already on the tab for <paramref name="viewModelType" />, populated with
+    ///     <paramref name="value" /> - the WPF build's matching constructor. Delegates to
+    ///     <see cref="NavigateTo" />.
+    /// </summary>
+    public DebugWindow( Type viewModelType, object value ) : this()
+    {
+        NavigateTo( viewModelType, value );
     }
 
     /// <summary>
     ///     Selects the tab whose content's DataContext is <paramref name="viewModelType" /> and, if it
     ///     derives from <see cref="DebugBaseViewModel" />, hands it <paramref name="value" /> - e.g.
     ///     Object Inspector double-clicking a Properties row opens straight to the Property tab
-    ///     pre-populated with that entity's properties. Mirrors the WPF build's matching constructor.
+    ///     pre-populated with that entity's properties.
+    ///     <para>
+    ///         Also called from <see cref="AvaloniaUIInvoker" />'s single-instance reuse, which
+    ///         re-targets this window with the second request's constructor parameters instead of
+    ///         constructing a second window and dropping them - "Inspect object" while the Debug
+    ///         window is already open must still navigate, not merely focus. Inert once
+    ///         <see cref="OnClosed" /> has run: tab view models are disposed there and must not be
+    ///         re-populated. A live window's view models are always safe to target - disposal only
+    ///         ever happens on close, and the reuse registry drops the window when it closes.
+    ///     </para>
     /// </summary>
-    public DebugWindow( Type viewModelType, object value ) : this()
+    public void NavigateTo( Type viewModelType, object value )
     {
+        if ( _closed )
+        {
+            return;
+        }
+
         if ( Content is not TabControl tabControl )
         {
             return;
@@ -104,6 +135,49 @@ public partial class DebugWindow : Window
         catch ( Exception ex )
         {
             Console.WriteLine( $"Failed to save debug window settings: {ex}" );
+        }
+    }
+
+    /// <summary>
+    ///     Tears down every view model this window constructed - the window's own DebugViewModel and
+    ///     the tab view models - now that the window is really gone. Their subscriptions into Engine
+    ///     events, packet handlers and managers are process-wide statics or singletons, so without
+    ///     this each closed window's graph keeps handling live packet traffic forever (and
+    ///     DebugViewModel's queue thread keeps running).
+    ///     <para>
+    ///         Timing and double-dispose: settings were already serialised in <see cref="OnClosing" />,
+    ///         so the intact state a disposed view model leaves behind still round-trips; <c>Closed</c>
+    ///         fires exactly once per window; and the walk below de-duplicates by reference (the Main
+    ///         tab's Grid inherits the window's DataContext, exactly as in
+    ///         <see cref="GetSettingProviders" />), so no instance is disposed twice even though every
+    ///         <c>Dispose</c> is idempotent anyway.
+    ///     </para>
+    /// </summary>
+    private void OnClosed( object sender, EventArgs e )
+    {
+        Closed -= OnClosed;
+        _closed = true;
+
+        HashSet<IDisposable> seen = new( ReferenceEqualityComparer.Instance );
+
+        if ( DataContext is IDisposable windowViewModel )
+        {
+            seen.Add( windowViewModel );
+            windowViewModel.Dispose();
+        }
+
+        if ( Content is not TabControl tabControl )
+        {
+            return;
+        }
+
+        foreach ( object item in tabControl.Items )
+        {
+            if ( item is TabItem tabItem && tabItem.Content is Control control &&
+                 control.DataContext is IDisposable tabViewModel && seen.Add( tabViewModel ) )
+            {
+                tabViewModel.Dispose();
+            }
         }
     }
 

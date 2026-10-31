@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Formats.Tar;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Threading;
@@ -187,7 +189,7 @@ public class MainViewModel : BaseViewModel
     ///     Modules ship as a nested zip so the macro module tree can be replaced wholesale without the
     ///     per-file copy above walking it.
     /// </summary>
-    private void ExtractModules( string updatePath, string destinationPath )
+    internal void ExtractModules( string updatePath, string destinationPath )
     {
         string modulesZip = Directory.EnumerateFiles( updatePath, "Modules.zip" ).FirstOrDefault();
 
@@ -213,12 +215,28 @@ public class MainViewModel : BaseViewModel
             {
                 AddText( $"Copying {entry.FullName}..." );
 
-                ( string basePath, string fileName ) = EnsurePathsExist( modulesPath, entry.FullName );
-
-                if ( !string.IsNullOrEmpty( fileName ) )
+                if ( !TryResolveEntryPath( modulesPath, entry.FullName, out string destination ) )
                 {
-                    entry.ExtractToFile( Path.Combine( basePath, entry.Name ), true );
+                    // A crafted Modules.zip can name anything, and written as-is an entry such as
+                    // "../../ClassicAssist.dll" would land outside Modules/ and overwrite whatever
+                    // the updater can write. Skip it and say so - silently dropping the entry would
+                    // hide the attempt, and writing it is the vulnerability.
+                    AddText( $"Skipping entry that would extract outside Modules: {entry.FullName}" );
+
+                    continue;
                 }
+
+                if ( string.IsNullOrEmpty( entry.Name ) )
+                {
+                    // Directory entry.
+                    Directory.CreateDirectory( destination );
+
+                    continue;
+                }
+
+                Directory.CreateDirectory( Path.GetDirectoryName( destination ) );
+
+                entry.ExtractToFile( destination, true );
             }
         }
         catch ( Exception e )
@@ -227,24 +245,75 @@ public class MainViewModel : BaseViewModel
         }
     }
 
-    private static (string basePath, string fileName) EnsurePathsExist( string modulesPath, string fullName )
+    /// <summary>
+    ///     Resolves an archive entry name to the path it would be written as, refusing anything that
+    ///     does not end up under <paramref name="root" />. Entries are supposed to name their path
+    ///     relative to the archive root, but nothing about a crafted archive guarantees that: an
+    ///     entry may name "..", a rooted path such as "C:/evil.dll", or '\' separators, all of which
+    ///     a naive segment combine walks straight past.
+    /// </summary>
+    internal static bool TryResolveEntryPath( string root, string entryName, out string destination )
     {
-        // Zip entries always use '/', whatever the platform that wrote them.
-        string[] paths = fullName.Split( '/' );
+        destination = null;
 
-        string basePath = modulesPath;
-
-        for ( int i = 0; i < paths.Length - 1; i++ )
+        if ( string.IsNullOrWhiteSpace( entryName ) || Path.IsPathRooted( entryName ) )
         {
-            basePath = Path.Combine( basePath, paths[i] );
-
-            if ( !Directory.Exists( basePath ) )
-            {
-                Directory.CreateDirectory( basePath );
-            }
+            return false;
         }
 
-        return ( basePath, paths[^1] );
+        // Entries are specified with '/', but an archive built on Windows may name its directories
+        // with '\'; both are separators here, whatever platform wrote the archive.
+        string[] segments = entryName.Replace( '\\', '/' ).Split( '/' );
+
+        string combined = root;
+
+        foreach ( string segment in segments )
+        {
+            if ( segment.Length == 0 || segment == "." )
+            {
+                continue;
+            }
+
+            // ".." is refused outright rather than normalised away, and a rooted segment would make
+            // Path.Combine discard everything combined before it.
+            if ( segment == ".." || Path.IsPathRooted( segment ) )
+            {
+                return false;
+            }
+
+            combined = Path.Combine( combined, segment );
+        }
+
+        try
+        {
+            // The authoritative check, on where the entry would actually be written rather than on
+            // what it claims: Path.GetFullPath collapses whatever ".." or separators slipped past
+            // the segment walk above. The trailing separator keeps a sibling such as "Modules-old"
+            // from passing as being under "Modules", and the length check keeps the root itself
+            // from passing either - a ".. " or "..." spoof, whose trailing dots and spaces
+            // collapse to nothing rather than to a name, resolves to exactly this.
+            string rootFull = Path.GetFullPath( root );
+            string destinationFull = Path.GetFullPath( combined );
+            string prefix = rootFull + Path.DirectorySeparatorChar;
+
+            StringComparison comparison = RuntimeInformation.IsOSPlatform( OSPlatform.Linux )
+                ? StringComparison.Ordinal
+                : StringComparison.OrdinalIgnoreCase;
+
+            if ( destinationFull.Length <= prefix.Length || !destinationFull.StartsWith( prefix, comparison ) )
+            {
+                return false;
+            }
+
+            destination = destinationFull;
+
+            return true;
+        }
+        catch ( Exception )
+        {
+            // A name the platform cannot even express as a path is not one to write.
+            return false;
+        }
     }
 
     private void CopyAll( DirectoryInfo source, DirectoryInfo target, List<string> failures )
@@ -454,7 +523,7 @@ public class MainViewModel : BaseViewModel
     internal static string UpdaterExecutableName =>
         OperatingSystem.IsWindows() ? "ClassicAssist.Updater.exe" : "ClassicAssist.Updater";
 
-    private static async Task<string> ExtractPackage( string fileName, string newVersion )
+    private async Task<string> ExtractPackage( string fileName, string newVersion )
     {
         string path = Path.Combine( Path.GetTempPath(), $"CAUpdate-{Sanitise( newVersion )}" );
 
@@ -463,9 +532,81 @@ public class MainViewModel : BaseViewModel
             Directory.Delete( path, true );
         }
 
-        await Task.Run( () => ZipFile.ExtractToDirectory( fileName, path ) );
+        // The format is whatever the release asset was; DownloadFile keeps the asset's extension in
+        // the temp file name for exactly this distinction.
+        if ( fileName.EndsWith( ".tar.gz", StringComparison.OrdinalIgnoreCase ) )
+        {
+            await Task.Run( () => ExtractTarGz( fileName, path ) );
+        }
+        else
+        {
+            await Task.Run( () => ZipFile.ExtractToDirectory( fileName, path ) );
+        }
 
         return path;
+    }
+
+    /// <summary>
+    ///     Unpacks a .tar.gz package one <see cref="TarEntry" /> at a time rather than through
+    ///     TarFile.ExtractToDirectory, so every entry name goes through the same containment check
+    ///     as Modules.zip above, and anything that is not a plain file or directory - a tar can
+    ///     carry links and device nodes - is skipped instead of recreated on disk.
+    /// </summary>
+    internal void ExtractTarGz( string fileName, string path )
+    {
+        Directory.CreateDirectory( path );
+
+        using FileStream stream = File.OpenRead( fileName );
+        using GZipStream gzip = new( stream, CompressionMode.Decompress );
+        using TarReader reader = new( gzip );
+
+        TarEntry entry;
+
+        while ( ( entry = reader.GetNextEntry() ) != null )
+        {
+            if ( !TryResolveEntryPath( path, entry.Name, out string destination ) )
+            {
+                AddText( $"Skipping entry that would extract outside the package: {entry.Name}" );
+
+                continue;
+            }
+
+            if ( entry.EntryType == TarEntryType.Directory )
+            {
+                Directory.CreateDirectory( destination );
+
+                continue;
+            }
+
+            if ( entry.EntryType is not ( TarEntryType.RegularFile or TarEntryType.V7RegularFile ) )
+            {
+                AddText( $"Skipping unsupported entry {entry.Name} ({entry.EntryType})..." );
+
+                continue;
+            }
+
+            Directory.CreateDirectory( Path.GetDirectoryName( destination ) );
+
+            using ( FileStream output = File.Create( destination ) )
+            {
+                entry.DataStream?.CopyTo( output );
+            }
+
+            // The mode carries the executable bit, and without it an apphost extracted here would
+            // not run once copied over the install. Best effort - a filesystem that refuses the
+            // mode should not stop the update.
+            if ( !OperatingSystem.IsWindows() )
+            {
+                try
+                {
+                    File.SetUnixFileMode( destination, entry.Mode );
+                }
+                catch ( Exception )
+                {
+                    // ignored
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -493,12 +634,27 @@ public class MainViewModel : BaseViewModel
         }
 
         // Temp rather than the current directory, which for the second stage is the package folder
-        // and for the first is the install being replaced.
-        string fileName = Path.Combine( Path.GetTempPath(), "ClassicAssist-Update.zip" );
+        // and for the first is the install being replaced. The package's own extension survives in
+        // the name because it is what tells ExtractPackage a tar.gz from a zip.
+        string fileName = Path.Combine( Path.GetTempPath(),
+            "ClassicAssist-Update" + PackageExtension( browserDownloadUrl ) );
 
         await File.WriteAllBytesAsync( fileName, response );
 
         return fileName;
+    }
+
+    /// <summary>
+    ///     A release may ship its package as either .zip or .tar.gz. The download is saved under a
+    ///     fixed base name, so the format only survives as the extension taken from the asset name.
+    /// </summary>
+    private static string PackageExtension( string browserDownloadUrl )
+    {
+        // Anything after '?' or '#' is not part of the file name.
+        int end = browserDownloadUrl.IndexOfAny( ['?', '#'] );
+        string name = end >= 0 ? browserDownloadUrl[..end] : browserDownloadUrl;
+
+        return name.EndsWith( ".tar.gz", StringComparison.OrdinalIgnoreCase ) ? ".tar.gz" : ".zip";
     }
 
     private void AddText( string message )

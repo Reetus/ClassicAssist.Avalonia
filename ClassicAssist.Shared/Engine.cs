@@ -57,6 +57,14 @@ public static partial class Engine
     private const int DISTANCE_CLEANUP_INTERVAL_MS = 250;
     private static long _nextDistanceCleanup;
 
+    // StreamJsonRpc has no default request timeout, so every wait on the plugin needs an explicit
+    // budget: a plugin that is connected but wedged must not park its caller forever. A healthy
+    // plugin answers these calls in well under a frame; the budgets are only ever reached when the
+    // answer is not coming.
+    private const int STARTUP_RPC_TIMEOUT_MS = 5000;
+    private const int PACKET_LENGTH_RPC_TIMEOUT_MS = 1000;
+    private const int SEND_RPC_TIMEOUT_MS = 1000;
+
     private static SendRecvPacket _sendToClient;
     private static SendRecvPacket _sendToServer;
     private static GetPacketLength _getPacketLength;
@@ -146,6 +154,9 @@ public static partial class Engine
     ///     <c>OnTick</c> callback instead. Mirrors upstream ClassicAssist's <c>Engine.TickWorkQueue</c> -
     ///     unlike <c>PluginEngine.TickWorkQueue</c>, which drains reflection calls on the client's own thread,
     ///     this one drains on the UI process's tick thread, which each inbound RPC <c>OnTick</c> wakes.
+    ///     Producers off the tick thread must lock the queue instance around <c>Enqueue</c> - the same
+    ///     discipline <c>ReflectionImpl</c> uses for the plugin-side tick queue - because the drain in
+    ///     <c>OnTick</c> takes that same lock around <c>Count</c>/<c>Dequeue</c>.
     /// </summary>
     public static Queue<Action> TickWorkQueue { get; set; } = new();
 
@@ -184,6 +195,17 @@ public static partial class Engine
     public static int InternalTargetSerial { get; set; }
 
     /// <summary>
+    ///     An RPC result with a deadline. StreamJsonRpc has no default request timeout, so a bare
+    ///     <c>Result</c> against a plugin that is connected but wedged never returns; this bounds the
+    ///     wait and falls back to <paramref name="timeoutFallback" /> when no answer arrives in time.
+    ///     A faulted call still throws, exactly as <c>Result</c> always did.
+    /// </summary>
+    private static T RPCResult<T>( Task<T> task, T timeoutFallback, int timeoutMs )
+    {
+        return task.Wait( timeoutMs ) ? task.Result : timeoutFallback;
+    }
+
+    /// <summary>
     ///     Sole entry point for the UI process. The plugin half lives in the game process and is reached
     ///     only through <paramref name="hostMethods" />; there is deliberately no in-process variant,
     ///     because Avalonia on Linux requires the UI to own the process main thread.
@@ -195,10 +217,15 @@ public static partial class Engine
 
         Initialize();
 
-        ClientPath = Host.GetClientPath().Result;
-        ClientVersion = Version.TryParse( Host.GetClientVersion().Result, out Version clientVersion ) ? clientVersion : new Version( 0, 0, 0, 0 );
-        WindowHandle = Host.GetWindowHandle().Result;
-        ReflectionAvailable = Host.IsReflectionAvailable().Result;
+        // Bounded (RPCResult): this runs on the UI thread behind the splash, and a wedged-but-connected
+        // plugin used to leave it parked on these forever - the splash only closes once this returns.
+        // There is no safe default for the client directory, so fail the way an RPC fault does - an
+        // exception out of InstallRPC - instead of stumbling into file errors from an empty path.
+        ClientPath = RPCResult( Host.GetClientPath(), null, STARTUP_RPC_TIMEOUT_MS ) ??
+                     throw new TimeoutException( $"Host.GetClientPath did not answer within {STARTUP_RPC_TIMEOUT_MS}ms" );
+        ClientVersion = Version.TryParse( RPCResult( Host.GetClientVersion(), null, STARTUP_RPC_TIMEOUT_MS ), out Version clientVersion ) ? clientVersion : new Version( 0, 0, 0, 0 );
+        WindowHandle = RPCResult( Host.GetWindowHandle(), IntPtr.Zero, STARTUP_RPC_TIMEOUT_MS );
+        ReflectionAvailable = RPCResult( Host.IsReflectionAvailable(), false, STARTUP_RPC_TIMEOUT_MS );
 
         if ( !Path.IsPathRooted( ClientPath ) )
         {
@@ -223,7 +250,10 @@ public static partial class Engine
 
         InitializeExtensions();
 
-        _getPacketLength = id => Host.GetPacketLength( id ).Result;
+        // Bounded like every plugin call. On timeout the plugin's own "don't know" answer (-1) is used
+        // and cached for the id: the packet then parses as dynamic length, which is safe, and a wedged
+        // plugin costs one bounded wait per id rather than one per packet.
+        _getPacketLength = id => RPCResult( Host.GetPacketLength( id ), (short) -1, PACKET_LENGTH_RPC_TIMEOUT_MS );
         _packetLengthCache.Clear();
         _sendToClient = SendPacketToClientPlugin;
         _sendToServer = SendPacketToServerPlugin;
@@ -610,16 +640,24 @@ public static partial class Engine
 
     public static void SendPacketToServer( byte[] packet, int length )
     {
+        // Deliberately before the lock: these only notify observers (the debug journal, packet wait
+        // entries), and a subscriber taking a lock of its own under the send lock is one step from a
+        // lock-order inversion. Each still fires before its own packet reaches the plugin.
+        InternalPacketSentEvent?.Invoke( packet, length );
+
+        PacketWaitEntries?.CheckWait( packet, PacketDirection.Outgoing, true );
+
+        // The lock covers the rate limit and the send round trip on purpose: the plugin injects
+        // packets in the order the requests arrive, so serialising issue AND confirmation is what
+        // keeps concurrent senders in call order on the wire. The wait inside is bounded, so the most
+        // a wedged plugin can cost a sender here - including the UI thread - is SEND_RPC_TIMEOUT_MS
+        // rather than forever.
         lock ( _serverSendLock )
         {
             while ( DateTime.Now < _nextPacketSendTime )
             {
                 Thread.Sleep( 1 );
             }
-
-            InternalPacketSentEvent?.Invoke( packet, length );
-
-            PacketWaitEntries?.CheckWait( packet, PacketDirection.Outgoing, true );
 
             (byte[] data, int dataLength) = Utility.CopyBuffer( packet, length );
 
@@ -633,6 +671,9 @@ public static partial class Engine
     {
         try
         {
+            // Before the lock, for the same reason as SendPacketToServer's notifications.
+            InternalPacketReceivedEvent?.Invoke( packet, length );
+
             lock ( _clientSendLock )
             {
                 if ( delay )
@@ -642,8 +683,6 @@ public static partial class Engine
                         Thread.Sleep( 1 );
                     }
                 }
-
-                InternalPacketReceivedEvent?.Invoke( packet, length );
 
                 _sendToClient?.Invoke( ref packet, ref length );
 
@@ -802,9 +841,25 @@ public static partial class Engine
     {
         try
         {
-            while ( TickWorkQueue.Count > 0 )
+            // A plain unlocked Queue<T> would tear against a producer enqueueing off the tick
+            // thread, so Count/Dequeue run under the same lock producers must take (see the
+            // TickWorkQueue doc). Actions are invoked outside the lock so tick work cannot stall
+            // producers, and actions queued while draining still run in this tick.
+            Queue<Action> tickWorkQueue = TickWorkQueue;
+
+            while ( true )
             {
-                Action action = TickWorkQueue.Dequeue();
+                Action action;
+
+                lock ( tickWorkQueue )
+                {
+                    if ( tickWorkQueue.Count == 0 )
+                    {
+                        break;
+                    }
+
+                    action = tickWorkQueue.Dequeue();
+                }
 
                 action?.Invoke();
             }
@@ -1200,14 +1255,33 @@ public static partial class Engine
         IsClientFocused = false;
     }
 
+    /// <summary>
+    ///     A packet send with a deadline. The send locks are held across this wait to keep packet
+    ///     order, so an unbounded wait - StreamJsonRpc has no default request timeout - would freeze
+    ///     every sender queued behind it, including the UI thread.
+    /// </summary>
+    private static bool SendPacketRPC( Task<bool> sent )
+    {
+        if ( sent.Wait( SEND_RPC_TIMEOUT_MS ) )
+        {
+            return sent.Result;
+        }
+
+        // The send APIs return void, so there is no caller to fail; the packet is dropped either way
+        // (the plugin may still have sent it). Say so rather than losing it silently.
+        Console.Error.WriteLine( $"ClassicAssist: plugin didn't confirm packet send within {SEND_RPC_TIMEOUT_MS}ms" );
+
+        return false;
+    }
+
     private static bool SendPacketToServerPlugin( ref byte[] data, ref int length )
     {
-        return Host.SendPacketToServer( data, length ).Result;
+        return SendPacketRPC( Host.SendPacketToServer( data, length ) );
     }
 
     private static bool SendPacketToClientPlugin( ref byte[] data, ref int length )
     {
-        return Host.SendPacketToClient( data, length ).Result;
+        return SendPacketRPC( Host.SendPacketToClient( data, length ) );
     }
 
     #endregion

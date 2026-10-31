@@ -185,7 +185,10 @@ public class ActiveObjectsViewModel : BaseViewModel
 
         foreach ( MacroEntry entry in macros.ToList() )
         {
-            foreach ( KeyValuePair<string, int> alias in entry.Aliases.ToList() )
+            // Snapshot(), not ToList(): LINQ's ToList() goes through ICollection<T>.CopyTo, which
+            // sizes its buffer from Count in a separate call - a concurrent remove between the two
+            // leaves default(KeyValuePair) nulls in the result. Snapshot() copies under the lock.
+            foreach ( KeyValuePair<string, int> alias in entry.Aliases.Snapshot() )
             {
                 InstanceAliases.Add( new InstanceAliasEntry
                 {

@@ -516,12 +516,20 @@ public class ScreenshotTabViewModel : BaseViewModel, ISettingProvider
 
     private void OnScreenshotDeleted( object sender, FileSystemEventArgs e )
     {
-        ScreenshotEntry screenshot = Screenshots.FirstOrDefault( s => s.Path.Equals( e.FullPath ) );
-
-        if ( screenshot != null )
+        // Look the entry up inside the post, not on the watcher thread: enumerating Screenshots
+        // there races the UI-thread mutations posted by AddScreenshot ("Collection was modified"),
+        // and an entry inserted between the lookup and the Remove would survive as a dead row.
+        // Posted, the lookup and removal run atomically on the dispatcher thread against the same
+        // collection the adds mutate.
+        _dispatcher.Invoke( () =>
         {
-            _dispatcher.Invoke( () => Screenshots.Remove( screenshot ) );
-        }
+            ScreenshotEntry screenshot = Screenshots.FirstOrDefault( s => s.Path.Equals( e.FullPath ) );
+
+            if ( screenshot != null )
+            {
+                Screenshots.Remove( screenshot );
+            }
+        } );
     }
 
     private void OnScreenshotCreated( object sender, FileSystemEventArgs e )
@@ -540,6 +548,14 @@ public class ScreenshotTabViewModel : BaseViewModel, ISettingProvider
     {
         _dispatcher.Invoke( () =>
         {
+            // Created events are added after a delay (see OnScreenshotCreated), so a file created
+            // and deleted within that window posts its Remove before this Add runs. Without this
+            // check the gallery gained a dead row for a file that no longer exists.
+            if ( !File.Exists( file ) )
+            {
+                return;
+            }
+
             if ( Screenshots.Any( s => s.Path.Equals( file ) ) )
             {
                 return;

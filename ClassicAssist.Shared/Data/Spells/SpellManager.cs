@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.Packets;
 using Newtonsoft.Json;
@@ -11,8 +10,7 @@ namespace ClassicAssist.Data.Spells;
 
 public class SpellManager
 {
-    private static readonly Lock _lock = new();
-    private static SpellManager _instance;
+    private static readonly Lazy<SpellManager> _instance = new( () => new SpellManager() );
     private readonly List<SpellData> _masteryData;
     private readonly List<SpellData> _spellData;
 
@@ -101,21 +99,6 @@ public class SpellManager
 
     public static SpellManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _lock )
-            {
-                if ( _instance != null )
-                {
-                    return _instance;
-                }
-
-                _instance = new SpellManager();
-                return _instance;
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 }

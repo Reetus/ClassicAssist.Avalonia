@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.ObjectModel;
-using System.Threading;
 
 namespace ClassicAssist.Data.Scavenger;
 
 public class ScavengerManager
 {
-    private static ScavengerManager _instance;
-    private static readonly Lock _instanceLock = new();
+    private static readonly Lazy<ScavengerManager> _instance = new( () => new ScavengerManager() );
 
     private ScavengerManager()
     {
@@ -23,15 +21,6 @@ public class ScavengerManager
 
     public static ScavengerManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _instanceLock )
-            {
-                _instance ??= new ScavengerManager();
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 }

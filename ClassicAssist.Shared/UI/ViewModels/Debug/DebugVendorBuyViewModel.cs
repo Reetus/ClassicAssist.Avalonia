@@ -17,6 +17,7 @@
 
 #endregion
 
+using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using ClassicAssist.Data.Vendors;
@@ -26,13 +27,43 @@ using ClassicAssist.UO.Network;
 
 namespace ClassicAssist.Shared.UI.ViewModels.Debug;
 
-public class DebugVendorBuyViewModel : BaseViewModel
+public class DebugVendorBuyViewModel : BaseViewModel, IDisposable
 {
+    /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
+    private bool _disposed;
+
+    /// <summary>
+    ///     Unsubscribes the vendor-buy notifications for this window and drops the collected
+    ///     messages. Called once from <c>DebugWindow.OnClosed</c>. Unsubscribes whether or not
+    ///     <see cref="IsEnabled" /> is on - a plain <c>-=</c>, harmless when nothing is subscribed -
+    ///     so a capture left running at close cannot keep handling vendor traffic forever; the
+    ///     setter then becomes inert rather than re-subscribing, so disposal wins over the toggle.
+    /// </summary>
+    public void Dispose()
+    {
+        if ( _disposed )
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        IncomingPacketHandlers.VendorBuyDisplayEvent -= OnVendorBuyDisplayEvent;
+        Messages.Clear();
+    }
+
     public bool IsEnabled
     {
         get;
         set
         {
+            // Inert once disposed - see Dispose: a late toggle must not resurrect the subscription
+            // on a torn-down window.
+            if ( _disposed )
+            {
+                return;
+            }
+
             if ( value != field )
             {
                 if ( value )

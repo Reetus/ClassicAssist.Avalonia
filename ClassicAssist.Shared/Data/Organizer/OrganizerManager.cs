@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using System;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -17,8 +18,7 @@ namespace ClassicAssist.Data.Organizer;
 
 public class OrganizerManager : INotifyPropertyChanged
 {
-    private static readonly Lock _lock = new();
-    private static OrganizerManager _instance;
+    private static readonly Lazy<OrganizerManager> _instance = new( () => new OrganizerManager() );
 
     private OrganizerManager()
     {
@@ -339,22 +339,7 @@ public class OrganizerManager : INotifyPropertyChanged
 
     public static OrganizerManager GetInstance()
     {
-        // ReSharper disable once InvertIf
-        if ( _instance == null )
-        {
-            lock ( _lock )
-            {
-                if ( _instance != null )
-                {
-                    return _instance;
-                }
-
-                _instance = new OrganizerManager();
-                return _instance;
-            }
-        }
-
-        return _instance;
+        return _instance.Value;
     }
 
     protected virtual void OnPropertyChanged( [CallerMemberName] string propertyName = null )

@@ -27,7 +27,10 @@ public class Commands
 {
     private static DateTime _lastSystemMessageTime;
     private static string _lastSystemMessage;
-    private static readonly Lock _dragDropLock = new();
+
+    // Serialises whole drag/drop sequences without holding a lock across the action delay - an async
+    // method must not block its thread (or a UI caller) for the duration of the sleep.
+    private static readonly SemaphoreSlim _dragDropLock = new( 1, 1 );
 
     public static void DragItem( int serial, int amount )
     {
@@ -48,16 +51,20 @@ public class Commands
             amount = i?.Count ?? 1;
         }
 
-        lock ( _dragDropLock )
+        await _dragDropLock.WaitAsync();
+
+        try
         {
             DragItem( serial, amount );
 
-            Thread.Sleep( Options.CurrentOptions.ActionDelayMS );
+            await Task.Delay( Options.CurrentOptions.ActionDelayMS );
 
             DropItem( serial, containerSerial, x, y, z );
         }
-
-        await Task.CompletedTask;
+        finally
+        {
+            _dragDropLock.Release();
+        }
     }
 
     public static Task EquipType( int id, Layer layer )
@@ -229,7 +236,11 @@ public class Commands
             pw.Write( (byte) 0 );
             pw.Fill();
 
-            AutoResetEvent are = new( false );
+            // The target cursor response is signalled with a TaskCompletionSource rather than the
+            // old per-call AutoResetEvent: a wait handle could not be disposed safely while this
+            // filter might still fire, and its registered wait (ToTask) stayed alive after a timeout
+            // - an OS handle leak per call. The wait below is unchanged.
+            TaskCompletionSource<bool> targetTcs = new( TaskCreationOptions.RunContinuationsAsynchronously );
 
             TargetType targetType = TargetType.Object;
             TargetFlags targetFlags = TargetFlags.None;
@@ -249,7 +260,7 @@ public class Commands
                 z = (short) ( ( packet[15] << 8 ) | packet[16] );
                 itemID = ( packet[17] << 8 ) | packet[18];
 
-                are.Set();
+                targetTcs.TrySetResult( true );
             } );
 
             PacketFilterInfo pfi2 = new( 0x6C, [PacketFilterConditions.UIntAtPositionCondition( value, 2, true )] );
@@ -265,7 +276,7 @@ public class Commands
                 Engine.InternalTarget = true;
                 Engine.InternalTargetSerial = (int) value;
 
-                Task<bool> targetTask = are.ToTask();
+                Task<bool> targetTask = targetTcs.Task;
                 Task<bool> waitEntryTask = waitEntry.Lock.ToTask();
 
                 int result = Task.WaitAny( [targetTask, waitEntryTask], timeout );
@@ -554,16 +565,18 @@ public class Commands
 
     public static async Task<bool> WaitForIncomingPacketFilterAsync( PacketFilterInfo pfi, int timeout, bool invokeHandler = true, bool fixedSize = false )
     {
-        AutoResetEvent are = new( false );
+        // Same as GetTargetInfoAsync: a TaskCompletionSource instead of a per-call AutoResetEvent,
+        // so there is no undisposed wait handle and no registered wait surviving the timeout.
+        TaskCompletionSource<bool> filterTcs = new( TaskCreationOptions.RunContinuationsAsynchronously );
         byte[] packet = null;
 
         Engine.AddReceiveFilter( new PacketFilterInfo( pfi.PacketID, pfi.GetConditions(), ( data, info ) =>
         {
             packet = data;
-            are.Set();
+            filterTcs.TrySetResult( true );
         } ) );
 
-        Task filterTask = are.ToTask();
+        Task filterTask = filterTcs.Task;
 
         if ( await Task.WhenAny( filterTask, Task.Delay( timeout ) ) == filterTask )
         {

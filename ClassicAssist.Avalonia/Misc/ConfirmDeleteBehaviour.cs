@@ -24,6 +24,7 @@ public class ConfirmDeleteBehaviour : Behavior<Button>
     private CancellationTokenSource _cancellationTokenSource;
     private ICommand _deleteCommand;
     private bool _isPending;
+    private IImage _originalIcon;
 
     public IImage PendingIcon
     {
@@ -68,6 +69,7 @@ public class ConfirmDeleteBehaviour : Behavior<Button>
         {
             _isPending = true;
             IImage originalIcon = image.Source;
+            _originalIcon = originalIcon;
             image.Source = PendingIcon;
 
             _cancellationTokenSource = new CancellationTokenSource();
@@ -97,12 +99,16 @@ public class ConfirmDeleteBehaviour : Behavior<Button>
             _cancellationTokenSource?.Dispose();
             _cancellationTokenSource = null;
 
+            // The 2-second revert scheduled above was just cancelled, so restore the icon here -
+            // otherwise the button stays "armed" on PendingIcon forever whenever the row survives
+            // (or the command can't execute).
+            image.Source = _originalIcon;
+            _isPending = false;
+
             if ( _deleteCommand?.CanExecute( AssociatedObject.CommandParameter ) == true )
             {
                 _deleteCommand.Execute( AssociatedObject.CommandParameter );
             }
-
-            _isPending = false;
         }
 
         e.Handled = true;
