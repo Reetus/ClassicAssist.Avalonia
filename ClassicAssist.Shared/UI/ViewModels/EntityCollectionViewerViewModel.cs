@@ -575,7 +575,7 @@ public class EntityCollectionViewerViewModel : BaseViewModel
             case EntityCollectionSortStyle.Weight:
                 return new WeightThenSerialComparer();
             default:
-                return new IDThenSerialComparer();
+                return new IDThenHueThenSerialComparer();
         }
     }
 

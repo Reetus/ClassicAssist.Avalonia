@@ -62,7 +62,7 @@ namespace ClassicAssist.Tests
             Dictionary<int, string> overrides = new Dictionary<int, string> { { 0x40000001, "a shiny thing" } };
 
             List<EntityCollectionData> data = MakeCollection( ( 0x40000001, 0x1BF2, 1 ) )
-                .ToEntityCollectionData( new IDThenSerialComparer(), overrides );
+                .ToEntityCollectionData( new IDThenHueThenSerialComparer(), overrides );
 
             Assert.AreEqual( "a shiny thing", data[0].Name );
         }
