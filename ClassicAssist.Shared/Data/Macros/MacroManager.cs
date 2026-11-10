@@ -24,6 +24,13 @@ public class MacroManager
         Engine.PacketReceivedEvent += PacketReceivedEvent;
         Engine.PacketSentEvent += PacketSentEvent;
 
+        // Packets the assistant sends itself never come back through the two events above, so
+        // without these a recording misses whatever it sends in place of a client packet it
+        // swallowed - e.g. the use request AbilitiesManager.CheckHands re-sends through the action
+        // queue once the hand is free.
+        Engine.InternalPacketReceivedEvent += PacketReceivedEvent;
+        Engine.InternalPacketSentEvent += PacketSentEvent;
+
         IEnumerable<Type> types = Assembly.GetExecutingAssembly().GetTypes()
             .Where( t => t.IsClass && typeof( IMacroCommandParser ).IsAssignableFrom( t ) );
 
@@ -45,7 +52,8 @@ public class MacroManager
 
     private void PacketSentEvent( byte[] data, int length )
     {
-        if ( !IsRecording() )
+        // Null until the macros tab's view model has been constructed.
+        if ( IsRecording == null || !IsRecording() )
         {
             return;
         }
@@ -55,7 +63,7 @@ public class MacroManager
 
     private void PacketReceivedEvent( byte[] data, int length )
     {
-        if ( !IsRecording() )
+        if ( IsRecording == null || !IsRecording() )
         {
             return;
         }
