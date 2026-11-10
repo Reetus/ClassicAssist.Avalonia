@@ -25,12 +25,15 @@
     <KeyBinding Gesture="F12" Command="{Binding StopCommand}" CommandParameter="{Binding SelectedItem}"/>
   </UserControl.KeyBindings>
   <Grid ColumnDefinitions="155,5,*">
-    <Grid Grid.Column="0" RowDefinitions="Auto,*, Auto, Auto, Auto">
+    <Grid Grid.Column="0" RowDefinitions="Auto,*, Auto, Auto, Auto, Auto">
       <controls:FilterControl Grid.Row="0" Margin="0,0,0,5"
                               FilterText="{Binding FilterText}"
                               IsFilterVisible="{Binding IsFilterOpen}"
                               IsVisible="{Binding IsFilterOpen}" />
-      <ListBox x:Name="ListBox" ItemsSource="{Binding FilterItems}" Grid.Row="1" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+      <!-- Locked while recording, as in the WPF build: recorded commands are appended to the selected
+           macro, so the selection must not move until the recording is stopped. -->
+      <ListBox x:Name="ListBox" ItemsSource="{Binding FilterItems}" Grid.Row="1" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               IsEnabled="{Binding IsRecording, Converter={StaticResource InverseBooleanConverter}}">
         <ListBox.KeyBindings>
           <!-- Scoped to the macro list itself, not the whole tab (UserControl.KeyBindings above) - a
                tab-wide binding would shadow Ctrl+F in the code editor, whose own find panel needs the
@@ -90,7 +93,9 @@
         <Button Content="{x:Static resources:Strings.Save}" Grid.Column="2" Margin="2.5,0,0,0"
                 Command="{Binding SaveMacroCommand, Mode=OneWay}" CommandParameter="{Binding SelectedItem}" />
       </Grid>
-      <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="0,5,0,0">
+      <Button x:Name="RecordButton" Grid.Row="3" Margin="0,5,0,0"
+              Content="{Binding RecordLabel}" Command="{Binding RecordCommand}" />
+      <Grid Grid.Row="4" ColumnDefinitions="*,*" Margin="0,5,0,0">
         <Button Content="{x:Static resources:Strings.Play}" Grid.Column="0" Margin="0,0,2.5,0"
                 Command="{Binding ExecuteCommand, Mode=OneWay}"
                 CommandParameter="{Binding SelectedItem, ElementName=ListBox}" />
@@ -99,7 +104,7 @@
                 Command="{Binding StopCommand, Mode=OneWay}" CommandParameter="{Binding SelectedItem}" />
         <!--IsEnabled="{Binding SelectedItem.IsRunning, ElementName=ListBox}"-->
       </Grid>
-      <controls:GroupBox Header="{x:Static resources:Strings.Hotkeys}" DockPanel.Dock="Top" Grid.Row="4" Margin="0,5,0,0">
+      <controls:GroupBox Header="{x:Static resources:Strings.Hotkeys}" DockPanel.Dock="Top" Grid.Row="5" Margin="0,5,0,0">
         <StackPanel>
           <controls:TextBoxKey Shortcut="{Binding DataContext.Hotkey, ElementName=UserControl}" />
           <CheckBox Content="{x:Static resources:Strings.Pass_to_UO}" Margin="0,5,0,0"

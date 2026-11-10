@@ -60,6 +60,7 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
 
         _manager.NewMacro = NewMacro;
         _manager.Items = Items;
+        _manager.MacroStartedEvent += OnMacroStartedEvent;
 
         _filterItems = Items;
 
@@ -87,7 +88,7 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
     //}
 
     public ICommand ExecuteCommand => field ??= new RelayCommandAsync( obj => Execute( obj, null ),
-            o => !IsRecording && SelectedItem != null && !SelectedItem.IsRunning );
+            o => SelectedItem != null && !SelectedItem.IsRunning );
 
     public ObservableCollectionEx<MacroEntry> FilterItems
     {
@@ -123,7 +124,11 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
     public bool IsRecording
     {
         get;
-        set => SetProperty( ref field, value );
+        set
+        {
+            SetProperty( ref field, value );
+            NotifyPropertyChanged( nameof( RecordLabel ) );
+        }
     }
 
     public RelayCommand NewMacroCommand => field ??= new RelayCommand( NewMacro, o => !SelectedItem?.IsRunning ?? true );
@@ -136,7 +141,9 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
 
     public ICommand OpenModulesFolderCommand => field ??= new RelayCommand( OpenModulesFolder, o => true );
 
-    public ICommand RecordCommand => field ??= new RelayCommand( Record, o => SelectedItem != null );
+    // Stopping stays available with nothing selected: the folder scan can remove the macro being
+    // recorded into, and the button would otherwise be stuck disabled on "Stop".
+    public ICommand RecordCommand => field ??= new RelayCommand( Record, o => IsRecording || SelectedItem != null );
 
     public string RecordLabel => IsRecording ? Strings.Stop : Strings.Record;
 
@@ -205,6 +212,7 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
 
         Engine.DisconnectedEvent -= OnDisconnectedEvent;
         Engine.ConnectedEvent -= OnConnectedEvent;
+        _manager.MacroStartedEvent -= OnMacroStartedEvent;
 
         _fileScanTimer.Dispose();
     }
@@ -659,15 +667,22 @@ public class MacrosTabViewModel : HotkeyEntryViewModel<MacroEntry>, ISettingProv
 
     private void Record( object obj )
     {
-        if ( IsRecording )
+        IsRecording = !IsRecording;
+    }
+
+    /// <summary>
+    ///     Playing the macro being recorded ends the recording - otherwise everything it sends would be
+    ///     recorded straight back into it. Raised on whichever thread started the macro (a hotkey, a
+    ///     PlayMacro call); the property change itself is marshalled by <see cref="BaseViewModel" />.
+    /// </summary>
+    private void OnMacroStartedEvent( MacroEntry macroEntry )
+    {
+        if ( !IsRecording || ( SelectedItem != null && !ReferenceEquals( SelectedItem, macroEntry ) ) )
         {
-            IsRecording = false;
-            NotifyPropertyChanged( nameof( RecordLabel ) );
             return;
         }
 
-        IsRecording = true;
-        NotifyPropertyChanged( nameof( RecordLabel ) );
+        IsRecording = false;
     }
 
     private void ToggleSearch( object obj )
