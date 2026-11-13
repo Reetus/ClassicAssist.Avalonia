@@ -43,8 +43,18 @@ public sealed class MobileCollection : EntityCollection<Mobile>, IEnumerable<Mob
     {
         bool changed = false;
 
+        // Never the player: 0x20 / 0x77 put it in this collection, and x / y are read on the tick
+        // thread while the packet thread may be applying a teleport, so it can look out of range of
+        // itself. Sweeping it removed everything it owns, the backpack and its contents included.
+        int playerSerial = Engine.Player?.Serial ?? 0;
+
         Mobile[] mobiles = SelectEntities( m =>
         {
+            if ( m.Serial == playerSerial )
+            {
+                return false;
+            }
+
             double d = UOMath.Distance( x, y, m.X, m.Y );
             return d > maxDistance;
         } );
