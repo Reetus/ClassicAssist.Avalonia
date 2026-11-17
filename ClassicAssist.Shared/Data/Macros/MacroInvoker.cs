@@ -30,7 +30,7 @@ public class MacroInvoker
 
     public delegate void dMacroStartStop();
 
-    private static readonly ScriptEngine _engine = Python.CreateEngine();
+    private static readonly ScriptEngine _engine = CreateEngine();
     private static readonly object BoxedTrue = true;
     private static Dictionary<string, object> _importCache;
     private readonly AutoResetEvent _pauseEvent = new( false );
@@ -40,6 +40,24 @@ public class MacroInvoker
     private string _lastCompiledHash = string.Empty;
     private MacroEntry _macro;
     private ScriptScope _macroScope;
+
+    /// <summary>
+    ///     IronPython builds sys.stdout/sys.stderr once, when the engine is created, and fixes their
+    ///     encoding name from the runtime's output encoding at that moment; a later SetOutput swaps the
+    ///     stream but not the name. That encoding defaults to Console.OutputEncoding, which is code page
+    ///     0 when the process has no console but redirected std handles (the client started by a
+    ///     launcher that captures its output) - and then every print fails with "unknown encoding:
+    ///     codepage___0". So set the output encoding on the runtime before the engine exists; each
+    ///     MacroInvoker still installs its own stream, in the same encoding.
+    /// </summary>
+    internal static ScriptEngine CreateEngine()
+    {
+        ScriptRuntime runtime = Python.CreateRuntime();
+        Encoding outputEncoding = MacroOutputEncoding.Current;
+        runtime.IO.SetOutput( Stream.Null, outputEncoding );
+        runtime.IO.SetErrorOutput( Stream.Null, outputEncoding );
+        return Python.GetEngine( runtime );
+    }
 
     public MacroInvoker()
     {
