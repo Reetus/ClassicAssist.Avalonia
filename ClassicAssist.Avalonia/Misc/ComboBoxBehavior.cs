@@ -47,7 +47,8 @@ public class ComboBoxBehavior : Behavior<ComboBox>
         AssociatedObject.LostFocus += OnLostFocus;
     }
 
-    private void OnGotFocus( object sender, GotFocusEventArgs e )
+    // Avalonia 12 replaced GotFocusEventArgs with FocusChangedEventArgs for GotFocus/LostFocus.
+    private void OnGotFocus( object sender, FocusChangedEventArgs e )
     {
         _userTriggered = true;
     }

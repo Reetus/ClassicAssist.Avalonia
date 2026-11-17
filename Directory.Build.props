@@ -19,15 +19,31 @@
   </PropertyGroup>
 
   <!--
+    Avalonia 12 flipped AvaloniaUseCompiledBindingsByDefault to true, so every {Binding} became a
+    CompiledBinding and needs an x:DataType. This codebase predates that: only 5 of ~70 .axaml files
+    declare one, the rest pair <Xaml.DataContext><vm/></Xaml.DataContext> with reflection bindings
+    (see TODO.md, "Compiled bindings are effectively unused"). Pinning the old default keeps the
+    upgrade behaviour-preserving instead of forcing a big-bang rewrite of every view.
+
+    Adopt compiled bindings per file as views are touched: add x:DataType (and x:CompileBindings
+    where the type cannot be inferred), then drop this once every file declares one.
+  -->
+  <PropertyGroup>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <!--
     One Newtonsoft.Json version across every project.
 
-    It arrives transitively through StreamJsonRpc, and NuGet resolves whichever version the
-    referencer asks for: the plugin's net10.0 build would take 13.0.3 (StreamJsonRpc 2.22.23) and
-    its net472 build 13.0.1 (StreamJsonRpc 2.13.33). The net10.0 build outputs into the same
-    Output\ClassicAssist folder as the launcher, so its older copy replaces the launcher's 13.0.4.
-    13.0.4 is the release that added the single-argument JToken.WriteTo(JsonWriter) overload the
-    launcher's shutdown save binds to, so the launcher then dies with MissingMethodException. Every
-    project references this one version explicitly to stop the downgrade.
+    It arrives transitively through StreamJsonRpc. Historically different StreamJsonRpc releases
+    pulled different Newtonsoft versions (13.0.1 / 13.0.3), and because the plugin's net10.0 build
+    outputs into the same Output\ClassicAssist folder as the launcher, an older transitive copy could
+    replace the launcher's 13.0.4. 13.0.4 added the single-argument JToken.WriteTo(JsonWriter)
+    overload the launcher's shutdown save binds to, so the launcher then died with
+    MissingMethodException.
+
+    StreamJsonRpc 2.26.150 resolves 13.0.4 itself, so that downgrade is gone; every project still
+    references this one version explicitly as a guard against a future transitive drift.
   -->
   <PropertyGroup>
     <NewtonsoftJsonVersion>13.0.4</NewtonsoftJsonVersion>

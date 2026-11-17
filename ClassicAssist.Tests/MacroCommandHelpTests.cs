@@ -23,7 +23,7 @@ namespace ClassicAssist.Tests
             Assert.IsNotNull( MacroCommandHelp.ResourceManager.GetString( "MSG_COMMAND_INSERTTEXT" ) );
         }
 
-        [DataTestMethod]
+        [TestMethod]
         [DataRow( "WaitForBuffEnabled" )]
         [DataRow( "WaitForBuffDisabled" )]
         [DataRow( "TradeAccept" )]
@@ -71,7 +71,7 @@ namespace ClassicAssist.Tests
         /// <summary>
         ///     Guards the wiring of the commands themselves rather than just their help.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow( "WaitForBuffEnabled" )]
         [DataRow( "WaitForBuffDisabled" )]
         [DataRow( "TradeAccept" )]

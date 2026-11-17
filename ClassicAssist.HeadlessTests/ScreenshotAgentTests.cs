@@ -347,7 +347,9 @@ public class ScreenshotAgentTests
 
         using ILockedFramebuffer buffer = rgba.Lock();
 
-        bitmap.CopyPixels( buffer, AlphaFormat.Unpremul );
+        // Avalonia 12 dropped the AlphaFormat argument: CopyPixels now honours the locked
+        // framebuffer's own AlphaFormat, which the WriteableBitmap above sets to Unpremul.
+        bitmap.CopyPixels( buffer );
 
         byte[] pixel = new byte[4];
 

@@ -56,10 +56,8 @@
     <EnableDnne>false</EnableDnne>
   </PropertyGroup>
 
-  <Target Name="WarnDnneSkipped" BeforeTargets="Build"
-          Condition="'$(EnableDnne)' != 'true' And '$(TargetFramework)' != 'net472'">
-    <Message Importance="high"
-             Text="ClassicAssist: clang not found, skipping the DNNE native shim. The managed entry point still works for TazUO; modern ClassicUO needs the shim." />
+  <Target Name="WarnDnneSkipped" BeforeTargets="Build" Condition="'$(EnableDnne)' != 'true' And '$(TargetFramework)' != 'net472'">
+    <Message Importance="high" Text="ClassicAssist: clang not found, skipping the DNNE native shim. The managed entry point still works for TazUO; modern ClassicUO needs the shim." />
   </Target>
 
   <PropertyGroup Condition="'$(EnableDnne)' == 'true'">
@@ -77,19 +75,7 @@
     DNNE needs it next to the managed assembly to activate the runtime, so write it manually.
   -->
   <Target Name="GenerateRuntimeConfig" AfterTargets="Build" Condition="'$(EnableDnne)' == 'true'">
-    <WriteLinesToFile
-      File="$(OutputPath)\ClassicAssist.runtimeconfig.json"
-      Lines="{
-  &quot;runtimeOptions&quot;: {
-    &quot;tfm&quot;: &quot;net10.0&quot;,
-    &quot;framework&quot;: {
-      &quot;name&quot;: &quot;Microsoft.NETCore.App&quot;,
-      &quot;version&quot;: &quot;10.0.0&quot;
-    },
-    &quot;rollForward&quot;: &quot;LatestMajor&quot;
-  }
-}"
-      Overwrite="true" />
+    <WriteLinesToFile File="$(OutputPath)\ClassicAssist.runtimeconfig.json" Lines="{&#xD;&#xA;  &quot;runtimeOptions&quot;: {&#xD;&#xA;    &quot;tfm&quot;: &quot;net10.0&quot;,&#xD;&#xA;    &quot;framework&quot;: {&#xD;&#xA;      &quot;name&quot;: &quot;Microsoft.NETCore.App&quot;,&#xD;&#xA;      &quot;version&quot;: &quot;10.0.0&quot;&#xD;&#xA;    },&#xD;&#xA;    &quot;rollForward&quot;: &quot;LatestMajor&quot;&#xD;&#xA;  }&#xD;&#xA;}" Overwrite="true" />
   </Target>
 
   <ItemGroup Condition="'$(EnableDnne)' == 'true'">
@@ -97,7 +83,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)' != 'net472'">
-    <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
+    <PackageReference Include="StreamJsonRpc" Version="2.26.150" />
   </ItemGroup>
 
   <!--
@@ -126,12 +112,12 @@
     <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.5.302" />
+    <PackageReference Include="MessagePack" Version="3.1.12" />
     <!--
       Referenced directly, not left to StreamJsonRpc, so both targets resolve the one version in
-      Directory.Build.props. Left transitive, net10.0 pulls 13.0.3 and net472 13.0.1, and the
-      net10.0 copy lands in Output\ClassicAssist beside the launcher and replaces its 13.0.4 -
-      see Directory.Build.props for the MissingMethodException that causes.
+      Directory.Build.props. StreamJsonRpc 2.26.150 resolves 13.0.4 itself now, but the explicit
+      reference guards against a transitive drift landing an older copy in Output\ClassicAssist
+      beside the launcher - see Directory.Build.props for the MissingMethodException that caused.
     -->
     <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
   </ItemGroup>
@@ -171,19 +157,16 @@
     notice ships beside the assembly.
   -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
-    <PackageReference Include="NETStandard.Library.NETFramework" Version="2.0.0-preview2-25405-01"
-                      GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
+    <PackageReference Include="NETStandard.Library.NETFramework" Version="2.0.0-preview2-25405-01" GeneratePathProperty="true" ExcludeAssets="all" PrivateAssets="all" />
   </ItemGroup>
 
   <Target Name="CopyNetStandardFacade" AfterTargets="Build" Condition="'$(TargetFramework)' == 'net472'">
     <ItemGroup>
       <NetStandardFacade Include="$(PkgNETStandard_Library_NETFramework)\build\net461\lib\netstandard.dll" />
     </ItemGroup>
-    <Error Condition="!Exists('%(NetStandardFacade.FullPath)')"
-           Text="Could not find the netstandard implementation facade; the net472 plugin will not reach its RPC layer without it." />
+    <Error Condition="!Exists('%(NetStandardFacade.FullPath)')" Text="Could not find the netstandard implementation facade; the net472 plugin will not reach its RPC layer without it." />
     <Copy SourceFiles="@(NetStandardFacade)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
-    <WriteLinesToFile File="$(OutputPath)netstandard.dll.LICENSE.txt" Overwrite="true"
-                      Lines="netstandard.dll is redistributed from Microsoft's NETStandard.Library.NETFramework package (MIT, https://github.com/dotnet/corefx/blob/master/LICENSE.TXT). It is required because StreamJsonRpc targets netstandard2.0 and the Mono runtime this build loads into ships no netstandard facade." />
+    <WriteLinesToFile File="$(OutputPath)netstandard.dll.LICENSE.txt" Overwrite="true" Lines="netstandard.dll is redistributed from Microsoft's NETStandard.Library.NETFramework package (MIT, https://github.com/dotnet/corefx/blob/master/LICENSE.TXT). It is required because StreamJsonRpc targets netstandard2.0 and the Mono runtime this build loads into ships no netstandard facade." />
   </Target>
 
   <ItemGroup>

@@ -68,7 +68,7 @@ namespace ClassicAssist.Tests
         [TestMethod]
         public void Resolve_Unknown_Throws()
         {
-            Assert.ThrowsException<InvalidOperationException>( () => PluginPathResolver.Resolve( ClientRuntimeFormat.Unknown ) );
+            Assert.ThrowsExactly<InvalidOperationException>( () => PluginPathResolver.Resolve( ClientRuntimeFormat.Unknown ) );
         }
 
         private static string ShimExtension =>

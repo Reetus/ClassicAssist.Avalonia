@@ -8,7 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="220" d:DesignHeight="150"
         x:Class="ClassicAssist.Avalonia.Views.RepositionableGumpWindow"
         Title="Position" Width="220" Height="150"
-        WindowStartupLocation="CenterScreen" SystemDecorations="None" CanResize="False"
+        WindowStartupLocation="CenterScreen" WindowDecorations="None" CanResize="False"
         ShowInTaskbar="False" Topmost="True" Opacity="0.85">
   <Grid Margin="10" ColumnDefinitions="Auto,*,Auto" RowDefinitions="*,Auto">
     <Slider Grid.Row="0" Grid.Column="0" Orientation="Vertical" Maximum="{Binding VerticalMax}"

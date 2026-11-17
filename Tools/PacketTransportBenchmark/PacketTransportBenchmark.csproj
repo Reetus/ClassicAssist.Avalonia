@@ -15,9 +15,10 @@
     <ItemGroup>
         <!-- The real plugin-side contracts, so the benchmark cannot drift from the product's shapes. -->
         <ProjectReference Include="..\..\ClassicAssist.Plugin.Shared\ClassicAssist.Plugin.Shared.csproj" />
-        <PackageReference Include="StreamJsonRpc" Version="2.22.23" />
-        <PackageReference Include="MessagePack" Version="2.5.302" />
-        <!-- Kept on the one version every project uses; StreamJsonRpc would otherwise resolve 13.0.3. -->
+        <PackageReference Include="StreamJsonRpc" Version="2.26.150" />
+        <PackageReference Include="MessagePack" Version="3.1.12" />
+        <!-- Kept on the one version every project uses (see Directory.Build.props); a drift guard now
+             that StreamJsonRpc itself resolves 13.0.4. -->
         <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     </ItemGroup>
 </Project>

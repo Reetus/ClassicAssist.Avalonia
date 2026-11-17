@@ -111,8 +111,10 @@ public class AvaloniaScreenshotComposer : IScreenshotComposer
             width = request.MaxWidth.Value;
             height = Math.Max( 1, (int) Math.Round( height * ( width / (double) request.Width ) ) );
 
+            // SkiaSharp 3 (via Avalonia 12) obsoleted SKFilterQuality; Mitchell cubic sampling is the
+            // equivalent of the old SKFilterQuality.High.
             resized = bitmap.Resize( new SKImageInfo( width, height, SKColorType.Rgba8888, SKAlphaType.Opaque ),
-                SKFilterQuality.High );
+                new SKSamplingOptions( SKCubicResampler.Mitchell ) );
 
             output = resized;
         }
@@ -170,7 +172,9 @@ public class AvaloniaScreenshotComposer : IScreenshotComposer
 
         Directory.CreateDirectory( Path.GetDirectoryName( request.OutputPath ) ?? string.Empty );
 
-        target.Save( request.OutputPath );
+        // Avalonia 12 obsoleted Save(string, int?). The composer always writes a PNG (see
+        // ScreenshotComposeRequest.OutputPath), so pass the PNG encoder options explicitly.
+        target.Save( request.OutputPath, PngBitmapEncoderOptions.Default );
     }
 
     /// <summary>

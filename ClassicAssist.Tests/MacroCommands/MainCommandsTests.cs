@@ -70,7 +70,7 @@ namespace ClassicAssist.Tests.MacroCommands
             // "Invalid" member for InvokeVirtue to guard against, so this propagates as-is (the
             // macro engine's own top-level handler is what turns it into a "macro error" message
             // for a real macro; nothing in InvokeVirtue itself catches it).
-            Assert.ThrowsException<System.InvalidOperationException>(
+            Assert.ThrowsExactly<System.InvalidOperationException>(
                 () => MainCommands.InvokeVirtue( "NotARealVirtue" ) );
         }
 
