@@ -206,7 +206,11 @@ public static class PacketWaitRegistry
     {
         IHostMethods host = Engine.Host;
 
-        if ( host == null || !Engine.Installed )
+        // Installed is deliberately not required here: InstallRPC pushes a bootstrap set as soon as
+        // the filter registries exist, before the UO files and view models load, so the plugin stops
+        // waiting on every packet during startup. BuildRules only needs those registries and Host;
+        // if a provider trips over half-built state the catch below falls back to all packets.
+        if ( host == null )
         {
             return false;
         }

@@ -75,6 +75,12 @@ public class App : Application
             }
             finally
             {
+                // Opens the startup gate and replays, in order, everything the plugin pushed while
+                // the engine and UI were loading - now that the main window and its view models exist
+                // to receive ConnectedEvent / PlayerInitializedEvent. Always runs, so a failed load
+                // cannot leave the gate shut and every later packet buffering forever.
+                SEngine.CompleteStartup();
+
                 // In a finally so a failure during load cannot strand an undismissable topmost
                 // window over the client.
                 splash.Close();

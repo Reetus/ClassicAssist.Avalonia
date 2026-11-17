@@ -76,6 +76,11 @@ internal class Program
         // process and a wire-format mismatch would be silent.
         bool messagePack = !args[0].StartsWith( "tcp:", StringComparison.Ordinal );
 
+        // Arm the startup packet gate before the listener goes live. Everything the plugin pushes
+        // while Avalonia, the UO data files and the tab view models load is buffered and replayed in
+        // order once the main window is up, so a fast login cannot slip its shard list past us.
+        Shared.Engine.ArmStartupBuffer();
+
         Rpc = messagePack
             ? CreateMessagePackRpc( stream, new Shared.Engine.PluginMethods() )
             : CreateJsonRpc( stream, new Shared.Engine.PluginMethods() );

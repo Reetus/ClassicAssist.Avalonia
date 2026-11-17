@@ -111,9 +111,207 @@ public static partial class Engine
     /// <summary>
     ///     The plugin starts pushing callbacks the moment the pipe is attached, which is before
     ///     <see cref="InstallRPC" /> has finished loading the UO files and building the managers.
-    ///     Callbacks arriving before that are dropped rather than crashing on half-built state.
+    ///     Until this flips, callbacks must not run on half-built state: the UI process arms the
+    ///     startup gate (see <see cref="ArmStartupBuffer" />), which buffers them for replay in
+    ///     <see cref="CompleteStartup" /> once the main window and its view models exist.
     /// </summary>
     public static bool Installed { get; internal set; }
+
+    #region Startup packet gate
+
+    // A fast login pushes 0xA8 / 0xA0 and the whole login burst while the splash is still up.
+    // Dropping those (the old behaviour) loses Engine.Shards / CurrentShard / Connected for the
+    // whole session, so buffer them instead and replay, in order, once everything is built.
+
+    private const int STARTUP_BUFFER_MAX_PACKETS = 20000;
+    private const int STARTUP_BUFFER_MAX_BYTES = 64 * 1024 * 1024;
+
+    private static readonly Lock _startupLock = new();
+    private static List<StartupEvent> _startupEvents = [];
+    private static int _startupBufferedBytes;
+
+    // 0 = buffering, 1 = draining, 2 = live. Starts live: only the UI process arms the gate, so
+    // unit tests and any other host keep the plain Installed behaviour.
+    private static int _startupState = 2;
+
+    // Offloaded cliloc preload; CompleteStartup waits on it before replaying anything.
+    private static Task _clilocPreload;
+
+    private enum StartupEventKind : byte
+    {
+        Connected,
+        Disconnected,
+        Packet
+    }
+
+    private sealed class StartupEvent
+    {
+        public StartupEvent( StartupEventKind kind, byte[] data = null, int length = 0, bool outgoing = false )
+        {
+            Kind = kind;
+            Data = data;
+            Length = length;
+            Outgoing = outgoing;
+        }
+
+        public StartupEventKind Kind { get; }
+        public byte[] Data { get; }
+        public int Length { get; }
+        public bool Outgoing { get; }
+    }
+
+    /// <summary>
+    ///     Arms the gate. Called by the UI process before its RPC listener starts so no callback can
+    ///     arrive unbuffered. Non-UI hosts never call this.
+    /// </summary>
+    public static void ArmStartupBuffer()
+    {
+        lock ( _startupLock )
+        {
+            _startupEvents = [];
+            _startupBufferedBytes = 0;
+            _startupState = 0;
+        }
+    }
+
+    /// <summary>
+    ///     Captures one startup callback for later replay. Returns true when it was handled (buffered
+    ///     or deliberately dropped at the cap), so the caller must let the client through untouched.
+    ///     Returns false only once the gate is live.
+    /// </summary>
+    private static bool TryBufferStartupEvent( StartupEventKind kind, byte[] data = null, int length = 0, bool outgoing = false )
+    {
+        lock ( _startupLock )
+        {
+            if ( _startupState == 2 )
+            {
+                return false;
+            }
+
+            if ( kind == StartupEventKind.Packet )
+            {
+                if ( data == null )
+                {
+                    return true;
+                }
+
+                length = Math.Min( length, data.Length );
+
+                if ( _startupEvents.Count >= STARTUP_BUFFER_MAX_PACKETS || _startupBufferedBytes + length > STARTUP_BUFFER_MAX_BYTES )
+                {
+                    // A wedged startup must not grow without bound. Degrade to the old drop for
+                    // packets but keep recording connection changes.
+                    return true;
+                }
+
+                byte[] copy = new byte[length];
+                Array.Copy( data, copy, length );
+                data = copy;
+                _startupBufferedBytes += length;
+            }
+
+            _startupEvents.Add( new( kind, data, length, outgoing ) );
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    ///     Opens the gate and replays, in order, every callback captured while the engine and UI were
+    ///     loading. Called once, after the main window and its view models exist, so replayed events
+    ///     have their subscribers and no handler runs on half-built state.
+    /// </summary>
+    public static void CompleteStartup()
+    {
+        // Cliloc preload was offloaded to a background task to overlap the rest of startup. Nothing
+        // on the packet path may touch it until it has finished, so the gate stays shut until here.
+        try
+        {
+            _clilocPreload?.GetAwaiter().GetResult();
+        }
+        catch ( Exception e )
+        {
+            Console.Error.WriteLine( $"ClassicAssist: cliloc preload failed: {e.Message}" );
+        }
+
+        while ( true )
+        {
+            List<StartupEvent> batch;
+
+            lock ( _startupLock )
+            {
+                if ( _startupState == 2 )
+                {
+                    return;
+                }
+
+                if ( _startupEvents.Count == 0 )
+                {
+                    _startupState = 2;
+                    return;
+                }
+
+                // Anything that arrives while this batch is replaying still buffers (state 1), so a
+                // live packet can never overtake an older buffered one.
+                _startupState = 1;
+                batch = _startupEvents;
+                _startupEvents = [];
+                _startupBufferedBytes = 0;
+            }
+
+            foreach ( StartupEvent entry in batch )
+            {
+                ReplayStartupEvent( entry );
+            }
+        }
+    }
+
+    private static void ReplayStartupEvent( StartupEvent entry )
+    {
+        // Startup failed before Installed flipped: dropping is still the safe outcome, the gate just
+        // has to open so live callbacks are not stranded buffering forever.
+        if ( !Installed || IncomingQueue == null || OutgoingQueue == null )
+        {
+            return;
+        }
+
+        try
+        {
+            switch ( entry.Kind )
+            {
+                case StartupEventKind.Connected:
+                    OnConnected();
+                    break;
+
+                case StartupEventKind.Disconnected:
+                    OnDisconnected();
+                    break;
+
+                case StartupEventKind.Packet:
+                    // The client already has the original, so this is observation only - ignore any
+                    // drop/rewrite verdict, because no wait rule was live while the gate was shut.
+                    if ( entry.Outgoing )
+                    {
+                        OnPacketSend( entry.Data, entry.Length );
+                    }
+                    else
+                    {
+                        OnPacketReceive( entry.Data, entry.Length );
+                    }
+
+                    break;
+
+                default:
+                    break;
+            }
+        }
+        catch ( Exception e )
+        {
+            SentrySdk.CaptureException( e );
+        }
+    }
+
+    #endregion
 
     public static bool IsClientFocused { get; set; }
     public static ItemCollection Items { get; set; } = new( 0 );
@@ -142,7 +340,7 @@ public static partial class Engine
     public static bool ReflectionAvailable { get; set; }
 
     public static RehueList RehueList { get; set; } = new();
-    public static List<ShardEntry> Shards { get; set; }
+    public static List<ShardEntry> Shards { get; set; } = [];
     public static string StartupPath { get; set; }
     public static bool TargetExists { get; set; }
     public static TargetFlags TargetFlags { get; set; }
@@ -217,6 +415,12 @@ public static partial class Engine
 
         Initialize();
 
+        // Bootstrap push: get the plugin off WaitForEverything as soon as the filter registries
+        // exist, so a fast login during the rest of startup does not pay a blocking RPC round trip
+        // for every packet. Re-pushed below, after extensions register their rules.
+        PacketWaitRegistry.Reset();
+        PacketWaitRegistry.PushNow( true );
+
         // Bounded (RPCResult): this runs on the UI thread behind the splash, and a wedged-but-connected
         // plugin used to leave it parked on these forever - the splash only closes once this returns.
         // There is no safe default for the client directory, so fail the way an RPC fault does - an
@@ -236,11 +440,11 @@ public static partial class Engine
         Hues.Initialize( ClientPath );
         Cliloc.Initialize( ClientPath );
 
-        // Force the cliloc load here rather than letting the first localized message trigger it on the
-        // packet path, where it blocks the client's thread for the duration of the read + BWT decode
-        // (measured ~1.6s on the first 0xC1). Runs before Installed flips, so nothing is being filtered
-        // yet and the cost lands during startup behind the splash.
-        Cliloc.Preload();
+        // Force the cliloc load rather than letting the first localized message trigger it on a
+        // packet handler. Offloaded to a background task so the ~1.6s read + BWT decode overlaps the
+        // remaining startup work; CompleteStartup waits on it before replaying buffered packets, so
+        // the gate stays shut until the list is ready and no handler ever sees it half-loaded.
+        _clilocPreload = Task.Run( Cliloc.Preload );
 
         Skills.Initialize( ClientPath );
         Speech.Initialize( ClientPath );
@@ -268,7 +472,8 @@ public static partial class Engine
 
         Installed = true;
 
-        // Until this lands the plugin waits on every packet, which is always correct, just slow
+        // Re-push so rules registered by InitializeExtensions are live; the registry's periodic
+        // check also repairs the set once the profile loads and adds its option filters.
         PacketWaitRegistry.Reset();
         PacketWaitRegistry.PushNow( true );
     }
@@ -883,7 +1088,7 @@ public static partial class Engine
     {
         public void OnConnected()
         {
-            if ( !Installed )
+            if ( Engine.TryBufferStartupEvent( StartupEventKind.Connected ) || !Installed )
             {
                 return;
             }
@@ -893,7 +1098,7 @@ public static partial class Engine
 
         public void OnDisconnected()
         {
-            if ( !Installed )
+            if ( Engine.TryBufferStartupEvent( StartupEventKind.Disconnected ) || !Installed )
             {
                 return;
             }
@@ -907,7 +1112,7 @@ public static partial class Engine
 
             try
             {
-                if ( !Installed )
+                if ( Engine.TryBufferStartupEvent( StartupEventKind.Packet, data, length, false ) || !Installed )
                 {
                     return Task.FromResult( (true, Array.Empty<byte>(), 0) );
                 }
@@ -932,7 +1137,7 @@ public static partial class Engine
 
             try
             {
-                if ( !Installed )
+                if ( Engine.TryBufferStartupEvent( StartupEventKind.Packet, data, length, true ) || !Installed )
                 {
                     return Task.FromResult( (true, Array.Empty<byte>(), 0) );
                 }
@@ -958,11 +1163,6 @@ public static partial class Engine
         /// </summary>
         public void OnPacketBatch( byte[] packed )
         {
-            if ( !Installed )
-            {
-                return;
-            }
-
             List<PacketBatchEntry> entries;
 
             try
@@ -979,6 +1179,13 @@ public static partial class Engine
             foreach ( PacketBatchEntry entry in entries )
             {
                 if ( entry.Packet.Length == 0 )
+                {
+                    continue;
+                }
+
+                // Each entry is buffered individually, so replay keeps the exact interleaving of
+                // batched and waited-for packets the plugin established on the wire.
+                if ( Engine.TryBufferStartupEvent( StartupEventKind.Packet, entry.Packet, entry.Packet.Length, entry.Outgoing ) || !Installed )
                 {
                     continue;
                 }
