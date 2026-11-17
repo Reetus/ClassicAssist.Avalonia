@@ -325,8 +325,10 @@ public static class Cliloc
     ///         on the first 0xC1 after login.
     ///     </para>
     ///     <para>
-    ///         <see cref="Engine.InstallRPC" /> calls this before flipping <c>Installed</c>, so the cost
-    ///         is paid once during startup (behind the splash) and no packet ever waits on it.
+    ///         <see cref="Engine.InstallRPC" /> runs this on a background task so the read/decode
+    ///         overlaps the rest of startup instead of holding the UI thread.
+    ///         <see cref="Engine.CompleteStartup" /> waits on it before replaying buffered packets,
+    ///         so the gate stays shut until the list is ready and no packet ever waits on it.
     ///     </para>
     /// </summary>
     public static void Preload()
