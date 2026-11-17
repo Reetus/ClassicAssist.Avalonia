@@ -727,7 +727,9 @@ namespace ClassicAssist.Plugin
                 System.IO.Pipelines.PipeReader.Create( stream ), formatter );
         }
 
-        private sealed class IntPtrFormatter : IMessagePackFormatter<IntPtr>
+        // Internal, not private: MessagePack's MsgPack010 analyzer requires formatters to be at least
+        // internal. It is still only ever used via Instance below.
+        internal sealed class IntPtrFormatter : IMessagePackFormatter<IntPtr>
         {
             public static readonly IntPtrFormatter Instance = new();
 

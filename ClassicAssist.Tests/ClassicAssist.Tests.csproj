@@ -5,6 +5,11 @@
     <IsPackable>false</IsPackable>
     <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
     <RollForward>LatestMajor</RollForward>
+    <!-- Microsoft.Testing.Platform, like ClassicAssist.HeadlessTests: the .NET 10 SDK dropped the
+         VSTest-mode bridge for MTP, so both test projects run as MTP executables under the
+         global.json test runner. MSTest's MTP entry point needs an executable. -->
+    <OutputType>Exe</OutputType>
+    <EnableMSTestRunner>true</EnableMSTestRunner>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="packetlengths.json" />
@@ -15,9 +20,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="MSTest.TestAdapter" Version="3.6.1" />
-    <PackageReference Include="MSTest.TestFramework" Version="3.6.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="MSTest.TestAdapter" Version="4.5.3" />
+    <PackageReference Include="MSTest.TestFramework" Version="4.5.3" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />
@@ -27,8 +32,7 @@
     <!-- The macro engine imports these by name from a Modules folder beside the app, so the tests
          need the same layout to exercise the real file rather than a copy of its contents. -->
     <ItemGroup>
-        <None Include="..\ClassicAssist.Avalonia\Modules\**" Link="Modules\%(RecursiveDir)%(Filename)%(Extension)"
-              CopyToOutputDirectory="PreserveNewest" />
+        <None Include="..\ClassicAssist.Avalonia\Modules\**" Link="Modules\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>

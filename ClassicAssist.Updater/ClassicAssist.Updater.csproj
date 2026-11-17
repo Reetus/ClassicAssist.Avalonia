@@ -26,18 +26,13 @@
         <Compile Include="..\ClassicAssist.Launcher\ViewModels\BaseViewModel.cs" Link="ViewModels\BaseViewModel.cs" />
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="Avalonia" Version="11.3.8" />
-        <PackageReference Include="Avalonia.Desktop" Version="11.3.8" />
-        <!--
-          Pinned ahead of Avalonia.FreeDesktop's transitive 0.21.2, which has a high-severity
-          advisory (GHSA-xrw6-gwf8-vvr9). Same pin as the launcher and the UI app.
-        -->
-        <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
-        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.8" />
-        <PackageReference Include="Avalonia.Skia" Version="11.3.8" />
+        <PackageReference Include="Avalonia" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.6" />
+        <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
         <!-- No DataGrid in this app's own views; the linked ClassicAssistDark/Compact dictionaries
              style one, and Avalonia resolves every type in a dictionary at compile time. -->
-        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8" />
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
         <PackageReference Include="Newtonsoft.Json" Version="$(NewtonsoftJsonVersion)" />
     </ItemGroup>
     <ItemGroup>

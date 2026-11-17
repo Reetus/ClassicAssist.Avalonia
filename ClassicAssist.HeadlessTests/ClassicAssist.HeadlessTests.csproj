@@ -6,16 +6,20 @@
     <IsPackable>false</IsPackable>
     <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
     <RollForward>LatestMajor</RollForward>
-    <!-- xUnit v3 runs on Microsoft.Testing.Platform; this keeps plain `dotnet test` working, which is
-         what CI calls (alongside the VSTest-based ClassicAssist.Tests, in the same invocation). -->
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+    <!-- xUnit v3 runs on Microsoft.Testing.Platform. `dotnet test` uses the MTP runner set in
+         global.json - the .NET 10 SDK dropped the VSTest-mode bridge, so TestingPlatformDotnetTestSupport
+         no longer applies. ClassicAssist.Tests runs on MTP too (EnableMSTestRunner), so a single
+         `dotnet test` invocation runs both projects. -->
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="xunit.v3" Version="3.2.2" />
-    <!-- Avalonia.Headless.XUnit's [AvaloniaFact] is xUnit v2-only on the 11.x line (its v3 build
-         starts at Avalonia 12), so this project drives HeadlessUnitTestSession itself - see
-         HeadlessSession. Swap to the package's attribute when the app moves to Avalonia 12. -->
-    <PackageReference Include="Avalonia.Headless" Version="11.3.8" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+    <!-- [AvaloniaFact] would be nicer than driving HeadlessUnitTestSession by hand (HeadlessSession.cs),
+         but Avalonia.Headless.XUnit 12.1.6 hard-requires xunit.v3.extensibility.core 3.2.2 and this
+         project is on xunit.v3 4.0.3, so every [AvaloniaFact] fails discovery with a
+         MissingMethodException in TestIntrospectionHelper.GetTestCaseDetails - upstream issue
+         AvaloniaUI/Avalonia#22072, still open. Verified by probe: plain [Fact] tests pass, [AvaloniaFact]
+         fails. Revisit when Avalonia ships a build compiled against xunit 4. -->
+    <PackageReference Include="Avalonia.Headless" Version="12.1.6" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Avalonia\ClassicAssist.Avalonia.csproj" />
@@ -24,10 +28,8 @@
     <Content Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
     <!-- The constraint list the filter editor offers, read from Data/Properties.json beside the app -
          the fixtures name real constraints ("Faster Casting"), so the tests need the real file. -->
-    <None Include="..\ClassicAssist.Shared\Data\Properties.json" Link="Data\Properties.json"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\ClassicAssist.Shared\Data\Properties.json" Link="Data\Properties.json" CopyToOutputDirectory="PreserveNewest" />
     <!-- The screenshot agent's default mobile-death filter is every humanoid body in Data/Bodies.json. -->
-    <None Include="..\ClassicAssist.Shared\Data\Bodies.json" Link="Data\Bodies.json"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\ClassicAssist.Shared\Data\Bodies.json" Link="Data\Bodies.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

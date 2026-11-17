@@ -48,9 +48,9 @@ namespace ClassicAssist.Tests
         [TestMethod]
         public void FromPatternRejectsBadTokens()
         {
-            Assert.ThrowsException<FormatException>( () => PacketWaitRule.FromPattern( "1D zz" ) );
-            Assert.ThrowsException<FormatException>( () => PacketWaitRule.FromPattern( "123" ) );
-            Assert.ThrowsException<ArgumentException>( () => PacketWaitRule.FromPattern( " " ) );
+            Assert.ThrowsExactly<FormatException>( () => PacketWaitRule.FromPattern( "1D zz" ) );
+            Assert.ThrowsExactly<FormatException>( () => PacketWaitRule.FromPattern( "123" ) );
+            Assert.ThrowsExactly<ArgumentException>( () => PacketWaitRule.FromPattern( " " ) );
         }
 
         [TestMethod]
@@ -186,7 +186,7 @@ namespace ClassicAssist.Tests
 
             byte[] packed = writer.ToArray();
 
-            Assert.ThrowsException<FormatException>( () => PacketBatchWriter.Read( packed.AsSpan( 0, packed.Length - 1 ).ToArray() ) );
+            Assert.ThrowsExactly<FormatException>( () => PacketBatchWriter.Read( packed.AsSpan( 0, packed.Length - 1 ).ToArray() ) );
             Assert.AreEqual( 0, PacketBatchWriter.Read( null ).Count );
         }
     }

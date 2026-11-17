@@ -94,7 +94,7 @@ namespace ClassicAssist.Tests
         ///     below it did nothing, hanging whichever thread called in. Journal and gump text come straight
         ///     from the server, so a trailing '#' in a shard's own text was enough to lock the client up.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         [DataRow( "#" )]
         [DataRow( "you see: #" )]
         [DataRow( "## " )]

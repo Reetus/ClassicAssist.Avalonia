@@ -25,12 +25,16 @@ using Avalonia.Threading;
 using ClassicAssist.Avalonia;
 using ClassicAssist.HeadlessTests;
 using Xunit;
+using Xunit.Sdk;
+using Xunit.v3;
 
 [assembly: AvaloniaTestApplication( typeof( TestAppBuilder ) )]
 
 // One Avalonia application and one dispatcher thread for the whole assembly, and the tests share
 // process-wide state either way (Engine.StartupPath, Application.Current), so they run one at a time.
-[assembly: CollectionBehavior( DisableTestParallelization = true )]
+// xunit.v3 4.0 removed CollectionBehavior.DisableTestParallelization; ParallelMode.None is the
+// equivalent of the old DisableTestParallelization = true.
+[assembly: Parallelization( Mode = ParallelMode.None )]
 
 namespace ClassicAssist.HeadlessTests;
 
@@ -55,9 +59,11 @@ public static class TestAppBuilder
 /// <summary>
 ///     Runs a test body on the headless session's UI thread.
 ///     <para>
-///         Avalonia ships the session itself (<see cref="HeadlessUnitTestSession" />) but the
-///         attribute that wires it into a test framework only exists for xUnit v2 and NUnit on the
-///         11.x line, so tests here are plain <c>[Fact]</c>s returning <see cref="Run" />.
+///         Avalonia ships both the session (<see cref="HeadlessUnitTestSession" />) and an
+///         <c>[AvaloniaFact]</c> attribute, but the attribute (Avalonia.Headless.XUnit 12.1.6) is
+///         compiled against xunit.v3 3.2.2 and this project is on 4.0.3, so it fails at discovery
+///         (AvaloniaUI/Avalonia#22072). Tests are therefore plain <c>[Fact]</c>s returning
+///         <see cref="Run" />; switch to <c>[AvaloniaFact]</c> when a compatible package ships.
 ///     </para>
 /// </summary>
 public static class Headless

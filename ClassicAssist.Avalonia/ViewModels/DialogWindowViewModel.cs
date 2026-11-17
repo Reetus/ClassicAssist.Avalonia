@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Windows.Input;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using ClassicAssist.Misc;
 
 namespace ClassicAssist.UI.ViewModels;

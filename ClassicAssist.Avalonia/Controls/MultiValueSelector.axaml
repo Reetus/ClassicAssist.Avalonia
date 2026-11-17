@@ -17,7 +17,7 @@
       <Border Padding="6" Background="{DynamicResource ThemeBackgroundBrush}">
         <StackPanel Width="{Binding #root.PopupWidth}">
           <Grid ColumnDefinitions="*,Auto">
-            <TextBox x:Name="textBox" Grid.Column="0" Watermark="0x... or value" KeyDown="OnTextBoxKeyDown"/>
+            <TextBox x:Name="textBox" Grid.Column="0" PlaceholderText="0x... or value" KeyDown="OnTextBoxKeyDown"/>
             <!-- Everything below reaches the control by element name rather than by ancestor type.
                  An ancestor-typed binding finds nothing from inside a Popup, whose child is hosted
                  in its own PopupRoot, so the injected buttons and the item list came up silently
