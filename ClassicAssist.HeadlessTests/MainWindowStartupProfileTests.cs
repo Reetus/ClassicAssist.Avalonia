@@ -38,6 +38,7 @@ public class MainWindowStartupProfileTests
         {
             string originalStartupPath = Engine.StartupPath;
             string originalLastProfile = AssistantOptions.LastProfile;
+            Options originalOptions = Options.CurrentOptions;
             string tempDirectory = Path.Combine( Path.GetTempPath(), Path.GetRandomFileName() );
 
             // SpellManager (used by the hotkeys tab) reads Data\ under the startup path.
@@ -46,6 +47,11 @@ public class MainWindowStartupProfileTests
 
             Engine.StartupPath = tempDirectory;
             AssistantOptions.LastProfile = PROFILE;
+
+            // A fresh instance, as at process start. Options.Load keeps an options instance's Name
+            // when it already has one, so a CurrentOptions left named by an earlier test (e.g. by
+            // MainWindowCloseTests) would send the save below to that profile instead of this one.
+            Options.CurrentOptions = new Options();
 
             int providersAtLoad = -1;
 
@@ -107,6 +113,7 @@ public class MainWindowStartupProfileTests
                 Options.LoadEvent -= OnLoad;
                 Engine.StartupPath = originalStartupPath;
                 AssistantOptions.LastProfile = originalLastProfile;
+                Options.CurrentOptions = originalOptions;
 
                 try
                 {
