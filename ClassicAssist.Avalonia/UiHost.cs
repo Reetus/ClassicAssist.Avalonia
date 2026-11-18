@@ -55,7 +55,7 @@ public static class UiHost
                 }
                 catch ( Exception ex )
                 {
-                    Console.WriteLine( $"Failed to serialize settings provider {instance.GetType().Name}: {ex}" );
+                    CommandExceptionPolicy.Log( $"Failed to serialize settings provider {instance.GetType().Name}", ex );
                 }
             }
 
@@ -73,8 +73,7 @@ public static class UiHost
                 }
                 catch ( Exception ex )
                 {
-                    Console.WriteLine(
-                        $"Failed to serialize global settings provider {instance.GetType().Name}: {ex}" );
+                    CommandExceptionPolicy.Log( $"Failed to serialize global settings provider {instance.GetType().Name}", ex );
                 }
             }
         }
@@ -96,7 +95,7 @@ public static class UiHost
                 }
                 catch ( Exception ex )
                 {
-                    Console.WriteLine( $"Failed to deserialize settings provider {instance.GetType().Name}: {ex}" );
+                    CommandExceptionPolicy.Log( $"Failed to deserialize settings provider {instance.GetType().Name}", ex );
                 }
             }
 
@@ -118,8 +117,7 @@ public static class UiHost
                 }
                 catch ( Exception ex )
                 {
-                    Console.WriteLine(
-                        $"Failed to deserialize global settings provider {instance.GetType().Name}: {ex}" );
+                    CommandExceptionPolicy.Log( $"Failed to deserialize global settings provider {instance.GetType().Name}", ex );
                 }
             }
         }
