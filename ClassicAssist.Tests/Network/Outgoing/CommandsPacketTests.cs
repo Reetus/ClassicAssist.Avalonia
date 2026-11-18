@@ -405,7 +405,9 @@ namespace ClassicAssist.Tests.Network.Outgoing
             UOC.ChangeSkillLock( skill, LockStatus.Locked );
             UOC.ChangeSkillLock( skill, LockStatus.Down, false );
 
-            IReadOnlyList<byte[]> sent = recorder.Sent;
+            // Only the skill lock and query packets: the recorder sees everything sent while it lives,
+            // and on CI something left running by another test sent one more packet in this window.
+            List<byte[]> sent = recorder.Sent.Where( p => p[0] == 0x3A || p[0] == 0x34 ).ToList();
             Assert.Equal( 3, sent.Count );
             Assert.Equal( new byte[] { 0x3A, 0x00, 0x06, 0x00, 25, (byte) LockStatus.Locked }, sent[0] );
             Assert.Equal( Concat( new byte[] { 0x34 }, U32( unchecked( (int) 0xEDEDEDED ) ),

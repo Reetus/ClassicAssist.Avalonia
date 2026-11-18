@@ -228,7 +228,19 @@ namespace ClassicAssist.Tests.Network.Incoming
         [Fact]
         public void WillPassPacketWithNoFilter()
         {
-            Assert.False( Check( new byte[] { 0x65, 0x01, 0x46, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } ) );
+            // 0x65 is only claimed by the weather filter, which is on by default and stays on once any
+            // earlier test has built the filter list - so turn it off for the duration.
+            bool weather = WeatherFilter.IsEnabled;
+            WeatherFilter.IsEnabled = false;
+
+            try
+            {
+                Assert.False( Check( new byte[] { 0x65, 0x01, 0x46, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } ) );
+            }
+            finally
+            {
+                WeatherFilter.IsEnabled = weather;
+            }
         }
 
         private static bool Check( byte[] packet )

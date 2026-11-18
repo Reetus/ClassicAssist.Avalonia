@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Reflection;
 using ClassicAssist.Data;
 using ClassicAssist.Mcp;
 using ClassicAssist.Shared;
@@ -52,11 +53,13 @@ namespace ClassicAssist.Tests.Mcp
             Engine.Player = new PlayerMobile( SERIAL );
 
             McpAutoStart.Initialize();
+            ForgetAutoStartedServer();
         }
 
         public void Dispose()
         {
             McpServer.Shutdown();
+            ForgetAutoStartedServer();
 
             Engine.Player = _originalPlayer;
             Engine.Dispatcher = _originalDispatcher;
@@ -297,6 +300,19 @@ namespace ClassicAssist.Tests.Mcp
 
             Assert.True( McpServer.IsRunning );
             Assert.Equal( byHand, McpServer.Port );
+        }
+
+        /// <summary>
+        ///     McpAutoStart remembers that it started the running server (<c>_startedHere</c>) and only clears
+        ///     that when it next sees no server running. Dispose stops the server directly, so the flag
+        ///     outlived it and the next test's server - started by hand - was treated as auto-started and
+        ///     moved. The same can happen in the app if the server is stopped and restarted from the options
+        ///     tab between logins.
+        /// </summary>
+        private static void ForgetAutoStartedServer()
+        {
+            typeof( McpAutoStart ).GetField( "_startedHere", BindingFlags.Static | BindingFlags.NonPublic )!
+                .SetValue( null, false );
         }
 
         private static ( int Low, int High ) TwoFreePorts()
