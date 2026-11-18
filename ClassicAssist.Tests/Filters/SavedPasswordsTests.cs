@@ -7,8 +7,29 @@ using Xunit;
 
 namespace ClassicAssist.Tests.Filters
 {
-    public class SavedPasswordsTests
+    public class SavedPasswordsTests : IDisposable
     {
+        private readonly bool _originalSavePasswords;
+        private readonly bool _originalSavePasswordsOnlyBlank;
+
+        // Each test turns these on; without a reset, whichever ran first decided what the other saw.
+        public SavedPasswordsTests()
+        {
+            _originalSavePasswords = AssistantOptions.SavePasswords;
+            _originalSavePasswordsOnlyBlank = AssistantOptions.SavePasswordsOnlyBlank;
+
+            AssistantOptions.SavePasswords = false;
+            AssistantOptions.SavePasswordsOnlyBlank = false;
+            AssistantOptions.SavedPasswords.Clear();
+        }
+
+        public void Dispose()
+        {
+            AssistantOptions.SavePasswords = _originalSavePasswords;
+            AssistantOptions.SavePasswordsOnlyBlank = _originalSavePasswordsOnlyBlank;
+            AssistantOptions.SavedPasswords.Clear();
+        }
+
         [Fact]
         public void WillSavePasswordIfEnabled()
         {

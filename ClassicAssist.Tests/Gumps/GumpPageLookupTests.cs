@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects.Gumps;
 using Xunit;
 
@@ -13,6 +15,13 @@ namespace ClassicAssist.Tests.Gumps
     /// </summary>
     public class GumpPageLookupTests
     {
+        public GumpPageLookupTests()
+        {
+            // xmfhtmlgump looks its cliloc up while parsing. Cliloc has no data until something sets it,
+            // so whether that threw depended on which test had run first.
+            Cliloc.Initialize( () => new Dictionary<int, string>() );
+        }
+
         // Page 0 carries the frame, title and a close button; pages 1 and 2 carry the content.
         private const string MultiPageLayout =
             "{ page 0 }{ resizepic 0 0 2600 400 300 }{ text 20 20 0 0 }{ button 350 20 4017 4019 1 0 99 }" +

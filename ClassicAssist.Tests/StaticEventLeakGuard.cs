@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using ClassicAssist.Shared;
 using ClassicAssist.Tests;
+using ClassicAssist.UI.ViewModels;
 using Xunit.v3;
 
 [assembly: StaticEventLeakGuard]
@@ -33,12 +34,17 @@ namespace ClassicAssist.Tests
         private static readonly Lazy<FieldInfo[]> _eventFields = new Lazy<FieldInfo[]>( FindStaticEventFields );
         private static readonly Assembly _testAssembly = typeof( StaticEventLeakGuardAttribute ).Assembly;
 
-        // A plain static: the assembly runs one test at a time (TestAssemblyInfo.cs), and an async test can
+        // Plain statics: the assembly runs one test at a time (TestAssemblyInfo.cs), and an async test can
         // reach After on a different thread from Before.
         private static Dictionary<FieldInfo, Delegate[]> _before;
 
+        // View model handlers seen at the end of the previous test, detached when the next one starts.
+        private static List<(FieldInfo Field, Delegate Handler)> _viewModelHandlers = new List<(FieldInfo, Delegate)>();
+
         public override void Before( MethodInfo methodUnderTest, IXunitTest test )
         {
+            DetachPreviousViewModels();
+
             _before = _eventFields.Value.ToDictionary( f => f, Handlers );
         }
 
@@ -46,6 +52,8 @@ namespace ClassicAssist.Tests
         {
             Dictionary<FieldInfo, Delegate[]> before = _before;
             _before = null;
+
+            RememberViewModels();
 
             if ( before == null )
             {
@@ -87,6 +95,31 @@ namespace ClassicAssist.Tests
                     "Test left handlers attached to static events (now detached). Unsubscribe in a finally block or Dispose:" +
                     Environment.NewLine + leaks );
             }
+        }
+
+        /// <summary>
+        ///     View models subscribe to static packet events in their constructors and, outside the app's
+        ///     own lifetime, are never torn down - SkillsTabViewModel, for one, keeps handling every later
+        ///     test's 0x3A and throws when no skill data is loaded. No view model is a singleton, so one that
+        ///     outlives the test that made it is always a leak. Its handlers are noted when a test ends
+        ///     (Dispose may still use the view model) and detached as the next test starts; a view model
+        ///     the next test's constructor creates has new delegates and is left alone.
+        /// </summary>
+        private static void RememberViewModels()
+        {
+            _viewModelHandlers = _eventFields.Value
+                .SelectMany( f => Handlers( f ).Where( h => h.Target is BaseViewModel ).Select( h => ( f, h ) ) )
+                .ToList();
+        }
+
+        private static void DetachPreviousViewModels()
+        {
+            foreach ( (FieldInfo field, Delegate handler) in _viewModelHandlers )
+            {
+                field.SetValue( null, Delegate.Remove( (Delegate) field.GetValue( null ), handler ) );
+            }
+
+            _viewModelHandlers = new List<(FieldInfo, Delegate)>();
         }
 
         private static bool IsTestCode( Delegate handler )
