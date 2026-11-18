@@ -4,11 +4,10 @@ using System.Globalization;
 using System.Linq;
 using ClassicAssist.Data;
 using ClassicAssist.Shared.Resources;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class LanguageTests
     {
         /// <summary>
@@ -26,7 +25,7 @@ namespace ClassicAssist.Tests
             { Language.Czech, "cs-CZ" }
         };
 
-        [TestMethod]
+        [Fact]
         public void WillMapEveryLanguageToACulture()
         {
             CultureInfo original = CultureInfo.CurrentUICulture;
@@ -44,10 +43,10 @@ namespace ClassicAssist.Tests
                         continue;
                     }
 
-                    Assert.IsTrue( _expectedCultures.ContainsKey( language ),
+                    Assert.True( _expectedCultures.ContainsKey( language ),
                         $"{language} is selectable but this test does not know its culture" );
 
-                    Assert.AreEqual( _expectedCultures[language], CultureInfo.CurrentUICulture.Name );
+                    Assert.Equal( _expectedCultures[language], CultureInfo.CurrentUICulture.Name );
                 }
             }
             finally
@@ -63,7 +62,7 @@ namespace ClassicAssist.Tests
         ///     translated value rather than merely that a resource set exists - a satellite can be present and
         ///     still be bypassed if the culture mapping is wrong.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillTranslateForEveryLanguage()
         {
             Dictionary<Language, string> expectedOptions = new Dictionary<Language, string>
@@ -84,8 +83,7 @@ namespace ClassicAssist.Tests
                 {
                     AssistantOptions.SetLanguage( expected.Key );
 
-                    Assert.AreEqual( expected.Value, Strings.Options,
-                        $"{expected.Key} did not resolve its translation" );
+                    Assert.Equal( expected.Value, Strings.Options ); // $"{expected.Key} did not resolve its translation"
                 }
 
                 // Every selectable language needs an entry above, or it could regress unnoticed.
@@ -93,7 +91,7 @@ namespace ClassicAssist.Tests
                 {
                     if ( language != Language.Default )
                     {
-                        Assert.IsTrue( expectedOptions.ContainsKey( language ),
+                        Assert.True( expectedOptions.ContainsKey( language ),
                             $"{language} is selectable but has no expected translation here" );
                     }
                 }

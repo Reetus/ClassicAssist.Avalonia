@@ -3,16 +3,15 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Abilities;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class AbilitiesCommandsTest
     {
         private readonly AutoResetEvent _are = new AutoResetEvent( false );
 
-        [TestMethod]
+        [Fact]
         public void WillOnlySetPrimaryAbilityOnce()
         {
             AbilitiesManager manager = AbilitiesManager.GetInstance();
@@ -30,8 +29,8 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.Primary, manager.Enabled );
-            Assert.IsTrue( manager.IsPrimaryEnabled );
+            Assert.Equal( AbilityType.Primary, manager.Enabled );
+            Assert.True( manager.IsPrimaryEnabled );
 
             Engine.InternalPacketSentEvent -= ExpectAbilityPacket;
             Engine.InternalPacketSentEvent += NotExpectAbilityPacket;
@@ -45,7 +44,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTogglePrimaryAbility()
         {
             AbilitiesManager manager = AbilitiesManager.GetInstance();
@@ -63,8 +62,8 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.Primary, manager.Enabled );
-            Assert.IsTrue( manager.IsPrimaryEnabled );
+            Assert.Equal( AbilityType.Primary, manager.Enabled );
+            Assert.True( manager.IsPrimaryEnabled );
 
             AbilitiesCommands.SetAbility( "primary" );
 
@@ -75,15 +74,15 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.None, manager.Enabled );
-            Assert.IsFalse( manager.IsPrimaryEnabled );
+            Assert.Equal( AbilityType.None, manager.Enabled );
+            Assert.False( manager.IsPrimaryEnabled );
 
             Engine.InternalPacketSentEvent -= ExpectAbilityPacket;
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillOnlySetSecondaryAbilityOnce()
         {
             AbilitiesManager manager = AbilitiesManager.GetInstance();
@@ -101,8 +100,8 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.Secondary, manager.Enabled );
-            Assert.IsTrue( manager.IsSecondaryEnabled );
+            Assert.Equal( AbilityType.Secondary, manager.Enabled );
+            Assert.True( manager.IsSecondaryEnabled );
 
             Engine.InternalPacketSentEvent -= ExpectAbilityPacket;
             Engine.InternalPacketSentEvent += NotExpectAbilityPacket;
@@ -116,7 +115,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillToggleSecondaryAbility()
         {
             AbilitiesManager manager = AbilitiesManager.GetInstance();
@@ -134,8 +133,8 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.Secondary, manager.Enabled );
-            Assert.IsTrue( manager.IsSecondaryEnabled );
+            Assert.Equal( AbilityType.Secondary, manager.Enabled );
+            Assert.True( manager.IsSecondaryEnabled );
 
             AbilitiesCommands.SetAbility( "secondary" );
 
@@ -146,15 +145,15 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.None, manager.Enabled );
-            Assert.IsFalse( manager.IsSecondaryEnabled );
+            Assert.Equal( AbilityType.None, manager.Enabled );
+            Assert.False( manager.IsSecondaryEnabled );
 
             Engine.InternalPacketSentEvent -= ExpectAbilityPacket;
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillClearAbilities()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -174,7 +173,7 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.None, manager.Enabled );
+            Assert.Equal( AbilityType.None, manager.Enabled );
 
             manager.Enabled = AbilityType.Secondary;
 
@@ -187,25 +186,32 @@ namespace ClassicAssist.Tests.MacroCommands
                 Assert.Fail();
             }
 
-            Assert.AreEqual( AbilityType.None, manager.Enabled );
+            Assert.Equal( AbilityType.None, manager.Enabled );
 
             Engine.InternalPacketSentEvent -= ExpectAbilityPacket;
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontSetAbilitySetOff()
         {
             Engine.Player = new PlayerMobile( 0x01 );
 
             Engine.InternalPacketSentEvent += NotExpectAbilityPacket;
 
-            AbilitiesCommands.SetAbility( "primary", "off" );
+            try
+            {
+                AbilitiesCommands.SetAbility( "primary", "off" );
 
-            Assert.AreEqual( AbilityType.None, AbilitiesManager.GetInstance().Enabled );
-
-            Engine.Player = null;
+                Assert.Equal( AbilityType.None, AbilitiesManager.GetInstance().Enabled );
+            }
+            finally
+            {
+                // Left attached, this fails whichever later test sends an ability packet.
+                Engine.InternalPacketSentEvent -= NotExpectAbilityPacket;
+                Engine.Player = null;
+            }
         }
 
         private static void NotExpectAbilityPacket( byte[] data, int length )

@@ -5,7 +5,8 @@ using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -15,8 +16,7 @@ namespace ClassicAssist.Tests
     ///     player, never forgets the player by distance, and moves an item out of its old container when a
     ///     0x25 / 0x3C puts it in a new one.
     /// </summary>
-    [TestClass]
-    public class BackpackContentsTests
+    public class BackpackContentsTests : IDisposable
     {
         private const int PLAYER = 0x00AAB001;
         private const int BACKPACK = 0x40A25F52;
@@ -27,8 +27,7 @@ namespace ClassicAssist.Tests
         private const int SMOKE_BOMBS = 0x43D3F2EC;
         private const int LOCKPICKS = 0x43D3F2ED;
 
-        [TestInitialize]
-        public void Initialize()
+        public BackpackContentsTests()
         {
             Engine.Items = new ItemCollection( 0 );
             Engine.Mobiles = new MobileCollection( Engine.Items );
@@ -41,15 +40,14 @@ namespace ClassicAssist.Tests
                 ( POUCH, 0xE79, 1, BACKPACK ) ), false );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Items.Clear();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void SetupGivesTheBackpackItsContents()
         {
             AssertBackpackHolds( ATLAS, BANDAGES, POUCH );
@@ -60,7 +58,7 @@ namespace ClassicAssist.Tests
         ///     the backpack and all its contents included; the next equip packet then brought back an empty
         ///     backpack, which only ever regained what arrived afterwards.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void DeleteObjectForThePlayerKeepsTheBackpack()
         {
             Send( DeleteObject( PLAYER ), true );
@@ -78,7 +76,7 @@ namespace ClassicAssist.Tests
         ///     the coordinates it was given and the player's own disagree - the tick thread samples them
         ///     while the packet thread is applying a teleport.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void DistanceSweepNeverTakesThePlayer()
         {
             Send( MobileUpdate( PLAYER, 3000, 3000 ), true );
@@ -93,7 +91,7 @@ namespace ClassicAssist.Tests
         ///     A server need not send a 0x1D before the 0x25 that moves an item. The client takes the item
         ///     out of the container it was in.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void AddToContainerTakesTheItemOutOfItsOldContainer()
         {
             Engine.Items.Add( new Item( CHEST ) { ID = 0xE41, X = 1000, Y = 1000 } );
@@ -103,7 +101,7 @@ namespace ClassicAssist.Tests
 
             Item chest = Engine.Items.GetItem( CHEST );
 
-            Assert.IsNull( chest.Container.GetItem( SMOKE_BOMBS ), "the chest must no longer list the moved stack" );
+            Assert.Null( chest.Container.GetItem( SMOKE_BOMBS ) ); // "the chest must no longer list the moved stack"
             AssertBackpackHolds( ATLAS, BANDAGES, POUCH, SMOKE_BOMBS );
         }
 
@@ -111,7 +109,7 @@ namespace ClassicAssist.Tests
         ///     The same move, then the player recalls away and the chest is swept. Removing the chest used
         ///     to remove everything its collection still listed from every other container too.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void SweepingTheOldContainerKeepsItemsMovedOutOfIt()
         {
             Engine.Items.Add( new Item( CHEST ) { ID = 0xE41, X = 1000, Y = 1000 } );
@@ -122,7 +120,7 @@ namespace ClassicAssist.Tests
 
             Engine.Items.RemoveByDistance( 32, 3000, 3000 );
 
-            Assert.IsNull( Engine.Items.GetItem( CHEST ), "the chest is out of range and goes" );
+            Assert.Null( Engine.Items.GetItem( CHEST ) ); // "the chest is out of range and goes"
             AssertBackpackHolds( ATLAS, BANDAGES, POUCH, SMOKE_BOMBS, LOCKPICKS );
         }
 
@@ -130,7 +128,7 @@ namespace ClassicAssist.Tests
         ///     Independent of how a container came to list an item that now belongs elsewhere: removing
         ///     the container must only take what it still owns.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void RemovingAContainerLeavesItemsOwnedElsewhere()
         {
             Item chest = new( CHEST ) { ID = 0xE41, X = 1000, Y = 1000, Container = new ItemCollection( CHEST ) };
@@ -142,8 +140,8 @@ namespace ClassicAssist.Tests
 
             Engine.Items.RemoveByDistance( 32, 3000, 3000 );
 
-            Assert.IsNull( Engine.Items.GetItem( CHEST ) );
-            Assert.IsNull( Engine.Items.GetItem( LOCKPICKS ), "what the chest owned goes with it" );
+            Assert.Null( Engine.Items.GetItem( CHEST ) );
+            Assert.Null( Engine.Items.GetItem( LOCKPICKS ) ); // "what the chest owned goes with it"
             AssertBackpackHolds( ATLAS, BANDAGES, POUCH );
         }
 
@@ -151,21 +149,21 @@ namespace ClassicAssist.Tests
         ///     A 0x3C replaces what its container held, as it does in the client: a container reopened after
         ///     others emptied it out of sight must not keep items that are gone.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void ContainerContentsReplacesTheContainer()
         {
             Send( ContainerContents( ( SMOKE_BOMBS, 0x2808, 70, BACKPACK ), ( LOCKPICKS, 0x14FC, 72, BACKPACK ) ),
                 false );
 
             AssertBackpackHolds( SMOKE_BOMBS, LOCKPICKS );
-            Assert.IsNull( Engine.Items.GetItem( ATLAS ) );
+            Assert.Null( Engine.Items.GetItem( ATLAS ) );
         }
 
         /// <summary>
         ///     Only the first entry's container is replaced. An entry naming another container goes into
         ///     that one, not into the first entry's.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void ContainerContentsPutsEachEntryInItsOwnContainer()
         {
             Send( ContainerContents( ( LOCKPICKS, 0x14FC, 72, POUCH ) ), false );
@@ -177,24 +175,23 @@ namespace ClassicAssist.Tests
 
             Item pouch = Engine.Items.GetItem( POUCH );
 
-            CollectionAssert.AreEquivalent( new[] { LOCKPICKS, SMOKE_BOMBS },
-                pouch.Container.GetItems().Select( i => i.Serial ).ToArray(),
-                "the pouch keeps what it had and gains its own entry" );
-            Assert.AreEqual( POUCH, Engine.Items.GetItem( SMOKE_BOMBS ).Owner );
+            Assert.Equivalent( new[] { LOCKPICKS, SMOKE_BOMBS },
+                pouch.Container.GetItems().Select( i => i.Serial ).ToArray(), strict: true ); // "the pouch keeps what it had and gains its own entry"
+            Assert.Equal( POUCH, Engine.Items.GetItem( SMOKE_BOMBS ).Owner );
         }
 
         private static void AssertBackpackHolds( params int[] serials )
         {
             Item backpack = Engine.Player.Backpack;
 
-            Assert.IsNotNull( backpack, "the player's backpack is gone from the item store" );
-            Assert.IsNotNull( backpack.Container, "the backpack has no contents" );
+            Assert.NotNull( backpack ); // "the player's backpack is gone from the item store"
+            Assert.NotNull( backpack.Container ); // "the backpack has no contents"
 
-            CollectionAssert.AreEquivalent( serials, backpack.Container.GetItems().Select( i => i.Serial ).ToArray() );
+            Assert.Equivalent( serials, backpack.Container.GetItems().Select( i => i.Serial ).ToArray(), strict: true );
 
             foreach ( int serial in serials )
             {
-                Assert.IsNotNull( Engine.Items.GetItem( serial ), $"0x{serial:x8} is not in the item store" );
+                Assert.NotNull( Engine.Items.GetItem( serial ) ); // $"0x{serial:x8} is not in the item store"
             }
         }
 
@@ -202,7 +199,7 @@ namespace ClassicAssist.Tests
         {
             PacketHandler handler = IncomingPacketHandlers.GetHandler( packet[0] );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, fixedSize ) );
         }

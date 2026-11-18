@@ -18,14 +18,13 @@
 using System.Collections.Generic;
 using System.Linq;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class MiscTests
     {
-        [TestMethod]
+        [Fact]
         public void Test()
         {
         }

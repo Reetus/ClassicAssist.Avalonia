@@ -21,14 +21,13 @@ using ClassicAssist.Data.BuffIcons;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class BuffIconTests
     {
-        [TestMethod]
+        [Fact]
         public void WillSetExpireTime()
         {
             byte[] packet =
@@ -49,17 +48,17 @@ namespace ClassicAssist.Tests
 
             double milliseconds = manager.BuffTime( "Confidence" );
 
-            Assert.IsTrue( milliseconds > 0 );
+            Assert.True( milliseconds > 0 );
         }
 
-        [TestMethod]
+        [Fact]
         public void UnsetBuffWillReturnTimeZero()
         {
             BuffIconManager manager = BuffIconManager.GetInstance();
 
             double milliseconds = manager.BuffTime( "Enemy Of One" );
 
-            Assert.AreEqual( 0, milliseconds );
+            Assert.Equal( 0, milliseconds );
         }
     }
 }

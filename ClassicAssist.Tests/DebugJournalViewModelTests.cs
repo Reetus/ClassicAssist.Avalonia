@@ -2,7 +2,8 @@ using ClassicAssist.Data;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Debug;
 using ClassicAssist.Shared.UO.Data;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -11,28 +12,30 @@ namespace ClassicAssist.Tests
     ///     previously subscribed in its constructor, so it ran for as long as the Debug Window was open
     ///     whichever tab you were actually looking at, and there was no way to turn it off.
     /// </summary>
-    [TestClass]
-    public class DebugJournalViewModelTests
+    public class DebugJournalViewModelTests : IDisposable
     {
-        [TestInitialize]
-        [TestCleanup]
-        public void ClearJournal()
+        public DebugJournalViewModelTests()
         {
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        public void Dispose()
+        {
+            Engine.Journal.Clear();
+        }
+
+        [Fact]
         public void WillNotCaptureUntilEnabled()
         {
             Engine.Journal.Write( new JournalEntry { Text = "before", SpeechType = JournalSpeech.System } );
 
             DebugJournalViewModel viewModel = new();
 
-            Assert.IsFalse( viewModel.Enabled, "capture should be off by default" );
-            Assert.AreEqual( 0, viewModel.Items.Count );
+            Assert.False( viewModel.Enabled, "capture should be off by default" );
+            Assert.Empty( viewModel.Items );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReplayTheBufferWhenEnabled()
         {
             Engine.Journal.Write( new JournalEntry { Text = "first", SpeechType = JournalSpeech.System } );
@@ -40,16 +43,16 @@ namespace ClassicAssist.Tests
 
             DebugJournalViewModel viewModel = new() { Enabled = true };
 
-            Assert.AreEqual( 2, viewModel.Items.Count );
-            StringAssert.Contains( viewModel.Items[0], "first" );
-            StringAssert.Contains( viewModel.Items[1], "second" );
+            Assert.Equal( 2, viewModel.Items.Count );
+            Assert.Contains( "first", viewModel.Items[0] );
+            Assert.Contains( "second", viewModel.Items[1] );
         }
 
         /// <summary>
         ///     WPF appends the buffer on every enable without clearing, so a tick-untick-tick shows every
         ///     entry twice. Not carried over.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotDuplicateWhenReEnabled()
         {
             Engine.Journal.Write( new JournalEntry { Text = "only once", SpeechType = JournalSpeech.System } );
@@ -61,21 +64,21 @@ namespace ClassicAssist.Tests
             viewModel.Enabled = false;
             viewModel.Enabled = true;
 
-            Assert.AreEqual( first, viewModel.Items.Count );
+            Assert.Equal( first, viewModel.Items.Count );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillClear()
         {
             Engine.Journal.Write( new JournalEntry { Text = "entry", SpeechType = JournalSpeech.System } );
 
             DebugJournalViewModel viewModel = new() { Enabled = true };
 
-            Assert.AreNotEqual( 0, viewModel.Items.Count );
+            Assert.NotEmpty( viewModel.Items );
 
             viewModel.ClearCommand.Execute( null );
 
-            Assert.AreEqual( 0, viewModel.Items.Count );
+            Assert.Empty( viewModel.Items );
         }
     }
 }

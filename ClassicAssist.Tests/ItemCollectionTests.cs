@@ -1,7 +1,7 @@
 using System.Linq;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -11,7 +11,6 @@ namespace ClassicAssist.Tests
     ///     design, so these tests assert observable outcomes - finds still find, removals untrack, and
     ///     notifications fire once - rather than internal counts.
     /// </summary>
-    [TestClass]
     public class ItemCollectionTests
     {
         private static Item MakeItem( int serial, int id = 0, int owner = 0 )
@@ -26,7 +25,7 @@ namespace ClassicAssist.Tests
 
         // --- Add / Remove basics ---
 
-        [TestMethod]
+        [Fact]
         public void AddSingleItem()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -34,13 +33,13 @@ namespace ClassicAssist.Tests
 
             bool result = col.Add( item );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( 1, col.GetItemCount() );
-            Assert.IsTrue( col.GetItem( 100, out Item found ) );
-            Assert.AreSame( item, found );
+            Assert.True( result );
+            Assert.Equal( 1, col.GetItemCount() );
+            Assert.True( col.GetItem( 100, out Item found ) );
+            Assert.Same( item, found );
         }
 
-        [TestMethod]
+        [Fact]
         public void AddMultipleItems()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -48,14 +47,14 @@ namespace ClassicAssist.Tests
 
             bool result = col.Add( items );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( 3, col.GetItemCount() );
-            Assert.IsTrue( col.GetItem( 100, out _ ) );
-            Assert.IsTrue( col.GetItem( 101, out _ ) );
-            Assert.IsTrue( col.GetItem( 102, out _ ) );
+            Assert.True( result );
+            Assert.Equal( 3, col.GetItemCount() );
+            Assert.True( col.GetItem( 100, out _ ) );
+            Assert.True( col.GetItem( 101, out _ ) );
+            Assert.True( col.GetItem( 102, out _ ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void AddDuplicateSerialOverwrites()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -65,12 +64,12 @@ namespace ClassicAssist.Tests
             col.Add( item1 );
             col.Add( item2 );
 
-            Assert.AreEqual( 1, col.GetItemCount() );
-            Assert.IsTrue( col.GetItem( 100, out Item found ) );
-            Assert.AreEqual( 10, found.ID );
+            Assert.Equal( 1, col.GetItemCount() );
+            Assert.True( col.GetItem( 100, out Item found ) );
+            Assert.Equal( 10, found.ID );
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveBySerial()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -79,13 +78,13 @@ namespace ClassicAssist.Tests
 
             bool removed = col.Remove( 100 );
 
-            Assert.IsTrue( removed );
-            Assert.AreEqual( 1, col.GetItemCount() );
-            Assert.IsFalse( col.GetItem( 100, out _ ) );
-            Assert.IsTrue( col.GetItem( 101, out _ ) );
+            Assert.True( removed );
+            Assert.Equal( 1, col.GetItemCount() );
+            Assert.False( col.GetItem( 100, out _ ) );
+            Assert.True( col.GetItem( 101, out _ ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveNonexistentReturnsFalse()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -93,11 +92,11 @@ namespace ClassicAssist.Tests
 
             bool removed = col.Remove( 999 );
 
-            Assert.IsFalse( removed );
-            Assert.AreEqual( 1, col.GetItemCount() );
+            Assert.False( removed );
+            Assert.Equal( 1, col.GetItemCount() );
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveOneItemLeavesOthersFindable()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -106,10 +105,10 @@ namespace ClassicAssist.Tests
 
             col.Remove( 100 );
 
-            Assert.IsTrue( col.GetItem( 101, out _ ), "untracking one serial must not affect the others" );
+            Assert.True( col.GetItem( 101, out _ ), "untracking one serial must not affect the others" );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetItemFindsReAddedInstance()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -119,24 +118,24 @@ namespace ClassicAssist.Tests
             Item replacement = MakeItem( 100, id: 7 );
             col.Add( replacement );
 
-            Assert.IsTrue( col.GetItem( 100, out Item found ) );
-            Assert.AreSame( replacement, found );
+            Assert.True( col.GetItem( 100, out Item found ) );
+            Assert.Same( replacement, found );
         }
 
         // --- Nested container search ---
 
-        [TestMethod]
+        [Fact]
         public void GetItemFindsInRoot()
         {
             ItemCollection col = MakeContainer( 1 );
             Item item = MakeItem( 100 );
             col.Add( item );
 
-            Assert.IsTrue( col.GetItem( 100, out Item found ) );
-            Assert.AreSame( item, found );
+            Assert.True( col.GetItem( 100, out Item found ) );
+            Assert.Same( item, found );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetItemFindsInNestedContainer()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -148,12 +147,12 @@ namespace ClassicAssist.Tests
             Item innerItem = MakeItem( 300, id: 42 );
             bag.Container.Add( innerItem );
 
-            Assert.IsTrue( col.GetItem( 300, out Item found ) );
-            Assert.AreSame( innerItem, found );
-            Assert.AreEqual( 42, found.ID );
+            Assert.True( col.GetItem( 300, out Item found ) );
+            Assert.Same( innerItem, found );
+            Assert.Equal( 42, found.ID );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetItemFindsInDeeplyNestedContainer()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -169,11 +168,11 @@ namespace ClassicAssist.Tests
             Item deepItem = MakeItem( 400, id: 99 );
             pouch.Container.Add( deepItem );
 
-            Assert.IsTrue( col.GetItem( 400, out Item found ) );
-            Assert.AreSame( deepItem, found );
+            Assert.True( col.GetItem( 400, out Item found ) );
+            Assert.Same( deepItem, found );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetItemAfterNestedContainerRemovedReturnsFalse()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -185,10 +184,10 @@ namespace ClassicAssist.Tests
 
             col.Remove( 200 );
 
-            Assert.IsFalse( col.GetItem( 300, out _ ) );
+            Assert.False( col.GetItem( 300, out _ ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveNestedBySerialRemovesFromOwningContainer()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -200,11 +199,11 @@ namespace ClassicAssist.Tests
 
             col.Remove( 300 );
 
-            Assert.IsFalse( col.GetItem( 300, out _ ) );
-            Assert.AreEqual( 0, bag.Container.GetItemCount() );
+            Assert.False( col.GetItem( 300, out _ ) );
+            Assert.Equal( 0, bag.Container.GetItemCount() );
         }
 
-        [TestMethod]
+        [Fact]
         public void ClearRemovesEverythingFromThisCollection()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -213,12 +212,12 @@ namespace ClassicAssist.Tests
 
             col.Clear();
 
-            Assert.AreEqual( 0, col.GetItemCount() );
-            Assert.IsFalse( col.GetItem( 100, out _ ) );
-            Assert.IsFalse( col.GetItem( 101, out _ ) );
+            Assert.Equal( 0, col.GetItemCount() );
+            Assert.False( col.GetItem( 100, out _ ) );
+            Assert.False( col.GetItem( 101, out _ ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveByOwnerRemovesOnlyOwnedItems()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -228,14 +227,14 @@ namespace ClassicAssist.Tests
 
             col.RemoveByOwner( 5000 );
 
-            Assert.IsFalse( col.GetItem( 100, out _ ) );
-            Assert.IsFalse( col.GetItem( 101, out _ ) );
-            Assert.IsTrue( col.GetItem( 102, out _ ) );
+            Assert.False( col.GetItem( 100, out _ ) );
+            Assert.False( col.GetItem( 101, out _ ) );
+            Assert.True( col.GetItem( 102, out _ ) );
         }
 
         // --- SelectEntity / SelectEntities (recursive) ---
 
-        [TestMethod]
+        [Fact]
         public void SelectEntityFindsAtRoot()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -244,11 +243,11 @@ namespace ClassicAssist.Tests
 
             Item found = col.SelectEntity( i => i.ID == 10 );
 
-            Assert.IsNotNull( found );
-            Assert.AreEqual( 101, found.Serial );
+            Assert.NotNull( found );
+            Assert.Equal( 101, found.Serial );
         }
 
-        [TestMethod]
+        [Fact]
         public void SelectEntityFindsInNestedContainer()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -261,11 +260,11 @@ namespace ClassicAssist.Tests
 
             Item found = col.SelectEntity( i => i.ID == 42 );
 
-            Assert.IsNotNull( found );
-            Assert.AreEqual( 300, found.Serial );
+            Assert.NotNull( found );
+            Assert.Equal( 300, found.Serial );
         }
 
-        [TestMethod]
+        [Fact]
         public void SelectEntityReturnsNullWhenNotFound()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -273,10 +272,10 @@ namespace ClassicAssist.Tests
 
             Item found = col.SelectEntity( i => i.ID == 999 );
 
-            Assert.IsNull( found );
+            Assert.Null( found );
         }
 
-        [TestMethod]
+        [Fact]
         public void SelectEntitiesFindsAcrossContainers()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -292,13 +291,13 @@ namespace ClassicAssist.Tests
 
             Item[] results = col.SelectEntities( i => i.ID == 5 );
 
-            Assert.IsNotNull( results );
-            Assert.AreEqual( 2, results.Length );
-            Assert.IsTrue( results.Any( i => i.Serial == 100 ) );
-            Assert.IsTrue( results.Any( i => i.Serial == 300 ) );
+            Assert.NotNull( results );
+            Assert.Equal( 2, results.Length );
+            Assert.Contains( results, i => i.Serial == 100 );
+            Assert.Contains( results, i => i.Serial == 300 );
         }
 
-        [TestMethod]
+        [Fact]
         public void SelectEntitiesReturnsNullWhenNoMatch()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -306,10 +305,10 @@ namespace ClassicAssist.Tests
 
             Item[] results = col.SelectEntities( i => i.ID == 999 );
 
-            Assert.IsNull( results );
+            Assert.Null( results );
         }
 
-        [TestMethod]
+        [Fact]
         public void SelectEntitiesHasNoDuplicates()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -324,27 +323,27 @@ namespace ClassicAssist.Tests
 
             Item[] results = col.SelectEntities( i => i.ID == 5 );
 
-            Assert.IsNotNull( results );
-            Assert.AreEqual( 2, results.Length );
-            Assert.AreEqual( results.Select( i => i.Serial ).Distinct().Count(), results.Length );
+            Assert.NotNull( results );
+            Assert.Equal( 2, results.Length );
+            Assert.Equal( results.Select( i => i.Serial ).Distinct().Count(), results.Length );
         }
 
         // --- FindItem / FindItems ---
 
-        [TestMethod]
+        [Fact]
         public void FindItemById()
         {
             ItemCollection col = MakeContainer( 1 );
             col.Add( MakeItem( 100, id: 5 ) );
             col.Add( MakeItem( 101, id: 10 ) );
 
-            Assert.IsTrue( col.FindItem( 5, out Item item ) );
-            Assert.AreEqual( 100, item.Serial );
+            Assert.True( col.FindItem( 5, out Item item ) );
+            Assert.Equal( 100, item.Serial );
 
-            Assert.IsFalse( col.FindItem( 999, out _ ) );
+            Assert.False( col.FindItem( 999, out _ ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FindItemsById()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -352,13 +351,13 @@ namespace ClassicAssist.Tests
             col.Add( MakeItem( 101, id: 5 ) );
             col.Add( MakeItem( 102, id: 10 ) );
 
-            Assert.IsTrue( col.FindItems( 5, out Item[] items ) );
-            Assert.AreEqual( 2, items.Length );
+            Assert.True( col.FindItems( 5, out Item[] items ) );
+            Assert.Equal( 2, items.Length );
         }
 
         // --- GetItems / GetTotalItemCount ---
 
-        [TestMethod]
+        [Fact]
         public void GetItemsReturnsSnapshot()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -367,14 +366,14 @@ namespace ClassicAssist.Tests
 
             Item[] items = col.GetItems();
 
-            Assert.AreEqual( 2, items.Length );
+            Assert.Equal( 2, items.Length );
 
             col.Add( MakeItem( 102 ) );
 
-            Assert.AreEqual( 2, items.Length );
+            Assert.Equal( 2, items.Length );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetTotalItemCountIncludesNested()
         {
             ItemCollection col = MakeContainer( 1 );
@@ -386,12 +385,12 @@ namespace ClassicAssist.Tests
             bag.Container.Add( MakeItem( 301 ) );
             col.Add( bag );
 
-            Assert.AreEqual( 4, col.GetTotalItemCount() );
+            Assert.Equal( 4, col.GetTotalItemCount() );
         }
 
         // --- GetAllItems (static, recursive flatten) ---
 
-        [TestMethod]
+        [Fact]
         public void GetAllItemsFlattensHierarchy()
         {
             Item bag = MakeItem( 200 );
@@ -407,26 +406,26 @@ namespace ClassicAssist.Tests
 
             Item[] all = ItemCollection.GetAllItems( [bag] );
 
-            Assert.IsNotNull( all );
-            Assert.AreEqual( 4, all.Length );
-            Assert.IsTrue( all.Any( i => i.Serial == 200 ) );
-            Assert.IsTrue( all.Any( i => i.Serial == 300 ) );
-            Assert.IsTrue( all.Any( i => i.Serial == 400 ) );
-            Assert.IsTrue( all.Any( i => i.Serial == 500 ) );
+            Assert.NotNull( all );
+            Assert.Equal( 4, all.Length );
+            Assert.Contains( all, i => i.Serial == 200 );
+            Assert.Contains( all, i => i.Serial == 300 );
+            Assert.Contains( all, i => i.Serial == 400 );
+            Assert.Contains( all, i => i.Serial == 500 );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetAllItemsReturnsEmptyForEmptyInput()
         {
             Item[] result = ItemCollection.GetAllItems( [] );
 
-            Assert.IsNotNull( result );
-            Assert.AreEqual( 0, result.Length );
+            Assert.NotNull( result );
+            Assert.Empty( result );
         }
 
         // --- CollectionChanged gating / de-duplication ---
 
-        [TestMethod]
+        [Fact]
         public void AddNotifiesLocalSubscribersOnce()
         {
             ItemCollection collection = new( 0x7F000001 );
@@ -436,10 +435,10 @@ namespace ClassicAssist.Tests
 
             collection.Add( MakeItem( 0x7F000002 ) );
 
-            Assert.AreEqual( 1, notifications, "a single add must not raise the accidental duplicate" );
+            Assert.Equal( 1, notifications ); // "a single add must not raise the accidental duplicate"
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveNotifiesLocalSubscribersOnce()
         {
             ItemCollection collection = new( 0x7F000003 );
@@ -451,10 +450,10 @@ namespace ClassicAssist.Tests
 
             collection.Remove( item );
 
-            Assert.AreEqual( 1, notifications, "a single remove must not raise the accidental duplicate" );
+            Assert.Equal( 1, notifications ); // "a single remove must not raise the accidental duplicate"
         }
 
-        [TestMethod]
+        [Fact]
         public void RemoveByDistanceNotifiesPerRemovedItem()
         {
             ItemCollection collection = new( 0x7F000005 );
@@ -466,11 +465,11 @@ namespace ClassicAssist.Tests
 
             collection.RemoveByDistance( 32, 1100, 1100 );
 
-            Assert.AreEqual( 2, notifications );
-            Assert.AreEqual( 0, collection.GetItemCount() );
+            Assert.Equal( 2, notifications );
+            Assert.Equal( 0, collection.GetItemCount() );
         }
 
-        [TestMethod]
+        [Fact]
         public void AddToNestedContainerNotifiesSubscribedParent()
         {
             ItemCollection root = Engine.Items;
@@ -490,8 +489,7 @@ namespace ClassicAssist.Tests
             {
                 inner.Container.Add( MakeItem( 0x7F000012 ) );
 
-                Assert.AreEqual( 1, notifications,
-                    "adding to a nested container should notify the subscribed parent container once" );
+                Assert.Equal( 1, notifications ); // "adding to a nested container should notify the subscribed parent container once"
             }
             finally
             {

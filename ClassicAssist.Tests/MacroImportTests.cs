@@ -2,7 +2,7 @@ using System;
 using System.Threading;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Engine = ClassicAssist.Shared.Engine;
 
 namespace ClassicAssist.Tests
@@ -12,7 +12,6 @@ namespace ClassicAssist.Tests
     ///     macro help shipped here still tells people to. The engine lives in a different namespace in
     ///     this build, so a module on the macro search path re-exports it.
     /// </summary>
-    [TestClass]
     public class MacroImportTests
     {
         private static bool RunMacro( string source, out Exception exception )
@@ -28,17 +27,17 @@ namespace ClassicAssist.Tests
             return !invoker.IsFaulted;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillImportEngineFromAssistant()
         {
-            Assert.IsTrue( RunMacro( "from Assistant import Engine", out Exception e ),
+            Assert.True( RunMacro( "from Assistant import Engine", out Exception e ),
                 $"the compatibility module did not resolve: {e}" );
         }
 
         /// <summary>
         ///     Importing the name is not the point; reaching the real engine through it is.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillReachTheRealEngineThroughIt()
         {
             Engine.Player = new PlayerMobile( 0x1234 ) { Name = "Testificate" };
@@ -51,7 +50,7 @@ namespace ClassicAssist.Tests
                     "    raise Exception('got ' + str(Engine.Player.Name))\n",
                     out Exception e );
 
-                Assert.IsTrue( ok, $"Engine.Player was not reachable through the shim: {e}" );
+                Assert.True( ok, $"Engine.Player was not reachable through the shim: {e}" );
             }
             finally
             {

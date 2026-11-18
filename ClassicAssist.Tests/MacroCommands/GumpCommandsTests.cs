@@ -2,55 +2,54 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Objects;
 using ClassicAssist.UO.Objects.Gumps;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class GumpCommandsTests
+    public class GumpCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Player = null;
             Engine.Gumps.Clear();
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void GumpExistsWillFindRegisteredGump()
         {
             Engine.GumpList[0x1234] = 1;
 
-            Assert.IsTrue( GumpCommands.GumpExists( 0x1234 ) );
-            Assert.IsFalse( GumpCommands.GumpExists( 0x9999 ) );
+            Assert.True( GumpCommands.GumpExists( 0x1234 ) );
+            Assert.False( GumpCommands.GumpExists( 0x9999 ) );
 
             Engine.GumpList.TryRemove( 0x1234, out _ );
         }
 
-        [TestMethod]
+        [Fact]
         public void InGumpWillMatchElementText()
         {
             Gump gump = new Gump( 0, 0, 1, 0x2001 ) { GumpElements = [new GumpElement { Text = "Hello World" }] };
 
             Engine.Gumps.Add( gump );
 
-            Assert.IsTrue( GumpCommands.InGump( 0x2001, "hello" ) );
-            Assert.IsFalse( GumpCommands.InGump( 0x2001, "goodbye" ) );
+            Assert.True( GumpCommands.InGump( 0x2001, "hello" ) );
+            Assert.False( GumpCommands.InGump( 0x2001, "goodbye" ) );
 
             Engine.Gumps.Remove( 0x2001 );
         }
 
-        [TestMethod]
+        [Fact]
         public void InGumpWillMessageWhenGumpMissing()
         {
             bool result = GumpCommands.InGump( 0x7777, "anything" );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Invalid gump", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Invalid gump", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void CloseGumpWillSendCloseClientGumpPacket()
         {
             Gump gump = new Gump( 0, 0, 2, 0x2002 );
@@ -74,12 +73,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketReceivedEvent -= OnReceived;
 
-            Assert.IsNotNull( received );
+            Assert.NotNull( received );
 
             Engine.Gumps.Remove( 0x2002 );
         }
 
-        [TestMethod]
+        [Fact]
         public void OpenGuildGumpWillSendPacket()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -97,12 +96,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( 0xD7, sent[0] );
-            Assert.AreEqual( 0x28, sent[8] );
+            Assert.NotNull( sent );
+            Assert.Equal( 0xD7, sent[0] );
+            Assert.Equal( 0x28, sent[8] );
         }
 
-        [TestMethod]
+        [Fact]
         public void OpenQuestsGumpWillSendPacket()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -120,12 +119,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( 0xD7, sent[0] );
-            Assert.AreEqual( 0x32, sent[8] );
+            Assert.NotNull( sent );
+            Assert.Equal( 0xD7, sent[0] );
+            Assert.Equal( 0x32, sent[8] );
         }
 
-        [TestMethod]
+        [Fact]
         public void OpenHelpGumpWillSendPacket()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -143,11 +142,11 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( 0x9B, sent[0] );
+            Assert.NotNull( sent );
+            Assert.Equal( 0x9B, sent[0] );
         }
 
-        [TestMethod]
+        [Fact]
         public void OpenVirtueGumpWillMessageWhenSerialInvalid()
         {
             // obj: null resolves through AliasCommands.ResolveSerial to Engine.Player's serial,
@@ -168,8 +167,8 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Mobile not found", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Mobile not found", "system" ) );
         }
     }
 }

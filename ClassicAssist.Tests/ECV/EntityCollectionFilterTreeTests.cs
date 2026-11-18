@@ -2,7 +2,8 @@ using System.IO;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.ECV
 {
@@ -11,14 +12,12 @@ namespace ClassicAssist.Tests.ECV
     ///     than one top-level group, or any sub-group (a single branch group still needs the tree to
     ///     reach its children). Matches WPF's HasSubgroups flat-vs-split decision, plus multi-group.
     /// </summary>
-    [TestClass]
-    public class EntityCollectionFilterTreeTests
+    public class EntityCollectionFilterTreeTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
 
-        [TestInitialize]
-        public void Initialize()
+        public EntityCollectionFilterTreeTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), Path.GetRandomFileName() );
@@ -28,8 +27,7 @@ namespace ClassicAssist.Tests.ECV
             Engine.StartupPath = _tempDir;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -43,14 +41,14 @@ namespace ClassicAssist.Tests.ECV
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void NoGroupsHidesTree()
         {
             EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
 
             try
             {
-                Assert.IsFalse( viewModel.ShowGroupTree );
+                Assert.False( viewModel.ShowGroupTree );
             }
             finally
             {
@@ -58,7 +56,7 @@ namespace ClassicAssist.Tests.ECV
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void SingleLeafGroupHidesTree()
         {
             EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
@@ -67,8 +65,8 @@ namespace ClassicAssist.Tests.ECV
             {
                 viewModel.AddGroupCommand.Execute( null );
 
-                Assert.AreEqual( 1, viewModel.SelectedProfile.Groups.Count );
-                Assert.IsFalse( viewModel.ShowGroupTree );
+                Assert.Single( viewModel.SelectedProfile.Groups );
+                Assert.False( viewModel.ShowGroupTree );
             }
             finally
             {
@@ -76,7 +74,7 @@ namespace ClassicAssist.Tests.ECV
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void MultipleGroupsShowTree()
         {
             EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
@@ -86,8 +84,8 @@ namespace ClassicAssist.Tests.ECV
                 viewModel.AddGroupCommand.Execute( null );
                 viewModel.AddGroupCommand.Execute( null );
 
-                Assert.AreEqual( 2, viewModel.SelectedProfile.Groups.Count );
-                Assert.IsTrue( viewModel.ShowGroupTree );
+                Assert.Equal( 2, viewModel.SelectedProfile.Groups.Count );
+                Assert.True( viewModel.ShowGroupTree );
             }
             finally
             {
@@ -95,7 +93,7 @@ namespace ClassicAssist.Tests.ECV
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void SingleBranchGroupShowsTree()
         {
             EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
@@ -105,9 +103,9 @@ namespace ClassicAssist.Tests.ECV
                 viewModel.AddGroupCommand.Execute( null );
                 viewModel.AddSubGroupCommand.Execute( null );
 
-                Assert.AreEqual( 1, viewModel.SelectedProfile.Groups.Count );
-                Assert.IsTrue( viewModel.SelectedProfile.Groups[0].HasChildren );
-                Assert.IsTrue( viewModel.ShowGroupTree );
+                Assert.Single( viewModel.SelectedProfile.Groups );
+                Assert.True( viewModel.SelectedProfile.Groups[0].HasChildren );
+                Assert.True( viewModel.ShowGroupTree );
             }
             finally
             {
@@ -115,7 +113,7 @@ namespace ClassicAssist.Tests.ECV
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void RemovingLastSubgroupHidesTree()
         {
             EntityCollectionViewerViewModel viewModel = new( new ItemCollection( 0 ) );
@@ -125,13 +123,13 @@ namespace ClassicAssist.Tests.ECV
                 viewModel.AddGroupCommand.Execute( null );
                 viewModel.AddSubGroupCommand.Execute( null );
 
-                Assert.IsTrue( viewModel.ShowGroupTree );
+                Assert.True( viewModel.ShowGroupTree );
 
                 viewModel.RemoveGroupCommand.Execute( null );
 
-                Assert.AreEqual( 1, viewModel.SelectedProfile.Groups.Count );
-                Assert.IsFalse( viewModel.SelectedProfile.Groups[0].HasChildren );
-                Assert.IsFalse( viewModel.ShowGroupTree );
+                Assert.Single( viewModel.SelectedProfile.Groups );
+                Assert.False( viewModel.SelectedProfile.Groups[0].HasChildren );
+                Assert.False( viewModel.ShowGroupTree );
             }
             finally
             {

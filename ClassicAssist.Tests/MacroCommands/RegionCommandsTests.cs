@@ -3,21 +3,20 @@ using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Regions;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class RegionCommandsTests
+    public class RegionCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Player = null;
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void InRegionWillMessageForInvalidSerial()
         {
             // Passing the int 0 directly resolves through AliasCommands.ResolveSerial without
@@ -25,20 +24,20 @@ namespace ClassicAssist.Tests.MacroCommands
             // message first), landing cleanly on RegionCommands' own "invalid object id" branch.
             bool result = RegionCommands.InRegion( "Guarded", 0 );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Invalid or unknown object id", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Invalid or unknown object id", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void InRegionWillMessageWhenEntityNotFound()
         {
             bool result = RegionCommands.InRegion( "Guarded", 0x40001234 );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Cannot find item", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Cannot find item", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void InRegionWillMatchAttributeInsideBounds()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { Map = Map.Felucca };
@@ -63,14 +62,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Regions.Add( region );
 
-            Assert.IsTrue( RegionCommands.InRegion( "Guarded", item.Serial ) );
-            Assert.IsFalse( RegionCommands.InRegion( "Wilderness", item.Serial ) );
+            Assert.True( RegionCommands.InRegion( "Guarded", item.Serial ) );
+            Assert.False( RegionCommands.InRegion( "Wilderness", item.Serial ) );
 
             Regions.Remove( region );
             Engine.Items.Remove( item.Serial );
         }
 
-        [TestMethod]
+        [Fact]
         public void InRegionWillBeFalseOutsideAnyRegion()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { Map = Map.Felucca };
@@ -78,7 +77,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Item item = new Item( 0x40002001 ) { X = -5000, Y = -5000 };
             Engine.Items.Add( item );
 
-            Assert.IsFalse( RegionCommands.InRegion( "Guarded", item.Serial ) );
+            Assert.False( RegionCommands.InRegion( "Guarded", item.Serial ) );
 
             Engine.Items.Remove( item.Serial );
         }

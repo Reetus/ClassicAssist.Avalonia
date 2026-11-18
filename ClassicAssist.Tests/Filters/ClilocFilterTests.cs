@@ -1,30 +1,24 @@
-﻿using System.Diagnostics;
-using System.IO;
-using System.Text;
+﻿using System.Text;
 using System.Threading;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Filters;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Filters
 {
-    [TestClass]
     public class ClilocFilterTests
     {
-        [TestMethod]
+        [Fact]
         public void WillFilterLocalizedText()
         {
-            const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
-
-            if ( !Directory.Exists( localPath ) )
+            if ( !TestData.HasUOData )
             {
-                Debug.WriteLine( "Not running test, requires Cliloc.enu" );
                 return;
             }
 
-            Cliloc.Initialize( localPath );
+            Cliloc.Initialize( TestData.UOPath );
 
             byte[] packet =
             {
@@ -68,23 +62,20 @@ namespace ClassicAssist.Tests.Filters
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketReceivedEvent -= OnReceivedEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFilterLocalizedTextAffix()
         {
-            const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
-
-            if ( !Directory.Exists( localPath ) )
+            if ( !TestData.HasUOData )
             {
-                Debug.WriteLine( "Not running test, requires Cliloc.enu" );
                 return;
             }
 
-            Cliloc.Initialize( localPath );
+            Cliloc.Initialize( TestData.UOPath );
 
             byte[] packet =
             {
@@ -128,7 +119,7 @@ namespace ClassicAssist.Tests.Filters
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketReceivedEvent -= OnReceivedEvent;
         }

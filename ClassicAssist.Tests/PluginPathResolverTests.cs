@@ -2,30 +2,29 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using ClassicAssist.Launcher.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class PluginPathResolverTests
+    public class PluginPathResolverTests : IDisposable
     {
-        [TestMethod]
+        [Fact]
         public void Resolve_Framework_ReturnsFrameworkSubfolderPath()
         {
             string result = PluginPathResolver.Resolve( ClientRuntimeFormat.Framework );
 
-            Assert.AreEqual( Path.Combine( AppContext.BaseDirectory, "framework", "ClassicAssist.dll" ), result );
+            Assert.Equal( Path.Combine( AppContext.BaseDirectory, "framework", "ClassicAssist.dll" ), result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Resolve_Managed_ReturnsBaseDirectoryPath()
         {
             string result = PluginPathResolver.Resolve( ClientRuntimeFormat.Managed );
 
-            Assert.AreEqual( Path.Combine( AppContext.BaseDirectory, "ClassicAssist.dll" ), result );
+            Assert.Equal( Path.Combine( AppContext.BaseDirectory, "ClassicAssist.dll" ), result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Resolve_NativeAot_ReturnsPlatformAppropriateShimExtension()
         {
             string directory = CreateTempDirectory();
@@ -34,7 +33,7 @@ namespace ClassicAssist.Tests
 
             string result = PluginPathResolver.Resolve( ClientRuntimeFormat.NativeAot, directory );
 
-            Assert.AreEqual( Path.Combine( directory, "ClassicAssistNE" + ShimExtension ), result );
+            Assert.Equal( Path.Combine( directory, "ClassicAssistNE" + ShimExtension ), result );
         }
 
         /// <summary>
@@ -43,17 +42,17 @@ namespace ClassicAssist.Tests
         ///     net472 build, which ClassicUO.Bootstrap loads by reflection, so an absent shim is a
         ///     fallback rather than a dead end.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void Resolve_NativeAot_FallsBackToFrameworkWhenTheShimIsAbsent()
         {
             string directory = CreateTempDirectory();
 
             string result = PluginPathResolver.Resolve( ClientRuntimeFormat.NativeAot, directory );
 
-            Assert.AreEqual( Path.Combine( directory, "framework", "ClassicAssist.dll" ), result );
+            Assert.Equal( Path.Combine( directory, "framework", "ClassicAssist.dll" ), result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Resolve_NativeAot_ForceManaged_IgnoresTheShim()
         {
             string directory = CreateTempDirectory();
@@ -62,13 +61,13 @@ namespace ClassicAssist.Tests
 
             string result = PluginPathResolver.Resolve( ClientRuntimeFormat.NativeAot, directory, true );
 
-            Assert.AreEqual( Path.Combine( directory, "ClassicAssist.dll" ), result );
+            Assert.Equal( Path.Combine( directory, "ClassicAssist.dll" ), result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Resolve_Unknown_Throws()
         {
-            Assert.ThrowsExactly<InvalidOperationException>( () => PluginPathResolver.Resolve( ClientRuntimeFormat.Unknown ) );
+            Assert.Throws<InvalidOperationException>( () => PluginPathResolver.Resolve( ClientRuntimeFormat.Unknown ) );
         }
 
         private static string ShimExtension =>
@@ -86,8 +85,7 @@ namespace ClassicAssist.Tests
             return directory;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             foreach ( string directory in _tempDirectories )
             {

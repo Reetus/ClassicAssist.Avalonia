@@ -2,15 +2,14 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Skills;
 using ClassicAssist.UO.Data;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class SkillCommandsTests
+    public class SkillCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Journal.Clear();
         }
@@ -33,60 +32,60 @@ namespace ClassicAssist.Tests.MacroCommands
             return entry;
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillWillReturnValueForMatchingSkill()
         {
             SkillEntry entry = AddSkill( "Anatomy", 85.5f, 80.0f, 100.0f, 5.5 );
 
-            Assert.AreEqual( 85.5, SkillCommands.Skill( "anatomy" ), 0.001 );
-            Assert.AreEqual( 80.0, SkillCommands.Skill( "anatomy", true ), 0.001 );
+            Assert.Equal( 85.5, SkillCommands.Skill( "anatomy" ), 0.001 );
+            Assert.Equal( 80.0, SkillCommands.Skill( "anatomy", true ), 0.001 );
 
             SkillManager.GetInstance().Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillWillReturnZeroForUnknownSkill()
         {
-            Assert.AreEqual( 0, SkillCommands.Skill( "ThisSkillDoesNotExist" ) );
+            Assert.Equal( 0, SkillCommands.Skill( "ThisSkillDoesNotExist" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillDeltaWillReturnDelta()
         {
             SkillEntry entry = AddSkill( "Tactics", 90, 90, 100, 3.2 );
 
-            Assert.AreEqual( 3.2, SkillCommands.SkillDelta( "tactics" ), 0.001 );
+            Assert.Equal( 3.2, SkillCommands.SkillDelta( "tactics" ), 0.001 );
 
             SkillManager.GetInstance().Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillCapWillReturnCap()
         {
             SkillEntry entry = AddSkill( "Healing", 50, 50, 120, 0 );
 
-            Assert.AreEqual( 120, SkillCommands.SkillCap( "healing" ), 0.001 );
+            Assert.Equal( 120, SkillCommands.SkillCap( "healing" ), 0.001 );
 
             SkillManager.GetInstance().Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillStateWillReturnLockStatus()
         {
             SkillEntry entry = AddSkill( "Magery", 90, 90, 100, 0, LockStatus.Locked );
 
-            Assert.AreEqual( "locked", SkillCommands.SkillState( "magery" ) );
+            Assert.Equal( "locked", SkillCommands.SkillState( "magery" ) );
 
             SkillManager.GetInstance().Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void SkillStateWillDefaultToUpForUnknownSkill()
         {
-            Assert.AreEqual( "up", SkillCommands.SkillState( "ThisSkillDoesNotExist" ) );
+            Assert.Equal( "up", SkillCommands.SkillState( "ThisSkillDoesNotExist" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SetSkillWillSendChangeSkillLockPacket()
         {
             SkillEntry entry = AddSkill( "Musicianship", 40, 40, 100, 0 );
@@ -108,22 +107,22 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( 15, sent[4] );
-            Assert.AreEqual( (byte) LockStatus.Down, sent[5] );
+            Assert.NotNull( sent );
+            Assert.Equal( 15, sent[4] );
+            Assert.Equal( (byte) LockStatus.Down, sent[5] );
 
             SkillManager.GetInstance().Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void SetSkillWillMessageForUnknownSkill()
         {
             SkillCommands.SetSkill( "ThisSkillDoesNotExist", "up" );
 
-            Assert.IsTrue( JournalCommands.InJournal( "Invalid skill name", "system" ) );
+            Assert.True( JournalCommands.InJournal( "Invalid skill name", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SetStatusWillSendChangeStatLockPacket()
         {
             byte[] sent = null;
@@ -142,12 +141,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( (byte) StatType.Str, sent[5] );
-            Assert.AreEqual( (byte) LockStatus.Locked, sent[6] );
+            Assert.NotNull( sent );
+            Assert.Equal( (byte) StatType.Str, sent[5] );
+            Assert.Equal( (byte) LockStatus.Locked, sent[6] );
         }
 
-        [TestMethod]
+        [Fact]
         public void UseLastSkillWillSendUseSkillPacketForLastSkillID()
         {
             Engine.LastSkillID = 33;
@@ -168,11 +167,11 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketSentEvent -= OnSent;
 
-            Assert.IsNotNull( sent );
+            Assert.NotNull( sent );
 
             string args = System.Text.Encoding.ASCII.GetString( sent, 4, sent.Length - 5 );
 
-            Assert.AreEqual( "33 0", args );
+            Assert.Equal( "33 0", args );
         }
     }
 }

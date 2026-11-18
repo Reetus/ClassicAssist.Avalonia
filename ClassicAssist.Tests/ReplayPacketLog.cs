@@ -1,109 +1,137 @@
-﻿//#region License
+﻿#region License
 
-//// Copyright (C) 2020 Reetus
-//// 
-//// This program is free software: you can redistribute it and/or modify
-//// it under the terms of the GNU General Public License as published by
-//// the Free Software Foundation, either version 3 of the License, or
-//// (at your option) any later version.
-//// 
-//// This program is distributed in the hope that it will be useful,
-//// but WITHOUT ANY WARRANTY; without even the implied warranty of
-//// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//// GNU General Public License for more details.
-//// 
-//// You should have received a copy of the GNU General Public License
-//// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// Copyright (C) 2020 Reetus
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-//#endregion
+#endregion
 
-//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
-//using Assistant;
-//using ClassicAssist.UO.Data;
-//using ClassicAssist.UO.Network;
-//using ClassicAssist.UO.Network.PacketFilter;
-//using ClassicAssist.UO.Objects;
-//using Microsoft.VisualStudio.TestTools.UnitTesting;
-//using Newtonsoft.Json;
-//using Newtonsoft.Json.Linq;
+using System;
+using ClassicAssist.Shared;
+using ClassicAssist.UO.Data;
+using ClassicAssist.UO.Objects;
+using Xunit;
 
-//namespace ClassicAssist.Tests
-//{
-//    [TestClass]
-//    public class ReplayPacketLog
-//    {
-//        [TestMethod]
-//        public void CheckPoisonStatus()
-//        {
-////            appDomain.DoCallBack( () =>
-//            {
-//                Engine.ClientVersion = new Version( 5, 0, 9, 1 );
+namespace ClassicAssist.Tests
+{
+    /// <summary>
+    ///     Replays the packet sequence a pre-7.0 client sees for a poisoned mobile - it comes into view
+    ///     (0x78), walks (0x77), gets a full update (0x20), is cured - and checks the poison state after
+    ///     every packet. Each packet rewrites the whole status byte, so one handler that forgets the
+    ///     0x04 flag means of the old protocol makes the mobile flicker between poisoned and not.
+    ///     <para>
+    ///         Originally replayed a capture from a developer's disk; the packets are built here instead.
+    ///     </para>
+    /// </summary>
+    public class ReplayPacketLog : IDisposable
+    {
+        private const int SERIAL = 0x002549BB;
+        private const byte POISONED = 0x04;
 
-//                string fileName = @"C:\Users\johns\source\repos\ClassicAssist\Output\net48\export.packets.json";
+        public ReplayPacketLog()
+        {
+            EngineState.Reset();
+            Engine.ClientVersion = new Version( 5, 0, 9, 1 );
+        }
 
-//                if ( !File.Exists( fileName ) )
-//                {
-//                    return;
-//                }
+        public void Dispose()
+        {
+            EngineState.Reset();
+        }
 
-//                IEnumerable<PacketEntry> packetEntries = ParseLog( fileName );
+        /// <summary>0x78 mobile incoming, no equipment.</summary>
+        private static byte[] Incoming( byte status )
+        {
+            PacketWriter writer = new PacketWriter( 23 );
+            writer.Write( (byte) 0x78 );
+            writer.Write( (short) 23 );
+            writer.Write( SERIAL );
+            writer.Write( (short) 0x190 ); // body
+            writer.Write( (short) 0x0DF9 ); // x
+            writer.Write( (short) 0x0A37 ); // y
+            writer.Write( (sbyte) 0 ); // z
+            writer.Write( (byte) 4 ); // direction
+            writer.Write( (short) 0x03EA ); // hue
+            writer.Write( status );
+            writer.Write( (byte) 1 ); // notoriety
+            writer.Write( 0 ); // end of equipment
 
-//                byte[] packetIds = { 0x20, 0x77, 0x78 };
+            return writer.ToArray();
+        }
 
-//                IEnumerable<PacketEntry> filteredEntries = packetEntries.Where( i =>
-//                    packetIds.Contains( i.Data[0] ) && i.Direction == PacketDirection.Incoming );
+        /// <summary>0x77 mobile moving.</summary>
+        private static byte[] Moving( byte status, short x )
+        {
+            PacketWriter writer = new PacketWriter( 17 );
+            writer.Write( (byte) 0x77 );
+            writer.Write( SERIAL );
+            writer.Write( (short) 0x190 );
+            writer.Write( x );
+            writer.Write( (short) 0x0A37 );
+            writer.Write( (sbyte) 0 );
+            writer.Write( (byte) 4 );
+            writer.Write( (short) 0x03EA );
+            writer.Write( status );
+            writer.Write( (byte) 1 );
 
-//                IncomingPacketHandlers.Initialize();
+            return writer.ToArray();
+        }
 
-//                foreach ( PacketEntry filteredEntry in filteredEntries )
-//                {
-//                    PacketHandler handler = IncomingPacketHandlers.GetHandler( filteredEntry.Data[0] );
+        /// <summary>0x20 mobile update.</summary>
+        private static byte[] Update( byte status )
+        {
+            PacketWriter writer = new PacketWriter( 19 );
+            writer.Write( (byte) 0x20 );
+            writer.Write( SERIAL );
+            writer.Write( (short) 0x190 );
+            writer.Write( (byte) 0 );
+            writer.Write( (short) 0x03EA );
+            writer.Write( status );
+            writer.Write( (short) 0x0DFA );
+            writer.Write( (short) 0x0A37 );
+            writer.Write( (short) 0 );
+            writer.Write( (byte) 4 );
+            writer.Write( (sbyte) 0 );
 
-//                    handler?.OnReceive( new PacketReader( filteredEntry.Data, filteredEntry.Data.Length, true ) );
+            return writer.ToArray();
+        }
 
-//                    Mobile mobile = Engine.Mobiles.GetMobile( 0x002549bb );
+        [Fact]
+        public void CheckPoisonStatus()
+        {
+            (byte[] packet, bool poisoned)[] replay =
+            {
+                ( Incoming( POISONED ), true ),
+                ( Moving( POISONED, 0x0DFA ), true ),
+                ( Update( POISONED ), true ),
+                ( Moving( POISONED, 0x0DFB ), true ),
+                // Cured.
+                ( Update( 0 ), false ),
+                ( Moving( 0, 0x0DFC ), false ),
+                ( Incoming( 0 ), false )
+            };
 
-//                    Assert.IsTrue( mobile.IsPoisoned );
-//                }
-//            } );
-//        }
+            for ( int i = 0; i < replay.Length; i++ )
+            {
+                EngineState.Receive( replay[i].packet );
 
-//        private static IEnumerable<PacketEntry> ParseLog( string fileName )
-//        {
-//            string text = File.ReadAllText( fileName );
+                Mobile mobile = Engine.Mobiles.GetMobile( SERIAL );
 
-//            List<PacketEntry> packets = new List<PacketEntry>();
-
-//            JObject[] data = JsonConvert.DeserializeObject<JObject[]>( text );
-
-//            if ( data == null )
-//            {
-//                return packets;
-//            }
-
-//            packets.AddRange( from entry in data
-//                where entry != null
-//                select new PacketEntry
-//                {
-//                    Title = entry?["Title"].ToObject<string>() ?? string.Empty,
-//                    Direction = entry["Direction"].ToObject<PacketDirection>(),
-//                    DateTime = entry["DateTime"].ToObject<DateTime>(),
-//                    Data = Convert.FromBase64String( entry["Base64"].ToObject<string>() )
-//                } );
-
-//            return packets;
-//        }
-
-//        public class PacketEntry
-//        {
-//            public byte[] Data { get; set; }
-//            public DateTime DateTime { get; set; }
-//            public PacketDirection Direction { get; set; }
-//            public string Title { get; set; }
-//        }
-//    }
-//}
-
+                Assert.NotNull( mobile );
+                Assert.True( replay[i].poisoned == mobile.IsPoisoned,
+                    $"packet {i} (0x{replay[i].packet[0]:X2}): expected poisoned={replay[i].poisoned}" );
+            }
+        }
+    }
+}

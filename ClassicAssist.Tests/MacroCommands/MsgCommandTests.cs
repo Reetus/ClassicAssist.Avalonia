@@ -22,7 +22,7 @@ using System.Diagnostics;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
@@ -31,7 +31,6 @@ namespace ClassicAssist.Tests.MacroCommands
     ///     and the wait all have to handle both. <see cref="Engine.LastPromptType" /> is 0 for ASCII and
     ///     1 for Unicode, set by the incoming handler for whichever prompt packet arrived.
     /// </summary>
-    [TestClass]
     public class MsgCommandTests
     {
         private const byte ASCII_PROMPT = 0x9A;
@@ -104,51 +103,51 @@ namespace ClassicAssist.Tests.MacroCommands
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReplyToAsciiPromptWithAsciiResponse()
         {
             List<byte> sent = CapturePacketIds( 0, () => MsgCommands.PromptMsg( "hello" ) );
 
-            CollectionAssert.AreEqual( new List<byte> { ASCII_PROMPT }, sent );
+            Assert.Equal( new List<byte> { ASCII_PROMPT }, sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReplyToUnicodePromptWithUnicodeResponse()
         {
             List<byte> sent = CapturePacketIds( 1, () => MsgCommands.PromptMsg( "hello" ) );
 
-            CollectionAssert.AreEqual( new List<byte> { UNICODE_PROMPT }, sent );
+            Assert.Equal( new List<byte> { UNICODE_PROMPT }, sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCancelAsciiPromptWithAsciiCancel()
         {
             List<byte> sent = CapturePacketIds( 0, MsgCommands.CancelPrompt );
 
-            CollectionAssert.AreEqual( new List<byte> { ASCII_PROMPT }, sent );
+            Assert.Equal( new List<byte> { ASCII_PROMPT }, sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCancelUnicodePromptWithUnicodeCancel()
         {
             List<byte> sent = CapturePacketIds( 1, MsgCommands.CancelPrompt );
 
-            CollectionAssert.AreEqual( new List<byte> { UNICODE_PROMPT }, sent );
+            Assert.Equal( new List<byte> { UNICODE_PROMPT }, sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillWaitForUnicodePrompt()
         {
-            Assert.IsTrue( RunWaitForPrompt( UNICODE_PROMPT, 5000 ) );
+            Assert.True( RunWaitForPrompt( UNICODE_PROMPT, 5000 ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillWaitForAsciiPrompt()
         {
-            Assert.IsTrue( RunWaitForPrompt( ASCII_PROMPT, 5000 ) );
+            Assert.True( RunWaitForPrompt( ASCII_PROMPT, 5000 ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTimeoutWaitingForPrompt()
         {
             Stopwatch sw = Stopwatch.StartNew();
@@ -157,10 +156,10 @@ namespace ClassicAssist.Tests.MacroCommands
 
             sw.Stop();
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             // Guards against the wait returning false instantly rather than actually waiting.
-            Assert.IsTrue( sw.ElapsedMilliseconds >= 400, $"Returned after only {sw.ElapsedMilliseconds}ms" );
+            Assert.True( sw.ElapsedMilliseconds >= 400, $"Returned after only {sw.ElapsedMilliseconds}ms" );
         }
     }
 }

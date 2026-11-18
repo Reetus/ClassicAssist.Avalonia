@@ -1,34 +1,33 @@
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class MovementCommandsTests
+    public class MovementCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Player = null;
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WalkWillReturnFalseForInvalidDirection()
         {
             // "Invalid" is itself a Direction member (Utility.GetEnumValueByName throws for a name
             // that matches none at all), and is exactly what Move()'s own guard checks for.
-            Assert.IsFalse( MovementCommands.Walk( "Invalid" ) );
+            Assert.False( MovementCommands.Walk( "Invalid" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RunWillReturnFalseForInvalidDirection()
         {
-            Assert.IsFalse( MovementCommands.Run( "Invalid" ) );
+            Assert.False( MovementCommands.Run( "Invalid" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SetForceWalkWillSendPacketAndMessage()
         {
             byte[] sent = null;
@@ -47,12 +46,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketReceivedEvent -= OnReceived;
 
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( 2, sent[5] );
-            Assert.IsTrue( JournalCommands.InJournal( "Force Walk On", "system" ) );
+            Assert.NotNull( sent );
+            Assert.Equal( 2, sent[5] );
+            Assert.True( JournalCommands.InJournal( "Force Walk On", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void ToggleForceWalkWillFlip()
         {
             MovementCommands.ToggleForceWalk();
@@ -65,32 +64,32 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool afterSecondToggle = JournalCommands.InJournal( "Force Walk Off", "system" );
 
-            Assert.IsTrue( afterFirstToggle );
-            Assert.IsTrue( afterSecondToggle );
+            Assert.True( afterFirstToggle );
+            Assert.True( afterSecondToggle );
         }
 
-        [TestMethod]
+        [Fact]
         public void PathfindWillFailWhenDistanceExceeded()
         {
             bool result = MovementCommands.Pathfind( 1000, 1000, 0 );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Maximum distance exceeded", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Maximum distance exceeded", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void PathfindObjectWillFailWhenEntityNotFound()
         {
             bool result = MovementCommands.Pathfind( "ThisAliasDoesNotExist" );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "not found", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "not found", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void PathfindMinusOneWillCancelAndReturnTrue()
         {
-            Assert.IsTrue( MovementCommands.Pathfind( (object) -1 ) );
+            Assert.True( MovementCommands.Pathfind( (object) -1 ) );
         }
 
     }

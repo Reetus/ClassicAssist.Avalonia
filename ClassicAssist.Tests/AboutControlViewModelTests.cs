@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using ClassicAssist.Shared;
 using ClassicAssist.UI.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -12,8 +12,7 @@ namespace ClassicAssist.Tests
     ///     no .exe outside Windows, once because the assistant runs from ui/ while the updater sits in
     ///     the install root above it. Neither is visible without launching the app, hence these.
     /// </summary>
-    [TestClass]
-    public class AboutControlViewModelTests
+    public class AboutControlViewModelTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
@@ -22,16 +21,14 @@ namespace ClassicAssist.Tests
         private static string UpdaterFileName =>
             OperatingSystem.IsWindows() ? "ClassicAssist.Updater.exe" : "ClassicAssist.Updater";
 
-        [TestInitialize]
-        public void SetUp()
+        public AboutControlViewModelTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistTests", Guid.NewGuid().ToString( "N" ) );
             Directory.CreateDirectory( _tempDir );
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -45,7 +42,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void FindsUpdaterOneLevelAboveTheUIFolder()
         {
             string installPath = Path.Combine( _tempDir, "ClassicAssist" );
@@ -60,14 +57,14 @@ namespace ClassicAssist.Tests
 
             string found = AboutControlViewModel.FindUpdater();
 
-            Assert.AreEqual( updater, found );
+            Assert.Equal( updater, found );
 
             // The install root, not ui/ - handing the updater the latter would have it copy a release
             // into ui/.
-            Assert.AreEqual( installPath, Path.GetDirectoryName( found ) );
+            Assert.Equal( installPath, Path.GetDirectoryName( found ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FindsUpdaterBesideItselfInAFlatFolder()
         {
             string updater = Path.Combine( _tempDir, UpdaterFileName );
@@ -75,10 +72,10 @@ namespace ClassicAssist.Tests
 
             Engine.StartupPath = _tempDir;
 
-            Assert.AreEqual( updater, AboutControlViewModel.FindUpdater() );
+            Assert.Equal( updater, AboutControlViewModel.FindUpdater() );
         }
 
-        [TestMethod]
+        [Fact]
         public void ReturnsNullWhenThereIsNoUpdater()
         {
             string uiPath = Path.Combine( _tempDir, "ClassicAssist", "ui" );
@@ -87,14 +84,14 @@ namespace ClassicAssist.Tests
 
             Engine.StartupPath = uiPath;
 
-            Assert.IsNull( AboutControlViewModel.FindUpdater() );
+            Assert.Null( AboutControlViewModel.FindUpdater() );
         }
 
         /// <summary>
         ///     The path is handed to the updater, which shows it to the user and matches it against
         ///     the module paths of running clients - a ui/../ in the middle would match nothing.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void ReturnsANormalisedPath()
         {
             string installPath = Path.Combine( _tempDir, "ClassicAssist" );
@@ -106,7 +103,7 @@ namespace ClassicAssist.Tests
 
             string found = AboutControlViewModel.FindUpdater();
 
-            Assert.IsFalse( found.Contains( ".." ), $"{found} still contains a relative segment" );
+            Assert.False( found.Contains( ".." ), $"{found} still contains a relative segment" );
         }
 
         /// <summary>
@@ -115,18 +112,17 @@ namespace ClassicAssist.Tests
         ///     does, so every release displayed a date years out. Guards the AssemblyAttribute item
         ///     in ClassicAssist.Shared.csproj, which nothing else would notice going missing.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void BuildDateComesFromTheStampedAttribute()
         {
             Assembly assembly = typeof( AboutControlViewModel ).Assembly;
 
-            Assert.IsNotNull( assembly.GetCustomAttribute<BuildDateAttribute>(),
-                "ClassicAssist.Shared has no BuildDateAttribute" );
+            Assert.NotNull( assembly.GetCustomAttribute<BuildDateAttribute>() ); // "ClassicAssist.Shared has no BuildDateAttribute"
 
             DateTime buildDate = AboutControlViewModel.GetBuildDateTime( assembly );
 
-            Assert.IsTrue( buildDate <= DateTime.Now.AddDays( 1 ), $"{buildDate} is in the future" );
-            Assert.IsTrue( buildDate > new DateTime( 2020, 7, 3 ), $"{buildDate} is the epoch the old version maths started from" );
+            Assert.True( buildDate <= DateTime.Now.AddDays( 1 ), $"{buildDate} is in the future" );
+            Assert.True( buildDate > new DateTime( 2020, 7, 3 ), $"{buildDate} is the epoch the old version maths started from" );
         }
     }
 }

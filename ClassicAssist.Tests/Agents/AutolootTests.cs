@@ -34,15 +34,14 @@ using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json;
 
 namespace ClassicAssist.Tests.Agents
 {
-    [TestClass]
-    public class AutolootTests
+    public class AutolootTests : IDisposable
     {
-        [TestMethod]
+        [Fact]
         public void WillRehueMatchingItemProperties()
         {
             Cliloc.Initialize( () => new Dictionary<int, string> { { 1060413, "faster casting ~NUMBER~" } } );
@@ -124,7 +123,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -132,7 +131,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.InternalPacketReceivedEvent -= OnPacketReceivedEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRehueMatchingObjectProperties()
         {
             Item corpse = new Item( 0x40000000 ) { ID = 0x2006 };
@@ -197,7 +196,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -205,7 +204,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.InternalPacketReceivedEvent -= OnPacketReceivedEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootMatchingObjectProperties()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -278,7 +277,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -286,7 +285,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontLootDisabledInGuardzone()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { X = 652, Y = 869 };
@@ -364,7 +363,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontRehueNotEnabledEntry()
         {
             Item corpse = new Item( 0x40000000 ) { ID = 0x2006 };
@@ -417,7 +416,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.InternalPacketReceivedEvent -= OnPacketReceivedEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontRehueNotEnabled()
         {
             Item corpse = new Item( 0x40000000 ) { ID = 0x2006 };
@@ -471,7 +470,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.InternalPacketReceivedEvent -= OnPacketReceivedEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontMatchNotIncluded()
         {
             PropertyEntry property1 = new PropertyEntry { ClilocIndex = -1, Clilocs = new[] { 1 }, Name = "Test" };
@@ -495,7 +494,7 @@ namespace ClassicAssist.Tests.Agents
 
             IEnumerable<Item> matchItems = AutolootHelpers.AutolootFilter( container.GetItems(), filter );
 
-            Assert.IsTrue( matchItems.Any() );
+            Assert.True( matchItems.Any() );
 
             container.Clear();
 
@@ -514,18 +513,17 @@ namespace ClassicAssist.Tests.Agents
 
             matchItems = AutolootHelpers.AutolootFilter( container.GetItems(), filter );
 
-            Assert.IsTrue( !matchItems.Any() );
+            Assert.True( !matchItems.Any() );
 
             Engine.Items.Clear();
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             ActionPacketQueue.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WontLootDisabledLootHumanoids()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { X = 652, Y = 869 };
@@ -608,7 +606,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootByPriority()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { X = 652, Y = 869 };
@@ -712,7 +710,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootItemPropertiesLMI()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -797,7 +795,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -805,7 +803,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootItemPropertiesClilocAsText()
         {
             /*
@@ -898,7 +896,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -906,7 +904,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillAutolootCustomProperties()
         {
             string dataPath = Path.Combine( Environment.CurrentDirectory, "Data" );
@@ -1028,7 +1026,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1036,7 +1034,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootSkillBonus()
         {
             Cliloc.Initialize( () =>
@@ -1130,7 +1128,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1138,7 +1136,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontLootSkillBonusLessThan()
         {
             Cliloc.Initialize( () =>
@@ -1232,7 +1230,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 2000 );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1240,7 +1238,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootTalismanSkillBonus()
         {
             Cliloc.Initialize( () =>
@@ -1333,7 +1331,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1341,7 +1339,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootTalismanSkillBonusMultipleSameName()
         {
             Cliloc.Initialize( () => new Dictionary<int, string>
@@ -1438,7 +1436,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             lootEntry.Constraints.Clear();
             lootEntry.Constraints.Add( new AutolootConstraintEntry
@@ -1453,7 +1451,7 @@ namespace ClassicAssist.Tests.Agents
 
             result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1461,7 +1459,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootSkillBonusOSILowercase()
         {
             Cliloc.Initialize( () =>
@@ -1559,7 +1557,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1567,7 +1565,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLootSkillBonusNoName()
         {
             Cliloc.Initialize( () =>
@@ -1665,7 +1663,7 @@ namespace ClassicAssist.Tests.Agents
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Clear();
             Engine.PacketWaitEntries = null;
@@ -1673,7 +1671,7 @@ namespace ClassicAssist.Tests.Agents
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchItemIDMultipleEqual()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1695,10 +1693,10 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( new[] { new Item( 0x40000001 ) { ID = 0x108A } } );
 
-            Assert.IsTrue( result.Any() );
+            Assert.True( result.Any() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontMatchItemIDMultipleNotEqual()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1720,10 +1718,10 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( new[] { new Item( 0x40000001 ) { ID = 0x108A } } );
 
-            Assert.IsTrue( !result.Any() );
+            Assert.True( !result.Any() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchAutolootMatchEqual()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1764,10 +1762,10 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( new[] { new Item( 0x40000001 ) { ID = 0x108A } } );
 
-            Assert.IsTrue( result.Any() );
+            Assert.True( result.Any() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontMatchAutolootMatchNotEqual()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1808,10 +1806,10 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( new[] { new Item( 0x40000001 ) { ID = 0x108A } } );
 
-            Assert.IsTrue( !result.Any() );
+            Assert.True( !result.Any() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchSkillBonusAny()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1842,10 +1840,10 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( items );
 
-            Assert.IsTrue( result.Any() );
+            Assert.True( result.Any() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontMatchSkillBonusAnyNotPresent()
         {
             AutolootViewModel vm = new AutolootViewModel { Enabled = true };
@@ -1876,7 +1874,7 @@ namespace ClassicAssist.Tests.Agents
 
             List<Item> result = manager.CheckItems( items );
 
-            Assert.IsTrue( !result.Any() );
+            Assert.True( !result.Any() );
         }
     }
 }

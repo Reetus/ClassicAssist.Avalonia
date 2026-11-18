@@ -3,19 +3,17 @@ using System.IO;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Autoloot;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class CustomPropertiesViewModelTests
+    public class CustomPropertiesViewModelTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
 
-        [TestInitialize]
-        public void SetUp()
+        public CustomPropertiesViewModelTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistTests", Guid.NewGuid().ToString( "N" ) );
@@ -23,8 +21,7 @@ namespace ClassicAssist.Tests
             Engine.StartupPath = _tempDir;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -40,7 +37,7 @@ namespace ClassicAssist.Tests
 
         private string CustomPropertiesFile => Path.Combine( _tempDir, "Data", "Properties.Custom.json" );
 
-        [TestMethod]
+        [Fact]
         public void WillLoadCustomPropertiesFromFile()
         {
             PropertyEntry[] entries =
@@ -53,16 +50,16 @@ namespace ClassicAssist.Tests
 
             CustomPropertiesViewModel vm = new CustomPropertiesViewModel();
 
-            Assert.AreEqual( 2, vm.Properties.Count );
-            Assert.AreEqual( "Faster Casting", vm.Properties[0].Name );
-            Assert.IsFalse( vm.Properties[0].Arguments );
-            Assert.AreEqual( -1, vm.Properties[0].ArgumentIndex );
-            Assert.AreEqual( "Lower Reagent Cost", vm.Properties[1].Name );
-            Assert.IsTrue( vm.Properties[1].Arguments );
-            Assert.AreEqual( 0, vm.Properties[1].ArgumentIndex );
+            Assert.Equal( 2, vm.Properties.Count );
+            Assert.Equal( "Faster Casting", vm.Properties[0].Name );
+            Assert.False( vm.Properties[0].Arguments );
+            Assert.Equal( -1, vm.Properties[0].ArgumentIndex );
+            Assert.Equal( "Lower Reagent Cost", vm.Properties[1].Name );
+            Assert.True( vm.Properties[1].Arguments );
+            Assert.Equal( 0, vm.Properties[1].ArgumentIndex );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSaveCustomPropertiesRoundTrip()
         {
             File.WriteAllText( CustomPropertiesFile, "[]" );
@@ -75,20 +72,20 @@ namespace ClassicAssist.Tests
 
             PropertyEntry[] parsed = JsonConvert.DeserializeObject<PropertyEntry[]>( File.ReadAllText( CustomPropertiesFile ) );
 
-            Assert.IsNotNull( parsed );
-            Assert.AreEqual( 1, parsed.Length );
-            Assert.AreEqual( "Hit Lightning", parsed[0].Name );
-            Assert.AreEqual( 1060450, parsed[0].Clilocs[0] );
-            Assert.AreEqual( -1, parsed[0].ClilocIndex );
+            Assert.NotNull( parsed );
+            Assert.Single( parsed );
+            Assert.Equal( "Hit Lightning", parsed[0].Name );
+            Assert.Equal( 1060450, parsed[0].Clilocs[0] );
+            Assert.Equal( -1, parsed[0].ClilocIndex );
 
             CustomPropertiesViewModel reloaded = new CustomPropertiesViewModel();
 
-            Assert.AreEqual( 1, reloaded.Properties.Count );
-            Assert.AreEqual( "Hit Lightning", reloaded.Properties[0].Name );
-            Assert.AreEqual( -1, reloaded.Properties[0].ArgumentIndex );
+            Assert.Single( reloaded.Properties );
+            Assert.Equal( "Hit Lightning", reloaded.Properties[0].Name );
+            Assert.Equal( -1, reloaded.Properties[0].ArgumentIndex );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillPersistArgumentIndexWhenEdited()
         {
             File.WriteAllText( CustomPropertiesFile, "[]" );
@@ -96,7 +93,7 @@ namespace ClassicAssist.Tests
             CustomPropertiesViewModel vm = new CustomPropertiesViewModel();
 
             CustomProperty property = new CustomProperty { Name = "Lower Mana Cost", Cliloc = 1060409, Arguments = true };
-            Assert.AreEqual( 0, property.ArgumentIndex );
+            Assert.Equal( 0, property.ArgumentIndex );
 
             property.ArgumentIndex = 1;
             vm.Properties.Add( property );
@@ -105,10 +102,10 @@ namespace ClassicAssist.Tests
 
             PropertyEntry[] parsed = JsonConvert.DeserializeObject<PropertyEntry[]>( File.ReadAllText( CustomPropertiesFile ) );
 
-            Assert.AreEqual( 1, parsed[0].ClilocIndex );
+            Assert.Equal( 1, parsed[0].ClilocIndex );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRaiseSavedEventOnSave()
         {
             File.WriteAllText( CustomPropertiesFile, "[]" );
@@ -116,11 +113,23 @@ namespace ClassicAssist.Tests
             CustomPropertiesViewModel vm = new CustomPropertiesViewModel();
             bool raised = false;
 
-            CustomPropertiesViewModel.Saved += ( sender, args ) => raised = true;
+            void OnSaved( object sender, EventArgs args )
+            {
+                raised = true;
+            }
 
-            vm.SaveCommand.Execute( null );
+            CustomPropertiesViewModel.Saved += OnSaved;
 
-            Assert.IsTrue( raised );
+            try
+            {
+                vm.SaveCommand.Execute( null );
+            }
+            finally
+            {
+                CustomPropertiesViewModel.Saved -= OnSaved;
+            }
+
+            Assert.True( raised );
         }
     }
 }

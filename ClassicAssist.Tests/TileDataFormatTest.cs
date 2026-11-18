@@ -19,17 +19,16 @@
 
 using System.IO;
 using ClassicAssist.UO.Data;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class TileDataFormatTest
     {
         private const string oldFormatPath = @"D:\Games\Ultima Online\";
         private static readonly string newFormatPath = @"C:\Program Files (x86)\Electronic Arts\Ultima Online Classic";
 
-        [TestMethod]
+        [Fact]
         public void WillReadOldFormatStatic()
         {
             if ( !Directory.Exists( oldFormatPath ) )
@@ -41,11 +40,11 @@ namespace ClassicAssist.Tests
 
             StaticTile td = TileData.GetStaticTile( 0x1bf8 );
 
-            Assert.AreEqual( "silver ingot", td.Name );
-            Assert.IsTrue( td.Flags.HasFlag( TileFlags.Stackable ) );
+            Assert.Equal( "silver ingot", td.Name );
+            Assert.True( td.Flags.HasFlag( TileFlags.Stackable ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReadNewFormatStatic()
         {
             if ( !Directory.Exists( newFormatPath ) )
@@ -57,8 +56,8 @@ namespace ClassicAssist.Tests
 
             StaticTile td = TileData.GetStaticTile( 0x1bf8 );
 
-            Assert.AreEqual( "silver ingot", td.Name );
-            Assert.IsTrue( td.Flags.HasFlag( TileFlags.Stackable ) );
+            Assert.Equal( "silver ingot", td.Name );
+            Assert.True( td.Flags.HasFlag( TileFlags.Stackable ) );
         }
     }
 }

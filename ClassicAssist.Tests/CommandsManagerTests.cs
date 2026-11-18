@@ -1,12 +1,11 @@
 ﻿using ClassicAssist.Data.Commands;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class CommandsManagerTests
     {
-        [TestMethod]
+        [Fact]
         public void WillHandleEncodedCommands()
         {
             byte[] packet =
@@ -17,7 +16,7 @@ namespace ClassicAssist.Tests
 
             string text = CommandsManager.ParseUnicodeSpeech( packet, packet.Length );
 
-            Assert.AreEqual( "+where bank", text );
+            Assert.Equal( "+where bank", text );
         }
     }
 }

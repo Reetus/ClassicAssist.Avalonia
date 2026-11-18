@@ -1,20 +1,19 @@
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Data.Organizer;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class OrganizerCommandsTests
+    public class OrganizerCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void OrganizingWillBeFalseWithNoRunningEntries()
         {
             OrganizerEntry entry = new OrganizerEntry { Name = "OrganizingFalseTest", IsRunning = () => false };
@@ -22,12 +21,12 @@ namespace ClassicAssist.Tests.MacroCommands
             OrganizerManager manager = OrganizerManager.GetInstance();
             manager.Items.Add( entry );
 
-            Assert.IsFalse( OrganizerCommands.Organizing() );
+            Assert.False( OrganizerCommands.Organizing() );
 
             manager.Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void OrganizingWillBeTrueWithARunningEntry()
         {
             OrganizerEntry entry = new OrganizerEntry { Name = "OrganizingTrueTest", IsRunning = () => true };
@@ -35,20 +34,20 @@ namespace ClassicAssist.Tests.MacroCommands
             OrganizerManager manager = OrganizerManager.GetInstance();
             manager.Items.Add( entry );
 
-            Assert.IsTrue( OrganizerCommands.Organizing() );
+            Assert.True( OrganizerCommands.Organizing() );
 
             manager.Items.Remove( entry );
         }
 
-        [TestMethod]
+        [Fact]
         public void OrganizerWillMessageForUnknownEntry()
         {
             OrganizerCommands.Organizer( "ThisOrganizerDoesNotExist" );
 
-            Assert.IsTrue( JournalCommands.InJournal( "not found", "system" ) );
+            Assert.True( JournalCommands.InJournal( "not found", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void StopOrganizerWontThrow()
         {
             OrganizerCommands.StopOrganizer();

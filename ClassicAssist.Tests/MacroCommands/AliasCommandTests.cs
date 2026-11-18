@@ -4,38 +4,36 @@ using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class AliasCommandTests
     {
         private PlayerMobile _player;
 
-        [TestInitialize]
-        public void Initialize()
+        public AliasCommandTests()
         {
             _player = new PlayerMobile( 0x01 );
             Engine.Player = _player;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetDefaultAliases()
         {
             AliasCommands.SetDefaultAliases();
 
-            Assert.AreEqual( _player.Serial, AliasCommands.GetAlias( "self" ) );
+            Assert.Equal( _player.Serial, AliasCommands.GetAlias( "self" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillChangeLastAliasOnTargetSent()
         {
             _player.LastTargetSerial = 0x02;
 
             AliasCommands.SetDefaultAliases();
 
-            Assert.AreEqual( 0x02, AliasCommands.GetAlias( "last" ) );
+            Assert.Equal( 0x02, AliasCommands.GetAlias( "last" ) );
 
             OutgoingPacketHandlers.Initialize();
             PacketHandler handler = OutgoingPacketHandlers.GetHandler( 0x6C );
@@ -47,7 +45,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             handler?.OnReceive( new PacketReader( packet, packet.Length, true ) );
 
-            Assert.AreEqual( 0xAABBCCDD, (uint) AliasCommands.GetAlias( "last" ) );
+            Assert.Equal( 0xAABBCCDD, (uint) AliasCommands.GetAlias( "last" ) );
         }
     }
 }

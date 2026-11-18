@@ -14,7 +14,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UI.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -27,8 +27,7 @@ namespace ClassicAssist.Tests
     ///     and is intentionally not committed to the repo, so the tests bail out (inconclusive) when
     ///     it isn't present.
     /// </summary>
-    [TestClass]
-    public class ProfileRoundTripTests
+    public class ProfileRoundTripTests : IDisposable
     {
         /// <summary>
         ///     Dot-notation paths excluded from the input-vs-output comparison. These are blocks/fields
@@ -91,8 +90,7 @@ namespace ClassicAssist.Tests
         private Options _originalCurrentOptions;
         private string _tempDir;
 
-        [TestInitialize]
-        public void SetUp()
+        public ProfileRoundTripTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _originalProfileDirectory = AssistantOptions.ProfileDirectory;
@@ -108,8 +106,7 @@ namespace ClassicAssist.Tests
             Options.CurrentOptions = new Options();
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             Options.CurrentOptions = _originalCurrentOptions;
 
@@ -147,23 +144,23 @@ namespace ClassicAssist.Tests
 
             HotkeyManager.GetInstance().ClearItems();
 
-            MacroManager.GetInstance().Items.Clear();
-            ScavengerManager.GetInstance().Items.Clear();
-            SkillManager.GetInstance().Items.Clear();
+            MacroManager.GetInstance().Items?.Clear();
+            ScavengerManager.GetInstance().Items?.Clear();
+            SkillManager.GetInstance().Items?.Clear();
 
             AliasCommands._aliases.Clear();
             AliasCommands._playerAliases.Clear();
             ActionCommands.UseOnceList.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void SaveProfileRoundTripsFaithfully()
         {
             string profileFile = FindProfileDataFile();
 
             if ( profileFile == null )
             {
-                Assert.Inconclusive( "ClassicAssist.Tests/data/profile.json is not present - skipping round-trip test" );
+                Assert.Skip( "ClassicAssist.Tests/data/profile.json is not present - skipping round-trip test" );
                 return;
             }
 
@@ -257,7 +254,7 @@ namespace ClassicAssist.Tests
             List<string> differences = new List<string>();
             CompareTokens( expected, actual, string.Empty, differences );
 
-            Assert.IsTrue( differences.Count == 0,
+            Assert.True( differences.Count == 0,
                 "Loading and re-saving the profile did not reproduce the input.\n" +
                 $"Deferred paths excluded: {string.Join( ", ", DeferredPaths )}\n\n" +
                 string.Join( "\n", differences ) );

@@ -2,43 +2,42 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class ConsumeCommandsTests
+    public class ConsumeCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Player = null;
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void BandageSelfWillMessageWithNoPlayer()
         {
             Engine.Player = null;
 
             bool result = ConsumeCommands.BandageSelf();
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "No Player", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "No Player", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void BandageSelfWillMessageWithNoBackpack()
         {
             Engine.Player = new PlayerMobile( 0x01 );
 
             bool result = ConsumeCommands.BandageSelf();
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Cannot find player backpack", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Cannot find player backpack", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void BandageSelfWillMessageWithNoBandageInBackpack()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -57,8 +56,8 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = ConsumeCommands.BandageSelf();
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Cannot find type", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Cannot find type", "system" ) );
 
             Engine.Items.Remove( backpack.Serial );
         }

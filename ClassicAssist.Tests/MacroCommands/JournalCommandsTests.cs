@@ -1,19 +1,22 @@
-﻿using System.Diagnostics;
-using System.IO;
+﻿using System;
+using System.Diagnostics;
+using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class JournalCommandsTests
     {
-        [TestMethod]
+        [Fact]
         public void WillMatchSystem()
         {
             Engine.Journal.Write( new JournalEntry
@@ -21,23 +24,20 @@ namespace ClassicAssist.Tests.MacroCommands
                 Text = "You are now under the protection of town guards.", SpeechType = JournalSpeech.System
             } );
 
-            Assert.IsTrue( JournalCommands.InJournal( "town guards", "system" ) );
+            Assert.True( JournalCommands.InJournal( "town guards", "system" ) );
 
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchSystemRegular()
         {
-            const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
-
-            if ( !Directory.Exists( localPath ) )
+            if ( !TestData.HasUOData )
             {
-                Debug.WriteLine( "Not running test, requires Cliloc.enu" );
                 return;
             }
 
-            Cliloc.Initialize( localPath );
+            Cliloc.Initialize( TestData.UOPath );
 
             byte[] packet =
             {
@@ -51,14 +51,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xc1 );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsTrue( JournalCommands.InJournal( "fingers slip!", "system" ) );
+            Assert.True( JournalCommands.InJournal( "fingers slip!", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchAuthor()
         {
             Engine.Journal.Write( new JournalEntry
@@ -68,12 +68,12 @@ namespace ClassicAssist.Tests.MacroCommands
                 Name = "Tony"
             } );
 
-            Assert.IsTrue( JournalCommands.InJournal( "lazy dog", "tony" ) );
+            Assert.True( JournalCommands.InJournal( "lazy dog", "tony" ) );
 
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchAny()
         {
             Engine.Journal.Write( new JournalEntry
@@ -88,14 +88,14 @@ namespace ClassicAssist.Tests.MacroCommands
                 Name = "Tony"
             } );
 
-            Assert.IsTrue( JournalCommands.InJournal( "town guards" ) );
+            Assert.True( JournalCommands.InJournal( "town guards" ) );
 
-            Assert.IsTrue( JournalCommands.InJournal( "lazy dog" ) );
+            Assert.True( JournalCommands.InJournal( "lazy dog" ) );
 
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillClearJournal()
         {
             Engine.Journal.Write( new JournalEntry
@@ -109,7 +109,7 @@ namespace ClassicAssist.Tests.MacroCommands
             // pre-existing entry is no longer matched...
             JournalCommands.ClearJournal();
 
-            Assert.IsFalse( JournalCommands.InJournal( "lazy dog" ) );
+            Assert.False( JournalCommands.InJournal( "lazy dog" ) );
 
             // ...but entries written afterwards are.
             Engine.Journal.Write( new JournalEntry
@@ -119,45 +119,64 @@ namespace ClassicAssist.Tests.MacroCommands
                 Name = "Tony"
             } );
 
-            Assert.IsTrue( JournalCommands.InJournal( "lazy dog" ) );
+            Assert.True( JournalCommands.InJournal( "lazy dog" ) );
 
             Engine.Journal.Clear();
         }
 
-        //[TestMethod]
-        //public void WaitForJournalWillMatch()
-        //{
-        //    const string text = "You are now under the protection of town guards.";
+        /// <summary>
+        ///     WaitForJournal returns as soon as a matching system message arrives as a real 0xAE packet,
+        ///     long before its timeout.
+        /// </summary>
+        [Fact]
+        public async Task WaitForJournalWillMatch()
+        {
+            EngineState.Reset();
 
-        //    byte[] textBytes = Encoding.Unicode.GetBytes( text );
+            const string text = "You are now under the protection of town guards.";
 
-        //    PacketWriter pw = new PacketWriter( 48 + textBytes.Length );
+            // Big-endian UTF-16, NUL terminated.
+            byte[] textBytes = Encoding.BigEndianUnicode.GetBytes( text + '\0' );
+            int length = 48 + textBytes.Length;
 
-        //    pw.Write( (byte) 0xAE );
-        //    pw.Write( (short) ( 48 + textBytes.Length ));
-        //    pw.Write((int)0  );
-        //    pw.Write( (short) 0 );
-        //    pw.Write((byte)1  ); // system
-        //    pw.Seek( 39, SeekOrigin.Current );
-        //    pw.Write(textBytes, 0, textBytes.Length  );
+            PacketWriter pw = new PacketWriter( length );
+            pw.Write( (byte) 0xAE );
+            pw.Write( (short) length );
+            pw.Write( -1 ); // serial
+            pw.Write( (short) -1 ); // graphic
+            pw.Write( (byte) JournalSpeech.System );
+            pw.Write( (short) 0x3B2 ); // hue
+            pw.Write( (short) 3 ); // font
+            pw.Write( new byte[4], 0, 4 ); // language
+            pw.Write( new byte[30], 0, 30 ); // name
+            pw.Write( textBytes, 0, textBytes.Length );
+            byte[] packet = pw.ToArray();
 
-        //    IncomingPacketHandlers.Initialize();
+            FieldInfo field = typeof( IncomingPacketHandlers ).GetField( "JournalEntryAddedEvent",
+                BindingFlags.Static | BindingFlags.NonPublic );
 
-        //    PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xAE );
+            int Handlers()
+            {
+                return ( (Delegate) field?.GetValue( null ) )?.GetInvocationList().Length ?? 0;
+            }
 
-        //    Task<bool> t = Task.Run(() => JournalCommands.WaitForJournal("town guards", 20000, "system"));
+            int before = Handlers();
 
-        //    handler?.OnReceive(new PacketReader( pw.ToArray(), pw.ToArray().Length, false ));
+            Stopwatch stopwatch = Stopwatch.StartNew();
 
-        //    bool finished = t.Wait( 20000 );
+            Task<bool> wait = Task.Run( () => JournalCommands.WaitForJournal( "town guards", 20000, "system" ),
+                TestContext.Current.CancellationToken );
 
-        //    Assert.IsTrue( finished );
+            // Only send once the wait is listening; a message that arrives first is (by design) not seen.
+            Assert.True( SpinWait.SpinUntil( () => Handlers() > before, 5000 ) );
 
-        //    bool result = t.Result;
+            EngineState.Receive( packet );
 
-        //    Assert.IsTrue( result );
+            Assert.True( await wait.WaitAsync( TimeSpan.FromSeconds( 5 ), TestContext.Current.CancellationToken ) );
+            Assert.True( stopwatch.ElapsedMilliseconds < 5000 );
+            Assert.Equal( before, Handlers() );
 
-        //    Engine.Journal.Clear();
-        //}
+            Engine.Journal.Clear();
+        }
     }
 }

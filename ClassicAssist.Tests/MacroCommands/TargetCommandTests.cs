@@ -10,14 +10,13 @@ using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class TargetCommandTests
     {
-        [TestMethod]
+        [Fact]
         public void WillTargetTileRelativeSelf()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { X = 100, Y = 100, Direction = Direction.East };
@@ -51,13 +50,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTargetTileRelativeSelfRunning()
         {
             Engine.Player = new PlayerMobile( 0x01 )
@@ -94,27 +93,27 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetLastTargetSerialOnInternalTargetSent()
         {
             Engine.Player = new PlayerMobile( 0x01 );
 
-            Assert.AreEqual( 0, Engine.Player.LastTargetSerial );
+            Assert.Equal( 0, Engine.Player.LastTargetSerial );
 
             TargetCommands.Target( 0x00aabbcc );
 
-            Assert.AreEqual( 0x00aabbcc, Engine.Player.LastTargetSerial );
+            Assert.Equal( 0x00aabbcc, Engine.Player.LastTargetSerial );
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillKeepLastBetweenCasts()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -157,19 +156,19 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 60000 );
 
-            Assert.AreEqual( 0x00aabbcc, AliasCommands.GetAlias( "last" ) );
+            Assert.Equal( 0x00aabbcc, AliasCommands.GetAlias( "last" ) );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Task.Run( () => SpellCommands.Cast( "Explosion", "last" ) );
 
             result = are.WaitOne( 60000 );
 
-            Assert.AreEqual( 0x00aabbcc, AliasCommands.GetAlias( "last" ) );
+            Assert.Equal( 0x00aabbcc, AliasCommands.GetAlias( "last" ) );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
-            Assert.AreEqual( 0x00aabbcc, Engine.Player.LastTargetSerial );
+            Assert.Equal( 0x00aabbcc, Engine.Player.LastTargetSerial );
 
             Engine.PacketWaitEntries.WaitEntryAddedEvent -= OnWaitEntryAddedEvent;
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
@@ -177,7 +176,7 @@ namespace ClassicAssist.Tests.MacroCommands
         }
 
         //TODO more robust testing
-        [TestMethod]
+        [Fact]
         public void WillGetFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -194,27 +193,27 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Innocent" } );
 
-            Assert.AreEqual( 0x02, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 0x02, AliasCommands.GetAlias( "friend" ) );
 
             TargetCommands.GetFriend( new[] { "Friend" } );
 
-            Assert.AreEqual( 0x03, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 0x03, AliasCommands.GetAlias( "friend" ) );
 
             TargetCommands.GetFriend( new[] { "Murderer" } );
 
-            Assert.AreEqual( 0x04, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 0x04, AliasCommands.GetAlias( "friend" ) );
 
             TargetCommands.GetFriend( new[] { "Innocent", "Friend", "Murderer" } );
 
             int friend = AliasCommands.GetAlias( "friend" );
 
-            Assert.IsTrue( ( (IList) new[] { 0x02, 0x03, 0x04 } ).Contains( friend ) );
+            Assert.True( ( (IList) new[] { 0x02, 0x03, 0x04 } ).Contains( friend ) );
 
             Engine.Mobiles.Remove( mobiles );
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillOnlyGetClosestFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -229,23 +228,23 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriend( new[] { "Murderer" }, "Any", "Closest" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
-            Assert.AreEqual( random.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( random.Serial, AliasCommands.GetAlias( "friend" ) );
 
             // Will get mate even though he is further away
             result = TargetCommands.GetFriendListOnly( "Closest" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
-            Assert.AreEqual( mate.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( mate.Serial, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontGetEnemyFriendClosest()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -261,16 +260,16 @@ namespace ClassicAssist.Tests.MacroCommands
             // Won't get mate even though he is closest
             bool result = TargetCommands.GetEnemy( new[] { "Murderer" }, "Any", "Closest" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
-            Assert.AreEqual( random.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( random.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontGetEnemyFriendNext()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -282,22 +281,22 @@ namespace ClassicAssist.Tests.MacroCommands
             // Will get mate because he's not in the friends list yet
             bool result = TargetCommands.GetEnemy( new[] { "Murderer" } );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mate.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.True( result );
+            Assert.Equal( mate.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             Options.CurrentOptions.Friends.Add( new FriendEntry { Name = "Mate", Serial = mate.Serial } );
 
             // Won't get a result because mate is in the friends list
             result = TargetCommands.GetEnemy( new[] { "Murderer" } );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetEnemyClosestBodyType()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -309,21 +308,21 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Mobiles.Add( new[] { any, humanoid, transformation } );
 
             TargetCommands.GetEnemy( new[] { "Murderer" }, "Any", "Closest" );
-            Assert.AreEqual( any.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( any.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             TargetCommands.GetEnemy( new[] { "Murderer" }, "Humanoid", "Closest" );
-            Assert.AreEqual( humanoid.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( humanoid.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             TargetCommands.GetEnemy( new[] { "Murderer" }, "Transformation", "Closest" );
-            Assert.AreEqual( transformation.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( transformation.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             TargetCommands.GetEnemy( new[] { "Murderer" }, "Both", "Closest" );
-            Assert.AreEqual( humanoid.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( humanoid.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTargetType()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -351,14 +350,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= PassOnTargetSent;
             Engine.Items.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTargetTypeLessThanSearchLevel()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -400,14 +399,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= PassOnTargetSent;
             Engine.Items.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontTargetTypeGreaterThanSearchLevel()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -450,7 +449,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTargetGround()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -474,14 +473,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= PassOnTargetSent;
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetLowestEnemy()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -502,13 +501,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Closest", "Lowest" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetParalyzedEnemy()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -529,13 +528,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Closest", "Paralyzed" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetPoisonedEnemy()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -556,13 +555,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Closest", "Poisoned" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetMortaledEnemy()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -583,13 +582,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Closest", "Mortaled" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetUnmounted()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -613,17 +612,17 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Closest", "Unmounted" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             TargetCommands.GetFriend( new[] { "Criminal" }, "Any", "Closest", "Unmounted" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetUnmountedFriendOnly()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -648,7 +647,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriendListOnly( "Closest", "Unmounted" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
@@ -656,7 +655,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetLowestFriendOnly()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -679,7 +678,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriendListOnly( "Closest", "Lowest" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
@@ -687,7 +686,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetPoisonedFriendOnly()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -710,7 +709,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriendListOnly( "Closest", "Poisoned" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
@@ -718,7 +717,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetMortaledFriendOnly()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -741,7 +740,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriendListOnly( "Closest", "Mortaled" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             Engine.Mobiles.Clear();
@@ -749,7 +748,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetLowestFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -770,14 +769,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Friend" }, "Any", "Closest", "Lowest" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetPoisonedFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -798,14 +797,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Friend" }, "Any", "Closest", "Poisoned" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetMortaledFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -826,14 +825,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Friend" }, "Any", "Closest", "Mortaled" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetNextLowestEnemy()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -855,17 +854,17 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Next", "Lowest" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "enemy" ) );
 
             TargetCommands.GetEnemy( new[] { "Criminal" }, "Any", "Next", "Lowest" );
 
-            Assert.AreEqual( 8, AliasCommands.GetAlias( "enemy" ) );
+            Assert.Equal( 8, AliasCommands.GetAlias( "enemy" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetClosestEnemy()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -876,22 +875,22 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetEnemy( new[] { Notoriety.Murderer.ToString() }, "Any", "Closest" );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetEnemy( new[] { Notoriety.Murderer.ToString() }, "Any", "Closest" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             ObjectCommands.ClearIgnoreList();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetNextEnemy()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -902,22 +901,22 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetEnemy( new[] { Notoriety.Murderer.ToString() } );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "enemy" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "enemy" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetEnemy( new[] { Notoriety.Murderer.ToString() } );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             ObjectCommands.ClearIgnoreList();
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetClosestFriend()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -928,15 +927,15 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriend( new[] { Notoriety.Murderer.ToString() }, "Any", "Closest" );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetFriend( new[] { Notoriety.Murderer.ToString() }, "Any", "Closest" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             ObjectCommands.ClearIgnoreList();
             Engine.Mobiles.Clear();
@@ -944,7 +943,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetNextFriend()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -955,15 +954,15 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriend( new[] { Notoriety.Murderer.ToString() } );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetFriend( new[] { Notoriety.Murderer.ToString() } );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             ObjectCommands.ClearIgnoreList();
             Engine.Mobiles.Clear();
@@ -971,7 +970,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetClosestFriendOnly()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -983,15 +982,15 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriendListOnly( "Closest" );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetFriendListOnly( "Closest" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Options.CurrentOptions.Friends.Clear();
             ObjectCommands.ClearIgnoreList();
@@ -1000,7 +999,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseIgnoreListIfEnabledGetNextFriendOnly()
         {
             Options.CurrentOptions.GetFriendEnemyUsesIgnoreList = true;
@@ -1012,15 +1011,15 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriendListOnly();
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             AliasCommands.UnsetAlias( "enemy" );
             ObjectCommands.IgnoreObject( mobile.Serial );
 
             result = TargetCommands.GetFriendListOnly();
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Options.CurrentOptions.Friends.Clear();
             ObjectCommands.ClearIgnoreList();
@@ -1029,7 +1028,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontGetInvalidBodyGetFriendListOnlyTransformation()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -1039,17 +1038,17 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = TargetCommands.GetFriendListOnly( "Closest", "Any", "Humanoid" );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             result = TargetCommands.GetFriendListOnly( "Closest", "Any", "Transformation" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             result = TargetCommands.GetFriendListOnly();
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
+            Assert.True( result );
+            Assert.Equal( mobile.Serial, AliasCommands.GetAlias( "friend" ) );
 
             Options.CurrentOptions.Friends.Clear();
             ObjectCommands.ClearIgnoreList();
@@ -1058,7 +1057,7 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetDeadFriend()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -1079,14 +1078,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Friend" }, "Any", "Closest", "Dead" );
 
-            Assert.AreEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.Equal( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
             AliasCommands.SetAlias( "friend", -1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontGetDeadFriendLowest()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -1108,7 +1107,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TargetCommands.GetFriend( new[] { "Friend" }, "Any", "Closest", "Lowest" );
 
-            Assert.AreNotEqual( 7, AliasCommands.GetAlias( "friend" ) );
+            Assert.NotEqual( 7, AliasCommands.GetAlias( "friend" ) );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;

@@ -1,39 +1,37 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
+using Xunit;
 using static ClassicAssist.Data.Macros.Commands.ListCommands;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class ListCommandTests
+    public class ListCommandTests : IDisposable
     {
-        [TestInitialize]
-        public void Initialize()
+        public ListCommandTests()
         {
             CreateList( "shmoo" );
             PushList( "shmoo", 0 );
             PushList( "shmoo", 1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void ListExistsWillReturnTrue()
         {
-            Assert.IsTrue( ListExists( "shmoo" ) );
+            Assert.True( ListExists( "shmoo" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void GetListWillReturnArray()
         {
-            Assert.IsTrue( GetList( "shmoo" ) is object[] _ );
+            Assert.True( GetList( "shmoo" ) is object[] _ );
         }
 
-        [TestMethod]
+        [Fact]
         public void ListCountWillReturnCorrect()
         {
-            Assert.AreEqual( 2, List( "shmoo" ) );
+            Assert.Equal( 2, List( "shmoo" ) );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             RemoveList( "shmoo" );
         }

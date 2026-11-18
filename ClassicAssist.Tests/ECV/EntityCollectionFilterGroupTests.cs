@@ -5,11 +5,10 @@ using ClassicAssist.Data.Autoloot;
 using ClassicAssist.UI.Models;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.ECV
 {
-    [TestClass]
     public class EntityCollectionFilterGroupTests
     {
         // Predicate-based constraint matching on item ID, so filtering behaviour can be asserted
@@ -91,7 +90,7 @@ namespace ClassicAssist.Tests.ECV
             return group;
         }
 
-        [TestMethod]
+        [Fact]
         public void SingleLeafGroupFiltersMatchingItems()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -99,10 +98,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { LeafGroup( IdFilter( 0x02 ) ) }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x02 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SingleTopLevelGroupOperationIsIgnored()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -111,10 +110,10 @@ namespace ClassicAssist.Tests.ECV
                 new List<EntityCollectionFilterGroup> { LeafGroup( BooleanOperation.Not, IdFilter( 0x02 ) ) },
                 source );
 
-            CollectionAssert.AreEqual( new[] { 0x02 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void MultipleItemsInGroupAreAnded()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -127,10 +126,10 @@ namespace ClassicAssist.Tests.ECV
                 },
                 source );
 
-            CollectionAssert.AreEqual( new[] { 0x02, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void MultipleTopLevelGroupsAreAnded()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -143,10 +142,10 @@ namespace ClassicAssist.Tests.ECV
 
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups( groups, source );
 
-            CollectionAssert.AreEqual( new[] { 0x02, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void MultipleTopLevelGroupsAreOred()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -159,10 +158,10 @@ namespace ClassicAssist.Tests.ECV
 
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups( groups, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void MultipleTopLevelGroupsAreNotted()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -175,10 +174,10 @@ namespace ClassicAssist.Tests.ECV
 
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups( groups, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x03, 0x04 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x03, 0x04 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SubGroupsAreAnded()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -190,10 +189,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x02, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SubGroupsAreOred()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -205,10 +204,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SubGroupsAreNotted()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -220,10 +219,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x03, 0x04 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x03, 0x04 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FirstChildOperationIsIgnored()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -235,10 +234,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x02 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x02 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void BranchGroupIgnoresItsOwnItems()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -249,10 +248,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x02 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x02 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void DeeplyNestedSubGroupsFilter()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -266,10 +265,10 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup> { group }, source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x02, 0x03 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x02, 0x03 }, GetIds( result ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void EmptyGroupListReturnsSource()
         {
             ItemCollection source = CreateSource( 0x01, 0x02, 0x03, 0x04 );
@@ -277,7 +276,7 @@ namespace ClassicAssist.Tests.ECV
             ItemCollection result = EntityCollectionViewerViewModel.EvaluateGroups(
                 new List<EntityCollectionFilterGroup>(), source );
 
-            CollectionAssert.AreEqual( new[] { 0x01, 0x02, 0x03, 0x04 }, GetIds( result ) );
+            Assert.Equal( new[] { 0x01, 0x02, 0x03, 0x04 }, GetIds( result ) );
         }
     }
 }

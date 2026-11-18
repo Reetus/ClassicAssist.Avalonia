@@ -7,12 +7,12 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class RehueFriendsTests
+    public class RehueFriendsTests : IDisposable
     {
         private const int FriendSerial = 0x00005678;
         private const int FriendHue = 0x0123;
@@ -22,8 +22,7 @@ namespace ClassicAssist.Tests
         private int _previousHue;
         private HashSet<Layer> _previousExcluded;
 
-        [TestInitialize]
-        public void Initialize()
+        public RehueFriendsTests()
         {
             IncomingPacketFilters.Initialize();
 
@@ -41,8 +40,7 @@ namespace ClassicAssist.Tests
             options.Friends.Add( new FriendEntry { Name = "Friend", Serial = FriendSerial } );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Options options = Options.CurrentOptions;
 
@@ -93,55 +91,55 @@ namespace ClassicAssist.Tests
             return sent;
         }
 
-        [TestMethod]
+        [Fact]
         public void WornItemOnFriendIsSentRehuedAndOriginalKept()
         {
             byte[] packet = WornItem( FriendSerial, Layer.OneHanded, 0x0020 );
 
             byte[] sent = CheckWornItem( packet, out bool rehued );
 
-            Assert.IsTrue( rehued );
-            Assert.IsNotNull( sent );
-            Assert.AreEqual( FriendHue, ( sent[13] << 8 ) | sent[14] );
-            Assert.AreEqual( 0x0020, ( packet[13] << 8 ) | packet[14] );
+            Assert.True( rehued );
+            Assert.NotNull( sent );
+            Assert.Equal( FriendHue, ( sent[13] << 8 ) | sent[14] );
+            Assert.Equal( 0x0020, ( packet[13] << 8 ) | packet[14] );
         }
 
-        [TestMethod]
+        [Fact]
         public void WornItemOnExcludedLayerIsLeftAlone()
         {
             Options.CurrentOptions.RehueFriendsExcludedLayers = [Layer.OneHanded];
 
             byte[] sent = CheckWornItem( WornItem( FriendSerial, Layer.OneHanded, 0x0020 ), out bool rehued );
 
-            Assert.IsFalse( rehued );
-            Assert.IsNull( sent );
+            Assert.False( rehued );
+            Assert.Null( sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WornItemOnStrangerIsLeftAlone()
         {
             byte[] sent = CheckWornItem( WornItem( FriendSerial + 1, Layer.OneHanded, 0x0020 ), out bool rehued );
 
-            Assert.IsFalse( rehued );
-            Assert.IsNull( sent );
+            Assert.False( rehued );
+            Assert.Null( sent );
         }
 
-        [TestMethod]
+        [Fact]
         public void WornItemWaitsOnlyForFriends()
         {
             PacketWaitRuleSet rules = PacketWaitRuleSet.Create( PacketWaitRegistry.BuildRules() );
 
-            Assert.IsTrue( rules.MustWait( WornItem( FriendSerial, Layer.OneHanded, 0 ), false ) );
-            Assert.IsFalse( rules.MustWait( WornItem( FriendSerial + 1, Layer.OneHanded, 0 ), false ) );
+            Assert.True( rules.MustWait( WornItem( FriendSerial, Layer.OneHanded, 0 ), false ) );
+            Assert.False( rules.MustWait( WornItem( FriendSerial + 1, Layer.OneHanded, 0 ), false ) );
 
             Options.CurrentOptions.RehueFriends = false;
 
             rules = PacketWaitRuleSet.Create( PacketWaitRegistry.BuildRules() );
 
-            Assert.IsFalse( rules.MustWait( WornItem( FriendSerial, Layer.OneHanded, 0 ), false ) );
+            Assert.False( rules.MustWait( WornItem( FriendSerial, Layer.OneHanded, 0 ), false ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void MobileIncomingSkipsExcludedLayersAndBody()
         {
             Mobile mobile = new Mobile( FriendSerial ) { ID = 0x190, Hue = 0x0010 };
@@ -153,9 +151,9 @@ namespace ClassicAssist.Tests
                 .ToArray();
 
             // Body hue at 15, then 9 bytes per item with the hue at item offset 7
-            Assert.AreEqual( 0x0010, ( packet[15] << 8 ) | packet[16] );
-            Assert.AreEqual( FriendHue, ( packet[26] << 8 ) | packet[27] );
-            Assert.AreEqual( 0x0030, ( packet[35] << 8 ) | packet[36] );
+            Assert.Equal( 0x0010, ( packet[15] << 8 ) | packet[16] );
+            Assert.Equal( FriendHue, ( packet[26] << 8 ) | packet[27] );
+            Assert.Equal( 0x0030, ( packet[35] << 8 ) | packet[36] );
         }
     }
 }

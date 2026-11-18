@@ -2,39 +2,38 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class WandCommandsTests
+    public class WandCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Features = FeatureFlags.None;
             Engine.Journal.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void EquipWandWillMessageForInvalidWandName()
         {
             bool result = WandCommands.EquipWand( "ThisWandDoesNotExist" );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Invalid skill name", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Invalid skill name", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FindWandWillMessageForInvalidWandName()
         {
             bool result = WandCommands.FindWand( "ThisWandDoesNotExist" );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Invalid skill name", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Invalid skill name", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FindWandWillMessageWhenNoneFound()
         {
             // AOS set so FindWands skips its LookRequest/property-query loop (no server to answer
@@ -43,11 +42,11 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = WandCommands.FindWand( "Clumsy" );
 
-            Assert.IsFalse( result );
-            Assert.IsTrue( JournalCommands.InJournal( "Cannot find item", "system" ) );
+            Assert.False( result );
+            Assert.True( JournalCommands.InJournal( "Cannot find item", "system" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void FindWandWillSetFoundAliasOnMatch()
         {
             Engine.Features = FeatureFlags.AOS;
@@ -61,8 +60,8 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = WandCommands.FindWand( "Clumsy" );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( wand.Serial, AliasCommands.GetAlias( "found" ) );
+            Assert.True( result );
+            Assert.Equal( wand.Serial, AliasCommands.GetAlias( "found" ) );
 
             Engine.Items.Remove( wand.Serial );
         }
