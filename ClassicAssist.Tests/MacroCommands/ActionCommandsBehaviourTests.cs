@@ -226,7 +226,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Assert.DoesNotContain( Engine.GetRuntimeFilterWaitRules(), r => r.PacketId == 0xBF );
         }
 
-        [Fact( Skip = "BUG: MatchFilterAll returns a filter once per matching condition, so WaitForContext clicks twice" )]
+        [Fact]
         public async Task WaitForContextWillClickOnlyOnce()
         {
             using PacketRecorder recorder = new PacketRecorder();
@@ -243,7 +243,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Assert.Single( recorder.SentWithId( 0xBF ), p => ReadShort( p, 3 ) == 0x15 );
         }
 
-        [Fact( Skip = "BUG: MatchFilterAll ORs a filter's conditions, so WaitForContext answers a menu for another object" )]
+        [Fact]
         public async Task WaitForContextWontAnswerAMenuForAnotherObject()
         {
             ThreadQueue<Packet> savedIncoming = Engine.IncomingQueue;

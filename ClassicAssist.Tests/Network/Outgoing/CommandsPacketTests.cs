@@ -152,7 +152,7 @@ namespace ClassicAssist.Tests.Network.Outgoing
             Assert.Equal( expected, Assert.Single( recorder.SentWithId( 0xAD ) ) );
         }
 
-        [Fact( Skip = "BUG: Commands.Speak writes the length high byte as (byte)(length << 8), always 0 " )]
+        [Fact]
         public void WillWriteSpeechLengthAbove255()
         {
             using PacketRecorder recorder = new PacketRecorder();

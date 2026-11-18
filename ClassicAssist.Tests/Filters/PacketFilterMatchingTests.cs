@@ -125,7 +125,7 @@ namespace ClassicAssist.Tests.Filters
             Assert.False( filter.MatchFilter( forThree ) );
         }
 
-        [Fact( Skip = "BUG: MatchFilterAll claims a packet when any one condition holds; WaitForContext relies on all" )]
+        [Fact]
         public void MatchFilterAllWillNeedEveryCondition()
         {
             PacketFilter filter = new PacketFilter();
@@ -137,7 +137,7 @@ namespace ClassicAssist.Tests.Filters
             Assert.Equal( 0, filter.MatchFilterAll( forThree, out _ ) );
         }
 
-        [Fact( Skip = "BUG: MatchFilterAll lists a filter once per matching condition, so its action runs repeatedly" )]
+        [Fact]
         public void MatchFilterAllWillListAFilterOnce()
         {
             PacketFilter filter = new PacketFilter();

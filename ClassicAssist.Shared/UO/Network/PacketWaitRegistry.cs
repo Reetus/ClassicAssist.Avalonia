@@ -131,7 +131,8 @@ public static class PacketWaitRegistry
 
     /// <summary>
     ///     A runtime filter's rules. <see cref="PacketFilter.PacketFilter.MatchFilterAll" /> claims a
-    ///     packet when any one of its conditions holds, so each condition becomes a rule of its own; a
+    ///     packet only when all of its conditions hold; each condition still becomes a rule of its own,
+    ///     which waits on a superset of those packets - never fewer - at the cost of the odd extra wait. A
     ///     filter without conditions claims every packet with its id, and one with an empty set never
     ///     matches anything.
     /// </summary>

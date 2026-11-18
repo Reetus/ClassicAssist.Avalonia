@@ -182,7 +182,7 @@ namespace ClassicAssist.Tests.Gumps
             Assert.Equal( "Hi", Encoding.BigEndianUnicode.GetString( packet, 27, 4 ) );
         }
 
-        [Fact( Skip = "BUG: GumpButtonClick writes text entry length as bytes (chars*2) and pads to 4 bytes per char " )]
+        [Fact]
         public void WillWriteTextEntryLengthInCharacters()
         {
             Engine.GumpList[GumpId] = GumpSerial;
