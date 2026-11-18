@@ -226,32 +226,46 @@ public class PacketFilter
                 // No condition so just match packetid
                 pfiList.Add( _filters[i] );
             }
-            else
+            else if ( MatchesAllConditions( packet, _filters[i].GetConditions() ) )
             {
-                foreach ( PacketFilterCondition fc in _filters[i].GetConditions() )
-                {
-                    if ( fc.Position + fc.Length > packet.Length )
-                    {
-                        continue;
-                    }
-
-                    byte[] tmp = new byte[fc.Length];
-                    Buffer.BlockCopy( packet, fc.Position, tmp, 0, fc.Length );
-
-                    bool equals = tmp.SequenceEqual( fc.GetBytes() );
-
-                    if ( ( fc.Negate && equals ) || ( !fc.Negate && !equals ) )
-                    {
-                        continue;
-                    }
-
-                    pfiList.Add( _filters[i] );
-                }
+                // Every condition must hold, and the filter is listed once - as PacketWaitEntries does.
+                // Matching any one condition let WaitForContext answer (and hide) a context menu meant for
+                // another object, and listing the filter per matching condition ran its action repeatedly.
+                pfiList.Add( _filters[i] );
             }
         }
 
         pfis = [.. pfiList];
 
         return pfiList.Count;
+    }
+
+    /// <summary>True when every condition holds; an empty set matches nothing.</summary>
+    private static bool MatchesAllConditions( byte[] packet, PacketFilterCondition[] conditions )
+    {
+        if ( conditions.Length == 0 )
+        {
+            return false;
+        }
+
+        foreach ( PacketFilterCondition fc in conditions )
+        {
+            if ( fc.Position + fc.Length > packet.Length )
+            {
+                return false;
+            }
+
+            byte[] tmp = new byte[fc.Length];
+            Buffer.BlockCopy( packet, fc.Position, tmp, 0, fc.Length );
+
+            bool equals = tmp.SequenceEqual( fc.GetBytes() );
+
+            if ( ( fc.Negate && equals ) || ( !fc.Negate && !equals ) )
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -774,7 +774,7 @@ public class Commands
 
         byte[] packet = writer.ToArray();
 
-        packet[1] = (byte) ( packet.Length << 8 );
+        packet[1] = (byte) ( packet.Length >> 8 );
         packet[2] = (byte) packet.Length;
 
         Engine.SendPacketToServer( packet, packet.Length );

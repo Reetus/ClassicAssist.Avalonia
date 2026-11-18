@@ -340,7 +340,7 @@ namespace ClassicAssist.Tests.Network.Incoming
         ///     text grows without bound. Pre-AOS shards send this for a single click on an unidentified
         ///     magic weapon.
         /// </summary>
-        [Fact( Skip = "BUG: 0xBF 0x10 with the unidentified marker (-4) loops forever (IncomingPacketHandlers.OnDisplayEquipmentInfo)" )]
+        [Fact]
         public async Task WillFinishEquipmentInfoForUnidentifiedItem()
         {
             Receive( AddToContainer( ITEM, 0x13B9, 1, BACKPACK ) );

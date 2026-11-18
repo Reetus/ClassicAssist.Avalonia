@@ -147,7 +147,7 @@ public static class TileData
         {
             for ( int i = 0; i < 0x4000; ++i )
             {
-                if ( i == 0 || i > 0 && ( i & 0x1f ) == 0 )
+                if ( ( i & 0x1f ) == 0 )
                 {
                     p += 4; // block header
                 }
@@ -164,7 +164,7 @@ public static class TileData
         {
             for ( int i = 0; i < 0x4000; ++i )
             {
-                if ( i == 1 || i > 0 && ( i & 0x1f ) == 0 )
+                if ( ( i & 0x1f ) == 0 )
                 {
                     p += 4; // block header
                 }

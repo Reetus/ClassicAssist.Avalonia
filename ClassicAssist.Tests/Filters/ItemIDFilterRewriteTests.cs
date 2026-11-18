@@ -188,7 +188,7 @@ namespace ClassicAssist.Tests.Filters
             Assert.Equal( 7, packet[last + 3] );
         }
 
-        [Fact( Skip = "BUG: ItemIDFilter 0x3C detects old-style records by length / 20 != count, which fails for up to 5 items" )]
+        [Fact]
         public void WillUseNineteenByteRecordsForSmallOldStyleContainerContents()
         {
             AddEntry( 0x0021 );

@@ -612,14 +612,11 @@ public static class IncomingPacketHandlers
                     }
                 case 0xFFFFFFFC:
                     {
-                        number = reader.ReadUInt32();
-                        charges = reader.ReadUInt16();
+                        // Unidentified. RunUO / ServUO write the bare marker with nothing after it; reading an
+                        // attribute here swallowed the -1 terminator and the loop never ended.
+                        properties.Add( new Property { Cliloc = -4, Text = "Unidentified" } );
 
-                        attrName = Cliloc.GetProperty( (int) number );
-
-                        properties.Add( new Property { Cliloc = (int) number, Text = attrName, Arguments = [charges.ToString()] } );
-
-                        journalOutput += $" {attrName}";
+                        journalOutput += " Unidentified";
 
                         break;
                     }
@@ -638,7 +635,8 @@ public static class IncomingPacketHandlers
                     }
             }
 
-            if ( next == 0xFFFFFFFF )
+            // A truncated packet has no terminator; past the end every read returns 0, which would loop forever.
+            if ( next == 0xFFFFFFFF || reader.Size - reader.Index < 4 )
             {
                 break;
             }
@@ -1363,7 +1361,9 @@ public static class IncomingPacketHandlers
 
     private static void OnSupportedFeatures( PacketReader reader )
     {
-        Engine.Features = (FeatureFlags) reader.ReadInt32();
+        // Clients before 6.0.14.2 get the 3-byte form with 16-bit flags; reading 32 bits there would
+        // shift the flags into the high half and lose AOS.
+        Engine.Features = reader.Size <= 3 ? (FeatureFlags) reader.ReadUInt16() : (FeatureFlags) reader.ReadInt32();
     }
 
     private static void OnSkillsList( PacketReader reader )

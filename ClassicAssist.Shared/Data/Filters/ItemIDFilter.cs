@@ -153,7 +153,9 @@ public class ItemIDFilter : DynamicFilterEntry, IConfigurableFilter
 
                     int count = ( packet[3] << 8 ) | packet[4];
 
-                    if ( length / 20 != count )
+                    // Records follow a 5-byte header, as in IncomingPacketHandlers.OnContainerContents.
+                    // Without subtracting it, 1-5 new-style records looked old-style and were misread.
+                    if ( ( length - 5 ) / 20 != count )
                     {
                         oldStyle = true;
                     }

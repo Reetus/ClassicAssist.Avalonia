@@ -158,7 +158,7 @@ namespace ClassicAssist.Tests.UOData
         ///     skips that header after tile 0 (at i == 1) instead of before it, so tile 0 is read 4 bytes early:
         ///     its flags take the header and its name comes out shifted.
         /// </summary>
-        [Fact( Skip = "BUG: TileData.LoadLandTiles (new layout) skips the first block header after land tile 0, so tile 0 is misread" )]
+        [Fact]
         public void WillReadLandTileZeroInTheNewLayout()
         {
             TileDataBuilder builder = new TileDataBuilder();

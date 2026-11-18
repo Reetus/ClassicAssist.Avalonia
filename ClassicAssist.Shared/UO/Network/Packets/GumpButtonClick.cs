@@ -41,7 +41,8 @@ public class GumpButtonClick : BasePacket, IMacroCommandParser
 
             foreach ( KeyValuePair<int, string> keyValuePair in textEntries )
             {
-                int length = keyValuePair.Value.Length * 2;
+                // In characters, not bytes: servers reject entries whose declared length exceeds 239.
+                int length = keyValuePair.Value.Length;
 
                 _writer.Write( (short) keyValuePair.Key );
                 _writer.Write( (short) length );

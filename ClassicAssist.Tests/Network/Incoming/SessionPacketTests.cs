@@ -52,7 +52,7 @@ namespace ClassicAssist.Tests.Network.Incoming
         ///     comes out as SA | HS | ... and AOS-only commands (wands, autoloot property checks) see a
         ///     pre-AOS shard.
         /// </summary>
-        [Fact( Skip = "BUG: 3-byte 0xB9 from pre-6.0.14.2 clients is read as 32 bits, shifting the flags (IncomingPacketHandlers.OnSupportedFeatures)" )]
+        [Fact]
         public void WillReadSixteenBitFlagsOnOldSupportedFeatures()
         {
             Engine.ClientVersion = new Version( 5, 0, 9, 1 );
