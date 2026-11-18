@@ -6,30 +6,29 @@ using System.Reflection;
 using ClassicAssist.Shared;
 using ClassicAssist.Data;
 using ClassicAssist.Misc;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     [Serializable]
     public class ConfigTests
     {
         private string _profilePath;
 
-        [TestMethod]
+        [Fact]
         public void WontThrowExceptionOnDeserializeNullConfig()
         {
             TestConfig( null );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontThrowExceptionOnDeserializeEmptyConfig()
         {
             TestConfig( new JObject() );
         }
 
-        public void TestConfig( JObject json )
+        private void TestConfig( JObject json )
         {
             string path = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location );
 

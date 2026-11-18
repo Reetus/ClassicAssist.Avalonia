@@ -20,15 +20,14 @@
 using ClassicAssist.Data;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class ActionDelayTests
     {
-        [TestMethod]
+        [Fact]
         public void WillUseGlobalActionDelayWhenNoOverride()
         {
             int previous = Options.CurrentOptions.ActionDelayMS;
@@ -39,7 +38,7 @@ namespace ClassicAssist.Tests
 
                 ActionQueueItem queueItem = new ActionQueueItem( o => true );
 
-                Assert.AreEqual( 750, ActionPacketQueue.GetActionDelay( queueItem ) );
+                Assert.Equal( 750, ActionPacketQueue.GetActionDelay( queueItem ) );
             }
             finally
             {
@@ -47,7 +46,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillUseItemActionDelayOverride()
         {
             int previous = Options.CurrentOptions.ActionDelayMS;
@@ -58,7 +57,7 @@ namespace ClassicAssist.Tests
 
                 ActionQueueItem queueItem = new ActionQueueItem( o => true ) { DelayMS = 1500 };
 
-                Assert.AreEqual( 1500, ActionPacketQueue.GetActionDelay( queueItem ) );
+                Assert.Equal( 1500, ActionPacketQueue.GetActionDelay( queueItem ) );
             }
             finally
             {
@@ -66,7 +65,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillDefaultAutolootActionDelayToGeneralActionDelay()
         {
             AutolootViewModel vm = new AutolootViewModel();
@@ -75,20 +74,20 @@ namespace ClassicAssist.Tests
 
             vm.Deserialize( json, new Options() );
 
-            Assert.AreEqual( 650, vm.ActionDelayMS );
+            Assert.Equal( 650, vm.ActionDelayMS );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillDefaultAutolootActionDelayTo1000WhenNoConfig()
         {
             AutolootViewModel vm = new AutolootViewModel { ActionDelayMS = 5 };
 
             vm.Deserialize( new JObject(), new Options() );
 
-            Assert.AreEqual( 1000, vm.ActionDelayMS );
+            Assert.Equal( 1000, vm.ActionDelayMS );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRoundTripAutolootActionDelay()
         {
             AutolootViewModel vm = new AutolootViewModel { ActionDelayMS = 2500 };
@@ -101,7 +100,7 @@ namespace ClassicAssist.Tests
 
             loaded.Deserialize( json, new Options() );
 
-            Assert.AreEqual( 2500, loaded.ActionDelayMS );
+            Assert.Equal( 2500, loaded.ActionDelayMS );
         }
     }
 }

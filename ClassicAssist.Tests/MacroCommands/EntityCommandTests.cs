@@ -20,7 +20,7 @@
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network.PacketFilter;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
@@ -29,7 +29,6 @@ namespace ClassicAssist.Tests.MacroCommands
     ///     on the serial at offset 1. Its default timeout is -1, so anything that stops it from matching
     ///     hangs the macro rather than returning False - hence the unknown-alias and wrong-serial cases.
     /// </summary>
-    [TestClass]
     public class EntityCommandTests
     {
         private const int SERIAL = 0x40000001;
@@ -71,16 +70,16 @@ namespace ClassicAssist.Tests.MacroCommands
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillWaitForRemoveObject()
         {
-            Assert.IsTrue( RunWaitForRemoveObject( SERIAL, 1000, SERIAL ) );
+            Assert.True( RunWaitForRemoveObject( SERIAL, 1000, SERIAL ) );
         }
 
         /// <summary>
         ///     The default timeout is infinite, so this only returns because the packet arrives.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillWaitForRemoveObjectWithNoTimeout()
         {
             Engine.PacketWaitEntries = new PacketWaitEntries();
@@ -96,7 +95,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             try
             {
-                Assert.IsTrue( EntityCommands.WaitForRemoveObject( SERIAL ) );
+                Assert.True( EntityCommands.WaitForRemoveObject( SERIAL ) );
             }
             finally
             {
@@ -104,14 +103,14 @@ namespace ClassicAssist.Tests.MacroCommands
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillResolveAlias()
         {
             AliasCommands.SetAlias( "removeobjecttest", SERIAL );
 
             try
             {
-                Assert.IsTrue( RunWaitForRemoveObject( "removeobjecttest", 1000, SERIAL ) );
+                Assert.True( RunWaitForRemoveObject( "removeobjecttest", 1000, SERIAL ) );
             }
             finally
             {
@@ -119,39 +118,39 @@ namespace ClassicAssist.Tests.MacroCommands
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillNotWaitForRemoveObjectOfDifferentSerial()
         {
-            Assert.IsFalse( RunWaitForRemoveObject( SERIAL, 100, 0x40000002 ) );
+            Assert.False( RunWaitForRemoveObject( SERIAL, 100, 0x40000002 ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTimeoutWithNoRemoveObject()
         {
-            Assert.IsFalse( RunWaitForRemoveObject( SERIAL, 100, null ) );
+            Assert.False( RunWaitForRemoveObject( SERIAL, 100, null ) );
         }
 
         /// <summary>
         ///     An unknown alias resolves to -1, which must not become a wait on serial 0xFFFFFFFF.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotWaitForUnknownAlias()
         {
             Engine.PacketWaitEntries = new PacketWaitEntries();
 
-            Assert.IsFalse( EntityCommands.WaitForRemoveObject( "notanalias" ) );
-            Assert.AreEqual( 0, Engine.PacketWaitEntries.GetEntries().Length );
+            Assert.False( EntityCommands.WaitForRemoveObject( "notanalias" ) );
+            Assert.Empty( Engine.PacketWaitEntries.GetEntries() );
         }
 
         /// <summary>
         ///     A timed-out entry is never matched, so nothing else removes it.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillRemoveWaitEntryOnTimeout()
         {
             RunWaitForRemoveObject( SERIAL, 100, null );
 
-            Assert.AreEqual( 0, Engine.PacketWaitEntries.GetEntries().Length );
+            Assert.Empty( Engine.PacketWaitEntries.GetEntries() );
         }
     }
 }

@@ -29,11 +29,10 @@ using ClassicAssist.Updater;
 using ClassicAssist.Updater.Models;
 using ClassicAssist.Updater.Services;
 using ClassicAssist.Updater.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class UpdaterTests
     {
         // Unix mode bits a zip entry claims in its external attributes: S_IFLNK | 0777 claims a
@@ -45,7 +44,7 @@ namespace ClassicAssist.Tests
         ///     The pre-flight that stops a half-applied update: every file the package would overwrite
         ///     is probed before anything is copied.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void EnsureVerifyWriteAccess()
         {
             string guid = Guid.NewGuid().ToString();
@@ -68,7 +67,7 @@ namespace ClassicAssist.Tests
 
                 InstallGuard.VerifyWriteAccess( new DirectoryInfo( path1 ), new DirectoryInfo( path2 ), failList );
 
-                Assert.AreEqual( 0, failList.Count, "nothing is in use, so nothing should have failed" );
+                Assert.Empty( failList ); // "nothing is in use, so nothing should have failed"
 
                 using ( File.OpenWrite( Path.Combine( path2, "path", guid ) ) )
                 {
@@ -80,7 +79,7 @@ namespace ClassicAssist.Tests
                 // emulates FileShare with advisory locks, so a second FileStream is refused there
                 // too. What Unix does not catch is a merely mapped assembly, which is why the
                 // clients are closed before the copy starts - see RunningClients.
-                Assert.AreNotEqual( 0, failList.Count, "an open handle should have failed the probe" );
+                Assert.NotEmpty( failList ); // "an open handle should have failed the probe"
             }
             finally
             {
@@ -89,7 +88,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillNotReportMissingDestinationFilesAsInUse()
         {
             string guid = Guid.NewGuid().ToString();
@@ -109,7 +108,7 @@ namespace ClassicAssist.Tests
                 InstallGuard.VerifyWriteAccess( new DirectoryInfo( source ), new DirectoryInfo( destination ),
                     failList );
 
-                Assert.AreEqual( 0, failList.Count, "a file that does not exist yet cannot be in use" );
+                Assert.Empty( failList ); // "a file that does not exist yet cannot be in use"
             }
             finally
             {
@@ -118,60 +117,60 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void PrereleaseNotNewerNumberSame()
         {
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.4.424", "0.4.424-prerelease" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.4.424", "0.4.424-prerelease" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void PrereleaseNewerBuildNotSame()
         {
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.4.424-prerelease", "0.4.424-prerelease+1" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.4.424-prerelease", "0.4.424-prerelease+1" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void PrereleaseNewerNumberNotSame()
         {
-            Assert.IsTrue( VersionHelpers.IsVersionNewer( "0.4.423", "0.4.424-prerelease" ) );
+            Assert.True( VersionHelpers.IsVersionNewer( "0.4.423", "0.4.424-prerelease" ) );
         }
 
         /// <summary>
         ///     This tree stamps assemblies 0.5.&lt;builddate&gt;.0, which the WPF build's semver parser
         ///     rejects outright.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillCompareFourPartVersions()
         {
-            Assert.IsTrue( VersionHelpers.IsVersionNewer( "0.5.2000.0", "0.5.2001.0" ) );
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2000.0" ) );
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2001.0" ) );
+            Assert.True( VersionHelpers.IsVersionNewer( "0.5.2000.0", "0.5.2001.0" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2000.0" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2001.0" ) );
         }
 
         /// <summary>
         ///     Three and four component spellings of the same version must compare equal, or every
         ///     check would offer the same release forever.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillTreatMissingComponentsAsZero()
         {
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2001", "0.5.2001.0" ) );
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2001" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.2001", "0.5.2001.0" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.2001.0", "0.5.2001" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillToleratePrefixedTags()
         {
-            Assert.IsTrue( VersionHelpers.IsVersionNewer( "0.5.2000.0", "v0.5.2001.0" ) );
+            Assert.True( VersionHelpers.IsVersionNewer( "0.5.2000.0", "v0.5.2001.0" ) );
         }
 
         /// <summary>
         ///     A develop build is ahead of anything released, so updating would move it backwards.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotUpdateDevelop()
         {
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.0-develop", "9.9.9" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.0-develop", "9.9.9" ) );
         }
 
         /// <summary>
@@ -179,24 +178,24 @@ namespace ClassicAssist.Tests
         ///     a suffix, where WPF used three. Output/ClassicAssist is both the build output and a
         ///     working install, so this is what stops the updater overwriting a tree being worked in.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotUpdateAFourPartDevelopBuild()
         {
-            Assert.IsFalse( VersionHelpers.IsVersionNewer( "0.5.2230.0-develop", "0.5.9999.0" ) );
+            Assert.False( VersionHelpers.IsVersionNewer( "0.5.2230.0-develop", "0.5.9999.0" ) );
         }
 
         /// <summary>
         ///     An unreadable current version means a broken or absent install, which WPF treated as
         ///     grounds to force the update rather than to give up.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillUpdateWhenCurrentVersionIsUnreadable()
         {
-            Assert.IsTrue( VersionHelpers.IsVersionNewer( null, "0.5.2001.0" ) );
-            Assert.IsTrue( VersionHelpers.IsVersionNewer( "not-a-version", "0.5.2001.0" ) );
+            Assert.True( VersionHelpers.IsVersionNewer( null, "0.5.2001.0" ) );
+            Assert.True( VersionHelpers.IsVersionNewer( "not-a-version", "0.5.2001.0" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseCommandLine()
         {
             CommandLineOptions options = CommandLineOptions.Parse( [
@@ -204,29 +203,29 @@ namespace ClassicAssist.Tests
                 "--pid", "1234", "--version", "0.5.1.0", "--force"
             ] );
 
-            Assert.AreEqual( UpdaterStage.Install, options.Stage );
-            Assert.AreEqual( "/tmp/CAUpdate-1", options.UpdatePath );
-            Assert.AreEqual( "/opt/my install", options.Path );
-            Assert.AreEqual( 1234, options.PID );
-            Assert.AreEqual( "0.5.1.0", options.CurrentVersion );
-            Assert.IsTrue( options.Force );
+            Assert.Equal( UpdaterStage.Install, options.Stage );
+            Assert.Equal( "/tmp/CAUpdate-1", options.UpdatePath );
+            Assert.Equal( "/opt/my install", options.Path );
+            Assert.Equal( 1234, options.PID );
+            Assert.Equal( "0.5.1.0", options.CurrentVersion );
+            Assert.True( options.Force );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillDefaultCommandLineWhenEmpty()
         {
             CommandLineOptions options = CommandLineOptions.Parse( [] );
 
-            Assert.AreEqual( UpdaterStage.Initial, options.Stage );
-            Assert.IsFalse( options.Force );
-            Assert.AreEqual( 0, options.PID );
+            Assert.Equal( UpdaterStage.Initial, options.Stage );
+            Assert.False( options.Force );
+            Assert.Equal( 0, options.PID );
         }
 
         /// <summary>
         ///     A release carries one package per platform; taking the wrong one installs a Windows
         ///     build on Linux.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillSelectThePackageForThisPlatform()
         {
             string[] assets =
@@ -237,49 +236,49 @@ namespace ClassicAssist.Tests
 
             string selected = PlatformPackage.Select( assets );
 
-            Assert.IsNotNull( selected );
-            StringAssert.Contains( selected, ExpectedToken() );
+            Assert.NotNull( selected );
+            Assert.Contains( ExpectedToken(), selected );
         }
 
         /// <summary>
         ///     "win" must not match "darwin", which is why matching is on separator-delimited tokens
         ///     rather than a plain Contains.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotMatchATokenMidWord()
         {
             string[] assets = ["ClassicAssist-darwin.zip", $"ClassicAssist-{ExpectedToken()}.zip"];
 
-            Assert.AreEqual( $"ClassicAssist-{ExpectedToken()}.zip", PlatformPackage.Select( assets ) );
+            Assert.Equal( $"ClassicAssist-{ExpectedToken()}.zip", PlatformPackage.Select( assets ) );
         }
 
         /// <summary>
         ///     One archive and no platform naming is unambiguous, which is what makes a single-package
         ///     repository work before per-platform builds exist.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillTakeTheOnlyArchive()
         {
-            Assert.AreEqual( "ClassicAssist.zip",
+            Assert.Equal( "ClassicAssist.zip",
                 PlatformPackage.Select( ["ClassicAssist.zip", "changelog.txt"] ) );
         }
 
         /// <summary>
         ///     Several unnamed archives are ambiguous, and guessing would install the wrong one.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillNotGuessBetweenUnnamedArchives()
         {
-            Assert.IsNull( PlatformPackage.Select( ["one.zip", "two.zip"] ) );
+            Assert.Null( PlatformPackage.Select( ["one.zip", "two.zip"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillIgnoreNonArchiveAssets()
         {
-            Assert.IsNull( PlatformPackage.Select( ["notes.txt", "checksums.sha256"] ) );
+            Assert.Null( PlatformPackage.Select( ["notes.txt", "checksums.sha256"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseGitHubReleases()
         {
             string json = $$"""
@@ -300,18 +299,18 @@ namespace ClassicAssist.Tests
 
             ChangelogEntry entry = ReleaseSource.Parse( json ).Single();
 
-            Assert.AreEqual( "0.5.2001.0", entry.Version );
-            Assert.AreEqual( "Release notes", entry.Description );
-            Assert.AreEqual( 1234, entry.DownloadSize );
-            Assert.AreEqual( "https://example.invalid/package.zip", entry.DownloadURL );
-            Assert.IsFalse( entry.Prerelease );
+            Assert.Equal( "0.5.2001.0", entry.Version );
+            Assert.Equal( "Release notes", entry.Description );
+            Assert.Equal( 1234, entry.DownloadSize );
+            Assert.Equal( "https://example.invalid/package.zip", entry.DownloadURL );
+            Assert.False( entry.Prerelease );
         }
 
         /// <summary>
         ///     A draft is not published, and a release with nothing for this platform is dropped rather
         ///     than offered and then failed on.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillSkipDraftsAndUnusableReleases()
         {
             string json = """
@@ -324,14 +323,14 @@ namespace ClassicAssist.Tests
                 ]
                 """;
 
-            Assert.AreEqual( 0, ReleaseSource.Parse( json ).Count() );
+            Assert.Empty( ReleaseSource.Parse( json ) );
         }
 
         /// <summary>
         ///     The WPF build's flat manifest is still accepted, so a fork can point the updater at a
         ///     static file instead of the GitHub API.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillParseLegacyManifest()
         {
             string json = """
@@ -343,16 +342,16 @@ namespace ClassicAssist.Tests
 
             ChangelogEntry entry = ReleaseSource.Parse( json ).Single();
 
-            Assert.AreEqual( "0.4.424", entry.Version );
-            Assert.AreEqual( 99, entry.DownloadSize );
-            Assert.AreEqual( "ClassicAssist.zip", entry.PackageName );
+            Assert.Equal( "0.4.424", entry.Version );
+            Assert.Equal( 99, entry.DownloadSize );
+            Assert.Equal( "ClassicAssist.zip", entry.PackageName );
         }
 
         /// <summary>
         ///     The assistant lives in ui/, not the install root. Looking only in the root found
         ///     nothing, silently forced every update, and ticked Force Update on startup.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillReadTheVersionFromTheUiSubfolder()
         {
             string root = Path.Combine( Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -366,7 +365,7 @@ namespace ClassicAssist.Tests
 
                 File.Copy( source, Path.Combine( root, "ui", "ClassicAssist.Shared.dll" ) );
 
-                Assert.IsFalse( string.IsNullOrEmpty( InstallVersion.Resolve( root ) ) );
+                Assert.False( string.IsNullOrEmpty( InstallVersion.Resolve( root ) ) );
             }
             finally
             {
@@ -374,7 +373,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReturnNoVersionForAnEmptyInstall()
         {
             string root = Path.Combine( Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -383,7 +382,7 @@ namespace ClassicAssist.Tests
 
             try
             {
-                Assert.IsNull( InstallVersion.Resolve( root ) );
+                Assert.Null( InstallVersion.Resolve( root ) );
             }
             finally
             {
@@ -391,12 +390,12 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillLookInTheUiSubfolderFirst()
         {
             string[] candidates = InstallVersion.Candidates( "/install" );
 
-            StringAssert.Contains( candidates[0], Path.Combine( "ui", "ClassicAssist.Shared.dll" ) );
+            Assert.Contains( Path.Combine( "ui", "ClassicAssist.Shared.dll" ), candidates[0] );
         }
 
         /// <summary>
@@ -405,7 +404,7 @@ namespace ClassicAssist.Tests
         ///     refused before a path is ever written to. Asserted on the resolver's return value
         ///     only: a test that actually wrote outside the root would be the bug being tested for.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillRejectEntryNamesThatWouldEscapeTheRoot()
         {
             string root = Path.Combine( Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -432,10 +431,10 @@ namespace ClassicAssist.Tests
 
             foreach ( string entryName in rejected )
             {
-                Assert.IsFalse( MainViewModel.TryResolveEntryPath( root, entryName, out string destination ),
+                Assert.False( MainViewModel.TryResolveEntryPath( root, entryName, out string destination ),
                     $"'{entryName}' must be refused" );
 
-                Assert.IsNull( destination, $"'{entryName}' must not report a destination" );
+                Assert.Null( destination ); // $"'{entryName}' must not report a destination"
             }
         }
 
@@ -448,7 +447,7 @@ namespace ClassicAssist.Tests
         ///     same names resolve safely inside the root instead. Either way the invariant holds:
         ///     refused, or strictly under the root.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillRefuseRootedAndWin32NormalisedEntryNames()
         {
             string root = Path.Combine( Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -461,8 +460,8 @@ namespace ClassicAssist.Tests
 
                 if ( OperatingSystem.IsWindows() )
                 {
-                    Assert.IsFalse( resolved, $"'{entryName}' must be refused on Windows" );
-                    Assert.IsNull( destination, $"'{entryName}' must not report a destination" );
+                    Assert.False( resolved, $"'{entryName}' must be refused on Windows" );
+                    Assert.Null( destination ); // $"'{entryName}' must not report a destination"
                 }
                 else if ( resolved )
                 {
@@ -478,7 +477,7 @@ namespace ClassicAssist.Tests
         ///     Windows-built archive, './' and '//' noise, and a trailing separator on a directory
         ///     entry.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillResolveEntryNamesStrictlyUnderTheRoot()
         {
             string root = Path.Combine( Path.GetTempPath(), Guid.NewGuid().ToString() );
@@ -494,11 +493,10 @@ namespace ClassicAssist.Tests
 
             foreach ( ( string entryName, string expected ) in accepted )
             {
-                Assert.IsTrue( MainViewModel.TryResolveEntryPath( root, entryName, out string destination ),
+                Assert.True( MainViewModel.TryResolveEntryPath( root, entryName, out string destination ),
                     $"'{entryName}' must resolve" );
 
-                Assert.AreEqual( Path.GetFullPath( Path.Combine( root, expected ) ), destination,
-                    $"'{entryName}' must resolve to '{expected}'" );
+                Assert.Equal( Path.GetFullPath( Path.Combine( root, expected ) ), destination ); // $"'{entryName}' must resolve to '{expected}'"
 
                 AssertUnderTheRoot( root, destination );
             }
@@ -513,7 +511,7 @@ namespace ClassicAssist.Tests
         ///     a later entry could write through to escape. A zip carries no nodes of its own, so a
         ///     claim can only ever land as plain bytes; asserted per file below.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillSkipHostileZipEntriesWhenExtractingModules()
         {
             string guid = Guid.NewGuid().ToString();
@@ -547,8 +545,7 @@ namespace ClassicAssist.Tests
 
                 new MainViewModel( true ).ExtractModules( updatePath, installPath );
 
-                Assert.AreEqual( "package payload", File.ReadAllText( Path.Combine( modulesPath, "good.txt" ) ),
-                    "the good entry must extract with its content" );
+                Assert.Equal( "package payload", File.ReadAllText( Path.Combine( modulesPath, "good.txt" ) ) ); // "the good entry must extract with its content"
 
                 // Skipped entries write nothing anywhere: the only files under the scratch tree are
                 // the archive itself and what the good and claimed entries produced. A hostile
@@ -562,16 +559,16 @@ namespace ClassicAssist.Tests
                     Path.Combine( modulesPath, "pipe" )
                 ];
 
-                CollectionAssert.AreEquivalent( expected, created, "hostile entries must write nothing" );
+                Assert.Equivalent( expected, created, strict: true ); // "hostile entries must write nothing"
 
-                Assert.IsFalse( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-a-{guid}.txt" ) ),
+                Assert.False( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-a-{guid}.txt" ) ),
                     "an entry naming ../../../evil.txt must not reach the temp directory" );
 
                 foreach ( string path in created )
                 {
-                    Assert.IsNull( new FileInfo( path ).LinkTarget, $"'{path}' must not be recreated as a link" );
+                    Assert.Null( new FileInfo( path ).LinkTarget ); // $"'{path}' must not be recreated as a link"
 
-                    Assert.IsFalse( File.GetAttributes( path ).HasFlag( FileAttributes.ReparsePoint ),
+                    Assert.False( File.GetAttributes( path ).HasFlag( FileAttributes.ReparsePoint ),
                         $"'{path}' must not be a reparse point" );
                 }
             }
@@ -588,7 +585,7 @@ namespace ClassicAssist.Tests
         ///     hostile names must be skipped rather than written anywhere, and the link and fifo
         ///     must not be recreated at all.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillSkipHostileAndNonRegularEntriesWhenExtractingPackageTarGz()
         {
             string guid = Guid.NewGuid().ToString();
@@ -626,32 +623,31 @@ namespace ClassicAssist.Tests
 
                 new MainViewModel( true ).ExtractTarGz( packagePath, extractPath );
 
-                Assert.AreEqual( "package payload",
-                    File.ReadAllText( Path.Combine( extractPath, "sub", "good.txt" ) ),
-                    "the good file must extract with its content" );
+                Assert.Equal( "package payload",
+                    File.ReadAllText( Path.Combine( extractPath, "sub", "good.txt" ) ) ); // "the good file must extract with its content"
 
-                Assert.IsTrue( Directory.Exists( Path.Combine( extractPath, "sub" ) ),
+                Assert.True( Directory.Exists( Path.Combine( extractPath, "sub" ) ),
                     "the directory entry must extract" );
 
                 // Skipped entries leave nothing behind at all - not the node, not a placeholder.
-                Assert.IsFalse( File.Exists( Path.Combine( extractPath, "link" ) ) ||
+                Assert.False( File.Exists( Path.Combine( extractPath, "link" ) ) ||
                                 Directory.Exists( Path.Combine( extractPath, "link" ) ),
                     "a symlink entry must be skipped, not recreated" );
 
-                Assert.IsFalse( File.Exists( Path.Combine( extractPath, "pipe" ) ) ||
+                Assert.False( File.Exists( Path.Combine( extractPath, "pipe" ) ) ||
                                 Directory.Exists( Path.Combine( extractPath, "pipe" ) ),
                     "a fifo entry must be skipped, not recreated" );
 
                 string[] expected = [packagePath, Path.Combine( extractPath, "sub", "good.txt" )];
                 string[] created = Directory.GetFiles( scratch, "*", SearchOption.AllDirectories );
 
-                CollectionAssert.AreEquivalent( expected, created, "hostile entries must write nothing" );
+                Assert.Equivalent( expected, created, strict: true ); // "hostile entries must write nothing"
 
                 // The parent entries walk as far as the temp directory itself.
-                Assert.IsFalse( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-a-{guid}.txt" ) ),
+                Assert.False( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-a-{guid}.txt" ) ),
                     "an entry naming ../../evil.txt must not reach the temp directory" );
 
-                Assert.IsFalse( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-b-{guid}.txt" ) ),
+                Assert.False( File.Exists( Path.Combine( Path.GetTempPath(), $"evil-b-{guid}.txt" ) ),
                     "an entry naming ..\\..\\evil.txt must not reach the temp directory" );
             }
             finally
@@ -666,7 +662,7 @@ namespace ClassicAssist.Tests
                 ? StringComparison.Ordinal
                 : StringComparison.OrdinalIgnoreCase;
 
-            Assert.IsTrue(
+            Assert.True(
                 destination.StartsWith( Path.GetFullPath( root ) + Path.DirectorySeparatorChar, comparison ),
                 $"'{destination}' must be strictly under '{root}'" );
         }

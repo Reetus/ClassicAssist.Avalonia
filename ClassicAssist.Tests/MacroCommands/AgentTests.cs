@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Counters;
 using ClassicAssist.Data.Macros.Commands;
@@ -8,14 +9,13 @@ using ClassicAssist.Data.Organizer;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class AgentTests
     {
-        [TestMethod]
+        [Fact]
         public void CounterWillCountType()
         {
             PlayerMobile player = new PlayerMobile( 0x01 );
@@ -41,11 +41,11 @@ namespace ClassicAssist.Tests.MacroCommands
 
             int count = AgentCommands.Counter( "test" );
 
-            Assert.AreEqual( 1, count );
+            Assert.Equal( 1, count );
         }
 
-        [TestMethod]
-        public void WillOrganizeLimitAmount()
+        [Fact]
+        public async Task WillOrganizeLimitAmount()
         {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
@@ -104,11 +104,11 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 Engine.PacketWaitEntries = new PacketWaitEntries();
 
-                OrganizerManager.GetInstance().Organize( entry ).Wait();
+                await OrganizerManager.GetInstance().Organize( entry );
 
                 Item[] destinationItems = destinationContainer.Container.GetItems();
 
-                Assert.AreEqual( entry.Items[0].Amount,
+                Assert.Equal( entry.Items[0].Amount,
                     destinationItems.Sum( i => i.ID == entry.Items[0].ID ? i.Count : 0 ) );
 
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
@@ -116,8 +116,8 @@ namespace ClassicAssist.Tests.MacroCommands
                 Engine.PacketWaitEntries = null;
         }
 
-        [TestMethod]
-        public void WillOrganizeNoLimit()
+        [Fact]
+        public async Task WillOrganizeNoLimit()
         {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
@@ -176,19 +176,19 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 Engine.PacketWaitEntries = new PacketWaitEntries();
 
-                OrganizerManager.GetInstance().Organize( entry ).Wait();
+                await OrganizerManager.GetInstance().Organize( entry );
 
                 Item[] destinationItems = destinationContainer.Container.GetItems();
 
-                Assert.AreEqual( amnt, destinationItems.Sum( i => i.Count ) );
+                Assert.Equal( amnt, destinationItems.Sum( i => i.Count ) );
 
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
                 Engine.Items.Clear();
                 Engine.PacketWaitEntries = null;
         }
 
-        [TestMethod]
-        public void WillOrganizeNoLimitMultiple()
+        [Fact]
+        public async Task WillOrganizeNoLimitMultiple()
         {
                 Dictionary<int, int> serialAmount = new Dictionary<int, int>();
 
@@ -250,12 +250,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 Engine.PacketWaitEntries = new PacketWaitEntries();
 
-                OrganizerManager.GetInstance().Organize( entry ).Wait();
+                await OrganizerManager.GetInstance().Organize( entry );
 
                 Item[] destinationItems = destinationContainer.Container.GetItems();
 
-                Assert.AreEqual( 2, destinationContainer.Container.GetTotalItemCount() );
-                Assert.AreEqual( amnt * 2, destinationItems.Sum( i => i.Count ) );
+                Assert.Equal( 2, destinationContainer.Container.GetTotalItemCount() );
+                Assert.Equal( amnt * 2, destinationItems.Sum( i => i.Count ) );
 
                 Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
                 Engine.Items.Clear();

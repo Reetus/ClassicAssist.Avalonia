@@ -6,13 +6,12 @@ using ClassicAssist.Data;
 using ClassicAssist.Mcp;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests.Mcp
 {
-    [TestClass]
-    public class McpAutoStartTests
+    public class McpAutoStartTests : IDisposable
     {
         private const int SERIAL = 0x0000ABCD;
         private const string SERIAL_KEY = "0x0000ABCD";
@@ -27,8 +26,7 @@ namespace ClassicAssist.Tests.Mcp
         private string _originalToken;
         private string _tempDir;
 
-        [TestInitialize]
-        public void SetUp()
+        public McpAutoStartTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _originalProfileDirectory = AssistantOptions.ProfileDirectory;
@@ -56,8 +54,7 @@ namespace ClassicAssist.Tests.Mcp
             McpAutoStart.Initialize();
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             McpServer.Shutdown();
 
@@ -84,7 +81,7 @@ namespace ClassicAssist.Tests.Mcp
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadRestartsOnTheSavedPort()
         {
             int port = FreePort();
@@ -92,13 +89,13 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.AreEqual( port, McpServer.Port );
-            Assert.IsTrue( Options.CurrentOptions.McpEnabled );
-            Assert.AreEqual( port, Options.CurrentOptions.McpPort );
+            Assert.True( McpServer.IsRunning );
+            Assert.Equal( port, McpServer.Port );
+            Assert.True( Options.CurrentOptions.McpEnabled );
+            Assert.Equal( port, Options.CurrentOptions.McpPort );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadTakesTheNextFreePortWhenTheSavedOneIsTaken()
         {
             using TcpListener taken = new( IPAddress.Loopback, 0 );
@@ -109,23 +106,23 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.IsTrue( McpServer.Port > port, $"Expected a port above {port}, got {McpServer.Port}." );
-            Assert.AreEqual( McpServer.Port, Options.CurrentOptions.McpPort );
+            Assert.True( McpServer.IsRunning );
+            Assert.True( McpServer.Port > port, $"Expected a port above {port}, got {McpServer.Port}." );
+            Assert.Equal( McpServer.Port, Options.CurrentOptions.McpPort );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadDoesNothingForACharacterWithoutAnEntry()
         {
             WriteProfile( new JObject { [OTHER_KEY] = FreePort() } );
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsFalse( McpServer.IsRunning );
-            Assert.IsFalse( Options.CurrentOptions.McpEnabled );
+            Assert.False( McpServer.IsRunning );
+            Assert.False( Options.CurrentOptions.McpEnabled );
         }
 
-        [TestMethod]
+        [Fact]
         public void SaveRecordsTheRunningPortAndKeepsOtherCharacters()
         {
             WriteProfile( new JObject { [OTHER_KEY] = 5000 } );
@@ -138,11 +135,11 @@ namespace ClassicAssist.Tests.Mcp
 
             JObject ports = ReadPorts();
 
-            Assert.AreEqual( port, ports[SERIAL_KEY]?.ToObject<int>() );
-            Assert.AreEqual( 5000, ports[OTHER_KEY]?.ToObject<int>() );
+            Assert.Equal( port, ports[SERIAL_KEY]?.ToObject<int>() );
+            Assert.Equal( 5000, ports[OTHER_KEY]?.ToObject<int>() );
         }
 
-        [TestMethod]
+        [Fact]
         public void SaveKeepsAnEntryWrittenByAnotherInstanceSinceLoad()
         {
             Options.Load( "test.json", Options.CurrentOptions );
@@ -153,10 +150,10 @@ namespace ClassicAssist.Tests.Mcp
             McpServer.Initialize( FreePort() );
             Options.Save( Options.CurrentOptions );
 
-            Assert.AreEqual( 5001, ReadPorts()[OTHER_KEY]?.ToObject<int>() );
+            Assert.Equal( 5001, ReadPorts()[OTHER_KEY]?.ToObject<int>() );
         }
 
-        [TestMethod]
+        [Fact]
         public void SaveDropsTheCharacterWhenMcpIsOff()
         {
             int port = FreePort();
@@ -168,11 +165,11 @@ namespace ClassicAssist.Tests.Mcp
 
             JObject ports = ReadPorts();
 
-            Assert.IsNull( ports[SERIAL_KEY] );
-            Assert.AreEqual( 5000, ports[OTHER_KEY]?.ToObject<int>() );
+            Assert.Null( ports[SERIAL_KEY] );
+            Assert.Equal( 5000, ports[OTHER_KEY]?.ToObject<int>() );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadBeforeLoginStartsOnTheLowestSavedPort()
         {
             ( int low, int high ) = TwoFreePorts();
@@ -181,12 +178,12 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.AreEqual( low, McpServer.Port );
-            Assert.IsTrue( Options.CurrentOptions.McpEnabled );
+            Assert.True( McpServer.IsRunning );
+            Assert.Equal( low, McpServer.Port );
+            Assert.True( Options.CurrentOptions.McpEnabled );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadBeforeLoginDoesNothingWithoutSavedPorts()
         {
             WriteProfile( [] );
@@ -194,10 +191,10 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsFalse( McpServer.IsRunning );
+            Assert.False( McpServer.IsRunning );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoginMovesToTheCharactersOwnPort()
         {
             ( int low, int high ) = TwoFreePorts();
@@ -207,12 +204,12 @@ namespace ClassicAssist.Tests.Mcp
 
             Engine.SetPlayer( new PlayerMobile( SERIAL ) );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.AreEqual( high, McpServer.Port );
-            Assert.AreEqual( high, Options.CurrentOptions.McpPort );
+            Assert.True( McpServer.IsRunning );
+            Assert.Equal( high, McpServer.Port );
+            Assert.Equal( high, Options.CurrentOptions.McpPort );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoginKeepsThePortWhenTheCharactersOwnIsTaken()
         {
             ( int low, int high ) = TwoFreePorts();
@@ -225,34 +222,34 @@ namespace ClassicAssist.Tests.Mcp
 
             Engine.SetPlayer( new PlayerMobile( SERIAL ) );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.AreEqual( low, McpServer.Port );
+            Assert.True( McpServer.IsRunning );
+            Assert.Equal( low, McpServer.Port );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoginStopsAServerTheCharacterDoesNotUse()
         {
             WriteProfile( new JObject { [OTHER_KEY] = FreePort() } );
             Engine.Player = null;
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsTrue( McpServer.IsRunning );
+            Assert.True( McpServer.IsRunning );
 
             Engine.SetPlayer( new PlayerMobile( SERIAL ) );
 
-            Assert.IsFalse( McpServer.IsRunning );
-            Assert.IsFalse( Options.CurrentOptions.McpEnabled );
+            Assert.False( McpServer.IsRunning );
+            Assert.False( Options.CurrentOptions.McpEnabled );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadRequiresTheTokenWithConsent()
         {
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.AreEqual( "test-token", McpServer.Token );
+            Assert.Equal( "test-token", McpServer.Token );
         }
 
-        [TestMethod]
+        [Fact]
         public void NothingStartsWithoutConsent()
         {
             AssistantOptions.McpAutoStart = false;
@@ -260,16 +257,16 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsFalse( McpServer.IsRunning );
-            Assert.IsNull( McpServer.Token );
+            Assert.False( McpServer.IsRunning );
+            Assert.Null( McpServer.Token );
 
             Engine.Player = null;
             Options.Load( "test.json", Options.CurrentOptions );
 
-            Assert.IsFalse( McpServer.IsRunning );
+            Assert.False( McpServer.IsRunning );
         }
 
-        [TestMethod]
+        [Fact]
         public void SaveLeavesPortsAloneWithoutConsent()
         {
             AssistantOptions.McpAutoStart = false;
@@ -278,15 +275,15 @@ namespace ClassicAssist.Tests.Mcp
 
             Options.Save( Options.CurrentOptions );
 
-            Assert.AreEqual( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
+            Assert.Equal( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
 
             McpServer.Initialize( FreePort() );
             Options.Save( Options.CurrentOptions );
 
-            Assert.AreEqual( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
+            Assert.Equal( 5000, ReadPorts()[SERIAL_KEY]?.ToObject<int>() );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoginLeavesAServerStartedByHandAlone()
         {
             ( int byHand, int saved ) = TwoFreePorts();
@@ -298,8 +295,8 @@ namespace ClassicAssist.Tests.Mcp
 
             Engine.SetPlayer( new PlayerMobile( SERIAL ) );
 
-            Assert.IsTrue( McpServer.IsRunning );
-            Assert.AreEqual( byHand, McpServer.Port );
+            Assert.True( McpServer.IsRunning );
+            Assert.Equal( byHand, McpServer.Port );
         }
 
         private static ( int Low, int High ) TwoFreePorts()

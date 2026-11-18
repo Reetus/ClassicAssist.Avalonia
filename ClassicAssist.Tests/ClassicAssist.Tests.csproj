@@ -5,11 +5,10 @@
     <IsPackable>false</IsPackable>
     <!-- Matches the runtime TazUO ships; roll forward onto anything newer the user has. -->
     <RollForward>LatestMajor</RollForward>
-    <!-- Microsoft.Testing.Platform, like ClassicAssist.HeadlessTests: the .NET 10 SDK dropped the
-         VSTest-mode bridge for MTP, so both test projects run as MTP executables under the
-         global.json test runner. MSTest's MTP entry point needs an executable. -->
+    <!-- xUnit v3, like ClassicAssist.HeadlessTests: test projects have to be executables, and run on
+         Microsoft.Testing.Platform under the global.json test runner (the .NET 10 SDK dropped the
+         VSTest-mode bridge). -->
     <OutputType>Exe</OutputType>
-    <EnableMSTestRunner>true</EnableMSTestRunner>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="packetlengths.json" />
@@ -20,9 +19,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="4.5.3" />
-    <PackageReference Include="MSTest.TestFramework" Version="4.5.3" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+    <!-- Code coverage for the MTP runner: dotnet test with the coverage switch. -->
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.12.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ClassicAssist.Shared\ClassicAssist.Shared.csproj" />

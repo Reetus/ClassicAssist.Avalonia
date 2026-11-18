@@ -6,19 +6,17 @@ using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class AutolootGroupsTests
+    public class AutolootGroupsTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
 
-        [TestInitialize]
-        public void SetUp()
+        public AutolootGroupsTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistTests", Guid.NewGuid().ToString( "N" ) );
@@ -26,8 +24,7 @@ namespace ClassicAssist.Tests
             Engine.StartupPath = _tempDir;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -47,36 +44,36 @@ namespace ClassicAssist.Tests
                 "[{\"Name\":\"Faster Casting\",\"ShortName\":\"FC\",\"Clilocs\":[1060413],\"ClilocIndex\":0,\"ConstraintType\":0}]" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseSimpleCsv()
         {
             CsvReader reader = new CsvReader( new StringReader( "ID,Name,FC\r\n0x0F6A,Sword,1\r\n0x0F6B,Axe,2\r\n" ) );
             reader.ReadHeader();
 
-            Assert.AreEqual( "ID", reader.HeaderRecord[0] );
-            Assert.IsTrue( reader.Read() );
-            Assert.IsTrue( reader.TryGetField( "ID", out string id ) );
-            Assert.AreEqual( "0x0F6A", id );
-            Assert.IsTrue( reader.TryGetField( "Name", out string name ) );
-            Assert.AreEqual( "Sword", name );
-            Assert.IsTrue( reader.Read() );
-            Assert.IsTrue( reader.TryGetField( "FC", out string fc ) );
-            Assert.AreEqual( "2", fc );
-            Assert.IsFalse( reader.Read() );
+            Assert.Equal( "ID", reader.HeaderRecord[0] );
+            Assert.True( reader.Read() );
+            Assert.True( reader.TryGetField( "ID", out string id ) );
+            Assert.Equal( "0x0F6A", id );
+            Assert.True( reader.TryGetField( "Name", out string name ) );
+            Assert.Equal( "Sword", name );
+            Assert.True( reader.Read() );
+            Assert.True( reader.TryGetField( "FC", out string fc ) );
+            Assert.Equal( "2", fc );
+            Assert.False( reader.Read() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseQuotedCsvFields()
         {
             CsvReader reader = new CsvReader( new StringReader( "ID,Name\r\n0x1,\"A, B\"\"C\"\r\n" ) );
             reader.ReadHeader();
 
-            Assert.IsTrue( reader.Read() );
-            Assert.IsTrue( reader.TryGetField( "Name", out string name ) );
-            Assert.AreEqual( "A, B\"C", name );
+            Assert.True( reader.Read() );
+            Assert.True( reader.TryGetField( "Name", out string name ) );
+            Assert.Equal( "A, B\"C", name );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSerializeAndDeserializeGroupsAndPriority()
         {
             WritePropertiesFile();
@@ -114,26 +111,26 @@ namespace ClassicAssist.Tests
             AutolootViewModel reloaded = new AutolootViewModel();
             reloaded.Deserialize( json, Options.CurrentOptions );
 
-            Assert.AreEqual( 2, reloaded.Items.Count );
-            Assert.IsTrue( reloaded.RequeueFailedItems );
-            Assert.IsFalse( reloaded.LootHumanoids );
+            Assert.Equal( 2, reloaded.Items.Count );
+            Assert.True( reloaded.RequeueFailedItems );
+            Assert.False( reloaded.LootHumanoids );
 
             AutolootEntry reloadedHigh = reloaded.Items.FirstOrDefault( i => i.Name == "High Item" );
             AutolootEntry reloadedTop = reloaded.Items.FirstOrDefault( i => i.Name == "Top Item" );
 
-            Assert.IsNotNull( reloadedHigh );
-            Assert.AreEqual( AutolootPriority.High, reloadedHigh.Priority );
-            Assert.AreEqual( AutolootPriority.Top, reloadedTop.Priority );
+            Assert.NotNull( reloadedHigh );
+            Assert.Equal( AutolootPriority.High, reloadedHigh.Priority );
+            Assert.Equal( AutolootPriority.Top, reloadedTop.Priority );
 
             AutolootGroup reloadedGroup = reloaded.Draggables.OfType<AutolootGroup>().FirstOrDefault();
-            Assert.IsNotNull( reloadedGroup );
-            Assert.AreEqual( "Group-1", reloadedGroup.Name );
-            Assert.AreEqual( 1, reloadedGroup.Children.Count );
-            Assert.AreEqual( "High Item", ( (AutolootEntry) reloadedGroup.Children[0] ).Name );
-            Assert.AreEqual( reloadedGroup, reloadedHigh.Group );
+            Assert.NotNull( reloadedGroup );
+            Assert.Equal( "Group-1", reloadedGroup.Name );
+            Assert.Single( reloadedGroup.Children );
+            Assert.Equal( "High Item", ( (AutolootEntry) reloadedGroup.Children[0] ).Name );
+            Assert.Equal( reloadedGroup, reloadedHigh.Group );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillKeepUngroupedEntryAtRootOnSerialize()
         {
             WritePropertiesFile();
@@ -148,12 +145,12 @@ namespace ClassicAssist.Tests
             AutolootViewModel reloaded = new AutolootViewModel();
             reloaded.Deserialize( json, Options.CurrentOptions );
 
-            Assert.AreEqual( 1, reloaded.Items.Count );
-            Assert.IsNull( reloaded.Items[0].Group );
-            Assert.AreEqual( 1, reloaded.Draggables.Count );
+            Assert.Single( reloaded.Items );
+            Assert.Null( reloaded.Items[0].Group );
+            Assert.Single( reloaded.Draggables );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMoveEntryBetweenGroups()
         {
             WritePropertiesFile();
@@ -172,18 +169,18 @@ namespace ClassicAssist.Tests
             vm.SelectedItem = entry;
             vm.MoveToGroupCommand.Execute( groupA );
 
-            Assert.AreEqual( 1, groupA.Children.Count );
-            Assert.AreEqual( groupA, entry.Group );
+            Assert.Single( groupA.Children );
+            Assert.Equal( groupA, entry.Group );
 
             vm.SelectedItem = entry;
             vm.MoveToGroupCommand.Execute( groupB );
 
-            Assert.AreEqual( 0, groupA.Children.Count );
-            Assert.AreEqual( 1, groupB.Children.Count );
-            Assert.AreEqual( groupB, entry.Group );
+            Assert.Empty( groupA.Children );
+            Assert.Single( groupB.Children );
+            Assert.Equal( groupB, entry.Group );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRemoveGroupAndRehomeChildren()
         {
             WritePropertiesFile();
@@ -201,12 +198,12 @@ namespace ClassicAssist.Tests
 
             vm.RemoveGroupCommand.Execute( group );
 
-            Assert.IsFalse( vm.Draggables.Contains( group ) );
-            Assert.IsTrue( vm.Draggables.Contains( entry ) );
-            Assert.IsNull( entry.Group );
+            Assert.DoesNotContain( group, vm.Draggables );
+            Assert.Contains( entry, vm.Draggables );
+            Assert.Null( entry.Group );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMoveNonSelectedEntryToGroup()
         {
             WritePropertiesFile();
@@ -221,28 +218,28 @@ namespace ClassicAssist.Tests
 
             vm.MoveToGroup( entry, group );
 
-            Assert.AreEqual( 1, group.Children.Count );
-            Assert.AreEqual( group, entry.Group );
-            Assert.IsFalse( vm.Draggables.Contains( entry ) );
+            Assert.Single( group.Children );
+            Assert.Equal( group, entry.Group );
+            Assert.DoesNotContain( entry, vm.Draggables );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillAppendItemIdToDisplayName()
         {
             AutolootEntry entry = new AutolootEntry { Name = "Iron Sword", ID = 0x1BF2 };
 
-            Assert.AreEqual( "Iron Sword - 0x1bf2", entry.DisplayName );
+            Assert.Equal( "Iron Sword - 0x1bf2", entry.DisplayName );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillShowMatchAnyIdAs0xFFFF()
         {
             AutolootEntry entry = new AutolootEntry { Name = "Any", ID = -1 };
 
-            Assert.AreEqual( "Any - 0xffff", entry.DisplayName );
+            Assert.Equal( "Any - 0xffff", entry.DisplayName );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMoveEntryOutOfGroupToRoot()
         {
             WritePropertiesFile();
@@ -258,14 +255,14 @@ namespace ClassicAssist.Tests
             vm.SelectedItem = entry;
             vm.MoveToGroupCommand.Execute( group );
 
-            Assert.AreEqual( 1, group.Children.Count );
-            Assert.AreEqual( group, entry.Group );
+            Assert.Single( group.Children );
+            Assert.Equal( group, entry.Group );
 
             vm.MoveToRoot( entry );
 
-            Assert.AreEqual( 0, group.Children.Count );
-            Assert.IsNull( entry.Group );
-            Assert.IsTrue( vm.Draggables.Contains( entry ) );
+            Assert.Empty( group.Children );
+            Assert.Null( entry.Group );
+            Assert.Contains( entry, vm.Draggables );
         }
     }
 }

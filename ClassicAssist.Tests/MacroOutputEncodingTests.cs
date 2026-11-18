@@ -4,11 +4,10 @@ using System.Runtime.InteropServices;
 using System.Text;
 using ClassicAssist.Data.Macros;
 using Microsoft.Scripting.Hosting;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class MacroOutputEncodingTests
     {
         /// <summary>
@@ -16,7 +15,7 @@ namespace ClassicAssist.Tests
         ///     and redirected std handles (the client started by a launcher that captures its output),
         ///     Console.Out reports code page 0 and every print fails with "unknown encoding: codepage___0".
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void StdoutUsesMacroOutputEncodingNotConsole()
         {
             TextWriter oldOut = Console.Out;
@@ -38,8 +37,8 @@ namespace ClassicAssist.Tests
 
                 engine.Execute( "import sys\nout = sys.stdout.encoding\nerr = sys.stderr.encoding", scope );
 
-                Assert.AreEqual( expected, scope.GetVariable<string>( "out" ) );
-                Assert.AreEqual( expected, scope.GetVariable<string>( "err" ) );
+                Assert.Equal( expected, scope.GetVariable<string>( "out" ) );
+                Assert.Equal( expected, scope.GetVariable<string>( "err" ) );
             }
             finally
             {

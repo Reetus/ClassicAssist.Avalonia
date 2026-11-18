@@ -5,11 +5,10 @@ using ClassicAssist.UI.Models;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class EntityCollectionViewerTests
     {
         private static ItemCollection MakeCollection( params (int serial, int id, int count)[] items )
@@ -24,7 +23,7 @@ namespace ClassicAssist.Tests
             return collection;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillNameItemsWithoutOne()
         {
             if ( !TestData.HasUOData )
@@ -44,12 +43,12 @@ namespace ClassicAssist.Tests
                 MakeCollection( ( 0x40000001, 0x1BF2, 1 ), ( 0x40000002, unknownId, 1 ) )
                     .ToEntityCollectionData( new SerialComparer(), new Dictionary<int, string>() );
 
-            Assert.AreEqual( 2, data.Count );
-            Assert.AreEqual( TileData.GetStaticTile( 0x1BF2 ).Name, data[0].Name );
-            Assert.AreEqual( "0x40000002", data[1].Name );
+            Assert.Equal( 2, data.Count );
+            Assert.Equal( TileData.GetStaticTile( 0x1BF2 ).Name, data[0].Name );
+            Assert.Equal( "0x40000002", data[1].Name );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillPreferNameOverride()
         {
             if ( !TestData.HasUOData )
@@ -64,10 +63,10 @@ namespace ClassicAssist.Tests
             List<EntityCollectionData> data = MakeCollection( ( 0x40000001, 0x1BF2, 1 ) )
                 .ToEntityCollectionData( new IDThenHueThenSerialComparer(), overrides );
 
-            Assert.AreEqual( "a shiny thing", data[0].Name );
+            Assert.Equal( "a shiny thing", data[0].Name );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillDrawCoinPileForStack()
         {
             if ( !TestData.HasUOData )
@@ -94,15 +93,15 @@ namespace ClassicAssist.Tests
                 Entity = new Item( 3 ) { ID = 0x0EED, Count = 500 }
             }.Pixmap;
 
-            Assert.IsFalse( single.IsEmpty );
-            Assert.IsFalse( small.IsEmpty );
-            Assert.IsFalse( large.IsEmpty );
+            Assert.False( single.IsEmpty );
+            Assert.False( small.IsEmpty );
+            Assert.False( large.IsEmpty );
 
-            CollectionAssert.AreNotEqual( single.Pixels, small.Pixels );
-            CollectionAssert.AreNotEqual( small.Pixels, large.Pixels );
+            Assert.NotEqual( single.Pixels, small.Pixels );
+            Assert.NotEqual( small.Pixels, large.Pixels );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSortByTheSelectedStyle()
         {
             if ( !TestData.HasUOData )
@@ -118,19 +117,19 @@ namespace ClassicAssist.Tests
 
             viewModel.Options.SortStyle = EntityCollectionSortStyle.Serial;
 
-            CollectionAssert.AreEqual( new[] { 0x40000001, 0x40000002, 0x40000003 },
+            Assert.Equal( new[] { 0x40000001, 0x40000002, 0x40000003 },
                 viewModel.Entities.Select( e => e.Entity.Serial ).ToArray() );
 
             viewModel.Options.SortStyle = EntityCollectionSortStyle.Quantity;
 
-            CollectionAssert.AreEqual( new[] { 1, 5, 9 },
+            Assert.Equal( new[] { 1, 5, 9 },
                 viewModel.Entities.Cast<EntityCollectionData>().Select( e => ( (Item) e.Entity ).Count )
                     .ToArray() );
 
             viewModel.Cleanup();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillStopListeningAfterCleanup()
         {
             if ( !TestData.HasUOData )
@@ -146,14 +145,14 @@ namespace ClassicAssist.Tests
 
             collection.Add( new Item( 0x40000002, 0x40000000 ) { ID = 0x13B9, Count = 1 } );
 
-            Assert.AreEqual( 2, viewModel.Entities.Count, "the viewer should track the collection" );
+            Assert.Equal( 2, viewModel.Entities.Count ); // "the viewer should track the collection"
 
             viewModel.Cleanup();
 
             // The collection outlives the window, so a closed viewer must not keep rebuilding itself.
             collection.Add( new Item( 0x40000003, 0x40000000 ) { ID = 0x0F0E, Count = 1 } );
 
-            Assert.AreEqual( 2, viewModel.Entities.Count );
+            Assert.Equal( 2, viewModel.Entities.Count );
         }
     }
 }

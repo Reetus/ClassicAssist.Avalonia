@@ -1,13 +1,12 @@
 ﻿using System;
 using ClassicAssist.Data.Macros.Commands;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class TimerTests
     {
-        [TestMethod]
+        [Fact]
         public void WillAddOffset()
         {
             TimerCommands.CreateTimer( "shmoo" );
@@ -17,35 +16,35 @@ namespace ClassicAssist.Tests.MacroCommands
 
             TimeSpan timespan = TimeSpan.FromMilliseconds( timerValue );
 
-            Assert.AreEqual( 2, (int) timespan.TotalMinutes );
+            Assert.Equal( 2, (int) timespan.TotalMinutes );
 
             TimerCommands.RemoveTimer( "shmoo" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCreateTimer()
         {
             TimerCommands.CreateTimer( "shmoo2" );
 
-            Assert.IsTrue( TimerCommands.TimerExists( "shmoo2" ) );
+            Assert.True( TimerCommands.TimerExists( "shmoo2" ) );
 
             TimerCommands.RemoveTimer( "shmoo2" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRemoveTimer()
         {
             TimerCommands.CreateTimer( "shmoo3" );
             TimerCommands.RemoveTimer( "shmoo3" );
 
-            Assert.IsFalse( TimerCommands.TimerExists( "shmoo3" ) );
+            Assert.False( TimerCommands.TimerExists( "shmoo3" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCreateTimerSetTimer()
         {
             TimerCommands.SetTimer( "shmoo4" );
-            Assert.IsTrue( TimerCommands.TimerExists( "shmoo4" ) );
+            Assert.True( TimerCommands.TimerExists( "shmoo4" ) );
         }
     }
 }

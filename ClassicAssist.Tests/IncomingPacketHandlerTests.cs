@@ -4,15 +4,13 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class IncomingPacketHandlerTests
     {
-        [TestInitialize]
-        public void Initialize()
+        public IncomingPacketHandlerTests()
         {
             Engine.Items = new ItemCollection( 0 );
             Engine.Mobiles = new MobileCollection( Engine.Items );
@@ -21,7 +19,7 @@ namespace ClassicAssist.Tests
             IncomingPacketHandlers.Initialize();
         }
 
-        [TestMethod]
+        [Fact]
         public void ContainerContentsWillAddToPlayerBackpack()
         {
             const int backpackSerial = 0x40000001;
@@ -31,14 +29,14 @@ namespace ClassicAssist.Tests
             Engine.Player.SetLayer( Layer.Backpack, backpack.Serial );
             Engine.Items.Add( backpack );
 
-            Assert.IsTrue( Engine.Player.Backpack.Serial > 0 );
+            Assert.True( Engine.Player.Backpack.Serial > 0 );
 
             ContainerContentsPacket cc =
                 new ContainerContentsPacket( new ItemCollection( backpackSerial ) { new Item( itemSerial ) } );
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x3C );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             byte[] packet = cc.ToArray();
 
@@ -46,16 +44,16 @@ namespace ClassicAssist.Tests
 
             Item item = Engine.Items.GetItem( backpackSerial );
 
-            Assert.IsNotNull( item.Container );
-            Assert.AreEqual( 1, item.Container.GetTotalItemCount() );
-            Assert.IsNotNull( Engine.Items.GetItem( itemSerial ) );
-            Assert.IsNotNull( item.Container.GetItem( itemSerial ) );
+            Assert.NotNull( item.Container );
+            Assert.Equal( 1, item.Container.GetTotalItemCount() );
+            Assert.NotNull( Engine.Items.GetItem( itemSerial ) );
+            Assert.NotNull( item.Container.GetItem( itemSerial ) );
 
             Engine.Items.Clear();
             Engine.Player.SetLayer( Layer.Backpack, 0 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetPoisonedOnHealthbarColour()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -64,22 +62,22 @@ namespace ClassicAssist.Tests
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x17 );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsTrue( Engine.Player.IsPoisoned );
+            Assert.True( Engine.Player.IsPoisoned );
 
             packet = new byte[] { 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x01, 0x00 };
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsFalse( Engine.Player.IsPoisoned );
+            Assert.False( Engine.Player.IsPoisoned );
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetYellowHitsOnHealthbarColour()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -88,27 +86,27 @@ namespace ClassicAssist.Tests
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x17 );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsTrue( Engine.Player.IsYellowHits );
+            Assert.True( Engine.Player.IsYellowHits );
 
             packet = new byte[] { 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x02, 0x00 };
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsFalse( Engine.Player.IsYellowHits );
+            Assert.False( Engine.Player.IsYellowHits );
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetFrozenOnMobileStatus()
         {
             Engine.Player = new PlayerMobile( 0x01 );
 
-            Assert.IsFalse( Engine.Player.IsFrozen );
+            Assert.False( Engine.Player.IsFrozen );
 
             byte[] packet =
             {
@@ -118,16 +116,16 @@ namespace ClassicAssist.Tests
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x20 );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, true ) );
 
-            Assert.IsTrue( Engine.Player.IsFrozen );
+            Assert.True( Engine.Player.IsFrozen );
 
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void MapChangeToSameMapKeepsMultis()
         {
             Engine.Player.Map = Map.Trammel;
@@ -135,13 +133,13 @@ namespace ClassicAssist.Tests
 
             SendMapChange( Map.Trammel );
 
-            Assert.IsNotNull( Engine.Items.GetItem( 0x40000010 ), "the same map again must not drop multis" );
-            Assert.AreEqual( Map.Trammel, Engine.Player.Map );
+            Assert.NotNull( Engine.Items.GetItem( 0x40000010 ) ); // "the same map again must not drop multis"
+            Assert.Equal( Map.Trammel, Engine.Player.Map );
 
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void MapChangeToOtherMapClearsMultisOnly()
         {
             Engine.Player.Map = Map.Trammel;
@@ -150,9 +148,9 @@ namespace ClassicAssist.Tests
 
             SendMapChange( Map.Felucca );
 
-            Assert.IsNull( Engine.Items.GetItem( 0x40000010 ), "a facet change drops the previous facet's multis" );
-            Assert.IsNotNull( Engine.Items.GetItem( 0x40000011 ), "non-multis are left alone" );
-            Assert.AreEqual( Map.Felucca, Engine.Player.Map );
+            Assert.Null( Engine.Items.GetItem( 0x40000010 ) ); // "a facet change drops the previous facet's multis"
+            Assert.NotNull( Engine.Items.GetItem( 0x40000011 ) ); // "non-multis are left alone"
+            Assert.Equal( Map.Felucca, Engine.Player.Map );
 
             Engine.Items.Clear();
         }
@@ -163,7 +161,7 @@ namespace ClassicAssist.Tests
 
             PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xBF );
 
-            Assert.IsNotNull( handler );
+            Assert.NotNull( handler );
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
         }

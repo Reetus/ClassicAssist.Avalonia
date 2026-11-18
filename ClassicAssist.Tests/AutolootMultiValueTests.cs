@@ -7,19 +7,17 @@ using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Shared;
 using ClassicAssist.Shared.UI.ViewModels.Agents;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class AutolootMultiValueTests
+    public class AutolootMultiValueTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
 
-        [TestInitialize]
-        public void SetUp()
+        public AutolootMultiValueTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), "ClassicAssistTests", Guid.NewGuid().ToString( "N" ) );
@@ -27,8 +25,7 @@ namespace ClassicAssist.Tests
             Engine.StartupPath = _tempDir;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -48,7 +45,7 @@ namespace ClassicAssist.Tests
                 "[{\"Name\":\"Faster Casting\",\"ShortName\":\"FC\",\"Clilocs\":[1060413],\"ClilocIndex\":0,\"ConstraintType\":0}]" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRegisterSpecialProperties()
         {
             ObservableCollection<PropertyEntry> constraints = new ObservableCollection<PropertyEntry>();
@@ -62,11 +59,11 @@ namespace ClassicAssist.Tests
 
             foreach ( string name in expected )
             {
-                Assert.IsTrue( constraints.Any( c => c.Name == name ), $"Missing special property: {name}" );
+                Assert.True( constraints.Any( c => c.Name == name ), $"Missing special property: {name}" );
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchIdMultipleValues()
         {
             ObservableCollection<PropertyEntry> constraints = new ObservableCollection<PropertyEntry>();
@@ -82,16 +79,16 @@ namespace ClassicAssist.Tests
                 Values = new ObservableCollection<int> { 0x0F6A }
             };
 
-            Assert.IsTrue( idMulti.Predicate( item, entry ) );
+            Assert.True( idMulti.Predicate( item, entry ) );
 
             entry.Values = new ObservableCollection<int> { 0x1234 };
-            Assert.IsFalse( idMulti.Predicate( item, entry ) );
+            Assert.False( idMulti.Predicate( item, entry ) );
 
             entry.Operator = AutolootOperator.NotEqual;
-            Assert.IsTrue( idMulti.Predicate( item, entry ) );
+            Assert.True( idMulti.Predicate( item, entry ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillMatchClilocMultipleValues()
         {
             ObservableCollection<PropertyEntry> constraints = new ObservableCollection<PropertyEntry>();
@@ -107,13 +104,13 @@ namespace ClassicAssist.Tests
                 Values = new ObservableCollection<int> { 1060401 }
             };
 
-            Assert.IsTrue( clilocMulti.Predicate( item, entry ) );
+            Assert.True( clilocMulti.Predicate( item, entry ) );
 
             entry.Values = new ObservableCollection<int> { 1060402 };
-            Assert.IsFalse( clilocMulti.Predicate( item, entry ) );
+            Assert.False( clilocMulti.Predicate( item, entry ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSerializeConstraintValuesRoundTrip()
         {
             WritePropertiesFile();
@@ -139,10 +136,10 @@ namespace ClassicAssist.Tests
 
             AutolootConstraintEntry reloadedConstraint = reloaded.Items[0].Constraints[0];
 
-            Assert.IsNotNull( reloadedConstraint.Values );
-            Assert.AreEqual( 2, reloadedConstraint.Values.Count );
-            Assert.IsTrue( reloadedConstraint.Values.Contains( 1060401 ) );
-            Assert.IsTrue( reloadedConstraint.Values.Contains( 1060402 ) );
+            Assert.NotNull( reloadedConstraint.Values );
+            Assert.Equal( 2, reloadedConstraint.Values.Count );
+            Assert.Contains( 1060401, reloadedConstraint.Values );
+            Assert.Contains( 1060402, reloadedConstraint.Values );
         }
     }
 }

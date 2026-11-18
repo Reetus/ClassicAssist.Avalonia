@@ -23,14 +23,13 @@ using ClassicAssist.Shared;
 using ClassicAssist.Data.Scavenger;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Agents
 {
-    [TestClass]
     public class ScavengerTests
     {
-        [TestMethod]
+        [Fact]
         public void WillScavengerEnabled()
         {
             //TODO
@@ -77,7 +76,7 @@ namespace ClassicAssist.Tests.Agents
             //manager.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WontScavengerEntryDisabled()
         {
             //TODO

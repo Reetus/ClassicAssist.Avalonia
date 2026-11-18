@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using ClassicAssist.UO.Data;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -9,7 +9,6 @@ namespace ClassicAssist.Tests
     ///     in one pass instead of a <c>string.Replace</c> per placeholder: repeated tokens must share an
     ///     argument, spare arguments are ignored, and a lone <c>~</c> is left alone.
     /// </summary>
-    [TestClass]
     public class ClilocLocalStringTests
     {
         private static void Initialize()
@@ -28,47 +27,47 @@ namespace ClassicAssist.Tests
             } );
         }
 
-        [TestMethod]
+        [Fact]
         public void SubstitutesSinglePlaceholder()
         {
             Initialize();
 
-            Assert.AreEqual( "Sword of 10", Cliloc.GetLocalString( 100, ["10"] ) );
+            Assert.Equal( "Sword of 10", Cliloc.GetLocalString( 100, ["10"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SubstitutesMultiplePlaceholdersInOrder()
         {
             Initialize();
 
-            Assert.AreEqual( "Bob hits for 5", Cliloc.GetLocalString( 101, ["Bob", "5"] ) );
+            Assert.Equal( "Bob hits for 5", Cliloc.GetLocalString( 101, ["Bob", "5"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RepeatedTokenSharesOneArgument()
         {
             Initialize();
 
-            Assert.AreEqual( "x and x plus y", Cliloc.GetLocalString( 102, ["x", "y"] ) );
+            Assert.Equal( "x and x plus y", Cliloc.GetLocalString( 102, ["x", "y"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void SpareArgumentsAreIgnored()
         {
             Initialize();
 
-            Assert.AreEqual( "value 7", Cliloc.GetLocalString( 103, ["7", "extra"] ) );
+            Assert.Equal( "value 7", Cliloc.GetLocalString( 103, ["7", "extra"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void NoPlaceholderReturnsText()
         {
             Initialize();
 
-            Assert.AreEqual( "plain text", Cliloc.GetLocalString( 104, ["x"] ) );
+            Assert.Equal( "plain text", Cliloc.GetLocalString( 104, ["x"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void ExpandsArgumentsEvenWithoutPlaceholders()
         {
             Initialize();
@@ -79,34 +78,34 @@ namespace ClassicAssist.Tests
             // up on the missing placeholder.
             string[] arguments = ["#500000", "5"];
 
-            Assert.AreEqual( "plain text", Cliloc.GetLocalString( 104, arguments ) );
-            Assert.AreEqual( "World", arguments[0] );
+            Assert.Equal( "plain text", Cliloc.GetLocalString( 104, arguments ) );
+            Assert.Equal( "World", arguments[0] );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoneTildeIsLeftAlone()
         {
             Initialize();
 
-            Assert.AreEqual( "a ~ b", Cliloc.GetLocalString( 105, ["x"] ) );
+            Assert.Equal( "a ~ b", Cliloc.GetLocalString( 105, ["x"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void ArgumentContainingTildeUsesFallback()
         {
             Initialize();
 
             // The old loop re-scanned the inserted argument, so ~2_B~ was replaced by the next argument.
-            Assert.AreEqual( "Z", Cliloc.GetLocalString( 106, ["~2_B~", "Z"] ) );
+            Assert.Equal( "Z", Cliloc.GetLocalString( 106, ["~2_B~", "Z"] ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void ExpandsHashTokens()
         {
             Initialize();
 
-            Assert.AreEqual( "World", Cliloc.GetLocalString( "#500000" ) );
-            Assert.AreEqual( "say Hello", Cliloc.GetLocalString( "say #200" ) );
+            Assert.Equal( "World", Cliloc.GetLocalString( "#500000" ) );
+            Assert.Equal( "say Hello", Cliloc.GetLocalString( "say #200" ) );
         }
     }
 }

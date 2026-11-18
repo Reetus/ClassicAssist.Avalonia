@@ -8,7 +8,7 @@ using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.Models;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -18,14 +18,12 @@ namespace ClassicAssist.Tests
     ///     either on save leaves a condition that loads back matching nothing. The file is written in
     ///     WPF's nested Groups/Children shape so the two sides can share profiles.
     /// </summary>
-    [TestClass]
-    public class FilterProfileRoundTripTests
+    public class FilterProfileRoundTripTests : IDisposable
     {
         private string _originalStartupPath;
         private string _tempDir;
 
-        [TestInitialize]
-        public void Initialize()
+        public FilterProfileRoundTripTests()
         {
             _originalStartupPath = Engine.StartupPath;
             _tempDir = Path.Combine( Path.GetTempPath(), Path.GetRandomFileName() );
@@ -35,8 +33,7 @@ namespace ClassicAssist.Tests
             Engine.StartupPath = _tempDir;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.StartupPath = _originalStartupPath;
 
@@ -50,7 +47,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRoundTripAdditionalAndValues()
         {
             EntityCollectionViewerViewModel viewModel = new EntityCollectionViewerViewModel( new ItemCollection( 0 ) );
@@ -88,24 +85,24 @@ namespace ClassicAssist.Tests
 
             try
             {
-                Assert.AreEqual( 1, reloaded.SelectedProfile.Groups.Count );
+                Assert.Single( reloaded.SelectedProfile.Groups );
 
                 ObservableCollection<AutolootConstraintEntry> loadedConditions =
                     reloaded.SelectedProfile.Groups[0].Items;
 
-                Assert.AreEqual( 2, loadedConditions.Count );
+                Assert.Equal( 2, loadedConditions.Count );
 
                 AutolootConstraintEntry loadedName =
                     loadedConditions.FirstOrDefault( c => c.Property?.Name == Strings.Name );
 
-                Assert.IsNotNull( loadedName );
-                Assert.AreEqual( "vanquishing", loadedName.Additional );
+                Assert.NotNull( loadedName );
+                Assert.Equal( "vanquishing", loadedName.Additional );
 
                 AutolootConstraintEntry loadedIds =
                     loadedConditions.FirstOrDefault( c => c.Property?.Name == Strings.ID__Multiple_ );
 
-                Assert.IsNotNull( loadedIds );
-                CollectionAssert.AreEqual( new[] { 0x0EED, 0x1F14 }, loadedIds.Values.ToArray() );
+                Assert.NotNull( loadedIds );
+                Assert.Equal( new[] { 0x0EED, 0x1F14 }, loadedIds.Values.ToArray() );
             }
             finally
             {
@@ -117,7 +114,7 @@ namespace ClassicAssist.Tests
         ///     A WPF-written FilterProfiles.json (nested Groups, items keyed by Constraint.Name) must load
         ///     with its group structure intact - this is the compatibility guarantee that drove the port.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillLoadWpfNestedGroups()
         {
             File.WriteAllText( Path.Combine( _tempDir, "FilterProfiles.json" ), @"{
@@ -137,18 +134,18 @@ namespace ClassicAssist.Tests
             try
             {
                 FilterProfile profile = viewModel.Profiles.Single();
-                Assert.AreEqual( "WPF", profile.Name );
-                Assert.AreEqual( 1, profile.Groups.Count );
+                Assert.Equal( "WPF", profile.Name );
+                Assert.Single( profile.Groups );
 
                 EntityCollectionFilterGroup branch = profile.Groups[0];
-                Assert.IsTrue( branch.HasChildren );
-                Assert.AreEqual( 2, branch.Children.Count );
-                Assert.AreEqual( BooleanOperation.And, branch.Children[0].Operation );
-                Assert.AreEqual( 1, branch.Children[0].Items.Count );
-                Assert.AreEqual( "Name", branch.Children[0].Items[0].Property?.Name );
-                Assert.AreEqual( 100, branch.Children[0].Items[0].Value );
-                Assert.AreEqual( BooleanOperation.Or, branch.Children[1].Operation );
-                Assert.IsFalse( branch.Children[1].Items[0].Enabled );
+                Assert.True( branch.HasChildren );
+                Assert.Equal( 2, branch.Children.Count );
+                Assert.Equal( BooleanOperation.And, branch.Children[0].Operation );
+                Assert.Single( branch.Children[0].Items );
+                Assert.Equal( "Name", branch.Children[0].Items[0].Property?.Name );
+                Assert.Equal( 100, branch.Children[0].Items[0].Value );
+                Assert.Equal( BooleanOperation.Or, branch.Children[1].Operation );
+                Assert.False( branch.Children[1].Items[0].Enabled );
             }
             finally
             {
@@ -162,7 +159,7 @@ namespace ClassicAssist.Tests
         ///     Written in the legacy flat Conditions shape, which must still load flat (no groups - the
         ///     tree stays hidden).
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillDropConditionsWhoseConstraintIsUnknown()
         {
             File.WriteAllText( Path.Combine( _tempDir, "FilterProfiles.json" ), @"{
@@ -174,8 +171,8 @@ namespace ClassicAssist.Tests
 
             try
             {
-                Assert.AreEqual( 0, viewModel.SelectedProfile.Groups.Count );
-                Assert.AreEqual( 0, viewModel.SelectedProfile.Conditions.Count );
+                Assert.Empty( viewModel.SelectedProfile.Groups );
+                Assert.Empty( viewModel.SelectedProfile.Conditions );
             }
             finally
             {
@@ -187,7 +184,7 @@ namespace ClassicAssist.Tests
         {
             PropertyEntry entry = viewModel.Constraints.FirstOrDefault( c => c.Name == name );
 
-            Assert.IsNotNull( entry, $"constraint '{name}' should be registered" );
+            Assert.NotNull( entry ); // $"constraint '{name}' should be registered"
 
             return entry;
         }

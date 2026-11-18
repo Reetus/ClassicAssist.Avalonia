@@ -23,15 +23,14 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class OutgoingPacketHandlerTests
+    public class OutgoingPacketHandlerTests : IDisposable
     {
-        [TestInitialize]
-        public void Initialize()
+        public OutgoingPacketHandlerTests()
         {
             Engine.Items = new ItemCollection( 0 );
             Engine.Mobiles = new MobileCollection( Engine.Items );
@@ -40,7 +39,7 @@ namespace ClassicAssist.Tests
             OutgoingPacketHandlers.Initialize();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetHolding()
         {
             byte[] packet = { 0x07, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF };
@@ -49,15 +48,15 @@ namespace ClassicAssist.Tests
 
             handler.OnReceive( new PacketReader( packet, packet.Length, true ) );
 
-            Assert.AreEqual( unchecked( (int) 0xAABBCCDD ), Engine.Player.Holding );
-            Assert.AreEqual( 0xEEFF, Engine.Player.HoldingAmount );
+            Assert.Equal( unchecked( (int) 0xAABBCCDD ), Engine.Player.Holding );
+            Assert.Equal( 0xEEFF, Engine.Player.HoldingAmount );
         }
 
         /// <summary>
         ///     0x12 sub-command 0x24 is the client using a skill. Tracking it is what makes "Use Last
         ///     Skill" follow a skill the player used from the client's own macros, not just ours.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillTrackLastSkillFromClient()
         {
             Engine.LastSkillID = 0;
@@ -67,10 +66,10 @@ namespace ClassicAssist.Tests
 
             OutgoingPacketHandlers.GetHandler( 0x12 ).OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.AreEqual( 12, Engine.LastSkillID );
+            Assert.Equal( 12, Engine.LastSkillID );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTrackLastSpellFromLegacyClient()
         {
             Engine.LastSpellID = 0;
@@ -80,10 +79,10 @@ namespace ClassicAssist.Tests
 
             OutgoingPacketHandlers.GetHandler( 0x12 ).OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.AreEqual( 42, Engine.LastSpellID );
+            Assert.Equal( 42, Engine.LastSpellID );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillIgnoreMalformedSkillPacket()
         {
             Engine.LastSkillID = 7;
@@ -93,14 +92,14 @@ namespace ClassicAssist.Tests
 
             OutgoingPacketHandlers.GetHandler( 0x12 ).OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.AreEqual( 7, Engine.LastSkillID, "a malformed packet should leave the last skill alone" );
+            Assert.Equal( 7, Engine.LastSkillID ); // "a malformed packet should leave the last skill alone"
         }
 
         /// <summary>
         ///     The packet we send has to update the same state, or using a skill through a macro and then
         ///     pressing the hotkey would repeat whatever came before it.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillTrackLastSkillFromOurOwnPacket()
         {
             Engine.LastSkillID = 0;
@@ -108,11 +107,10 @@ namespace ClassicAssist.Tests
             // ReSharper disable once ObjectCreationAsStatement
             new UseSkill( 34 );
 
-            Assert.AreEqual( 34, Engine.LastSkillID );
+            Assert.Equal( 34, Engine.LastSkillID );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
         }
     }

@@ -26,15 +26,14 @@ using ClassicAssist.Data.Organizer;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Agents
 {
-    [TestClass]
     public class OrganizerTests
     {
-        [TestMethod]
-        public void WillOrganizeAnyHue()
+        [Fact]
+        public async Task WillOrganizeAnyHue()
         {
             Engine.Items.Clear();
 
@@ -74,11 +73,11 @@ namespace ClassicAssist.Tests.Agents
 
             Engine.InternalPacketSentEvent += OnInternalPacketSentEvent;
 
-            Task.Run( () => manager.Organize( entry, container.Serial, container.Serial ) ).Wait();
+            await Task.Run( () => manager.Organize( entry, container.Serial, container.Serial ), TestContext.Current.CancellationToken );
 
             bool result = are.WaitOne( 4000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             manager.Items.Clear();
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
@@ -86,8 +85,8 @@ namespace ClassicAssist.Tests.Agents
             Engine.Items.Clear();
         }
 
-        [TestMethod]
-        public void WillOrganizeOnlyHue()
+        [Fact]
+        public async Task WillOrganizeOnlyHue()
         {
             Engine.Items.Clear();
 
@@ -136,11 +135,11 @@ namespace ClassicAssist.Tests.Agents
 
             Engine.InternalPacketSentEvent += OnInternalPacketSentEvent;
 
-            Task.Run( () => manager.Organize( entry, container.Serial, container.Serial ) ).Wait();
+            await Task.Run( () => manager.Organize( entry, container.Serial, container.Serial ), TestContext.Current.CancellationToken );
 
             bool result = are.WaitOne( 4000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             manager.Items.Clear();
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;

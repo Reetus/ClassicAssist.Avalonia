@@ -4,7 +4,7 @@ using System.Linq;
 using ClassicAssist.Data;
 using ClassicAssist.Data.Autoloot;
 using ClassicAssist.Misc;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -15,26 +15,23 @@ namespace ClassicAssist.Tests
     ///     the plugin. Assembly.LoadFrom on an already-loaded file hands back the same instance, so the
     ///     hook is discovered and invoked exactly as it would be for a real one.
     /// </summary>
-    [TestClass]
-    public class PluginConstraintTests
+    public class PluginConstraintTests : IDisposable
     {
         private static string[] _originalAssemblies;
 
-        [TestInitialize]
-        public void Initialize()
+        public PluginConstraintTests()
         {
             _originalAssemblies = AssistantOptions.Assemblies;
             FakePlugin.InitializeCount = 0;
             FakePlugin.ParameterlessCount = 0;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             AssistantOptions.Assemblies = _originalAssemblies;
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadPluginPropertiesInvokesConstraintHook()
         {
             AssistantOptions.Assemblies = new[] { typeof( FakePlugin ).Assembly.Location };
@@ -43,12 +40,12 @@ namespace ClassicAssist.Tests
 
             AutolootPropertyRegistration.LoadPluginProperties( constraints );
 
-            Assert.AreEqual( 1, FakePlugin.InitializeCount );
-            Assert.IsTrue( constraints.Any( c => c.Name == FakePlugin.CONSTRAINT_NAME ),
+            Assert.Equal( 1, FakePlugin.InitializeCount );
+            Assert.True( constraints.Any( c => c.Name == FakePlugin.CONSTRAINT_NAME ),
                 "plugin constraint should be registered" );
         }
 
-        [TestMethod]
+        [Fact]
         public void LoadPluginPropertiesDoesNothingWithoutConfiguredAssemblies()
         {
             AssistantOptions.Assemblies = null;
@@ -57,31 +54,31 @@ namespace ClassicAssist.Tests
 
             AutolootPropertyRegistration.LoadPluginProperties( constraints );
 
-            Assert.AreEqual( 0, FakePlugin.InitializeCount );
-            Assert.AreEqual( 0, constraints.Count );
+            Assert.Equal( 0, FakePlugin.InitializeCount );
+            Assert.Empty( constraints );
         }
 
         /// <summary>
         ///     The parameterless hook is the one AssistantOptions.Load fires; it must not be confused with
         ///     the constraint overload, or a plugin's general setup would re-run on every filter rebuild.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void InitializeOverloadsAreMatchedBySignature()
         {
             AssistantOptions.Assemblies = new[] { typeof( FakePlugin ).Assembly.Location };
 
             AutolootPropertyRegistration.LoadPluginProperties( new ObservableCollection<PropertyEntry>() );
 
-            Assert.AreEqual( 1, FakePlugin.InitializeCount );
-            Assert.AreEqual( 0, FakePlugin.ParameterlessCount, "parameterless hook should not fire" );
+            Assert.Equal( 1, FakePlugin.InitializeCount );
+            Assert.Equal( 0, FakePlugin.ParameterlessCount ); // "parameterless hook should not fire"
 
             PluginAssemblies.InvokeInitialize( Type.EmptyTypes, null );
 
-            Assert.AreEqual( 1, FakePlugin.ParameterlessCount );
-            Assert.AreEqual( 1, FakePlugin.InitializeCount, "constraint hook should not fire" );
+            Assert.Equal( 1, FakePlugin.ParameterlessCount );
+            Assert.Equal( 1, FakePlugin.InitializeCount ); // "constraint hook should not fire"
         }
 
-        [TestMethod]
+        [Fact]
         public void UnloadableAssemblyIsSkipped()
         {
             AssistantOptions.Assemblies = new[]
@@ -94,7 +91,7 @@ namespace ClassicAssist.Tests
             // A plugin built against a different version shouldn't take the constraint list down with it.
             AutolootPropertyRegistration.LoadPluginProperties( constraints );
 
-            Assert.IsTrue( constraints.Any( c => c.Name == FakePlugin.CONSTRAINT_NAME ),
+            Assert.True( constraints.Any( c => c.Name == FakePlugin.CONSTRAINT_NAME ),
                 "a bad path must not stop later assemblies loading" );
         }
     }

@@ -26,14 +26,13 @@ using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.Packets;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class OldPacketTests
     {
-        [TestMethod]
+        [Fact]
         public void WillSendProperDropRequest()
         {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
@@ -52,11 +51,11 @@ namespace ClassicAssist.Tests
                     int z = data[9];
                     int containerSerial = ( data[10] << 24 ) | ( data[11] << 16 ) | ( data[12] << 8 ) | data[13];
 
-                    Assert.AreEqual( 0x11223344, serial );
-                    Assert.AreEqual( 1, x );
-                    Assert.AreEqual( 2, y );
-                    Assert.AreEqual( 3, z );
-                    Assert.AreEqual( 0x55667788, containerSerial );
+                    Assert.Equal( 0x11223344, serial );
+                    Assert.Equal( 1, x );
+                    Assert.Equal( 2, y );
+                    Assert.Equal( 3, z );
+                    Assert.Equal( 0x55667788, containerSerial );
 
                     are.Set();
                 }
@@ -78,7 +77,7 @@ namespace ClassicAssist.Tests
                 Engine.ClientVersion = new Version( 7, 0, 45, 1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseOldContainerContents()
         {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
@@ -95,16 +94,17 @@ namespace ClassicAssist.Tests
                 PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x3C );
                 handler?.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-                Assert.AreEqual( 1, Engine.Items.GetItemCount() );
-                Assert.IsTrue( Engine.Items.Any( i => i.Serial == 0x4613ff6d ) );
+                Assert.Equal( 1, Engine.Items.GetItemCount() );
+                Assert.Contains( Engine.Items, i => i.Serial == 0x4613ff6d );
                 Item container = Engine.Items.GetItem( 0x4613ff6d );
-                Assert.IsNotNull( container );
-                Assert.AreEqual( 2, container.Container.GetItemCount() );
-                Engine.Items = null;
+                Assert.NotNull( container );
+                Assert.Equal( 2, container.Container.GetItemCount() );
+                Engine.Items = new ItemCollection( 0 );
+                Engine.Mobiles = new MobileCollection( Engine.Items );
                 Engine.ClientVersion = new Version( 7, 0, 45, 1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillParseOldHealthbarColour()
         {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
@@ -123,10 +123,10 @@ namespace ClassicAssist.Tests
                 PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x17 );
                 handler?.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-                Assert.IsTrue( mobile.IsPoisoned );
+                Assert.True( mobile.IsPoisoned );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSetPoisonedFromOldMoving()
         {
                 Engine.ClientVersion = new Version( 5, 0, 9, 1 );
@@ -144,8 +144,8 @@ namespace ClassicAssist.Tests
 
                 Mobile mobile = Engine.Mobiles.GetMobile( 0x2549bb );
 
-                Assert.IsNotNull( mobile );
-                Assert.IsTrue( mobile.IsPoisoned );
+                Assert.NotNull( mobile );
+                Assert.True( mobile.IsPoisoned );
 
                 byte[] packet2 =
                 {
@@ -157,41 +157,65 @@ namespace ClassicAssist.Tests
 
                 mobile = Engine.Mobiles.GetMobile( 0x6bc06 );
 
-                Assert.IsNotNull( mobile );
-                Assert.IsTrue( mobile.IsPoisoned );
+                Assert.NotNull( mobile );
+                Assert.True( mobile.IsPoisoned );
         }
 
-        //[TestMethod]
-        //public void WillSetPoisonedFromOldIncoming()
-        //{
-        //        //    appDomain.DoCallBack( () =>
-        //    {
-        //        Engine.ClientVersion = new Version( 5, 0, 9, 1 );
+        /// <summary>
+        ///     Pre-7.0 clients carry poison as flag 0x04 in the mobile-incoming status byte (later clients
+        ///     use it for flying). A captured old-format 0x78 for a mobile wearing ten items - its status
+        ///     byte (offset 17) is 0x00 as captured, i.e. not poisoned, so the poisoned case sets 0x04 there.
+        ///     Old-format equipment carries a hue only when the graphic's 0x8000 bit is set.
+        /// </summary>
+        [Theory]
+        [InlineData( 0x00, false )]
+        [InlineData( 0x04, true )]
+        public void WillSetPoisonedFromOldIncoming( byte status, bool poisoned )
+        {
+            EngineState.Reset();
+            Engine.ClientVersion = new Version( 5, 0, 9, 1 );
 
-        //        byte[] packet =
-        //        {
-        //            0x78, 0x00, 0x6e, 0x00, 0x05, 0xca, 0x65, 0x01, 0x90, 0x09, 0xba, 0x02, 0x23, 0x00, 0x03, 0x03,
-        //            0xff, 0x00, 0x01, 0x40, 0x05, 0xca, 0x5d, 0xa0, 0x48, 0x0b, 0x04, 0x65, 0x40, 0x05, 0xca, 0x58,
-        //            0xa0, 0x3e, 0x10, 0x04, 0x65, 0x40, 0x05, 0xca, 0x57, 0x95, 0x17, 0x05, 0x03, 0x1c, 0x40, 0x05,
-        //            0xca, 0x54, 0x95, 0x2e, 0x04, 0x01, 0xb6, 0x40, 0x05, 0xca, 0x53, 0x14, 0x15, 0x0d, 0x40, 0x05,
-        //            0xca, 0x51, 0x14, 0x11, 0x18, 0x40, 0x05, 0xca, 0x4f, 0x14, 0x10, 0x13, 0x40, 0x05, 0xca, 0x46,
-        //            0x95, 0x41, 0x11, 0x03, 0xaf, 0x40, 0x05, 0xca, 0x3b, 0x0e, 0x75, 0x15, 0x40, 0x05, 0xca, 0x35,
-        //            0x3e, 0xa0, 0x19, 0x40, 0x05, 0xca, 0x42, 0x14, 0x3e, 0x02, 0x00, 0x00, 0x00, 0x00
-        //        };
+            try
+            {
+                byte[] packet =
+                {
+                    0x78, 0x00, 0x6e, 0x00, 0x05, 0xca, 0x65, 0x01, 0x90, 0x09, 0xba, 0x02, 0x23, 0x00, 0x03, 0x03,
+                    0xff, 0x00, 0x01, 0x40, 0x05, 0xca, 0x5d, 0xa0, 0x48, 0x0b, 0x04, 0x65, 0x40, 0x05, 0xca, 0x58,
+                    0xa0, 0x3e, 0x10, 0x04, 0x65, 0x40, 0x05, 0xca, 0x57, 0x95, 0x17, 0x05, 0x03, 0x1c, 0x40, 0x05,
+                    0xca, 0x54, 0x95, 0x2e, 0x04, 0x01, 0xb6, 0x40, 0x05, 0xca, 0x53, 0x14, 0x15, 0x0d, 0x40, 0x05,
+                    0xca, 0x51, 0x14, 0x11, 0x18, 0x40, 0x05, 0xca, 0x4f, 0x14, 0x10, 0x13, 0x40, 0x05, 0xca, 0x46,
+                    0x95, 0x41, 0x11, 0x03, 0xaf, 0x40, 0x05, 0xca, 0x3b, 0x0e, 0x75, 0x15, 0x40, 0x05, 0xca, 0x35,
+                    0x3e, 0xa0, 0x19, 0x40, 0x05, 0xca, 0x42, 0x14, 0x3e, 0x02, 0x00, 0x00, 0x00, 0x00
+                };
 
-        //        IncomingPacketHandlers.Initialize();
+                packet[17] = status;
 
-        //        PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x78 );
-        //        handler?.OnReceive( new PacketReader( packet, packet.Length, false ) );
+                EngineState.Receive( packet );
 
-        //        Mobile mobile = Engine.Mobiles.GetMobile( 0x5ca65 );
+                Mobile mobile = Engine.Mobiles.GetMobile( 0x5ca65 );
 
-        //        Assert.IsNotNull( mobile );
-        //        Assert.IsTrue( mobile.IsPoisoned );
-        //    } );
-        //}
+                Assert.NotNull( mobile );
+                Assert.Equal( poisoned, mobile.IsPoisoned );
 
-        [TestMethod]
+                // 40 05 ca 5d / a0 48 / 0b / 04 65: graphic 0x2048 with the hue flag, layer 0x0B, hue 0x0465
+                Item hued = Engine.Items.GetItem( 0x4005ca5d );
+                Assert.NotNull( hued );
+                Assert.Equal( 0x2048, hued.ID );
+                Assert.Equal( 0x0465, hued.Hue );
+
+                // 40 05 ca 53 / 14 15 / 0d: no hue flag, so no hue bytes follow
+                Item plain = Engine.Items.GetItem( 0x4005ca53 );
+                Assert.NotNull( plain );
+                Assert.Equal( 0x1415, plain.ID );
+                Assert.Equal( 0, plain.Hue );
+            }
+            finally
+            {
+                EngineState.Reset();
+            }
+        }
+
+        [Fact]
         public void WillParseItemListMenu()
         {
             /*

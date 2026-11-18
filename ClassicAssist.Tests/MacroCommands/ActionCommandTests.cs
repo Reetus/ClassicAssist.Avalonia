@@ -6,20 +6,18 @@ using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class ActionCommandTests
+    public class ActionCommandTests : IDisposable
     {
-        [TestInitialize]
-        public void Initialize()
+        public ActionCommandTests()
         {
             Engine.ClientVersion = new Version( 7, 0, 45, 1 );
         }
 
-        [TestMethod]
+        [Fact]
         public void AttackWillSendAttackPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -33,7 +31,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -44,12 +42,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void ClearHandsWillSendDragPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -63,7 +61,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -77,13 +75,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void ClickObjectWillSendPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -97,7 +95,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -109,13 +107,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void MoveItemWillSendDragPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -129,7 +127,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -142,12 +140,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void FeedWillSendDragPacket()
         {
             PlayerMobile player = new PlayerMobile( 0x01 );
@@ -174,7 +172,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -185,7 +183,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
 
@@ -193,7 +191,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void RenameWillSendRenamePacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -202,11 +200,11 @@ namespace ClassicAssist.Tests.MacroCommands
             {
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 string name = Encoding.ASCII.GetString( data, 5, 30 ).TrimEnd( '\0' );
 
-                Assert.AreEqual( "Snorlax", name );
+                Assert.Equal( "Snorlax", name );
 
                 are.Set();
             }
@@ -217,16 +215,21 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
         }
 
-        [TestMethod]
+        [Fact]
         public void ShowNamesWillSendLookRequest()
         {
             PlayerMobile player = new PlayerMobile( 0x01 );
             Mobile mobile = new Mobile( 0x00aabbcc );
+
+            // ShowNames looks at every known mobile/corpse, so start from empty collections rather than
+            // whatever an earlier test left behind.
+            Engine.Mobiles.Clear();
+            Engine.Items.Clear();
 
             Engine.Player = player;
             Engine.Mobiles.Add( mobile );
@@ -235,40 +238,47 @@ namespace ClassicAssist.Tests.MacroCommands
 
             void OnInternalPacketSentEvent( byte[] data, int length )
             {
-                Assert.AreEqual( 0x09, data[0] );
+                Assert.Equal( 0x09, data[0] );
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
 
             Engine.InternalPacketSentEvent += OnInternalPacketSentEvent;
 
-            ActionCommands.ShowNames( "mobiles" );
+            try
+            {
+                ActionCommands.ShowNames( "mobiles" );
 
-            bool result = are.WaitOne( 5000 );
+                bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+                Assert.True( result );
 
-            Engine.Mobiles.Remove( mobile );
+                Engine.Mobiles.Remove( mobile );
 
-            Engine.Items.Add( new Item( 0x00aabbcc ) { ID = 0x2006 } );
+                Engine.Items.Add( new Item( 0x00aabbcc ) { ID = 0x2006 } );
 
-            ActionCommands.ShowNames( "corpses" );
+                ActionCommands.ShowNames( "corpses" );
 
-            result = are.WaitOne( 5000 );
+                result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
-
-            Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
-            Engine.Player = null;
-            Engine.Mobiles.Clear();
-            Engine.Items.Clear();
+                Assert.True( result );
+            }
+            finally
+            {
+                // The handler asserts on every packet sent, so leaving it attached after a failure
+                // would fail every later test that sends anything.
+                Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
+                Engine.Player = null;
+                Engine.Mobiles.Clear();
+                Engine.Items.Clear();
+            }
         }
 
-        [TestMethod]
+        [Fact]
         public void EquipItemWillSendDragPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -282,7 +292,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x00aabbcc, serial );
+                Assert.Equal( 0x00aabbcc, serial );
 
                 are.Set();
             }
@@ -297,14 +307,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void EquipTypeWillSendDragPacket()
         {
             Item backpack = new Item( 0x40000000 ) { Owner = 1, Container = new ItemCollection( 0x40000000 ) };
@@ -327,7 +337,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( item.Serial, serial );
+                Assert.Equal( item.Serial, serial );
 
                 are.Set();
             }
@@ -338,29 +348,28 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
             Engine.Player = null;
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindLayer()
         {
             Engine.Player = new PlayerMobile( 1 );
             Engine.Player.SetLayer( Layer.OneHanded, 0x40000001 );
             AliasCommands.SetAlias( "self", Engine.Player.Serial );
 
-            Assert.IsTrue( ActionCommands.FindLayer( "OneHanded" ) );
-            Assert.IsFalse( ActionCommands.FindLayer( "TwoHanded" ) );
+            Assert.True( ActionCommands.FindLayer( "OneHanded" ) );
+            Assert.False( ActionCommands.FindLayer( "TwoHanded" ) );
 
             AliasCommands.UnsetAlias( "self" );
             Engine.Player = null;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             ActionPacketQueue.Clear();
         }

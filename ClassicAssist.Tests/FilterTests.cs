@@ -6,15 +6,14 @@ using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class FilterTests
     {
-        [TestMethod]
+        [Fact]
         public void MacrosFilterTextFiltersItems()
         {
             MacrosTabViewModel vm = new MacrosTabViewModel();
@@ -25,19 +24,19 @@ namespace ClassicAssist.Tests
             vm.Items.Add( macro1 );
             vm.Items.Add( macro2 );
 
-            Assert.AreEqual( 2, vm.FilterItems.Count );
+            Assert.Equal( 2, vm.FilterItems.Count );
 
             vm.FilterText = "beta";
 
-            Assert.AreEqual( 1, vm.FilterItems.Count );
-            Assert.IsTrue( vm.FilterItems.Contains( macro2 ) );
+            Assert.Single( vm.FilterItems );
+            Assert.Contains( macro2, vm.FilterItems );
 
             vm.FilterText = string.Empty;
 
-            Assert.AreEqual( 2, vm.FilterItems.Count );
+            Assert.Equal( 2, vm.FilterItems.Count );
         }
 
-        [TestMethod]
+        [Fact]
         public void HotkeysFilterTextFiltersChildren()
         {
             HotkeysTabViewModel vm = new HotkeysTabViewModel();
@@ -46,25 +45,25 @@ namespace ClassicAssist.Tests
             HotkeyCommand commandsCategory =
                 HotkeyManager.GetInstance().Items.FirstOrDefault( c => c.IsCategory && c.Name == Strings.Commands );
 
-            Assert.IsNotNull( commandsCategory );
-            Assert.IsTrue( commandsCategory.Children.Count > 0 );
+            Assert.NotNull( commandsCategory );
+            Assert.True( commandsCategory.Children.Count > 0 );
 
             HotkeyEntry child = commandsCategory.Children.First();
             string name = child.Name;
 
             vm.FilterText = name;
 
-            Assert.IsTrue( vm.FilterItems.Count > 0 );
-            Assert.IsTrue( vm.FilterItems.All( c => c.Children.Count > 0 ) );
-            Assert.IsTrue( vm.FilterItems.SelectMany( c => c.Children ).Contains( child ) );
+            Assert.True( vm.FilterItems.Count > 0 );
+            Assert.True( vm.FilterItems.All( c => c.Children.Count > 0 ) );
+            Assert.Contains( child, vm.FilterItems.SelectMany( c => c.Children ) );
 
             vm.FilterText = "zzz-no-such-hotkey-zzz";
 
-            Assert.AreEqual( 0, vm.FilterItems.Count );
+            Assert.Empty( vm.FilterItems );
 
             vm.FilterText = string.Empty;
 
-            Assert.AreEqual( HotkeyManager.GetInstance().Items.Count, vm.FilterItems.Count );
+            Assert.Equal( HotkeyManager.GetInstance().Items.Count, vm.FilterItems.Count );
         }
     }
 }

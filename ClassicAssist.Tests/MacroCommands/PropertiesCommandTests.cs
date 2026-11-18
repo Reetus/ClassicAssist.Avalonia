@@ -1,20 +1,17 @@
-﻿using System.Diagnostics;
-using System.IO;
-using ClassicAssist.Shared;
+﻿using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class PropertiesCommandTests
     {
-        [TestMethod]
+        [Fact]
         public void WillWaitForProperties()
         {
             Engine.PacketWaitEntries = new PacketWaitEntries();
@@ -37,25 +34,22 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = PropertiesCommands.WaitForProperties( 0x00aabbcc, 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.PacketWaitEntries = null;
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
         }
 
-        [TestMethod]
-        [TestCategory( "Data" )]
+        [Fact]
+        [Trait( "Category", "Data" )]
         public void WillReturnTrueOnPropertyName()
         {
-            const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
-
-            if ( !Directory.Exists( localPath ) )
+            if ( !TestData.HasUOData )
             {
-                Debug.WriteLine( "Not running test, requires Cliloc.enu" );
                 return;
             }
 
-            Cliloc.Initialize( localPath );
+            Cliloc.Initialize( TestData.UOPath );
 
             byte[] packet =
             {
@@ -76,32 +70,29 @@ namespace ClassicAssist.Tests.MacroCommands
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsNotNull( item.Properties );
+            Assert.NotNull( item.Properties );
 
             bool result = PropertiesCommands.Property( item.Serial, "Contents" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             result = PropertiesCommands.Property( item.Serial, "Donkey" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Engine.Items.Clear();
         }
 
-        [TestMethod]
-        [TestCategory( "Data" )]
+        [Fact]
+        [Trait( "Category", "Data" )]
         public void WillGetPropertyValue()
         {
-            const string localPath = @"C:\Users\johns\Desktop\KvG Client 2.0";
-
-            if ( !Directory.Exists( localPath ) )
+            if ( !TestData.HasUOData )
             {
-                Debug.WriteLine( "Not running test, requires Cliloc.enu" );
                 return;
             }
 
-            Cliloc.Initialize( localPath );
+            Cliloc.Initialize( TestData.UOPath );
 
             byte[] packet =
             {
@@ -122,20 +113,20 @@ namespace ClassicAssist.Tests.MacroCommands
 
             handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
 
-            Assert.IsNotNull( item.Properties );
+            Assert.NotNull( item.Properties );
 
             int value = PropertiesCommands.PropertyValue<int>( item.Serial, "Contents" );
 
-            Assert.AreEqual( 49, value );
+            Assert.Equal( 49, value );
 
             value = PropertiesCommands.PropertyValue<int>( item.Serial, "Contents", 2 );
 
-            Assert.AreEqual( 71, value );
+            Assert.Equal( 71, value );
 
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetPropertyValueBigInteger()
         {
             // IronPython maps `int` to System.Numerics.BigInteger; Convert.ChangeType can't target
@@ -156,7 +147,7 @@ namespace ClassicAssist.Tests.MacroCommands
             System.Numerics.BigInteger value =
                 PropertiesCommands.PropertyValue<System.Numerics.BigInteger>( item.Serial, "Durability" );
 
-            Assert.AreEqual( new System.Numerics.BigInteger( 25 ), value );
+            Assert.Equal( new System.Numerics.BigInteger( 25 ), value );
 
             Engine.Items.Clear();
         }

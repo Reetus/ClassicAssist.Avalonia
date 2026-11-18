@@ -4,46 +4,46 @@ using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class ObjectCommandTests
+    public class ObjectCommandTests : IDisposable
     {
-        [TestMethod]
+        [Fact]
         public void WillFindTypeGround()
         {
             Engine.Items.Add( new Item( 0x40000001 ) { ID = 0xdda } );
 
             bool result = ObjectCommands.FindType( 0xdda );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             int val = AliasCommands.GetAlias( "found" );
 
-            Assert.AreEqual( 0x40000001, val );
+            Assert.Equal( 0x40000001, val );
 
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindTypeGroundMobile()
         {
             Engine.Mobiles.Add( new Mobile( 0x02 ) { ID = 0x190 } );
 
             bool result = ObjectCommands.FindType( 0x190 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             int val = AliasCommands.GetAlias( "found" );
 
-            Assert.AreEqual( 0x02, val );
+            Assert.Equal( 0x02, val );
 
             Engine.Mobiles.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindTypeSubcontainer()
         {
             Item container = new Item( 1 )
@@ -57,16 +57,16 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = ObjectCommands.FindType( 0xdda, -1, "cont" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             int val = AliasCommands.GetAlias( "found" );
 
-            Assert.AreEqual( 0x02, val );
+            Assert.Equal( 0x02, val );
 
             Engine.Items.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindTypeInRange()
         {
             Engine.Player = new PlayerMobile( 1 );
@@ -74,13 +74,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = ObjectCommands.FindType( 0x190, 8 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WontFindTypeOutOfRange()
         {
             Engine.Player = new PlayerMobile( 1 );
@@ -88,32 +88,32 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = ObjectCommands.FindType( 0x190, 1 );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillIgnoreObject()
         {
             Engine.Mobiles.Add( new Mobile( 0x02 ) { ID = 0x190, X = 5, Y = 5 } );
 
             bool result = ObjectCommands.FindType( 0x190 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             ObjectCommands.IgnoreObject( "found" );
 
             result = ObjectCommands.FindType( 0x190 );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
 
             Engine.Mobiles.Clear();
             ObjectCommands.ClearIgnoreList();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCountType()
         {
             PlayerMobile player = new PlayerMobile( 1 );
@@ -129,13 +129,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             int count = ObjectCommands.CountType( 0xfe, 0x40000001 );
 
-            Assert.AreEqual( 1, count );
+            Assert.Equal( 1, count );
 
             Engine.Items.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillCountMobileGround()
         {
             Engine.Player = new PlayerMobile( 0x01 );
@@ -148,13 +148,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             int count = ObjectCommands.CountTypeGround( 0x190, -1, 5 );
 
-            Assert.AreEqual( 1, count );
+            Assert.Equal( 1, count );
 
             Engine.Mobiles.Clear();
             Engine.Player = null;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSendUseObjectPacket()
         {
             AutoResetEvent are = new AutoResetEvent( false );
@@ -168,7 +168,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
                 int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
 
-                Assert.AreEqual( 0x40000001, serial );
+                Assert.Equal( 0x40000001, serial );
 
                 are.Set();
             }
@@ -183,14 +183,14 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = are.WaitOne( 5000 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.InternalPacketSentEvent -= InternalPacketSentEvent;
             Engine.Items.Clear();
             AliasCommands.UnsetAlias( "item" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindObjectInContainer()
         {
             Item container = new Item( 0x55 ) { Container = new ItemCollection( 0x55 ) };
@@ -201,7 +201,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = ObjectCommands.FindObject( 0x56, -1, 0x55 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Item subContainer = new Item( 0x57 ) { Container = new ItemCollection( 0x57 ), Owner = 0x55 };
 
@@ -210,12 +210,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             result = ObjectCommands.FindObject( 0x57, -1, 0x55 );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             Engine.Items.Remove( container );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillFindObjectGround()
         {
             Engine.Player = new PlayerMobile( 0x01 ) { X = 0, Y = 0 };
@@ -226,9 +226,9 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Items.Add( item1 );
             Engine.Items.Add( item2 );
 
-            Assert.IsTrue( ObjectCommands.FindObject( item1.Serial ) );
-            Assert.IsTrue( ObjectCommands.FindObject( item2.Serial ) );
-            Assert.IsFalse( ObjectCommands.FindObject( item2.Serial, 5 ) );
+            Assert.True( ObjectCommands.FindObject( item1.Serial ) );
+            Assert.True( ObjectCommands.FindObject( item2.Serial ) );
+            Assert.False( ObjectCommands.FindObject( item2.Serial, 5 ) );
 
             Engine.Items.Remove( item2 );
             Engine.Items.Remove( item1 );
@@ -236,8 +236,7 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.Player = null;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             ActionPacketQueue.Clear();
         }

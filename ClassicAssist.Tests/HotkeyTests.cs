@@ -7,16 +7,15 @@ using ClassicAssist.Data.Hotkeys;
 using ClassicAssist.Data.Hotkeys.Commands;
 using ClassicAssist.UI.Misc;
 using ClassicAssist.UI.ViewModels.Hotkeys;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 using Key = ClassicAssist.Misc.Key;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class HotkeyTests
     {
-        [TestMethod]
+        [Fact]
         public void WillInstantiateAllHotkeysCommandsNoExceptions()
         {
             IEnumerable<Type> hotkeyCommands = Assembly.GetAssembly( typeof( Engine ) ).GetTypes()
@@ -32,29 +31,29 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillBuildConfigurationEntryFromHotkeyConfigurationAttribute()
         {
             GreaterHealCureSelf command = new GreaterHealCureSelf { CureType = CureType.ArchCure };
 
             HotkeyOptionsViewModel vm = new HotkeyOptionsViewModel( command );
 
-            Assert.IsTrue( command.Configurable );
-            Assert.AreEqual( 1, vm.Entries.Count );
+            Assert.True( command.Configurable );
+            Assert.Single( vm.Entries );
 
             HotkeyOptionEntry entry = vm.Entries[0];
 
-            Assert.AreEqual( "Cure Type", entry.Name );
+            Assert.Equal( "Cure Type", entry.Name );
 
             // Both members of CureType, labelled from their [Description] via the resource manager.
-            CollectionAssert.AreEquivalent( new[] { "Cure", "Arch Cure" },
-                entry.Values.Select( v => v.DisplayName ).ToArray() );
+            Assert.Equivalent( new[] { "Cure", "Arch Cure" },
+                entry.Values.Select( v => v.DisplayName ).ToArray(), strict: true );
 
             // The dialog opens on whatever the command currently holds.
-            Assert.AreEqual( CureType.ArchCure, entry.SelectedValue.Value );
+            Assert.Equal( CureType.ArchCure, entry.SelectedValue.Value );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillWriteConfigurationValueBackOnOk()
         {
             MiniHealCureSelf command = new MiniHealCureSelf { CureType = CureType.Cure };
@@ -66,20 +65,19 @@ namespace ClassicAssist.Tests
             entry.SelectedValue = entry.Values.First( v => Equals( v.Value, CureType.ArchCure ) );
 
             // Nothing is written until OK - closing the dialog any other way leaves the command alone.
-            Assert.AreEqual( CureType.Cure, command.CureType );
+            Assert.Equal( CureType.Cure, command.CureType );
 
             vm.OkCommand.Execute( null );
 
-            Assert.AreEqual( CureType.ArchCure, command.CureType );
+            Assert.Equal( CureType.ArchCure, command.CureType );
         }
     }
 }
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class ShortcutKeysTests
     {
-        [TestMethod]
+        [Fact]
         public void WillReadSdlModifierFromClassicAssistProfile()
         {
             // WPF writes SDLModifier (KMOD_LALT = 0x0100 = 256) instead of "Modifier". The Keys value is
@@ -91,12 +89,12 @@ namespace ClassicAssist.Tests
 
             ShortcutKeys keys = new ShortcutKeys( json );
 
-            Assert.AreEqual( Key.G, keys.Key );
-            Assert.AreEqual( Key.LeftAlt, keys.Modifier );
-            Assert.AreEqual( MouseOptions.None, keys.Mouse );
+            Assert.Equal( Key.G, keys.Key );
+            Assert.Equal( Key.LeftAlt, keys.Modifier );
+            Assert.Equal( MouseOptions.None, keys.Mouse );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReadSdlModifierCtrlShift()
         {
             JObject json = new JObject
@@ -106,11 +104,11 @@ namespace ClassicAssist.Tests
 
             ShortcutKeys keys = new ShortcutKeys( json );
 
-            Assert.AreEqual( Key.W, keys.Key );
-            Assert.AreEqual( Key.LeftCtrl, keys.Modifier );
+            Assert.Equal( Key.W, keys.Key );
+            Assert.Equal( Key.LeftCtrl, keys.Modifier );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReadLegacyModifierForBackCompat()
         {
             JObject json = new JObject
@@ -120,30 +118,30 @@ namespace ClassicAssist.Tests
 
             ShortcutKeys keys = new ShortcutKeys( json );
 
-            Assert.AreEqual( Key.W, keys.Key );
-            Assert.AreEqual( Key.LeftShift, keys.Modifier );
+            Assert.Equal( Key.W, keys.Key );
+            Assert.Equal( Key.LeftShift, keys.Modifier );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSerializeSdlModifierLikeWpf()
         {
             ShortcutKeys keys = new ShortcutKeys( Key.LeftAlt, Key.G ) { Mouse = MouseOptions.None };
 
             JObject json = keys.ToJObject();
 
-            Assert.AreEqual( 50, (int) json["Keys"] );
-            Assert.AreEqual( 256, (int) json["SDLModifier"] );
-            Assert.IsNull( json["Modifier"] );
+            Assert.Equal( 50, (int) json["Keys"] );
+            Assert.Equal( 256, (int) json["SDLModifier"] );
+            Assert.Null( json["Modifier"] );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillRoundTripSdlModifier()
         {
             ShortcutKeys original = new ShortcutKeys( Key.LeftAlt, Key.G );
 
             ShortcutKeys reloaded = new ShortcutKeys( original.ToJObject() );
 
-            Assert.AreEqual( original, reloaded );
+            Assert.Equal( original, reloaded );
         }
     }
 }

@@ -1,484 +1,358 @@
-﻿//using System;
-//using System.IO;
-//using System.Reflection;
-//using System.Runtime.InteropServices;
-//using System.Threading;
-//using Assistant;
-//using ClassicAssist.Data;
-//using ClassicAssist.Data.Friends;
-//using ClassicAssist.UO.Data;
-//using ClassicAssist.UO.Network;
-//using ClassicAssist.UO.Network.PacketFilter;
-//using CUO_API;
-//using Microsoft.VisualStudio.TestTools.UnitTesting;
-//using Newtonsoft.Json.Linq;
-
-//namespace ClassicAssist.Tests
-//{
-//    [TestClass]
-//    [TestCategory( "Engine" )]
-//    public class EngineTests
-//    {
-//        private const string CLIENT_PATH = @"C:\Users\johns\Desktop\KvG Client 2.0";
-//        private OnGetPacketLength _getPacketLength;
-//        private OnGetUOFilePath _getUOFilePath;
-//        private int[] _packetLengths;
-//        private PluginHeader _pluginHeader;
-//        private OnPacketSendRecv _receivePacket;
-//        private RequestMove _requestMove;
-//        private OnPacketSendRecv _sendPacket;
-//        private string _startupPath;
-
-//        [TestInitialize]
-//        public void Initialize()
-//        {
-//            _startupPath = Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location );
-
-//            _getUOFilePath = GetUOFilePath;
-//            _getPacketLength = GetPacketLength;
-//            _sendPacket = SendPacket;
-//            _receivePacket = ReceivePacket;
-//            _requestMove = ( dir, run ) => true;
-
-//            _pluginHeader = new PluginHeader
-//            {
-//                GetPacketLength = Marshal.GetFunctionPointerForDelegate( _getPacketLength ),
-//                GetUOFilePath = Marshal.GetFunctionPointerForDelegate( _getUOFilePath ),
-//                Recv = Marshal.GetFunctionPointerForDelegate( _receivePacket ),
-//                Send = Marshal.GetFunctionPointerForDelegate( _sendPacket ),
-//                RequestMove = Marshal.GetFunctionPointerForDelegate( _requestMove )
-//            };
-
-//            Engine.StartupPath = _startupPath;
-
-//            _packetLengths = new int[byte.MaxValue];
-
-//            string json = File.ReadAllText( Path.Combine( _startupPath ?? throw new InvalidOperationException(),
-//                "packetlengths.json" ) );
-
-//            JObject jsonObj = JObject.Parse( json );
-
-//            foreach ( JProperty token in jsonObj["PacketLengths"].Children<JProperty>() )
-//            {
-//                int key = int.Parse( token.Name );
-//                int val = token.Value.ToObject<int>();
-
-//                if ( val == 0x8000 )
-//                {
-//                    val = 0;
-//                }
-
-//                _packetLengths[key] = val;
-//            }
-//        }
-
-//        [TestMethod]
-//        public void WillGetPacketLength()
-//        {
-//            // Fixed Length
-//            int length = GetPacketLength( 0x1B );
-
-//            Assert.AreEqual( 37, length );
-
-//            // Dynamic Length
-//            length = GetPacketLength( 0x1C );
-
-//            Assert.AreEqual( 0, length );
-//        }
-
-//        [TestMethod]
-//        public void WillInitializePlugin()
-//        {
-//            InitializePlugin();
-
-//            Assert.AreEqual( CLIENT_PATH, Engine.ClientPath );
-//        }
-
-//        private unsafe void InitializePlugin()
-//        {
-//            fixed ( void* func = &_pluginHeader )
-//            {
-//                Engine.InitializePlugin( (PluginHeader*) func );
-//            }
-//        }
-
-//        [TestMethod]
-//        public unsafe void WillSendPacket()
-//        {
-//            fixed ( void* func = &_pluginHeader )
-//            {
-//                Engine.Install( (PluginHeader*) func );
-//            }
-
-//            using ( AutoResetEvent are = new AutoResetEvent( false ) )
-//            {
-//                void OnPacketSentEvent( byte[] data, int len )
-//                {
-//                    Engine.PacketSentEvent -= OnPacketSentEvent;
-
-//                    int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
-
-//                    if ( (uint) serial != 0xaabbccdd )
-//                    {
-//                        Assert.Fail();
-//                    }
-
-//                    // ReSharper disable once AccessToDisposedClosure
-//                    are.Set();
-//                }
-
-//                Engine.PacketSentEvent += OnPacketSentEvent;
-
-//                byte[] packet = { 0x06, 0xAA, 0xBB, 0xCC, 0xDD };
-//                int length = packet.Length;
-
-//                Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( _pluginHeader.OnSend )
-//                    .Invoke( ref packet, ref length );
-
-//                bool result = are.WaitOne( 5000 );
-
-//                Assert.IsTrue( result );
-//            }
-//        }
-
-//        [TestMethod]
-//        public unsafe void WillFilterSendPacket()
-//        {
-//            fixed ( void* func = &_pluginHeader )
-//            {
-//                Engine.Install( (PluginHeader*) func );
-//            }
-
-//            byte[] packet = { 0x06, 0xAA, 0xBB, 0xCC, 0xDD };
-//            int length = packet.Length;
-
-//            try
-//            {
-//                Engine.AddSendPreFilter( new PacketFilterInfo( 0x06 ) );
-
-//                using ( AutoResetEvent are = new AutoResetEvent( false ) )
-//                {
-//                    void OnSentPacketFilteredEvent( byte[] data, int len )
-//                    {
-//                        Engine.SentPacketFilteredEvent -= OnSentPacketFilteredEvent;
-
-//                        int serial = ( data[1] << 24 ) | ( data[2] << 16 ) | ( data[3] << 8 ) | data[4];
-
-//                        if ( (uint) serial != 0xaabbccdd )
-//                        {
-//                            Assert.Fail();
-//                        }
-
-//                        // ReSharper disable once AccessToDisposedClosure
-//                        are.Set();
-//                    }
-
-//                    Engine.SentPacketFilteredEvent += OnSentPacketFilteredEvent;
-
-//                    Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( _pluginHeader.OnSend )
-//                        .Invoke( ref packet, ref length );
-
-//                    bool result = are.WaitOne( 5000 );
-
-//                    Assert.IsTrue( result );
-//                }
-//            }
-//            finally
-//            {
-//                Engine.ClearSendPreFilter();
-//            }
-//        }
-
-//        [TestMethod]
-//        public unsafe void WillFilterReceivedPacket()
-//        {
-//            fixed ( void* func = &_pluginHeader )
-//            {
-//                Engine.Install( (PluginHeader*) func );
-//            }
-
-//            byte[] packet = { 0x2F, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
-//            int length = packet.Length;
-
-//            try
-//            {
-//                Engine.AddReceiveFilter( new PacketFilterInfo( 0x2F ) );
-
-//                using ( AutoResetEvent are = new AutoResetEvent( false ) )
-//                {
-//                    void OnSentPacketFilteredEvent( byte[] data, int len )
-//                    {
-//                        Engine.ReceivedPacketFilteredEvent -= OnSentPacketFilteredEvent;
-
-//                        int attacker = ( data[2] << 24 ) | ( data[3] << 16 ) | ( data[4] << 8 ) | data[5];
-//                        int defender = ( data[6] << 24 ) | ( data[7] << 16 ) | ( data[8] << 8 ) | data[9];
-
-//                        if ( (uint) attacker != 0x11223344 || defender != 0x55667788 )
-//                        {
-//                            Assert.Fail();
-//                        }
-
-//                        // ReSharper disable once AccessToDisposedClosure
-//                        are.Set();
-//                    }
-
-//                    Engine.ReceivedPacketFilteredEvent += OnSentPacketFilteredEvent;
-
-//                    Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( _pluginHeader.OnRecv )
-//                        .Invoke( ref packet, ref length );
-
-//                    bool result = are.WaitOne( 5000 );
-
-//                    Assert.IsTrue( result );
-//                }
-//            }
-//            finally
-//            {
-//                Engine.ClearReceiveFilter();
-//            }
-//        }
-
-//        [TestMethod]
-//        public unsafe void WillReceivePacket()
-//        {
-//            fixed ( void* func = &_pluginHeader )
-//            {
-//                Engine.Install( (PluginHeader*) func );
-//            }
-
-//            byte[] packet = { 0x2F, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
-//            int length = packet.Length;
-
-//            AutoResetEvent are = new AutoResetEvent( false );
-
-//            void OnPacketReceivedEvent( byte[] data, int len )
-//            {
-//                Engine.PacketReceivedEvent -= OnPacketReceivedEvent;
-
-//                int attacker = ( data[2] << 24 ) | ( data[3] << 16 ) | ( data[4] << 8 ) | data[5];
-//                int defender = ( data[6] << 24 ) | ( data[7] << 16 ) | ( data[8] << 8 ) | data[9];
-
-//                if ( (uint) attacker != 0x11223344 || defender != 0x55667788 )
-//                {
-//                    Assert.Fail();
-//                }
-
-//                are.Set();
-//            }
-
-//            Engine.PacketReceivedEvent += OnPacketReceivedEvent;
-
-//            Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>( _pluginHeader.OnRecv )
-//                .Invoke( ref packet, ref length );
-
-//            bool result = are.WaitOne( 5000 );
-
-//            Assert.IsTrue( result );
-//        }
-
-//        [TestMethod]
-//        public void OnConnectedWillSetEngineConnected()
-//        {
-//            InitializePlugin();
-
-//            Marshal.GetDelegateForFunctionPointer<OnConnected>( _pluginHeader.OnConnected )();
-
-//            Assert.IsTrue( Engine.Connected );
-//        }
-
-//        [TestMethod]
-//        public void OnDisconnectedWillSetEngineDisconnected()
-//        {
-//            InitializePlugin();
-
-//            Marshal.GetDelegateForFunctionPointer<OnDisconnected>( _pluginHeader.OnDisconnected )();
-
-//            Assert.IsFalse( Engine.Connected );
-//        }
-
-//        [TestMethod]
-//        public void OnDisconnectedWillInvokeDisconnectedEvent()
-//        {
-//            InitializePlugin();
-
-//            using ( AutoResetEvent are = new AutoResetEvent( false ) )
-//            {
-//                void OnDisconnectedEvent()
-//                {
-//                    // ReSharper disable once AccessToDisposedClosure
-//                    are.Set();
-//                }
-
-//                Engine.DisconnectedEvent += OnDisconnectedEvent;
-
-//                Marshal.GetDelegateForFunctionPointer<OnDisconnected>( _pluginHeader.OnDisconnected )();
-
-//                bool result = are.WaitOne( 5000 );
-
-//                Assert.IsTrue( result );
-
-//                Engine.DisconnectedEvent -= OnDisconnectedEvent;
-
-//                are.Dispose();
-//            }
-//        }
-
-//        [TestMethod]
-//        public void OnConnectedWillInvokeDisconnectedEvent()
-//        {
-//            InitializePlugin();
-
-//            using ( AutoResetEvent are = new AutoResetEvent( false ) )
-//            {
-//                void OnConnectedEvent()
-//                {
-//                    // ReSharper disable once AccessToDisposedClosure
-//                    are.Set();
-//                }
-
-//                Engine.ConnectedEvent += OnConnectedEvent;
-
-//                Marshal.GetDelegateForFunctionPointer<OnConnected>( _pluginHeader.OnConnected )();
-
-//                bool result = are.WaitOne( 5000 );
-
-//                Assert.IsTrue( result );
-
-//                Engine.ConnectedEvent -= OnConnectedEvent;
-
-//                are.Dispose();
-//            }
-//        }
-
-//        [TestMethod]
-//        public void WillAutoAcceptPartyInvite()
-//        {
-//            Options.CurrentOptions.AutoAcceptPartyInvite = true;
-//            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = false;
-
-//            AutoResetEvent are = new AutoResetEvent( false );
-
-//            void OnPacketSentEvent( byte[] data, int length )
-//            {
-//                if ( data[0] == 0xBF && data[5] == 0x08 )
-//                {
-//                    are.Set();
-//                }
-//            }
-
-//            Engine.InternalPacketSentEvent += OnPacketSentEvent;
-
-//            IncomingPacketHandlers.Initialize();
-
-//            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xBF );
-
-//            byte[] packet = { 0xBF, 0x00, 0x0A, 0x00, 0x06, 0x07, 0x00, 0xaa, 0xbb, 0xcc };
-
-//            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
-
-//            bool result = are.WaitOne( 5000 );
-
-//            Assert.IsTrue( result );
-
-//            Engine.InternalPacketSentEvent -= OnPacketSentEvent;
-//        }
-
-//        [TestMethod]
-//        public void WontAutoAcceptPartyInviteNonFriend()
-//        {
-//            Options.CurrentOptions.AutoAcceptPartyInvite = true;
-//            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = true;
-
-//            void OnPacketSentEvent( byte[] data, int length )
-//            {
-//                if ( data[0] == 0xBF && data[5] == 0x08 )
-//                {
-//                    Assert.Fail();
-//                }
-//            }
-
-//            Engine.InternalPacketSentEvent += OnPacketSentEvent;
-
-//            IncomingPacketHandlers.Initialize();
-
-//            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xBF );
-
-//            byte[] packet = { 0xBF, 0x00, 0x0A, 0x00, 0x06, 0x07, 0x00, 0xaa, 0xbb, 0xcc };
-
-//            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
-
-//            Engine.InternalPacketSentEvent -= OnPacketSentEvent;
-//        }
-
-//        [TestMethod]
-//        public void WillAutoAcceptPartyInviteIfFriend()
-//        {
-//            Options.CurrentOptions.AutoAcceptPartyInvite = true;
-//            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = true;
-
-//            AutoResetEvent are = new AutoResetEvent( false );
-
-//            FriendEntry fe = new FriendEntry { Name = "Test", Serial = 0xaabbcc };
-
-//            Options.CurrentOptions.Friends.Add( fe );
-
-//            void OnPacketSentEvent( byte[] data, int length )
-//            {
-//                if ( data[0] == 0xBF && data[5] == 0x08 )
-//                {
-//                    are.Set();
-//                }
-//            }
-
-//            Engine.InternalPacketSentEvent += OnPacketSentEvent;
-
-//            IncomingPacketHandlers.Initialize();
-
-//            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0xBF );
-
-//            byte[] packet = { 0xBF, 0x00, 0x0A, 0x00, 0x06, 0x07, 0x00, 0xaa, 0xbb, 0xcc };
-
-//            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
-
-//            bool result = are.WaitOne( 5000 );
-
-//            Assert.IsTrue( result );
-
-//            Options.CurrentOptions.Friends.Remove( fe );
-//            Engine.InternalPacketSentEvent -= OnPacketSentEvent;
-//        }
-
-//        [TestCleanup]
-//        public void TestCleanup()
-//        {
-//            if ( _pluginHeader.OnClientClosing != IntPtr.Zero )
-//            {
-//                Marshal.GetDelegateForFunctionPointer<OnClientClose>( _pluginHeader.OnClientClosing )();
-//            }
-//        }
-
-//        #region Plugin Functions
-
-//        private short GetPacketLength( int id )
-//        {
-//            return (short) _packetLengths[id];
-//        }
-
-//        private static string GetUOFilePath()
-//        {
-//            return CLIENT_PATH;
-//        }
-
-//        private static bool ReceivePacket( ref byte[] data, ref int length )
-//        {
-//            return true;
-//        }
-
-//        private static bool SendPacket( ref byte[] data, ref int length )
-//        {
-//            return true;
-//        }
-
-//        #endregion
-//    }
-//}
+﻿using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using ClassicAssist.Data;
+using ClassicAssist.Data.Friends;
+using ClassicAssist.Misc;
+using ClassicAssist.Shared;
+using ClassicAssist.UO.Network.PacketFilter;
+using ClassicAssist.UO.Objects;
+using Xunit;
+
+namespace ClassicAssist.Tests
+{
+    /// <summary>
+    ///     The callbacks the game client's plugin makes into the engine over RPC
+    ///     (<see cref="Engine.PluginMethods" />): packets in each direction reaching the packet path or
+    ///     being swallowed by a filter, and connect/disconnect updating the engine's state and raising its
+    ///     events. Plus party-invite auto-accept, the one place a received packet makes the assistant
+    ///     answer the server on its own.
+    ///     <para>
+    ///         The verdict these return decides whether the client sees or sends the packet at all, so a
+    ///         wrong answer either leaks a packet a filter was meant to hide or silently drops game
+    ///         traffic.
+    ///     </para>
+    /// </summary>
+    public class EngineTests : IDisposable
+    {
+        private const int TIMEOUT_MS = 5000;
+
+        // 0xBF / 0x06 party / 0x07 invitation from leader 0x00aabbcc
+        private static readonly byte[] _partyInvite = { 0xBF, 0x00, 0x0A, 0x00, 0x06, 0x07, 0x00, 0xAA, 0xBB, 0xCC };
+
+        private readonly ConcurrentQueue<byte[]> _incoming = new ConcurrentQueue<byte[]>();
+        private readonly ThreadQueue<Packet> _incomingQueue;
+        private readonly ConcurrentQueue<byte[]> _outgoing = new ConcurrentQueue<byte[]>();
+        private readonly ThreadQueue<Packet> _outgoingQueue;
+        private readonly bool _savedAutoAccept;
+        private readonly bool _savedAutoAcceptFriends;
+        private readonly bool _savedIncludeParty;
+        private readonly ThreadQueue<Packet> _savedIncoming;
+        private readonly bool _savedInstalled;
+        private readonly ThreadQueue<Packet> _savedOutgoing;
+
+        public EngineTests()
+        {
+            EngineState.Reset();
+
+            _savedIncoming = Engine.IncomingQueue;
+            _savedOutgoing = Engine.OutgoingQueue;
+            _savedInstalled = Engine.Installed;
+            _savedAutoAccept = Options.CurrentOptions.AutoAcceptPartyInvite;
+            _savedAutoAcceptFriends = Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends;
+            _savedIncludeParty = Options.CurrentOptions.IncludePartyMembersInFriends;
+
+            // Stand-ins for the engine's packet workers, so the test sees exactly what reached them.
+            _incomingQueue = new ThreadQueue<Packet>( p => _incoming.Enqueue( p.GetPacket() ) );
+            _outgoingQueue = new ThreadQueue<Packet>( p => _outgoing.Enqueue( p.GetPacket() ) );
+
+            Engine.IncomingQueue = _incomingQueue;
+            Engine.OutgoingQueue = _outgoingQueue;
+            Engine.Installed = true;
+            Options.CurrentOptions.IncludePartyMembersInFriends = false;
+        }
+
+        public void Dispose()
+        {
+            Engine.ClearSendPreFilter();
+            Engine.ClearReceiveFilter();
+
+            Engine.IncomingQueue = _savedIncoming;
+            Engine.OutgoingQueue = _savedOutgoing;
+            Engine.Installed = _savedInstalled;
+            Engine.Connected = false;
+
+            Options.CurrentOptions.AutoAcceptPartyInvite = _savedAutoAccept;
+            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = _savedAutoAcceptFriends;
+            Options.CurrentOptions.IncludePartyMembersInFriends = _savedIncludeParty;
+
+            _incomingQueue.Dispose();
+            _outgoingQueue.Dispose();
+        }
+
+        [Fact]
+        public async Task WillPassAnUnfilteredSentPacketToTheClientAndThePacketPath()
+        {
+            byte[] packet = { 0x06, 0xAA, 0xBB, 0xCC, 0xDD };
+
+            ( bool pass, byte[] _, int modifiedLength ) =
+                await new Engine.PluginMethods().OnPacketSend( packet, packet.Length, 0 );
+
+            Assert.True( pass );
+            Assert.Equal( 0, modifiedLength );
+            Assert.True( SpinWait.SpinUntil( () => !_outgoing.IsEmpty, TIMEOUT_MS ) );
+            Assert.Equal( packet, _outgoing.Single() );
+        }
+
+        [Fact]
+        public async Task WillSwallowASentPacketMatchedByAPreFilter()
+        {
+            byte[] packet = { 0x06, 0xAA, 0xBB, 0xCC, 0xDD };
+            byte[] filtered = null;
+            byte[] actioned = null;
+
+            void OnFiltered( byte[] data, int length )
+            {
+                filtered = data.Take( length ).ToArray();
+            }
+
+            Engine.SentPacketFilteredEvent += OnFiltered;
+
+            try
+            {
+                Engine.AddSendPreFilter( new PacketFilterInfo( 0x06, ( data, _ ) => actioned = data ) );
+
+                ( bool pass, byte[] _, int _ ) = await new Engine.PluginMethods().OnPacketSend( packet, packet.Length, 0 );
+
+                Assert.False( pass );
+            }
+            finally
+            {
+                Engine.SentPacketFilteredEvent -= OnFiltered;
+            }
+
+            Assert.Equal( packet, filtered );
+            Assert.Equal( packet, actioned );
+
+            // Filtered before the packet path: nothing downstream sees it.
+            Thread.Sleep( 50 );
+            Assert.Empty( _outgoing );
+        }
+
+        [Fact]
+        public async Task WillPassAnUnfilteredReceivedPacketToTheClientAndThePacketPath()
+        {
+            // 0x2F swing: attacker 0x11223344, defender 0x55667788
+            byte[] packet = { 0x2F, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+
+            ( bool pass, byte[] _, int _ ) = await new Engine.PluginMethods().OnPacketReceive( packet, packet.Length, 0 );
+
+            Assert.True( pass );
+            Assert.True( SpinWait.SpinUntil( () => !_incoming.IsEmpty, TIMEOUT_MS ) );
+            Assert.Equal( packet, _incoming.Single() );
+        }
+
+        [Fact]
+        public async Task WillSwallowAReceivedPacketMatchedByAFilter()
+        {
+            byte[] packet = { 0x2F, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+            byte[] filtered = null;
+
+            void OnFiltered( byte[] data, int length )
+            {
+                filtered = data.Take( length ).ToArray();
+            }
+
+            Engine.ReceivedPacketFilteredEvent += OnFiltered;
+
+            try
+            {
+                Engine.AddReceiveFilter( new PacketFilterInfo( 0x2F ) );
+
+                ( bool pass, byte[] _, int _ ) = await new Engine.PluginMethods().OnPacketReceive( packet, packet.Length, 0 );
+
+                Assert.False( pass );
+            }
+            finally
+            {
+                Engine.ReceivedPacketFilteredEvent -= OnFiltered;
+            }
+
+            Assert.Equal( packet, filtered );
+
+            Thread.Sleep( 50 );
+            Assert.Empty( _incoming );
+        }
+
+        /// <summary>
+        ///     Before install completes there is nothing to run a packet against: it must be let through
+        ///     to the client untouched rather than dropped.
+        /// </summary>
+        [Fact]
+        public async Task WillPassPacketsUntouchedBeforeInstall()
+        {
+            Engine.Installed = false;
+
+            byte[] packet = { 0x2F, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+            Engine.AddReceiveFilter( new PacketFilterInfo( 0x2F ) );
+
+            ( bool pass, byte[] _, int _ ) = await new Engine.PluginMethods().OnPacketReceive( packet, packet.Length, 0 );
+
+            Assert.True( pass );
+            Thread.Sleep( 50 );
+            Assert.Empty( _incoming );
+        }
+
+        [Fact]
+        public void OnConnectedWillSetConnectedAndRaiseConnectedEvent()
+        {
+            int raised = 0;
+            bool connectedWhenRaised = false;
+
+            void OnConnected()
+            {
+                raised++;
+                connectedWhenRaised = Engine.Connected;
+            }
+
+            Engine.ConnectedEvent += OnConnected;
+
+            try
+            {
+                new Engine.PluginMethods().OnConnected();
+            }
+            finally
+            {
+                Engine.ConnectedEvent -= OnConnected;
+            }
+
+            Assert.True( Engine.Connected );
+            Assert.Equal( 1, raised );
+            Assert.True( connectedWhenRaised );
+        }
+
+        /// <summary>
+        ///     A disconnect ends the session: the world, the player and the connected flag are cleared
+        ///     before anyone hears about it, so no subscriber acts on the old world.
+        /// </summary>
+        [Fact]
+        public void OnDisconnectedWillClearTheWorldAndRaiseDisconnectedEvent()
+        {
+            EngineState.ResetWithPlayer();
+            Engine.Mobiles.Add( new Mobile( 0x22 ) );
+            Engine.Connected = true;
+
+            int raised = 0;
+            bool clearedWhenRaised = false;
+
+            void OnDisconnected()
+            {
+                raised++;
+                clearedWhenRaised = !Engine.Connected && Engine.Player == null && !Engine.Items.Any() &&
+                                    !Engine.Mobiles.Any();
+            }
+
+            Engine.DisconnectedEvent += OnDisconnected;
+
+            try
+            {
+                new Engine.PluginMethods().OnDisconnected();
+            }
+            finally
+            {
+                Engine.DisconnectedEvent -= OnDisconnected;
+            }
+
+            Assert.False( Engine.Connected );
+            Assert.Null( Engine.Player );
+            Assert.Equal( 1, raised );
+            Assert.True( clearedWhenRaised );
+        }
+
+        [Fact]
+        public void WontRaiseConnectionEventsBeforeInstall()
+        {
+            Engine.Installed = false;
+            int raised = 0;
+
+            void OnEvent()
+            {
+                raised++;
+            }
+
+            Engine.ConnectedEvent += OnEvent;
+            Engine.DisconnectedEvent += OnEvent;
+
+            try
+            {
+                Engine.PluginMethods plugin = new Engine.PluginMethods();
+                plugin.OnConnected();
+                plugin.OnDisconnected();
+            }
+            finally
+            {
+                Engine.ConnectedEvent -= OnEvent;
+                Engine.DisconnectedEvent -= OnEvent;
+            }
+
+            Assert.Equal( 0, raised );
+            Assert.False( Engine.Connected );
+        }
+
+        [Fact]
+        public void WillAutoAcceptPartyInvite()
+        {
+            Options.CurrentOptions.AutoAcceptPartyInvite = true;
+            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = false;
+
+            using PacketRecorder recorder = new PacketRecorder();
+
+            EngineState.Receive( _partyInvite );
+
+            // 0xBF / 0x06 party / 0x08 accept, leader serial
+            byte[] accept = Assert.Single( recorder.SentWithId( 0xBF ) );
+            Assert.Equal( new byte[] { 0xBF, 0x00, 0x0A, 0x00, 0x06, 0x08, 0x00, 0xAA, 0xBB, 0xCC }, accept );
+        }
+
+        [Fact]
+        public void WontAutoAcceptPartyInviteWhenDisabled()
+        {
+            Options.CurrentOptions.AutoAcceptPartyInvite = false;
+            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = false;
+
+            using PacketRecorder recorder = new PacketRecorder();
+
+            EngineState.Receive( _partyInvite );
+
+            Assert.Empty( recorder.Sent );
+        }
+
+        [Fact]
+        public void WontAutoAcceptPartyInviteFromNonFriend()
+        {
+            Options.CurrentOptions.AutoAcceptPartyInvite = true;
+            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = true;
+
+            using PacketRecorder recorder = new PacketRecorder();
+
+            EngineState.Receive( _partyInvite );
+
+            Assert.Empty( recorder.Sent );
+        }
+
+        [Fact]
+        public void WillAutoAcceptPartyInviteFromFriend()
+        {
+            Options.CurrentOptions.AutoAcceptPartyInvite = true;
+            Options.CurrentOptions.AutoAcceptPartyOnlyFromFriends = true;
+
+            FriendEntry friend = new FriendEntry { Name = "Test", Serial = 0xAABBCC };
+            Options.CurrentOptions.Friends.Add( friend );
+
+            try
+            {
+                using PacketRecorder recorder = new PacketRecorder();
+
+                EngineState.Receive( _partyInvite );
+
+                Assert.Single( recorder.SentWithId( 0xBF ) );
+            }
+            finally
+            {
+                Options.CurrentOptions.Friends.Remove( friend );
+            }
+        }
+    }
+}

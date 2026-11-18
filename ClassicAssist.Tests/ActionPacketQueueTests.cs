@@ -26,7 +26,7 @@ using ClassicAssist.Data;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -34,13 +34,11 @@ namespace ClassicAssist.Tests
     ///     Covers the queue behaviour driven by <see cref="Options" />. Both the ActionDelay toggle and the
     ///     UseObjectQueue cap were settings the queue used to ignore entirely.
     /// </summary>
-    [TestClass]
-    public class ActionPacketQueueTests
+    public class ActionPacketQueueTests : IDisposable
     {
         private Options _originalOptions;
 
-        [TestInitialize]
-        public void SetUp()
+        public ActionPacketQueueTests()
         {
             _originalOptions = Options.CurrentOptions;
             Options.CurrentOptions = new Options();
@@ -52,15 +50,14 @@ namespace ClassicAssist.Tests
             Engine.LastActionPacket = DateTime.MinValue;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             ActionPacketQueue.Clear();
             Options.CurrentOptions = _originalOptions;
         }
 
-        [TestMethod]
-        public void WillApplyActionDelayWhenEnabled()
+        [Fact]
+        public async Task WillApplyActionDelayWhenEnabled()
         {
             Options.CurrentOptions.ActionDelay = true;
             Options.CurrentOptions.ActionDelayMS = 400;
@@ -70,16 +67,16 @@ namespace ClassicAssist.Tests
 
             Stopwatch sw = Stopwatch.StartNew();
 
-            bool result = ActionPacketQueue.EnqueueAction( 0, _ => true ).Result;
+            bool result = await ActionPacketQueue.EnqueueAction( 0, _ => true, cancellationToken: TestContext.Current.CancellationToken );
 
             sw.Stop();
 
-            Assert.IsTrue( result );
-            Assert.IsTrue( sw.ElapsedMilliseconds >= 300, $"Ran after only {sw.ElapsedMilliseconds}ms, delay not applied" );
+            Assert.True( result );
+            Assert.True( sw.ElapsedMilliseconds >= 300, $"Ran after only {sw.ElapsedMilliseconds}ms, delay not applied" );
         }
 
-        [TestMethod]
-        public void WillNotApplyActionDelayWhenDisabled()
+        [Fact]
+        public async Task WillNotApplyActionDelayWhenDisabled()
         {
             Options.CurrentOptions.ActionDelay = false;
             Options.CurrentOptions.ActionDelayMS = 5000;
@@ -88,42 +85,42 @@ namespace ClassicAssist.Tests
 
             Stopwatch sw = Stopwatch.StartNew();
 
-            bool result = ActionPacketQueue.EnqueueAction( 0, _ => true ).Result;
+            bool result = await ActionPacketQueue.EnqueueAction( 0, _ => true, cancellationToken: TestContext.Current.CancellationToken );
 
             sw.Stop();
 
-            Assert.IsTrue( result );
-            Assert.IsTrue( sw.ElapsedMilliseconds < 1000, $"Took {sw.ElapsedMilliseconds}ms, delay applied despite being disabled" );
+            Assert.True( result );
+            Assert.True( sw.ElapsedMilliseconds < 1000, $"Took {sw.ElapsedMilliseconds}ms, delay applied despite being disabled" );
         }
 
-        [TestMethod]
-        public void WillPassArgumentsToAction()
+        [Fact]
+        public async Task WillPassArgumentsToAction()
         {
             Options.CurrentOptions.ActionDelay = false;
 
             string observed = null;
 
-            bool result = ActionPacketQueue.EnqueueAction( "payload", arg =>
+            bool result = await ActionPacketQueue.EnqueueAction( "payload", arg =>
             {
                 observed = arg;
                 return true;
-            } ).Result;
+            }, cancellationToken: TestContext.Current.CancellationToken );
 
-            Assert.IsTrue( result );
-            Assert.AreEqual( "payload", observed );
+            Assert.True( result );
+            Assert.Equal( "payload", observed );
         }
 
-        [TestMethod]
-        public void WillReturnActionResult()
+        [Fact]
+        public async Task WillReturnActionResult()
         {
             Options.CurrentOptions.ActionDelay = false;
 
-            Assert.IsFalse( ActionPacketQueue.EnqueueAction( 0, _ => false ).Result );
-            Assert.IsTrue( ActionPacketQueue.EnqueueAction( 0, _ => true ).Result );
+            Assert.False( await ActionPacketQueue.EnqueueAction( 0, _ => false, cancellationToken: TestContext.Current.CancellationToken ) );
+            Assert.True( await ActionPacketQueue.EnqueueAction( 0, _ => true, cancellationToken: TestContext.Current.CancellationToken ) );
         }
 
-        [TestMethod]
-        public void WillNotRunCancelledAction()
+        [Fact]
+        public async Task WillNotRunCancelledAction()
         {
             Options.CurrentOptions.ActionDelay = false;
 
@@ -132,18 +129,18 @@ namespace ClassicAssist.Tests
 
             bool ran = false;
 
-            bool result = ActionPacketQueue.EnqueueAction( 0, _ =>
+            bool result = await ActionPacketQueue.EnqueueAction( 0, _ =>
             {
                 ran = true;
                 return true;
-            }, cancellationToken: cts.Token ).Result;
+            }, cancellationToken: cts.Token );
 
-            Assert.IsFalse( result );
-            Assert.IsFalse( ran, "Action ran despite a cancelled token" );
+            Assert.False( result );
+            Assert.False( ran, "Action ran despite a cancelled token" );
         }
 
-        [TestMethod]
-        public void WillRejectWhenObjectQueueFull()
+        [Fact]
+        public async Task WillRejectWhenObjectQueueFull()
         {
             Options.CurrentOptions.ActionDelay = false;
             Options.CurrentOptions.UseObjectQueue = true;
@@ -156,38 +153,39 @@ namespace ClassicAssist.Tests
             {
                 release.Wait( 5000 );
                 return true;
-            } );
+            }, cancellationToken: TestContext.Current.CancellationToken );
 
             try
             {
-                // Queue enough behind the blocked item to reach the cap.
+                // Queue enough behind the blocked item to reach the cap. Not awaited: they cannot
+                // complete until the blocked item is released.
                 for ( int i = 0; i < 4; i++ )
                 {
-                    ActionPacketQueue.EnqueueAction( i, _ => true );
+                    _ = ActionPacketQueue.EnqueueAction( i, _ => true, cancellationToken: TestContext.Current.CancellationToken );
                 }
 
-                Assert.IsFalse( ActionPacketQueue.CheckUseObjectQueueLength() );
-                Assert.IsFalse( ActionPacketQueue.EnqueueAction( 0, _ => true, checkUseObjectQueue: true ).Result );
+                Assert.False( ActionPacketQueue.CheckUseObjectQueueLength() );
+                Assert.False( await ActionPacketQueue.EnqueueAction( 0, _ => true, checkUseObjectQueue: true, cancellationToken: TestContext.Current.CancellationToken ) );
             }
             finally
             {
                 release.Set();
-                blocking.Wait( 5000 );
+                await Task.WhenAny( blocking, Task.Delay( 5000, TestContext.Current.CancellationToken ) );
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void WillAllowWhenObjectQueueDisabled()
         {
             Options.CurrentOptions.ActionDelay = false;
             Options.CurrentOptions.UseObjectQueue = false;
             Options.CurrentOptions.UseObjectQueueAmount = 1;
 
-            Assert.IsTrue( ActionPacketQueue.CheckUseObjectQueueLength() );
+            Assert.True( ActionPacketQueue.CheckUseObjectQueueLength() );
         }
 
-        [TestMethod]
-        public void WillRaiseQueueEventsInOrder()
+        [Fact]
+        public async Task WillRaiseQueueEventsInOrder()
         {
             Options.CurrentOptions.ActionDelay = false;
 
@@ -207,7 +205,8 @@ namespace ClassicAssist.Tests
 
             try
             {
-                ActionPacketQueue.EnqueueAction( 0, _ => true ).Wait( 5000 );
+                await ActionPacketQueue.EnqueueAction( 0, _ => true, cancellationToken: TestContext.Current.CancellationToken )
+                    .WaitAsync( TimeSpan.FromSeconds( 5 ), TestContext.Current.CancellationToken );
             }
             finally
             {
@@ -216,15 +215,15 @@ namespace ClassicAssist.Tests
 
             lock ( events )
             {
-                CollectionAssert.AreEqual(
+                Assert.Equal(
                     new List<ActionQueueEvents>
                     {
                         ActionQueueEvents.Enqueue, ActionQueueEvents.Enter, ActionQueueEvents.Execute, ActionQueueEvents.Finish
                     }, events );
 
-                Assert.IsNotNull( seen );
-                Assert.IsNotNull( seen.TimeSpan );
-                Assert.AreEqual( nameof( WillRaiseQueueEventsInOrder ), seen.Caller );
+                Assert.NotNull( seen );
+                Assert.NotNull( seen.TimeSpan );
+                Assert.Equal( nameof( WillRaiseQueueEventsInOrder ), seen.Caller );
             }
         }
     }

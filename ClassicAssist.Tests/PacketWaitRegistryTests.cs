@@ -10,7 +10,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Network.PacketFilter;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -19,13 +19,11 @@ namespace ClassicAssist.Tests
     ///     something on the synchronous path might drop or rewrite, and nothing while the filter that
     ///     would is off; batched packets must still reach the packet path in order.
     /// </summary>
-    [TestClass]
     public class PacketWaitRegistryTests
     {
         private const int RehuedSerial = 0x00001234;
 
-        [TestInitialize]
-        public void Initialize()
+        public PacketWaitRegistryTests()
         {
             IncomingPacketFilters.Initialize();
         }
@@ -47,19 +45,19 @@ namespace ClassicAssist.Tests
             return packet;
         }
 
-        [TestMethod]
+        [Fact]
         public void WeatherFilterWaitsOnlyWhileEnabled()
         {
             WeatherFilter filter = new() { Enabled = false };
 
             try
             {
-                Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, false ) );
+                Assert.False( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, false ) );
 
                 filter.Enabled = true;
 
-                Assert.IsTrue( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, false ) );
-                Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, true ) );
+                Assert.True( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, false ) );
+                Assert.False( CurrentRules().MustWait( new byte[] { 0x65, 0x00, 0x00, 0x00 }, true ) );
             }
             finally
             {
@@ -68,7 +66,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void SeasonFilterWaitsOnSeasonAndMapChange()
         {
             SeasonFilter filter = new() { Enabled = true };
@@ -77,9 +75,9 @@ namespace ClassicAssist.Tests
             {
                 PacketWaitRuleSet rules = CurrentRules();
 
-                Assert.IsTrue( rules.MustWait( new byte[] { 0xBC, 0x01, 0x00 }, false ) );
-                Assert.IsTrue( rules.MustWait( new byte[] { 0xBF, 0x00, 0x06, 0x00, 0x08, 0x01 }, false ) );
-                Assert.IsFalse( rules.MustWait( new byte[] { 0xBF, 0x00, 0x06, 0x00, 0x04, 0x01 }, false ) );
+                Assert.True( rules.MustWait( new byte[] { 0xBC, 0x01, 0x00 }, false ) );
+                Assert.True( rules.MustWait( new byte[] { 0xBF, 0x00, 0x06, 0x00, 0x08, 0x01 }, false ) );
+                Assert.False( rules.MustWait( new byte[] { 0xBF, 0x00, 0x06, 0x00, 0x04, 0x01 }, false ) );
             }
             finally
             {
@@ -87,10 +85,10 @@ namespace ClassicAssist.Tests
                 DynamicFilterEntry.Filters.Remove( filter );
             }
 
-            Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0xBC, 0x01, 0x00 }, false ) );
+            Assert.False( CurrentRules().MustWait( new byte[] { 0xBC, 0x01, 0x00 }, false ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void UnknownDynamicFilterWaitsOnEveryIncomingPacket()
         {
             UnknownFilter filter = new() { Enabled = true };
@@ -99,8 +97,8 @@ namespace ClassicAssist.Tests
             {
                 PacketWaitRuleSet rules = CurrentRules();
 
-                Assert.IsTrue( rules.MustWait( new byte[] { 0xD6, 0x00, 0x05 }, false ) );
-                Assert.IsTrue( rules.MustWait( new byte[] { 0xDC, 0x00 }, false ) );
+                Assert.True( rules.MustWait( new byte[] { 0xD6, 0x00, 0x05 }, false ) );
+                Assert.True( rules.MustWait( new byte[] { 0xDC, 0x00 }, false ) );
             }
             finally
             {
@@ -108,10 +106,10 @@ namespace ClassicAssist.Tests
                 DynamicFilterEntry.Filters.Remove( filter );
             }
 
-            Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0xD6, 0x00, 0x05 }, false ) );
+            Assert.False( CurrentRules().MustWait( new byte[] { 0xD6, 0x00, 0x05 }, false ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RepeatedMessagesFilterWaitsOnAsciiSpeech()
         {
             bool saved = RepeatedMessagesFilter.IsEnabled;
@@ -119,10 +117,10 @@ namespace ClassicAssist.Tests
             try
             {
                 RepeatedMessagesFilter.IsEnabled = false;
-                Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0x1C, 0x00, 0x2C }, false ) );
+                Assert.False( CurrentRules().MustWait( new byte[] { 0x1C, 0x00, 0x2C }, false ) );
 
                 RepeatedMessagesFilter.IsEnabled = true;
-                Assert.IsTrue( CurrentRules().MustWait( new byte[] { 0x1C, 0x00, 0x2C }, false ) );
+                Assert.True( CurrentRules().MustWait( new byte[] { 0x1C, 0x00, 0x2C }, false ) );
             }
             finally
             {
@@ -130,7 +128,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void RehueWaitsOnlyOnTheRehuedSerial()
         {
             Engine.RehueList.Add( RehuedSerial, 0x0021 );
@@ -139,23 +137,23 @@ namespace ClassicAssist.Tests
             {
                 PacketWaitRuleSet rules = CurrentRules();
 
-                Assert.IsTrue( rules.MustWait( WithSerial( 0x20, 1, RehuedSerial, 19 ), false ) );
-                Assert.IsTrue( rules.MustWait( WithSerial( 0x77, 1, RehuedSerial, 17 ), false ) );
-                Assert.IsTrue( rules.MustWait( WithSerial( 0x78, 3, RehuedSerial, 23 ), false ) );
-                Assert.IsTrue( rules.MustWait( WithSerial( 0xF3, 4, RehuedSerial, 26 ), false ) );
+                Assert.True( rules.MustWait( WithSerial( 0x20, 1, RehuedSerial, 19 ), false ) );
+                Assert.True( rules.MustWait( WithSerial( 0x77, 1, RehuedSerial, 17 ), false ) );
+                Assert.True( rules.MustWait( WithSerial( 0x78, 3, RehuedSerial, 23 ), false ) );
+                Assert.True( rules.MustWait( WithSerial( 0xF3, 4, RehuedSerial, 26 ), false ) );
 
-                Assert.IsFalse( rules.MustWait( WithSerial( 0x20, 1, RehuedSerial + 1, 19 ), false ) );
-                Assert.IsFalse( rules.MustWait( WithSerial( 0xF3, 4, RehuedSerial + 1, 26 ), false ) );
+                Assert.False( rules.MustWait( WithSerial( 0x20, 1, RehuedSerial + 1, 19 ), false ) );
+                Assert.False( rules.MustWait( WithSerial( 0xF3, 4, RehuedSerial + 1, 26 ), false ) );
             }
             finally
             {
                 Engine.RehueList.Remove( RehuedSerial );
             }
 
-            Assert.IsFalse( CurrentRules().MustWait( WithSerial( 0x20, 1, RehuedSerial, 19 ), false ) );
+            Assert.False( CurrentRules().MustWait( WithSerial( 0x20, 1, RehuedSerial, 19 ), false ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RuntimeFilterWaitsWhileRegistered()
         {
             PacketFilterInfo pfi = new( 0xB0, [PacketFilterConditions.ByteAtPositionCondition( 0x05, 3 )] );
@@ -168,18 +166,18 @@ namespace ClassicAssist.Tests
             {
                 PacketWaitRuleSet rules = CurrentRules();
 
-                Assert.IsTrue( rules.MustWait( matching, false ) );
-                Assert.IsFalse( rules.MustWait( other, false ) );
+                Assert.True( rules.MustWait( matching, false ) );
+                Assert.False( rules.MustWait( other, false ) );
             }
             finally
             {
                 Engine.RemoveReceiveFilter( pfi );
             }
 
-            Assert.IsFalse( CurrentRules().MustWait( matching, false ) );
+            Assert.False( CurrentRules().MustWait( matching, false ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RuntimeSendFiltersWaitOnOutgoingPackets()
         {
             PacketFilterInfo pre = new( 0x12 );
@@ -188,8 +186,8 @@ namespace ClassicAssist.Tests
 
             try
             {
-                Assert.IsTrue( CurrentRules().MustWait( new byte[] { 0x12, 0x00, 0x05, 0x24, 0x00 }, true ) );
-                Assert.IsFalse( CurrentRules().MustWait( new byte[] { 0x12, 0x00, 0x05, 0x24, 0x00 }, false ) );
+                Assert.True( CurrentRules().MustWait( new byte[] { 0x12, 0x00, 0x05, 0x24, 0x00 }, true ) );
+                Assert.False( CurrentRules().MustWait( new byte[] { 0x12, 0x00, 0x05, 0x24, 0x00 }, false ) );
             }
             finally
             {
@@ -197,7 +195,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void FromFilterTurnsEachConditionIntoARule()
         {
             PacketFilterInfo unconditional = new( 0x1D );
@@ -207,15 +205,15 @@ namespace ClassicAssist.Tests
             List<PacketWaitRule> all = [.. PacketWaitRegistry.FromFilter( unconditional, false )];
             List<PacketWaitRule> perCondition = [.. PacketWaitRegistry.FromFilter( conditional, true )];
 
-            Assert.AreEqual( 1, all.Count );
-            Assert.IsNull( all[0].Conditions );
+            Assert.Single( all );
+            Assert.Null( all[0].Conditions );
 
-            Assert.AreEqual( 2, perCondition.Count );
-            Assert.IsTrue( perCondition.All( r => r.Outgoing && r.PacketId == 0x1D && r.Conditions.Length == 1 ) );
-            Assert.AreEqual( "> 1D ?? ?? ?? ?? FF", perCondition[0].ToString() );
+            Assert.Equal( 2, perCondition.Count );
+            Assert.True( perCondition.All( r => r.Outgoing && r.PacketId == 0x1D && r.Conditions.Length == 1 ) );
+            Assert.Equal( "> 1D ?? ?? ?? ?? FF", perCondition[0].ToString() );
         }
 
-        [TestMethod]
+        [Fact]
         public void BatchReachesThePacketPathInOrder()
         {
             ThreadQueue<Packet> savedIncoming = Engine.IncomingQueue;
@@ -244,8 +242,8 @@ namespace ClassicAssist.Tests
 
                 SpinWait.SpinUntil( () => incoming.Count == 3 && outgoing.Count == 1, TimeSpan.FromSeconds( 5 ) );
 
-                CollectionAssert.AreEqual( new byte[] { 1, 2, 3 }, incoming.Select( p => p[4] ).ToArray() );
-                Assert.AreEqual( 0x09, outgoing.Single()[0] );
+                Assert.Equal( new byte[] { 1, 2, 3 }, incoming.Select( p => p[4] ).ToArray() );
+                Assert.Equal( 0x09, outgoing.Single()[0] );
             }
             finally
             {
@@ -255,7 +253,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void BatchIsIgnoredBeforeInstall()
         {
             ThreadQueue<Packet> savedIncoming = Engine.IncomingQueue;
@@ -276,7 +274,7 @@ namespace ClassicAssist.Tests
 
                 Thread.Sleep( 50 );
 
-                Assert.AreEqual( 0, Volatile.Read( ref received ) );
+                Assert.Equal( 0, Volatile.Read( ref received ) );
             }
             finally
             {

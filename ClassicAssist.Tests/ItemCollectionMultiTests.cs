@@ -1,5 +1,5 @@
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -9,12 +9,11 @@ namespace ClassicAssist.Tests
     ///     never fires. Without <see cref="ItemCollection.ClearMultis" /> the previous facet's houses
     ///     stay in the collection, matching different geometry at the same x/y.
     /// </summary>
-    [TestClass]
     public class ItemCollectionMultiTests
     {
         private const int MULTI_ART_DATA_ID = 2;
 
-        [TestMethod]
+        [Fact]
         public void ClearMultisRemovesOnlyMultis()
         {
             ItemCollection collection = new ItemCollection( 0 );
@@ -29,12 +28,12 @@ namespace ClassicAssist.Tests
 
             collection.ClearMultis();
 
-            Assert.IsNull( collection.GetItem( 0x40000001 ), "house should be removed" );
-            Assert.IsNull( collection.GetItem( 0x40000002 ), "boat should be removed" );
-            Assert.IsNotNull( collection.GetItem( 0x40000003 ), "non-multi should be left alone" );
+            Assert.Null( collection.GetItem( 0x40000001 ) ); // "house should be removed"
+            Assert.Null( collection.GetItem( 0x40000002 ) ); // "boat should be removed"
+            Assert.NotNull( collection.GetItem( 0x40000003 ) ); // "non-multi should be left alone"
         }
 
-        [TestMethod]
+        [Fact]
         public void ClearMultisNotifiesOnlyWhenSomethingWasRemoved()
         {
             ItemCollection collection = new ItemCollection( 0 );
@@ -46,7 +45,7 @@ namespace ClassicAssist.Tests
 
             // Nothing to remove - must not raise, or every facet change would churn the ECV.
             collection.ClearMultis();
-            Assert.AreEqual( 0, notifications );
+            Assert.Equal( 0, notifications );
 
             collection.Add( new Item( 0x40000001 ) { ArtDataID = MULTI_ART_DATA_ID, X = 100, Y = 100 } );
             notifications = 0;
@@ -54,13 +53,13 @@ namespace ClassicAssist.Tests
             // Only that it notified - the exact count is an implementation detail, and pinning it here
             // would freeze it rather than the contract.
             collection.ClearMultis();
-            Assert.IsTrue( notifications > 0 );
+            Assert.True( notifications > 0 );
         }
 
         /// <summary>
         ///     The case the facet sweep exists for: same coordinates, so a distance sweep is a no-op.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void DistanceSweepLeavesCoLocatedMultiButClearMultisRemovesIt()
         {
             ItemCollection collection = new ItemCollection( 0 );
@@ -69,12 +68,11 @@ namespace ClassicAssist.Tests
 
             collection.RemoveByDistance( 32, 1000, 1000 );
 
-            Assert.IsNotNull( collection.GetItem( 0x40000001 ),
-                "distance sweep can't help when the facet change doesn't move the player" );
+            Assert.NotNull( collection.GetItem( 0x40000001 ) ); // "distance sweep can't help when the facet change doesn't move the player"
 
             collection.ClearMultis();
 
-            Assert.IsNull( collection.GetItem( 0x40000001 ) );
+            Assert.Null( collection.GetItem( 0x40000001 ) );
         }
 
         /// <summary>
@@ -82,7 +80,7 @@ namespace ClassicAssist.Tests
         ///     far out of range while the player stands inside it. Sweeping it would drop the structure the
         ///     player is currently in, so multis are exempt.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void DistanceSweepExemptsOutOfRangeMultis()
         {
             ItemCollection collection = new ItemCollection( 0 );
@@ -92,8 +90,8 @@ namespace ClassicAssist.Tests
 
             collection.RemoveByDistance( 32, 1100, 1100 );
 
-            Assert.IsNotNull( collection.GetItem( 0x40000001 ), "multi should survive the distance sweep" );
-            Assert.IsNull( collection.GetItem( 0x40000002 ), "non-multi out of range should still be swept" );
+            Assert.NotNull( collection.GetItem( 0x40000001 ) ); // "multi should survive the distance sweep"
+            Assert.Null( collection.GetItem( 0x40000002 ) ); // "non-multi out of range should still be swept"
         }
     }
 }

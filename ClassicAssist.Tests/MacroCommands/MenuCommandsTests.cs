@@ -1,29 +1,28 @@
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Macros.Commands;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
-    public class MenuCommandsTests
+    public class MenuCommandsTests : IDisposable
     {
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             Engine.Menus.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void MenuExistsWillFindRegisteredMenu()
         {
             Engine.Menus.Add( new Menu { ID = 0x3001, Title = "Test Menu" } );
 
-            Assert.IsTrue( MenuCommands.MenuExists( 0x3001 ) );
-            Assert.IsFalse( MenuCommands.MenuExists( 0x9999 ) );
+            Assert.True( MenuCommands.MenuExists( 0x3001 ) );
+            Assert.False( MenuCommands.MenuExists( 0x9999 ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void InMenuWillMatchTitle()
         {
             // Entries: [] - InMenu falls through to Entries.Any(...) with no null guard once the
@@ -31,11 +30,11 @@ namespace ClassicAssist.Tests.MacroCommands
             // always are) with entries.
             Engine.Menus.Add( new Menu { ID = 0x3002, Title = "Choose a Weapon", Entries = [] } );
 
-            Assert.IsTrue( MenuCommands.InMenu( 0x3002, "weapon" ) );
-            Assert.IsFalse( MenuCommands.InMenu( 0x3002, "armor" ) );
+            Assert.True( MenuCommands.InMenu( 0x3002, "weapon" ) );
+            Assert.False( MenuCommands.InMenu( 0x3002, "armor" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void InMenuWillMatchEntryTitle()
         {
             Engine.Menus.Add( new Menu
@@ -43,16 +42,16 @@ namespace ClassicAssist.Tests.MacroCommands
                 ID = 0x3003, Title = "Choose", Entries = [new MenuEntry { Title = "Longsword" }]
             } );
 
-            Assert.IsTrue( MenuCommands.InMenu( 0x3003, "longsword" ) );
+            Assert.True( MenuCommands.InMenu( 0x3003, "longsword" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void InMenuWillBeFalseWhenMenuMissing()
         {
-            Assert.IsFalse( MenuCommands.InMenu( 0x8888, "anything" ) );
+            Assert.False( MenuCommands.InMenu( 0x8888, "anything" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void CloseMenuWillSendMenuButtonClickAndCloseClientGump()
         {
             Engine.Menus.Add( new Menu { ID = 0x3004, Serial = 0x40000001, Title = "Test" } );
@@ -84,11 +83,11 @@ namespace ClassicAssist.Tests.MacroCommands
             Engine.InternalPacketSentEvent -= OnSent;
             Engine.InternalPacketReceivedEvent -= OnReceived;
 
-            Assert.IsNotNull( serverPacket );
-            Assert.IsNotNull( clientPacket );
+            Assert.NotNull( serverPacket );
+            Assert.NotNull( clientPacket );
         }
 
-        [TestMethod]
+        [Fact]
         public void ReplyMenuWillSendCloseClientGumpEvenWithoutMenu()
         {
             byte[] clientPacket = null;
@@ -107,7 +106,7 @@ namespace ClassicAssist.Tests.MacroCommands
 
             Engine.InternalPacketReceivedEvent -= OnReceived;
 
-            Assert.IsNotNull( clientPacket );
+            Assert.NotNull( clientPacket );
         }
     }
 }

@@ -8,26 +8,23 @@ using ClassicAssist.Data.Macros;
 using ClassicAssist.Misc;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class GlobalSettingsTests
+    public class GlobalSettingsTests : IDisposable
     {
         private string _globalDirectory;
 
-        [TestInitialize]
-        public void Initialize()
+        public GlobalSettingsTests()
         {
             _globalDirectory = Path.Combine( Path.GetTempPath(), $"cal-test-{Guid.NewGuid():N}" );
             Directory.CreateDirectory( _globalDirectory );
             AssistantOptions.GlobalDirectory = _globalDirectory;
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             AssistantOptions.GlobalDirectory = ".";
 
@@ -37,7 +34,7 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void GlobalMacroDeserializeForcesGlobalFlag()
         {
             // A file that predates the Global flag, or was written by a build that didn't persist it -
@@ -59,11 +56,11 @@ namespace ClassicAssist.Tests
             vm.Deserialize( null, new Options() );
 
             MacroEntry entry = vm.Items.FirstOrDefault( e => e.Name == "TestMacro" );
-            Assert.IsNotNull( entry );
-            Assert.IsTrue( entry.Global );
+            Assert.NotNull( entry );
+            Assert.True( entry.Global );
         }
 
-        [TestMethod]
+        [Fact]
         public void GlobalMacroSerializeWritesPortableFormat()
         {
             MacrosTabViewModel vm = new MacrosTabViewModel();
@@ -82,19 +79,19 @@ namespace ClassicAssist.Tests
             vm.Serialize( new JObject() );
 
             string file = Path.Combine( _globalDirectory, "Macros.json" );
-            Assert.IsTrue( File.Exists( file ) );
+            Assert.True( File.Exists( file ) );
 
             JArray json = JArray.Parse( File.ReadAllText( file ) );
             JObject entry = json.FirstOrDefault( t => t["Name"]?.ToObject<string>() == "PortableMacro" ) as JObject;
 
-            Assert.IsNotNull( entry );
-            Assert.IsTrue( entry["Global"].ToObject<bool>() );
-            Assert.IsNotNull( entry["Keys"] );
-            Assert.IsNull( entry["IsRunning"] );
-            Assert.AreEqual( 1, entry["Aliases"].Count() );
+            Assert.NotNull( entry );
+            Assert.True( entry["Global"].ToObject<bool>() );
+            Assert.NotNull( entry["Keys"] );
+            Assert.Null( entry["IsRunning"] );
+            Assert.Single( entry["Aliases"] );
         }
 
-        [TestMethod]
+        [Fact]
         public void HotkeyGlobalPassSeparatesIsGlobalEntries()
         {
             HotkeysTabViewModel vm = new HotkeysTabViewModel();
@@ -106,7 +103,7 @@ namespace ClassicAssist.Tests
                 HotkeyManager.GetInstance().Items.FirstOrDefault( c => c.IsCategory && c.Name == Strings.Commands && c.Children?.Count > 0 );
 
             HotkeyEntry globalEntry = category?.Children.FirstOrDefault( e => !e.IsCategory );
-            Assert.IsNotNull( globalEntry );
+            Assert.NotNull( globalEntry );
 
             globalEntry.Hotkey = new ShortcutKeys( Key.None, Key.F1 );
             globalEntry.IsGlobal = true;
@@ -120,14 +117,14 @@ namespace ClassicAssist.Tests
             JArray globalCommands = (JArray) globalJson["Hotkeys"]?["Commands"];
             JArray profileCommands = (JArray) profileJson["Hotkeys"]?["Commands"];
 
-            Assert.IsNotNull( globalCommands );
-            Assert.IsTrue( globalCommands.Any( t => t["Type"]?.ToObject<string>() == globalEntry.GetType().FullName ) );
-            Assert.IsFalse( profileCommands.Any( t => t["Type"]?.ToObject<string>() == globalEntry.GetType().FullName ) );
+            Assert.NotNull( globalCommands );
+            Assert.Contains( globalCommands, t => t["Type"]?.ToObject<string>() == globalEntry.GetType().FullName );
+            Assert.DoesNotContain( profileCommands, t => t["Type"]?.ToObject<string>() == globalEntry.GetType().FullName );
 
             vm.Deserialize( globalJson, options, true );
 
-            Assert.IsTrue( globalEntry.IsGlobal );
-            Assert.AreEqual( globalEntry.Hotkey, new ShortcutKeys( Key.None, Key.F1 ) );
+            Assert.True( globalEntry.IsGlobal );
+            Assert.Equal( globalEntry.Hotkey, new ShortcutKeys( Key.None, Key.F1 ) );
         }
     }
 }

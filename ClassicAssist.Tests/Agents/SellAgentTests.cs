@@ -1,202 +1,228 @@
-﻿//TODO
-//using System.Threading;
-//using Assistant;
-//using ClassicAssist.Data.Vendors;
-//using ClassicAssist.UO.Data;
-//using ClassicAssist.UO.Network;
-//using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using ClassicAssist.Data.Vendors;
+using ClassicAssist.Shared.UI.ViewModels.Agents;
+using ClassicAssist.UO.Data;
+using Xunit;
 
-//namespace ClassicAssist.Tests.Agents
-//{
-//    [TestClass]
-//    public class SellAgentTests
-//    {
-//        [TestMethod]
-//        public void WontSellIncorrectHue()
-//        {
-//            //TODO
-//            //void OnPacket( byte[] data, int length )
-//            //{
-//            //    Assert.Fail();
-//            //}
+namespace ClassicAssist.Tests.Agents
+{
+    /// <summary>
+    ///     The sell agent answers a vendor's sell list (0x9E) with a sell request (0x9F) for the items the
+    ///     player configured. Each rule - graphic, hue, minimum price, enabled, and the amount cap - decides
+    ///     whether the player's goods are sold, so a rule that stops applying sells things the player meant
+    ///     to keep. The amount cap is a total across every matching stack, not a per-stack limit.
+    /// </summary>
+    public class SellAgentTests : IDisposable
+    {
+        private const int VENDOR = 0x00001234;
 
-//            //Engine.InternalPacketSentEvent += OnPacket;
+        private readonly VendorSellTabViewModel _viewModel;
 
-//            //VendorSellTabViewModel vsvm = new VendorSellTabViewModel();
+        public SellAgentTests()
+        {
+            EngineState.ResetWithPlayer();
 
-//            //vsvm.Items.Add( new VendorSellAgentEntry
-//            //{
-//            //    Enabled = true,
-//            //    Graphic = 0xff,
-//            //    MinPrice = 10,
-//            //    Name = "Shmoo",
-//            //    Hue = 0xff
-//            //} );
+            _viewModel = new VendorSellTabViewModel();
+        }
 
-//            //IncomingPacketHandlers.Initialize();
-//            //PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x9E );
+        public void Dispose()
+        {
+            _viewModel.Dispose();
+        }
 
-//            //PacketWriter pw = new PacketWriter( 23 );
-//            //pw.Write( (byte) 0x9E );
-//            //pw.Write( (short) 21 );
-//            //pw.Write( 0 );
-//            //pw.Write( (short) 1 );
-//            //pw.Write( 0 );
-//            //pw.Write( (short) 0xFF );
-//            //pw.Write( (short) 0 );
-//            //pw.Write( (short) 0 );
-//            //pw.Write( (short) 9 );
-//            //pw.Write( (short) 0 );
+        private struct Offer
+        {
+            public int Serial;
+            public int Graphic;
+            public int Hue;
+            public int Amount;
+            public int Price;
+        }
 
-//            //byte[] packet = pw.ToArray();
+        /// <summary>
+        ///     0x9E: id, length (2), vendor serial (4), count (2), then per item serial (4), graphic (2),
+        ///     hue (2), amount (2), price (2), name length (2), name.
+        /// </summary>
+        private static byte[] SellList( params Offer[] offers )
+        {
+            const string name = "Shmoo";
+            int length = 9 + offers.Length * ( 14 + name.Length );
 
-//            //handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+            PacketWriter writer = new PacketWriter( length );
+            writer.Write( (byte) 0x9E );
+            writer.Write( (short) length );
+            writer.Write( VENDOR );
+            writer.Write( (short) offers.Length );
 
-//            //vsvm.Items.Clear();
-//            //Engine.InternalPacketSentEvent -= OnPacket;
-//        }
+            foreach ( Offer offer in offers )
+            {
+                writer.Write( offer.Serial );
+                writer.Write( (short) offer.Graphic );
+                writer.Write( (short) offer.Hue );
+                writer.Write( (short) offer.Amount );
+                writer.Write( (short) offer.Price );
+                writer.Write( (short) name.Length );
 
-//        [TestMethod]
-//        public void WontSellUnderMinPrice()
-//        {
-//            //TODO
-//            //void OnPacket( byte[] data, int length )
-//            //{
-//            //    Assert.Fail();
-//            //}
+                byte[] nameBytes = Encoding.ASCII.GetBytes( name );
+                writer.Write( nameBytes, 0, nameBytes.Length );
+            }
 
-//            //Engine.InternalPacketSentEvent += OnPacket;
+            return writer.ToArray();
+        }
 
-//            //VendorSellTabViewModel vsvm = new VendorSellTabViewModel();
+        /// <summary>0x9F: id, length (2), vendor serial (4), count (2), then per item serial (4), amount (2).</summary>
+        private static List<(int serial, int amount)> ParseSell( byte[] packet )
+        {
+            Assert.Equal( 0x9F, packet[0] );
+            Assert.Equal( VENDOR, ( packet[3] << 24 ) | ( packet[4] << 16 ) | ( packet[5] << 8 ) | packet[6] );
 
-//            //vsvm.Items.Add( new VendorSellAgentEntry
-//            //{
-//            //    Enabled = true, Graphic = 0xff, MinPrice = 10, Name = "Shmoo"
-//            //} );
+            int count = ( packet[7] << 8 ) | packet[8];
+            List<(int, int)> items = new List<(int, int)>();
 
-//            //IncomingPacketHandlers.Initialize();
-//            //PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x9E );
+            for ( int i = 0; i < count; i++ )
+            {
+                int offset = 9 + i * 6;
+                int serial = ( packet[offset] << 24 ) | ( packet[offset + 1] << 16 ) | ( packet[offset + 2] << 8 ) |
+                             packet[offset + 3];
+                int amount = ( packet[offset + 4] << 8 ) | packet[offset + 5];
 
-//            //PacketWriter pw = new PacketWriter( 23 );
-//            //pw.Write( (byte) 0x9E );
-//            //pw.Write( (short) 21 );
-//            //pw.Write( 0 );
-//            //pw.Write( (short) 1 );
-//            //pw.Write( 0 );
-//            //pw.Write( (short) 0xFF );
-//            //pw.Write( (short) 0 );
-//            //pw.Write( (short) 0 );
-//            //pw.Write( (short) 9 );
-//            //pw.Write( (short) 0 );
+                items.Add( (serial, amount) );
+            }
 
-//            //byte[] packet = pw.ToArray();
+            return items;
+        }
 
-//            //handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+        private List<(int serial, int amount)> Run( params Offer[] offers )
+        {
+            using PacketRecorder recorder = new PacketRecorder();
 
-//            //vsvm.Items.Clear();
-//            //Engine.InternalPacketSentEvent -= OnPacket;
-//        }
+            EngineState.Receive( SellList( offers ) );
 
-//        [TestMethod]
-//        public void WillSellMinPrice()
-//        {
-//            AutoResetEvent are = new AutoResetEvent( false );
+            IReadOnlyList<byte[]> sent = recorder.SentWithId( 0x9F );
 
-//            void OnPacket( byte[] data, int length )
-//            {
-//                if ( data[0] == 0x9F )
-//                {
-//                    are.Set();
-//                }
-//            }
+            Assert.True( sent.Count <= 1, "more than one sell request" );
 
-//            Engine.InternalPacketSentEvent += OnPacket;
+            return sent.Count == 0 ? new List<(int, int)>() : ParseSell( sent[0] );
+        }
 
-//            VendorSellTabViewModel vsvm = new VendorSellTabViewModel();
+        private void AddRule( int graphic, int hue = -1, int amount = -1, int minPrice = 0, bool enabled = true )
+        {
+            _viewModel.Items.Add( new VendorSellAgentEntry
+            {
+                Enabled = enabled,
+                Graphic = graphic,
+                Hue = hue,
+                Amount = amount,
+                MinPrice = minPrice,
+                Name = "Shmoo"
+            } );
+        }
 
-//            vsvm.Items.Add( new VendorSellAgentEntry { Enabled = true, Graphic = 0xff, MinPrice = 9, Name = "Shmoo" } );
+        [Fact]
+        public void WontSellIncorrectHue()
+        {
+            AddRule( 0xFF, 0xFF );
 
-//            IncomingPacketHandlers.Initialize();
-//            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x9E );
+            Assert.Empty( Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Hue = 0, Amount = 1, Price = 9 } ) );
+        }
 
-//            PacketWriter pw = new PacketWriter( 23 );
-//            pw.Write( (byte) 0x9E );
-//            pw.Write( (short) 21 );
-//            pw.Write( 0 );
-//            pw.Write( (short) 1 );
-//            pw.Write( 0 );
-//            pw.Write( (short) 0xFF );
-//            pw.Write( (short) 0 );
-//            pw.Write( (short) 0 );
-//            pw.Write( (short) 9 );
-//            pw.Write( (short) 0 );
+        [Fact]
+        public void WillSellMatchingHue()
+        {
+            AddRule( 0xFF, 0x21 );
 
-//            byte[] packet = pw.ToArray();
+            Assert.Equal( new[] { (0x40000010, 1) },
+                Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Hue = 0x21, Amount = 1, Price = 9 } ) );
+        }
 
-//            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+        [Fact]
+        public void WontSellUnderMinPrice()
+        {
+            AddRule( 0xFF, minPrice: 10 );
 
-//            bool result = are.WaitOne( 1000 );
+            Assert.Empty( Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 1, Price = 9 } ) );
+        }
 
-//            Assert.IsTrue( result );
+        [Fact]
+        public void WillSellMinPrice()
+        {
+            AddRule( 0xFF, minPrice: 9 );
 
-//            vsvm.Items.Clear();
-//            Engine.InternalPacketSentEvent -= OnPacket;
-//        }
+            Assert.Equal( new[] { (0x40000010, 1) },
+                Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 1, Price = 9 } ) );
+        }
 
-//        [TestMethod]
-//        public void WontSellMoreThanAmount()
-//        {
-//            AutoResetEvent are = new AutoResetEvent( false );
+        [Fact]
+        public void WontSellDisabledEntry()
+        {
+            AddRule( 0xFF, enabled: false );
 
-//            void OnPacket( byte[] data, int length )
-//            {
-//                if ( data[0] != 0x9F )
-//                {
-//                    return;
-//                }
+            Assert.Empty( Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 1, Price = 9 } ) );
+        }
 
-//                int amount = ( data[13] << 8 ) | data[14];
+        [Fact]
+        public void WontSellMoreThanAmount()
+        {
+            AddRule( 0xFF, amount: 10 );
 
-//                if ( amount != 10 )
-//                {
-//                    Assert.Fail();
-//                    return;
-//                }
+            Assert.Equal( new[] { (0x40000010, 10) },
+                Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 100, Price = 9 } ) );
+        }
 
-//                are.Set();
-//            }
+        /// <summary>
+        ///     The cap is shared: 6 + 6 offered against a cap of 10 sells 6 then 4, and a third stack
+        ///     after the cap is used up is left out of the request entirely.
+        /// </summary>
+        [Fact]
+        public void WillShareAmountAcrossStacks()
+        {
+            AddRule( 0xFF, amount: 10 );
 
-//            Engine.InternalPacketSentEvent += OnPacket;
+            List<(int serial, int amount)> sold = Run(
+                new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 6, Price = 9 },
+                new Offer { Serial = 0x40000011, Graphic = 0xFF, Amount = 6, Price = 9 },
+                new Offer { Serial = 0x40000012, Graphic = 0xFF, Amount = 6, Price = 9 } );
 
-//            VendorSellTabViewModel vsvm = new VendorSellTabViewModel();
+            Assert.Equal( new[] { (0x40000010, 6), (0x40000011, 4) }, sold );
+        }
 
-//            vsvm.Items.Add( new VendorSellAgentEntry { Enabled = true, Graphic = 0xff, Amount = 10, Name = "Shmoo" } );
+        [Fact]
+        public void WillSellOnlyMatchingGraphicsFromAMixedList()
+        {
+            AddRule( 0xFF );
 
-//            IncomingPacketHandlers.Initialize();
-//            PacketHandler handler = IncomingPacketHandlers.GetHandler( 0x9E );
+            List<(int serial, int amount)> sold = Run(
+                new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 2, Price = 9 },
+                new Offer { Serial = 0x40000011, Graphic = 0x100, Amount = 3, Price = 9 } );
 
-//            PacketWriter pw = new PacketWriter( 23 );
-//            pw.Write( (byte) 0x9E );
-//            pw.Write( (short) 21 );
-//            pw.Write( 0 );
-//            pw.Write( (short) 1 );
-//            pw.Write( 0 );
-//            pw.Write( (short) 0xFF );
-//            pw.Write( (short) 0 );
-//            pw.Write( (short) 100 );
-//            pw.Write( (short) 9 );
-//            pw.Write( (short) 0 );
+            Assert.Equal( new[] { (0x40000010, 2) }, sold );
+        }
 
-//            byte[] packet = pw.ToArray();
+        [Fact]
+        public void MatchAnyWillSellEverything()
+        {
+            _viewModel.InsertMatchAnyCommand.Execute( null );
 
-//            handler.OnReceive( new PacketReader( packet, packet.Length, false ) );
+            List<(int serial, int amount)> sold = Run(
+                new Offer { Serial = 0x40000010, Graphic = 0xFF, Hue = 5, Amount = 2, Price = 1 },
+                new Offer { Serial = 0x40000011, Graphic = 0x100, Amount = 3, Price = 0 } );
 
-//            bool result = are.WaitOne( 1000 );
+            Assert.Equal( new[] { (0x40000010, 2), (0x40000011, 3) }, sold );
+        }
 
-//            Assert.IsTrue( result );
+        /// <summary>
+        ///     With a sell container set that the player does not have, nothing is sold - selling from the
+        ///     whole backpack instead would sell exactly what the container was meant to protect.
+        /// </summary>
+        [Fact]
+        public void WontSellWhenTheSellContainerIsMissing()
+        {
+            AddRule( 0xFF );
+            _viewModel.ContainerSerial = 0x40000099;
 
-//            vsvm.Items.Clear();
-//            Engine.InternalPacketSentEvent -= OnPacket;
-//        }
-//    }
-//}
+            Assert.Empty( Run( new Offer { Serial = 0x40000010, Graphic = 0xFF, Amount = 1, Price = 9 } ) );
+        }
+    }
+}

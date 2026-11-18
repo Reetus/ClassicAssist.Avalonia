@@ -6,7 +6,7 @@ using ClassicAssist.Misc;
 using ClassicAssist.Plugin.Shared;
 using ClassicAssist.Shared;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -16,10 +16,9 @@ namespace ClassicAssist.Tests
     ///     0xA0) and the whole login state for a fast login. They must be buffered and replayed in order
     ///     once the UI is up, and must not reach the packet path a moment earlier.
     /// </summary>
-    [TestClass]
     public class StartupPacketGateTests
     {
-        [TestMethod]
+        [Fact]
         public void BufferedPacketsAreReplayedInOrderAfterStartup()
         {
             ThreadQueue<Packet> savedIncoming = Engine.IncomingQueue;
@@ -56,15 +55,15 @@ namespace ClassicAssist.Tests
                 // Nothing may reach the packet path while the gate is shut - replay runs on fully
                 // built state, not half-built state.
                 Thread.Sleep( 50 );
-                Assert.AreEqual( 0, incoming.Count );
-                Assert.AreEqual( 0, outgoing.Count );
+                Assert.Empty( incoming );
+                Assert.Empty( outgoing );
 
                 Engine.CompleteStartup();
 
                 SpinWait.SpinUntil( () => incoming.Count == 2 && outgoing.Count == 2, TimeSpan.FromSeconds( 5 ) );
 
-                CollectionAssert.AreEqual( new byte[] { 1, 3 }, incoming.Select( p => p[4] ).ToArray() );
-                CollectionAssert.AreEqual( new byte[] { 2, 4 }, outgoing.Select( p => p[4] ).ToArray() );
+                Assert.Equal( new byte[] { 1, 3 }, incoming.Select( p => p[4] ).ToArray() );
+                Assert.Equal( new byte[] { 2, 4 }, outgoing.Select( p => p[4] ).ToArray() );
             }
             finally
             {

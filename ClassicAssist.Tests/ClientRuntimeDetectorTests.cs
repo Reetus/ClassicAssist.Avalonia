@@ -1,24 +1,21 @@
 using System;
 using System.IO;
 using ClassicAssist.Launcher.Client;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
-    public class ClientRuntimeDetectorTests
+    public class ClientRuntimeDetectorTests : IDisposable
     {
         private string _tempDirectory;
 
-        [TestInitialize]
-        public void Setup()
+        public ClientRuntimeDetectorTests()
         {
             _tempDirectory = Path.Combine( Path.GetTempPath(), "ClientRuntimeDetectorTests_" + Guid.NewGuid() );
             Directory.CreateDirectory( _tempDirectory );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        public void Dispose()
         {
             if ( Directory.Exists( _tempDirectory ) )
             {
@@ -26,15 +23,15 @@ namespace ClassicAssist.Tests
             }
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_NonexistentFile_ReturnsUnknown()
         {
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( Path.Combine( _tempDirectory, "missing" ) );
 
-            Assert.AreEqual( ClientRuntimeFormat.Unknown, result );
+            Assert.Equal( ClientRuntimeFormat.Unknown, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_ElfBinary_NoSiblingRuntimeConfig_ReturnsNativeAot()
         {
             string path = Path.Combine( _tempDirectory, "ClassicUO" );
@@ -42,10 +39,10 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( path );
 
-            Assert.AreEqual( ClientRuntimeFormat.NativeAot, result );
+            Assert.Equal( ClientRuntimeFormat.NativeAot, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_ElfBinary_WithSiblingRuntimeConfig_ReturnsManaged()
         {
             string path = Path.Combine( _tempDirectory, "TazUO" );
@@ -54,10 +51,10 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( path );
 
-            Assert.AreEqual( ClientRuntimeFormat.Managed, result );
+            Assert.Equal( ClientRuntimeFormat.Managed, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_MachOBinary_NoSiblingRuntimeConfig_ReturnsNativeAot()
         {
             string path = Path.Combine( _tempDirectory, "ClassicUO" );
@@ -65,10 +62,10 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( path );
 
-            Assert.AreEqual( ClientRuntimeFormat.NativeAot, result );
+            Assert.Equal( ClientRuntimeFormat.NativeAot, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_ManagedAssembly_HasCorHeader_ReturnsFramework()
         {
             // Every managed assembly - including this running test assembly - has a CLI/COR20
@@ -78,10 +75,10 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( realManagedDll );
 
-            Assert.AreEqual( ClientRuntimeFormat.Framework, result );
+            Assert.Equal( ClientRuntimeFormat.Framework, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_NativePeStub_NoSiblingRuntimeConfig_ReturnsNativeAot()
         {
             string path = Path.Combine( _tempDirectory, "ClassicUO.exe" );
@@ -89,10 +86,10 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( path );
 
-            Assert.AreEqual( ClientRuntimeFormat.NativeAot, result );
+            Assert.Equal( ClientRuntimeFormat.NativeAot, result );
         }
 
-        [TestMethod]
+        [Fact]
         public void Detect_NativePeStub_WithSiblingRuntimeConfig_ReturnsManaged()
         {
             string path = Path.Combine( _tempDirectory, "ClassicUO.exe" );
@@ -101,7 +98,7 @@ namespace ClassicAssist.Tests
 
             ClientRuntimeFormat result = ClientRuntimeDetector.Detect( path );
 
-            Assert.AreEqual( ClientRuntimeFormat.Managed, result );
+            Assert.Equal( ClientRuntimeFormat.Managed, result );
         }
     }
 }

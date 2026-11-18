@@ -1,206 +1,198 @@
-﻿//TODO
-//using System;
-//using System.Collections.Generic;
-//using System.IO;
-//using System.Linq;
-//using System.Reflection;
-//using Assistant;
-//using ClassicAssist.Data.Macros;
-//using ClassicAssist.Resources;
-//using ClassicAssist.Shared.Resources;
-//using ClassicAssist.UI.ViewModels;
-//using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using ClassicAssist.Data.Macros;
+using ClassicAssist.Shared;
+using ClassicAssist.Tests.Macros;
+using Xunit;
 
-//namespace ClassicAssist.Tests
-//{
-//    [TestClass]
-//    public class MacroTests
-//    {
-//        [TestMethod]
-//        public void WillExecute()
-//        {
-//            MacroEntry me = new MacroEntry();
+namespace ClassicAssist.Tests
+{
+    /// <summary>
+    ///     Basic macro execution through <see cref="MacroManager" />, and the contract every macro command
+    ///     must meet: a <see cref="CommandsDisplayAttribute" /> whose help text and category resolve.
+    ///     The attribute is what puts a command in the editor's command list and help, and its constructor
+    ///     throws on a missing translation - so one untranslated command breaks the whole list, not just
+    ///     its own entry. The deeper runtime behaviour lives in <c>Macros/</c>.
+    /// </summary>
+    public class MacroTests : IDisposable
+    {
+        private readonly MacroHarness _harness = new MacroHarness();
 
-//            MacroManager mi = MacroManager.GetInstance();
+        public void Dispose()
+        {
+            _harness.Dispose();
+        }
 
-//            mi.Execute( me );
-//        }
+        /// <summary>
+        ///     Public statics in the command classes that are not macro commands: accessors the Active
+        ///     Objects window and profile save use to read the commands' state. Macros can still see them
+        ///     (the whole class is imported), but they are not offered in the command list.
+        /// </summary>
+        private static readonly HashSet<string> _hostAccessors = new HashSet<string>
+        {
+            "AliasCommands.GetAllAliases",
+            "AliasCommands.GetAllPlayerAliases",
+            "AliasCommands.GetPlayerAliases",
+            "ListCommands.GetAllLists",
+            "TimerCommands.GetAllTimers"
+        };
 
-//        [TestMethod]
-//        public void WontThrowExceptionNewMacroNoAssistantOptions()
-//        {
-//            try
-//            {
-//                string path = Path.Combine( Engine.StartupPath ?? Environment.CurrentDirectory, "Assistant.json" );
+        private static IEnumerable<MethodInfo> CommandMethods()
+        {
+            return Assembly.GetAssembly( typeof( Engine ) ).GetTypes()
+                .Where( t => t.Namespace != null && t.Namespace.EndsWith( "Macros.Commands" ) && t.IsClass &&
+                             t.IsPublic && !t.Name.Contains( "Dummy" ) )
+                .SelectMany( t => t.GetMethods( BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly ) )
+                .Where( m => !m.IsSpecialName && !_hostAccessors.Contains( $"{m.DeclaringType?.Name}.{m.Name}" ) );
+        }
 
-//                if ( File.Exists( path ) )
-//                {
-//                    File.Delete( path );
-//                }
+        [Fact]
+        public void WillExecute()
+        {
+            MacroEntry entry = _harness.Add( "Execute", "SetAlias('ran', 1)" );
 
-//                MacrosTabViewModel vm = new MacrosTabViewModel();
+            _harness.Manager.Execute( entry );
 
-//                vm.NewMacroCommand.Execute( null );
-//            }
-//            catch ( Exception )
-//            {
-//                Assert.Fail();
-//            }
-//        }
+            Assert.Same( entry, _harness.Manager.CurrentMacro );
+            Assert.True( MacroHarness.Join( entry ) );
+            Assert.False( entry.MacroInvoker.IsFaulted, entry.MacroInvoker.Exception?.ToString() );
+            Assert.Equal( 1, MacroHarness.Alias( "ran" ) );
+        }
 
-//        //[TestMethod]
-//        //public void WillAbortRunning()
-//        //{
-//        //    MacroEntry me = new MacroEntry { Macro = "while true:\r\n\t" };
+        [Fact]
+        public void WillExecuteAnEmptyMacro()
+        {
+            MacroEntry entry = _harness.Add( "Empty", string.Empty );
 
-//        //    MacroManager mi = MacroManager.GetInstance();
+            _harness.Manager.Execute( entry );
 
-//        //    mi.Execute( me );
+            Assert.True( MacroHarness.Join( entry ) );
+            Assert.False( entry.MacroInvoker.IsFaulted );
+            Assert.False( entry.IsRunning );
+        }
 
-//        //    mi.Stop();
+        [Fact]
+        public void WillAbortRunning()
+        {
+            MacroEntry entry = _harness.Add( "Abort", "SetAlias('ready', 1)\nwhile True:\n    pass" );
 
-//        //    bool result = mi.CurrentMacro.MacroInvoker.Thread.Join( 5000 );
+            _harness.Manager.Execute( entry );
 
-//        //    Assert.IsTrue( result );
-//        //}
+            Assert.True( MacroHarness.WaitForAlias( "ready", 1 ) );
 
-//        //[TestMethod]
-//        //public void WillRaiseStartedEvent()
-//        //{
-//        //    MacroEntry me = new MacroEntry();
+            _harness.Manager.Stop();
 
-//        //    MacroManager mi = MacroManager.GetInstance();
+            Assert.True( MacroHarness.Join( entry, 5000 ) );
+            Assert.False( entry.IsRunning );
+        }
 
-//        //    AutoResetEvent are = new AutoResetEvent( false );
+        [Fact]
+        public void WillRaiseStartedEvent()
+        {
+            MacroEntry entry = _harness.Add( "Started", string.Empty );
+            using ManualResetEventSlim started = new ManualResetEventSlim();
 
-//        //    void OnStartedEvent()
-//        //    {
-//        //        are.Set();
-//        //    }
+            void OnStarted()
+            {
+                started.Set();
+            }
 
-//        //    mi.CurrentMacro.MacroInvoker.StartedEvent += OnStartedEvent;
+            entry.MacroInvoker.StartedEvent += OnStarted;
 
-//        //    mi.Execute( me );
+            _harness.Manager.Execute( entry );
 
-//        //    bool result = are.WaitOne( 5000 );
+            Assert.True( started.Wait( MacroHarness.TIMEOUT_MS, TestContext.Current.CancellationToken ) );
+            Assert.True( MacroHarness.Join( entry ) );
+        }
 
-//        //    Assert.IsTrue( result );
-//        //}
+        [Fact]
+        public void WillRaiseStoppedEvent()
+        {
+            MacroEntry entry = _harness.Add( "Stopped", string.Empty );
+            using ManualResetEventSlim stopped = new ManualResetEventSlim();
 
-//        //[TestMethod]
-//        //public void WillRaiseStoppedEvent()
-//        //{
-//        //    MacroEntry me = new MacroEntry();
+            void OnStopped()
+            {
+                stopped.Set();
+            }
 
-//        //    MacroManager mi = MacroManager.GetInstance();
+            entry.MacroInvoker.StoppedEvent += OnStopped;
 
-//        //    AutoResetEvent are = new AutoResetEvent( false );
+            _harness.Manager.Execute( entry );
 
-//        //    void OnStoppedEvent()
-//        //    {
-//        //        are.Set();
-//        //    }
+            Assert.True( stopped.Wait( MacroHarness.TIMEOUT_MS, TestContext.Current.CancellationToken ) );
+            Assert.True( MacroHarness.Join( entry ) );
+        }
 
-//        //    mi.CurrentMacro.MacroInvoker.StoppedEvent += OnStoppedEvent;
+        [Fact]
+        public void WillRaiseExceptionEvent()
+        {
+            MacroEntry entry = _harness.Add( "Throws", "kjdkdsdksdfsdk" );
+            Exception reported = null;
+            bool faultedWhenRaised = false;
 
-//        //    mi.Execute( me );
+            void OnException( Exception e )
+            {
+                reported = e;
+                faultedWhenRaised = entry.MacroInvoker.IsFaulted;
+            }
 
-//        //    bool result = are.WaitOne( 5000 );
+            entry.MacroInvoker.ExceptionEvent += OnException;
 
-//        //    Assert.IsTrue( result );
-//        //}
+            _harness.Manager.Execute( entry );
 
-//        //[TestMethod]
-//        //public void WillExecuteRunDummy()
-//        //{
-//        //    MacroEntry me = new MacroEntry { Macro = "Dummy(5,7)" };
+            Assert.True( MacroHarness.Join( entry ) );
+            Assert.NotNull( reported );
+            Assert.True( faultedWhenRaised );
+            Assert.Same( reported, entry.MacroInvoker.Exception );
+        }
 
-//        //    MacroManager mi = MacroManager.GetInstance();
+        [Fact]
+        public void EnsureAllCommandsHaveAttribute()
+        {
+            List<string> missing = new List<string>();
 
-//        //    mi.Execute( me );
+            foreach ( MethodInfo method in CommandMethods() )
+            {
+                if ( !method.IsDefined( typeof( CommandsDisplayAttribute ) ) )
+                {
+                    missing.Add( $"{method.DeclaringType?.Name}.{method.Name}" );
+                }
+            }
 
-//        //    mi.CurrentMacro.MacroInvoker.Thread.Join();
+            Assert.True( missing.Count == 0, "No CommandsDisplayAttribute: " + string.Join( ", ", missing.Distinct() ) );
+        }
 
-//        //    Assert.IsFalse( mi.CurrentMacro.MacroInvoker.IsFaulted );
-//        //}
+        /// <summary>
+        ///     Instantiating the attribute is the check: its constructor and Category setter throw when the
+        ///     help text or the category name has no resource entry.
+        /// </summary>
+        [Fact]
+        public void EnsureAllCategoriesAreLocalizable()
+        {
+            List<string> failures = new List<string>();
 
-//        //[TestMethod]
-//        //public void WillExceptionEvent()
-//        //{
-//        //    MacroEntry me = new MacroEntry { Macro = "kjdkdsdksdfsdk" };
+            foreach ( MethodInfo method in CommandMethods().Where( m => m.IsDefined( typeof( CommandsDisplayAttribute ) ) ) )
+            {
+                try
+                {
+                    CommandsDisplayAttribute attribute = method.GetCustomAttribute<CommandsDisplayAttribute>();
 
-//        //    MacroManager mi = MacroManager.GetInstance();
+                    if ( string.IsNullOrEmpty( attribute?.Category ) )
+                    {
+                        failures.Add( $"{method.DeclaringType?.Name}.{method.Name}: no category" );
+                    }
+                }
+                catch ( Exception e )
+                {
+                    failures.Add( $"{method.DeclaringType?.Name}.{method.Name}: {e.Message}" );
+                }
+            }
 
-//        //    AutoResetEvent are = new AutoResetEvent( false );
-
-//        //    void OnExceptionEvent( Exception e )
-//        //    {
-//        //        Assert.IsTrue( mi.CurrentMacro.MacroInvoker.IsFaulted );
-//        //        Assert.IsNotNull( mi.CurrentMacro.MacroInvoker.Exception );
-//        //        are.Set();
-//        //    }
-
-//        //    mi.CurrentMacro.MacroInvoker.ExceptionEvent += OnExceptionEvent;
-
-//        //    mi.Execute( me );
-
-//        //    bool result = are.WaitOne( 5000 );
-
-//        //    Assert.IsTrue( result );
-//        //}
-
-//        [TestMethod]
-//        public void EnsureAllCommandsHaveAttribute()
-//        {
-//            IEnumerable<Type> types = Assembly.GetAssembly( typeof( Engine ) ).GetTypes().Where( t =>
-//                t.Namespace != null && t.Namespace.EndsWith( "Macros.Commands" ) && t.IsClass && t.IsPublic &&
-//                !t.Name.Contains( "Dummy" ) );
-
-//            foreach ( Type type in types )
-//            {
-//                MethodInfo[] members = type.GetMethods( BindingFlags.Public | BindingFlags.Static );
-
-//                foreach ( MethodInfo member in members )
-//                {
-//                    CommandsDisplayAttribute attr = member.GetCustomAttribute<CommandsDisplayAttribute>();
-
-//                    if ( attr == null )
-//                    {
-//                        Assert.Fail( $"{type.Name}.{member.Name} has no CommandsDisplayAttribute." );
-//                    }
-//                }
-//            }
-//        }
-
-//        [TestMethod]
-//        public void EnsureAllCategoriesAreLocalizable()
-//        {
-//            IEnumerable<Type> types = Assembly.GetAssembly( typeof( Engine ) ).GetTypes().Where( t =>
-//                t.Namespace != null && t.Namespace.EndsWith( "Macros.Commands" ) && t.IsClass && t.IsPublic &&
-//                !t.Name.Contains( "Dummy" ) );
-
-//            foreach ( Type type in types )
-//            {
-//                MethodInfo[] members = type.GetMethods( BindingFlags.Public | BindingFlags.Static );
-
-//                foreach ( MethodInfo member in members )
-//                {
-//                    CommandsDisplayAttribute attr = member.GetCustomAttribute<CommandsDisplayAttribute>();
-
-//                    if ( attr == null )
-//                    {
-//                        Assert.Fail( $"{type.Name}.{member.Name} has no CommandsDisplayAttribute." );
-//                    }
-
-//                    string resourceName = Strings.ResourceManager.GetString( attr.Category );
-
-//                    if ( string.IsNullOrEmpty( resourceName ) )
-//                    {
-//                        Assert.Fail(
-//                            $"{type.Name}.{member.Name}: Category \"{attr.Category}\" has no resource entry." );
-//                    }
-//                }
-//            }
-//        }
-//    }
-//}
+            Assert.True( failures.Count == 0, string.Join( Environment.NewLine, failures ) );
+        }
+    }
+}

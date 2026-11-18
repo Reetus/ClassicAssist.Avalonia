@@ -21,14 +21,13 @@ using System;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Filters;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Filters
 {
-    [TestClass]
     public class RepeatedMessageFilterTests
     {
-        [TestMethod]
+        [Fact]
         public void WillFilterOldAsciiSystemMessages()
         {
                 byte[] packet =
@@ -54,10 +53,10 @@ namespace ClassicAssist.Tests.Filters
 
                 bool result = IncomingPacketFilters.CheckPacket( ref packet, ref length );
 
-                Assert.IsTrue( result );
+                Assert.True( result );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSendToJournalFilteredMessages()
         {
                 byte[] packet =
@@ -84,11 +83,11 @@ namespace ClassicAssist.Tests.Filters
 
                 bool result = IncomingPacketFilters.CheckPacket( ref packet, ref length );
 
-                Assert.IsTrue( result );
-                Assert.IsTrue( Engine.Journal.Count > 0 );
+                Assert.True( result );
+                Assert.True( Engine.Journal.Count > 0 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WontSendToJournalFilteredMessagesDisabled()
         {
                 byte[] packet =
@@ -118,8 +117,8 @@ namespace ClassicAssist.Tests.Filters
 
                 bool result = IncomingPacketFilters.CheckPacket( ref packet, ref length );
 
-                Assert.IsTrue( result );
-                Assert.AreEqual( 0, Engine.Journal.Count );
+                Assert.True( result );
+                Assert.Equal( 0, Engine.Journal.Count );
         }
     }
 }

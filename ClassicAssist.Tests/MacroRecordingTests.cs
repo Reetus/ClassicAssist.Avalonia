@@ -23,7 +23,7 @@ using ClassicAssist.Shared;
 using ClassicAssist.Shared.Resources;
 using ClassicAssist.UI.ViewModels;
 using ClassicAssist.UO.Network.Packets;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -31,8 +31,7 @@ namespace ClassicAssist.Tests
     ///     The macros tab's Record button: <see cref="MacrosTabViewModel.RecordCommand" /> and the
     ///     <see cref="MacroManager" /> plumbing that turns packets into commands in the selected macro.
     /// </summary>
-    [TestClass]
-    public class MacroRecordingTests
+    public class MacroRecordingTests : IDisposable
     {
         private const int SERIAL = 0x40001234;
         private const string USE_OBJECT_COMMAND = "UseObject(0x40001234)\r\n";
@@ -45,8 +44,7 @@ namespace ClassicAssist.Tests
         private MacrosTabViewModel _viewModel;
         private MacroEntry _macro;
 
-        [TestInitialize]
-        public void SetUp()
+        public MacroRecordingTests()
         {
             MacroManager manager = MacroManager.GetInstance();
 
@@ -66,8 +64,7 @@ namespace ClassicAssist.Tests
             _viewModel.SelectedItem = _macro;
         }
 
-        [TestCleanup]
-        public void TearDown()
+        public void Dispose()
         {
             _viewModel.Dispose();
 
@@ -87,24 +84,24 @@ namespace ClassicAssist.Tests
             Engine.SendPacketToServer( new UseObject( SERIAL ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordCommandTogglesRecordingAndLabel()
         {
-            Assert.IsFalse( _viewModel.IsRecording );
-            Assert.AreEqual( Strings.Record, _viewModel.RecordLabel );
+            Assert.False( _viewModel.IsRecording );
+            Assert.Equal( Strings.Record, _viewModel.RecordLabel );
 
             _viewModel.RecordCommand.Execute( null );
 
-            Assert.IsTrue( _viewModel.IsRecording );
-            Assert.AreEqual( Strings.Stop, _viewModel.RecordLabel );
+            Assert.True( _viewModel.IsRecording );
+            Assert.Equal( Strings.Stop, _viewModel.RecordLabel );
 
             _viewModel.RecordCommand.Execute( null );
 
-            Assert.IsFalse( _viewModel.IsRecording );
-            Assert.AreEqual( Strings.Record, _viewModel.RecordLabel );
+            Assert.False( _viewModel.IsRecording );
+            Assert.Equal( Strings.Record, _viewModel.RecordLabel );
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordLabelChangeIsNotifiedWithIsRecording()
         {
             int labelChanges = 0;
@@ -119,35 +116,35 @@ namespace ClassicAssist.Tests
 
             _viewModel.RecordCommand.Execute( null );
 
-            Assert.AreEqual( 1, labelChanges, "the button's label is bound to RecordLabel, not IsRecording" );
+            Assert.Equal( 1, labelChanges ); // "the button's label is bound to RecordLabel, not IsRecording"
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordCommandNeedsASelectedMacroToStart()
         {
             _viewModel.SelectedItem = null;
 
-            Assert.IsFalse( _viewModel.RecordCommand.CanExecute( null ) );
+            Assert.False( _viewModel.RecordCommand.CanExecute( null ) );
 
             _viewModel.SelectedItem = _macro;
 
-            Assert.IsTrue( _viewModel.RecordCommand.CanExecute( null ) );
+            Assert.True( _viewModel.RecordCommand.CanExecute( null ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordCommandCanStillStopWhenSelectionIsLost()
         {
             _viewModel.RecordCommand.Execute( null );
             _viewModel.SelectedItem = null;
 
-            Assert.IsTrue( _viewModel.RecordCommand.CanExecute( null ) );
+            Assert.True( _viewModel.RecordCommand.CanExecute( null ) );
 
             _viewModel.RecordCommand.Execute( null );
 
-            Assert.IsFalse( _viewModel.IsRecording );
+            Assert.False( _viewModel.IsRecording );
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordingAppendsCommandsForPacketsTheAssistantSends()
         {
             _macro.Macro = "Pause(500)\r\n";
@@ -156,25 +153,25 @@ namespace ClassicAssist.Tests
             SendUseObject();
             SendUseObject();
 
-            Assert.AreEqual( "Pause(500)\r\n" + USE_OBJECT_COMMAND + USE_OBJECT_COMMAND, _macro.Macro );
+            Assert.Equal( "Pause(500)\r\n" + USE_OBJECT_COMMAND + USE_OBJECT_COMMAND, _macro.Macro );
         }
 
-        [TestMethod]
+        [Fact]
         public void NothingIsRecordedWhenNotRecording()
         {
             SendUseObject();
 
-            Assert.AreEqual( string.Empty, _macro.Macro );
+            Assert.Equal( string.Empty, _macro.Macro );
 
             _viewModel.RecordCommand.Execute( null );
             _viewModel.RecordCommand.Execute( null );
 
             SendUseObject();
 
-            Assert.AreEqual( string.Empty, _macro.Macro );
+            Assert.Equal( string.Empty, _macro.Macro );
         }
 
-        [TestMethod]
+        [Fact]
         public void RecordingWithNoSelectionDropsTheCommand()
         {
             _viewModel.RecordCommand.Execute( null );
@@ -182,10 +179,10 @@ namespace ClassicAssist.Tests
 
             SendUseObject();
 
-            Assert.AreEqual( string.Empty, _macro.Macro );
+            Assert.Equal( string.Empty, _macro.Macro );
         }
 
-        [TestMethod]
+        [Fact]
         public void PacketsBeforeTheMacrosTabExistsAreIgnored()
         {
             // The state MacroManager is in until the first MacrosTabViewModel is constructed.
@@ -195,21 +192,21 @@ namespace ClassicAssist.Tests
 
             SendUseObject();
 
-            Assert.AreEqual( string.Empty, _macro.Macro );
+            Assert.Equal( string.Empty, _macro.Macro );
         }
 
-        [TestMethod]
+        [Fact]
         public void PlayingTheRecordedMacroStopsRecording()
         {
             _viewModel.RecordCommand.Execute( null );
 
             MacroManager.GetInstance().OnMacroStarted( _macro );
 
-            Assert.IsFalse( _viewModel.IsRecording );
-            Assert.AreEqual( Strings.Record, _viewModel.RecordLabel );
+            Assert.False( _viewModel.IsRecording );
+            Assert.Equal( Strings.Record, _viewModel.RecordLabel );
         }
 
-        [TestMethod]
+        [Fact]
         public void PlayingAnotherMacroKeepsRecording()
         {
             MacroEntry other = new MacroEntry { Name = "Other", Macro = string.Empty };
@@ -219,18 +216,18 @@ namespace ClassicAssist.Tests
 
             MacroManager.GetInstance().OnMacroStarted( other );
 
-            Assert.IsTrue( _viewModel.IsRecording );
+            Assert.True( _viewModel.IsRecording );
         }
 
-        [TestMethod]
+        [Fact]
         public void PlayIsAvailableWhileRecording()
         {
             _viewModel.RecordCommand.Execute( null );
 
-            Assert.IsTrue( _viewModel.ExecuteCommand.CanExecute( _macro ) );
+            Assert.True( _viewModel.ExecuteCommand.CanExecute( _macro ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void DisposedViewModelNoLongerReactsToMacroStart()
         {
             _viewModel.RecordCommand.Execute( null );
@@ -238,7 +235,7 @@ namespace ClassicAssist.Tests
 
             MacroManager.GetInstance().OnMacroStarted( _macro );
 
-            Assert.IsTrue( _viewModel.IsRecording );
+            Assert.True( _viewModel.IsRecording );
         }
     }
 }

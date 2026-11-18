@@ -5,62 +5,60 @@ using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.MacroCommands
 {
-    [TestClass]
     public class MobileCommandTests
     {
         private PlayerMobile _player;
 
-        [TestInitialize]
-        public void Initialize()
+        public MobileCommandTests()
         {
             _player = new PlayerMobile( 0x01 ) { Name = "Shmoo", Notoriety = Notoriety.Murderer };
             Engine.Player = _player;
             AliasCommands.SetAlias( "self", 0x01 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetName()
         {
             string name = EntityCommands.Name( "self" );
 
-            Assert.AreEqual( "Shmoo", name );
+            Assert.Equal( "Shmoo", name );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillTrimNameItem()
         {
             Engine.Items.Add( new Item( 0x40000000 ) { Name = " need trim " } );
 
-            Assert.AreEqual( "need trim", EntityCommands.Name( 0x40000000 ) );
+            Assert.Equal( "need trim", EntityCommands.Name( 0x40000000 ) );
 
-            Assert.AreEqual( string.Empty, EntityCommands.Name( 0x40000001 ) );
+            Assert.Equal( string.Empty, EntityCommands.Name( 0x40000001 ) );
 
             Engine.Items.Remove( 0x40000000 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetNotoriety()
         {
-            Assert.IsTrue( NotorietyCommands.Murderer( "self" ) );
+            Assert.True( NotorietyCommands.Murderer( "self" ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetHitsNoParam()
         {
             _player.Hits = 100;
 
             int val = MobileCommands.Hits();
 
-            Assert.AreEqual( 100, val );
+            Assert.Equal( 100, val );
 
             _player.Hits = 0;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetHitsSerialParam()
         {
             Mobile mobile = new Mobile( 2 ) { Hits = 200 };
@@ -69,12 +67,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             int val = MobileCommands.Hits( mobile.Serial );
 
-            Assert.AreEqual( 200, val );
+            Assert.Equal( 200, val );
 
             Engine.Mobiles.Remove( mobile );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetHitsStringParam()
         {
             Mobile mobile = new Mobile( 2 ) { Hits = 250 };
@@ -85,12 +83,12 @@ namespace ClassicAssist.Tests.MacroCommands
 
             int val = MobileCommands.Hits( "mobile" );
 
-            Assert.AreEqual( 250, val );
+            Assert.Equal( 250, val );
 
             Engine.Mobiles.Remove( mobile );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetHiddenNoParam()
         {
             _player.Status |= MobileStatus.Hidden;
@@ -98,38 +96,38 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool hidden = MobileCommands.Hidden();
 
-            Assert.IsTrue( hidden );
+            Assert.True( hidden );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetDead()
         {
-            Assert.IsFalse( MobileCommands.Dead() );
+            Assert.False( MobileCommands.Dead() );
 
             _player.ID = 0x192;
 
-            Assert.IsTrue( MobileCommands.Dead() );
+            Assert.True( MobileCommands.Dead() );
 
             _player.ID = 0x190;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetDeadParam()
         {
             Mobile m = new Mobile( 2 );
 
             Engine.Mobiles.Add( m );
 
-            Assert.IsFalse( MobileCommands.Dead( 2 ) );
+            Assert.False( MobileCommands.Dead( 2 ) );
 
             m.ID = 0x192;
 
-            Assert.IsTrue( MobileCommands.Dead( 2 ) );
+            Assert.True( MobileCommands.Dead( 2 ) );
 
             Engine.Mobiles.Remove( m );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetMountedParam()
         {
             Item mount = new Item( 2 );
@@ -139,54 +137,54 @@ namespace ClassicAssist.Tests.MacroCommands
             AliasCommands.SetAlias( "self", 1 );
             AliasCommands.SetAlias( "mount", 2 );
 
-            Assert.IsFalse( MobileCommands.Mounted( "self" ) );
+            Assert.False( MobileCommands.Mounted( "self" ) );
 
             _player.SetLayer( Layer.Mount, 2 );
 
-            Assert.IsTrue( MobileCommands.Mounted( "self" ) );
+            Assert.True( MobileCommands.Mounted( "self" ) );
 
             Engine.Items.Remove( mount );
             _player.SetLayer( Layer.Mount, 0 );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetMaxHits()
         {
             _player.HitsMax = 100;
 
-            Assert.AreEqual( 100, MobileCommands.MaxHits( _player.Serial ) );
+            Assert.Equal( 100, MobileCommands.MaxHits( _player.Serial ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetHits()
         {
             _player.Hits = 100;
 
-            Assert.AreEqual( 100, MobileCommands.Hits( _player.Serial ) );
+            Assert.Equal( 100, MobileCommands.Hits( _player.Serial ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetDiffHits()
         {
             _player.Hits = 90;
             _player.HitsMax = 100;
 
-            Assert.AreEqual( 10, MobileCommands.DiffHits( _player.Serial ) );
+            Assert.Equal( 10, MobileCommands.DiffHits( _player.Serial ) );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillGetStats()
         {
             _player.Strength = 100;
             _player.Int = 90;
             _player.Dex = 25;
 
-            Assert.AreEqual( 100, MobileCommands.Str() );
-            Assert.AreEqual( 90, MobileCommands.Int() );
-            Assert.AreEqual( 25, MobileCommands.Dex() );
+            Assert.Equal( 100, MobileCommands.Str() );
+            Assert.Equal( 90, MobileCommands.Int() );
+            Assert.Equal( 25, MobileCommands.Dex() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillEnableDisableSpecialMove()
         {
             SpecialMovesManager manager = SpecialMovesManager.GetInstance();
@@ -202,13 +200,13 @@ namespace ClassicAssist.Tests.MacroCommands
 
             bool result = EntityCommands.SpecialMoveExists( "Death Strike" );
 
-            Assert.IsTrue( result );
+            Assert.True( result );
 
             handler?.OnReceive( new PacketReader( disablePacket, disablePacket.Length, false ) );
 
             result = EntityCommands.SpecialMoveExists( "Death Strike" );
 
-            Assert.IsFalse( result );
+            Assert.False( result );
         }
     }
 }

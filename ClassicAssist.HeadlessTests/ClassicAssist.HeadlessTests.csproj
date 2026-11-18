@@ -8,8 +8,8 @@
     <RollForward>LatestMajor</RollForward>
     <!-- xUnit v3 runs on Microsoft.Testing.Platform. `dotnet test` uses the MTP runner set in
          global.json - the .NET 10 SDK dropped the VSTest-mode bridge, so TestingPlatformDotnetTestSupport
-         no longer applies. ClassicAssist.Tests runs on MTP too (EnableMSTestRunner), so a single
-         `dotnet test` invocation runs both projects. -->
+         no longer applies. ClassicAssist.Tests is xUnit v3 on MTP too, so a single `dotnet test`
+         invocation runs both projects. -->
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="4.0.3" />

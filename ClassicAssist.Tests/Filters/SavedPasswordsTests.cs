@@ -3,14 +3,13 @@ using System.Text;
 using ClassicAssist.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Filters
 {
-    [TestClass]
     public class SavedPasswordsTests
     {
-        [TestMethod]
+        [Fact]
         public void WillSavePasswordIfEnabled()
         {
             AssistantOptions.SavedPasswords.Clear();
@@ -28,18 +27,18 @@ namespace ClassicAssist.Tests.Filters
 
             OutgoingPacketFilters.CheckPacket( ref packet, ref length );
 
-            Assert.AreEqual( 0, AssistantOptions.SavedPasswords.Count );
+            Assert.Empty( AssistantOptions.SavedPasswords );
 
             AssistantOptions.SavePasswords = true;
 
             OutgoingPacketFilters.CheckPacket( ref packet, ref length );
 
-            Assert.AreEqual( 1, AssistantOptions.SavedPasswords.Count );
+            Assert.Single( AssistantOptions.SavedPasswords );
 
             AssistantOptions.SavedPasswords.Clear();
         }
 
-        [TestMethod]
+        [Fact]
         public void WillSavePasswordOnlyIfBlanl()
         {
             AssistantOptions.SavedPasswords.Clear();
@@ -60,7 +59,7 @@ namespace ClassicAssist.Tests.Filters
 
             OutgoingPacketFilters.CheckPacket( ref packet, ref length );
 
-            Assert.AreEqual( 1, AssistantOptions.SavedPasswords.Count );
+            Assert.Single( AssistantOptions.SavedPasswords );
 
             PacketWriter writer2 = new PacketWriter( 62 );
             writer2.Write( (byte) 0x80 );
@@ -76,7 +75,7 @@ namespace ClassicAssist.Tests.Filters
             byte[] tmp = new byte[30];
             Buffer.BlockCopy( packet2, 31, tmp, 0, 30 );
 
-            Assert.AreEqual( "fakepassword", Encoding.ASCII.GetString( tmp ).TrimEnd( '\0' ) );
+            Assert.Equal( "fakepassword", Encoding.ASCII.GetString( tmp ).TrimEnd( '\0' ) );
 
             PacketWriter writer3 = new PacketWriter( 62 );
             writer3.Write( (byte) 0x80 );
@@ -92,7 +91,7 @@ namespace ClassicAssist.Tests.Filters
             byte[] tmp2 = new byte[30];
             Buffer.BlockCopy( packet3, 31, tmp2, 0, 30 );
 
-            Assert.AreEqual( "butter", Encoding.ASCII.GetString( tmp2 ).TrimEnd( '\0' ) );
+            Assert.Equal( "butter", Encoding.ASCII.GetString( tmp2 ).TrimEnd( '\0' ) );
 
             AssistantOptions.SavedPasswords.Clear();
         }

@@ -26,14 +26,13 @@ using ClassicAssist.Data.Vendors;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests.Agents
 {
-    [TestClass]
     public class BuyAgentTests
     {
-        [TestMethod]
+        [Fact]
         public void WillBuyCorrectAmount()
         {
             int vendorSerial = 0x0b0354;
@@ -195,7 +194,7 @@ namespace ClassicAssist.Tests.Agents
             //{
             //    int amount = buyList.Where( e => e.Item.ID == entry.Graphic ).Sum( e => e.Amount );
 
-            //    Assert.AreEqual( entry.Amount, amount, 0, "Buy incorrect amount" );
+            //    Assert.Equal( entry.Amount, amount, 0 ); // "Buy incorrect amount"
             //}
 
             //Engine.Items.Clear();

@@ -20,7 +20,7 @@
 using System.Collections.Generic;
 using System.IO;
 using ClassicAssist.UO.Data;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 
 namespace ClassicAssist.Tests
 {
@@ -28,7 +28,6 @@ namespace ClassicAssist.Tests
     ///     Covers the map and statics readers, which hold their files open as memory mapped views and
     ///     pre-group statics by cell rather than re-opening and re-scanning per lookup.
     /// </summary>
-    [TestClass]
     public class MapDataTests
     {
         private const int MAP = 0;
@@ -49,7 +48,7 @@ namespace ClassicAssist.Tests
             return true;
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReadTheSameLandTileEveryTime()
         {
             if ( !Ready() )
@@ -60,18 +59,18 @@ namespace ClassicAssist.Tests
             LandTile first = MapInfo.GetLandTile( MAP, X, Y );
             LandTile second = MapInfo.GetLandTile( MAP, X, Y );
 
-            Assert.AreEqual( first.ID, second.ID );
-            Assert.AreEqual( first.Z, second.Z );
-            Assert.AreEqual( first.Flags, second.Flags );
-            Assert.AreEqual( X, first.X );
-            Assert.AreEqual( Y, first.Y );
+            Assert.Equal( first.ID, second.ID );
+            Assert.Equal( first.Z, second.Z );
+            Assert.Equal( first.Flags, second.Flags );
+            Assert.Equal( X, first.X );
+            Assert.Equal( Y, first.Y );
         }
 
         /// <summary>
         ///     Initialize used to be able to run again against a different install; the view has to be
         ///     rebuilt with it rather than pinned to whichever path was read first.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillRereadAfterInitialize()
         {
             if ( !Ready() )
@@ -83,14 +82,14 @@ namespace ClassicAssist.Tests
 
             MapInfo.Initialize( TestData.UOPath );
 
-            Assert.AreEqual( first.ID, MapInfo.GetLandTile( MAP, X, Y ).ID );
+            Assert.Equal( first.ID, MapInfo.GetLandTile( MAP, X, Y ).ID );
         }
 
         /// <summary>
         ///     Reads past the end of the map return an empty tile. The previous reader seeked past the end
         ///     of the file and let the resulting EndOfStreamException out.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillReturnEmptyTileOutsideTheMap()
         {
             if ( !Ready() )
@@ -100,16 +99,16 @@ namespace ClassicAssist.Tests
 
             LandTile tile = MapInfo.GetLandTile( MAP, 99999, 99999 );
 
-            Assert.AreEqual( 0, tile.ID );
-            Assert.AreEqual( 0, tile.Z );
+            Assert.Equal( 0, tile.ID );
+            Assert.Equal( 0, tile.Z );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillReturnEmptyTileWithNoDataPath()
         {
             MapInfo.Initialize( "/nonexistent-uo-path" );
 
-            Assert.AreEqual( 0, MapInfo.GetLandTile( MAP, X, Y ).ID );
+            Assert.Equal( 0, MapInfo.GetLandTile( MAP, X, Y ).ID );
 
             // Leave the shared statics pointing back at real data for whatever runs next.
             if ( TestData.HasUOData )
@@ -122,7 +121,7 @@ namespace ClassicAssist.Tests
         ///     Statics are stored grouped by cell so a lookup can slice its cell out of the block. If the
         ///     grouping or the range were wrong the block's other cells would leak into the result.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillOnlyReturnStaticsForTheRequestedCell()
         {
             if ( !Ready() )
@@ -149,16 +148,16 @@ namespace ClassicAssist.Tests
 
                     foreach ( StaticTile tile in tiles )
                     {
-                        Assert.AreEqual( x, tile.X );
-                        Assert.AreEqual( y, tile.Y );
+                        Assert.Equal( x, tile.X );
+                        Assert.Equal( y, tile.Y );
                     }
                 }
             }
 
-            Assert.IsTrue( found > 0, "expected at least one static in a populated block" );
+            Assert.True( found > 0, "expected at least one static in a populated block" );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillAppendTheSameStaticsToAList()
         {
             if ( !Ready() )
@@ -177,13 +176,13 @@ namespace ClassicAssist.Tests
 
                     Statics.GetStatics( MAP, x, y, results );
 
-                    Assert.AreEqual( tiles.Length, results.Count - before );
+                    Assert.Equal( tiles.Length, results.Count - before );
 
                     for ( int i = 0; i < tiles.Length; i++ )
                     {
-                        Assert.AreEqual( tiles[i].ID, results[before + i].ID );
-                        Assert.AreEqual( tiles[i].Z, results[before + i].Z );
-                        Assert.AreEqual( tiles[i].Hue, results[before + i].Hue );
+                        Assert.Equal( tiles[i].ID, results[before + i].ID );
+                        Assert.Equal( tiles[i].Z, results[before + i].Z );
+                        Assert.Equal( tiles[i].Hue, results[before + i].Hue );
                     }
                 }
             }
@@ -192,7 +191,7 @@ namespace ClassicAssist.Tests
         /// <summary>
         ///     Off the end of the block table. This used to index straight into the array and throw.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillReturnNullForStaticsOutsideTheMap()
         {
             if ( !Ready() )
@@ -200,7 +199,7 @@ namespace ClassicAssist.Tests
                 return;
             }
 
-            Assert.IsNull( Statics.GetStatics( MAP, 99999, 99999 ) );
+            Assert.Null( Statics.GetStatics( MAP, 99999, 99999 ) );
         }
 
         /// <summary>
@@ -208,7 +207,7 @@ namespace ClassicAssist.Tests
         ///     has to agree with the flattened bytes ReadAll produces, since the map reader uses the first
         ///     and this asserts against the second.
         /// </summary>
-        [TestMethod]
+        [Fact]
         public void WillLookUpTheSameBytesReadAllProduces()
         {
             if ( !TestData.HasUOData )
@@ -231,21 +230,21 @@ namespace ClassicAssist.Tests
                 using UOPIndex index = new( stream );
                 flattened = index.ReadAll();
 
-                Assert.IsTrue( flattened.Length > 0 );
+                Assert.True( flattened.Length > 0 );
 
                 for ( int offset = 0; offset < flattened.Length; offset += 999983 )
                 {
                     int translated = index.Lookup( offset );
 
-                    Assert.IsTrue( translated >= 0 && translated < raw.Length,
+                    Assert.True( translated >= 0 && translated < raw.Length,
                         $"offset {offset} translated outside the file" );
 
-                    Assert.AreEqual( flattened[offset], raw[translated], $"mismatch at offset {offset}" );
+                    Assert.Equal( flattened[offset], raw[translated] ); // $"mismatch at offset {offset}"
                 }
             }
 
             // A map block is 196 bytes, so the flattened file has to be a whole number of them.
-            Assert.AreEqual( 0, flattened.Length % 196 );
+            Assert.Equal( 0, flattened.Length % 196 );
         }
     }
 }

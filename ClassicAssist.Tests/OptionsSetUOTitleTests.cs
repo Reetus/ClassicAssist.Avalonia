@@ -1,14 +1,13 @@
 using ClassicAssist.Data;
 using ClassicAssist.UI.ViewModels;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests
 {
-    [TestClass]
     public class OptionsSetUOTitleTests
     {
-        [TestMethod]
+        [Fact]
         public void WillRoundTripSetUOTitleOption()
         {
             Options options = new Options();
@@ -16,15 +15,15 @@ namespace ClassicAssist.Tests
 
             vm.Deserialize( new JObject { ["Options"] = new JObject { ["SetUOTitle"] = false } }, options );
 
-            Assert.IsFalse( options.SetUOTitle );
+            Assert.False( options.SetUOTitle );
 
             JObject json = new JObject();
             vm.Serialize( json );
 
-            Assert.IsFalse( json["Options"]["SetUOTitle"].ToObject<bool>() );
+            Assert.False( json["Options"]["SetUOTitle"].ToObject<bool>() );
         }
 
-        [TestMethod]
+        [Fact]
         public void WillDefaultSetUOTitleToTrue()
         {
             Options options = new Options();
@@ -32,7 +31,7 @@ namespace ClassicAssist.Tests
 
             vm.Deserialize( new JObject { ["Options"] = new JObject() }, options );
 
-            Assert.IsTrue( options.SetUOTitle );
+            Assert.True( options.SetUOTitle );
         }
     }
 }

@@ -2,26 +2,25 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using ClassicAssist.Shared;
 using ClassicAssist.Data.Dress;
 using ClassicAssist.Shared.UO.Data;
 using ClassicAssist.UO.Data;
 using ClassicAssist.UO.Network;
 using ClassicAssist.UO.Objects;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Xunit;
 using Newtonsoft.Json.Linq;
 
 namespace ClassicAssist.Tests.Agents
 {
-    [TestClass]
-    public class DressAgentTests
+    public class DressAgentTests : IDisposable
     {
         private Item _backpack;
         private int[] _packetLengths;
         private PlayerMobile _player;
 
-        [TestInitialize]
-        public void Initialize()
+        public DressAgentTests()
         {
             _packetLengths = new int[byte.MaxValue];
 
@@ -119,8 +118,8 @@ namespace ClassicAssist.Tests.Agents
             }
         }
 
-        [TestMethod]
-        public void WillDressUndressItem()
+        [Fact]
+        public async Task WillDressUndressItem()
         {
             Item dressItem = new Item( 0x40000003 );
             Engine.Items.Add( dressItem );
@@ -134,19 +133,19 @@ namespace ClassicAssist.Tests.Agents
                 }
             };
 
-            dae.Dress( CancellationToken.None ).Wait();
+            await dae.Dress( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
-            dae.Undress().Wait();
+            await dae.Undress( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( 0, _player.GetLayer( dressItem.Layer ) );
-            Assert.AreEqual( 1, _player.Backpack.Container.GetTotalItemCount() );
-            Assert.IsNotNull( _player.Backpack.Container.GetItem( dressItem.Serial ) );
+            Assert.Equal( 0, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( 1, _player.Backpack.Container.GetTotalItemCount() );
+            Assert.NotNull( _player.Backpack.Container.GetItem( dressItem.Serial ) );
         }
 
-        [TestMethod]
-        public void WillDressUndressItemContainer()
+        [Fact]
+        public async Task WillDressUndressItemContainer()
         {
             Item dressItem = new Item( 0x40000003 );
             Item undressContainer = new Item( 0x40000004 ) { Container = new ItemCollection( 0x40000004 ) };
@@ -164,21 +163,21 @@ namespace ClassicAssist.Tests.Agents
                 UndressContainer = undressContainer.Serial
             };
 
-            dae.Dress( CancellationToken.None ).Wait();
+            await dae.Dress( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
-            dae.Undress().Wait();
+            await dae.Undress( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( 0, _player.GetLayer( dressItem.Layer ) );
-            Assert.AreEqual( 1, undressContainer.Container.GetTotalItemCount() );
-            Assert.IsNotNull( undressContainer.Container.GetItem( dressItem.Serial ) );
+            Assert.Equal( 0, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( 1, undressContainer.Container.GetTotalItemCount() );
+            Assert.NotNull( undressContainer.Container.GetItem( dressItem.Serial ) );
 
             Engine.Items.Remove( undressContainer );
         }
 
-        [TestMethod]
-        public void WillUndressAll()
+        [Fact]
+        public async Task WillUndressAll()
         {
             Item dressItem = new Item( 0x40000003 );
             Engine.Items.Add( dressItem );
@@ -192,47 +191,19 @@ namespace ClassicAssist.Tests.Agents
                 }
             };
 
-            dae.Dress( CancellationToken.None ).Wait();
+            await dae.Dress( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( dressItem.Serial, _player.GetLayer( dressItem.Layer ) );
 
-            DressManager.GetInstance().UndressAll().Wait();
+            await DressManager.GetInstance().UndressAll( TestContext.Current.CancellationToken );
 
-            Assert.AreEqual( 0, _player.GetLayer( dressItem.Layer ) );
-            Assert.AreEqual( 1, _player.Backpack.Container.GetTotalItemCount() );
-            Assert.IsNotNull( _player.Backpack.Container.GetItem( dressItem.Serial ) );
+            Assert.Equal( 0, _player.GetLayer( dressItem.Layer ) );
+            Assert.Equal( 1, _player.Backpack.Container.GetTotalItemCount() );
+            Assert.NotNull( _player.Backpack.Container.GetItem( dressItem.Serial ) );
         }
 
-        [TestMethod]
-        public void WontDressNoMoveConflicting()
-        {
-            Item dressItem = new Item( 0x40000003 );
-            Engine.Items.Add( dressItem );
-
-            Item conflictingItem = new Item( 0x40000004 ) { Owner = _player.Serial };
-            Engine.Items.Add( conflictingItem );
-            _player.SetLayer( Layer.Talisman, conflictingItem.Serial );
-
-            DressAgentEntry dae = new DressAgentEntry
-            {
-                Name = "Test",
-                Items = new List<DressAgentItem>
-                {
-                    new DressAgentItem { Layer = Layer.Talisman, Serial = dressItem.Serial }
-                }
-            };
-
-            Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
-
-            dae.Dress( CancellationToken.None, false ).Wait();
-
-            Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
-
-            Engine.Items.Remove( conflictingItem );
-        }
-
-        [TestMethod]
-        public void WillDressMoveConflicting()
+        [Fact]
+        public async Task WontDressNoMoveConflicting()
         {
             Item dressItem = new Item( 0x40000003 );
             Engine.Items.Add( dressItem );
@@ -250,17 +221,44 @@ namespace ClassicAssist.Tests.Agents
                 }
             };
 
-            Assert.AreEqual( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
+            Assert.Equal( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
 
-            dae.Dress( CancellationToken.None ).Wait();
+            await dae.Dress( TestContext.Current.CancellationToken, false );
 
-            Assert.AreEqual( dressItem.Serial, _player.GetLayer( Layer.Talisman ) );
+            Assert.Equal( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
 
             Engine.Items.Remove( conflictingItem );
         }
 
-        [TestCleanup]
-        public void Cleanup()
+        [Fact]
+        public async Task WillDressMoveConflicting()
+        {
+            Item dressItem = new Item( 0x40000003 );
+            Engine.Items.Add( dressItem );
+
+            Item conflictingItem = new Item( 0x40000004 ) { Owner = _player.Serial };
+            Engine.Items.Add( conflictingItem );
+            _player.SetLayer( Layer.Talisman, conflictingItem.Serial );
+
+            DressAgentEntry dae = new DressAgentEntry
+            {
+                Name = "Test",
+                Items = new List<DressAgentItem>
+                {
+                    new DressAgentItem { Layer = Layer.Talisman, Serial = dressItem.Serial }
+                }
+            };
+
+            Assert.Equal( conflictingItem.Serial, _player.GetLayer( Layer.Talisman ) );
+
+            await dae.Dress( TestContext.Current.CancellationToken );
+
+            Assert.Equal( dressItem.Serial, _player.GetLayer( Layer.Talisman ) );
+
+            Engine.Items.Remove( conflictingItem );
+        }
+
+        public void Dispose()
         {
             ActionPacketQueue.Clear();
             Engine.InternalPacketSentEvent -= OnInternalPacketSentEvent;
