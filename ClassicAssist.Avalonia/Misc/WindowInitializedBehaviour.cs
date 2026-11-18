@@ -36,7 +36,15 @@ public class WindowInitializedBehaviour : Behavior<Window>
             return;
         }
 
-        AssociatedObject.Initialized += OnInitialized;
+        // Load on Opened, not Initialized. Xaml.Behaviors 12 attaches this behaviour while
+        // MainWindow.axaml is still being populated: Initialized has already been raised by then (so
+        // a handler for it never runs), and the tab controls further down the file - whose view
+        // models are the settings providers - do not exist yet, so loading in OnAttached reaches no
+        // provider. Either way nothing deserializes, and the save on close then rewrites the profile
+        // without the providers' sections. Opened is raised from Show(), once the whole tree has been
+        // built and before App calls CompleteStartup, so a linked-profile switch replayed there
+        // still runs after this load.
+        AssociatedObject.Opened += OnOpened;
         AssociatedObject.Closing += OnClosing;
     }
 
@@ -49,7 +57,7 @@ public class WindowInitializedBehaviour : Behavior<Window>
             return;
         }
 
-        AssociatedObject.Initialized -= OnInitialized;
+        AssociatedObject.Opened -= OnOpened;
         AssociatedObject.Closing -= OnClosing;
     }
 
@@ -59,8 +67,10 @@ public class WindowInitializedBehaviour : Behavior<Window>
         AssistantOptions.Save();
     }
 
-    private static void OnInitialized( object sender, EventArgs e )
+    private void OnOpened( object sender, EventArgs e )
     {
+        // Once only: the main window is shown once, but a re-show must not reload over live state.
+        AssociatedObject?.Opened -= OnOpened;
         AssistantOptions.OnWindowLoaded();
     }
 }

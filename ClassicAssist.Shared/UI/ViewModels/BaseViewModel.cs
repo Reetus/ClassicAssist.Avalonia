@@ -21,6 +21,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -332,6 +333,10 @@ public class BaseViewModel : ObservableObject
 /// </summary>
 public static class CommandExceptionPolicy
 {
+    private const string LOG_DIRECTORY = "Logs";
+    private const string LOG_FILENAME = "errors.log";
+    private static readonly Lock _logLock = new();
+
     public static bool IsFatal( Exception exception )
     {
         return exception is OutOfMemoryException or AccessViolationException or AppDomainUnloadedException
@@ -345,7 +350,7 @@ public static class CommandExceptionPolicy
     /// </summary>
     public static void Report( Exception exception )
     {
-        Console.WriteLine( $"Unhandled exception in command: {exception}" );
+        Log( "Unhandled exception in command", exception );
 
         try
         {
@@ -355,6 +360,35 @@ public static class CommandExceptionPolicy
         catch ( Exception )
         {
             // Already logged above.
+        }
+    }
+
+    /// <summary>
+    ///     Writes a handled exception to the console and appends it to Logs/errors.log (next to the
+    ///     executable, beside the crash logs). The UI process inherits the client's stdout, which has
+    ///     no console, so console output alone is lost in a real session - and for failures that are
+    ///     swallowed (a settings provider that cannot load its slice) it is the only trace there is.
+    ///     Best effort: a log that cannot be written must not mask the original error.
+    /// </summary>
+    public static void Log( string context, Exception exception )
+    {
+        Console.WriteLine( $"{context}: {exception}" );
+
+        try
+        {
+            string directory = Path.Combine( AppContext.BaseDirectory, LOG_DIRECTORY );
+
+            Directory.CreateDirectory( directory );
+
+            lock ( _logLock )
+            {
+                File.AppendAllText( Path.Combine( directory, LOG_FILENAME ),
+                    $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {context}:{Environment.NewLine}{exception}{Environment.NewLine}{Environment.NewLine}" );
+            }
+        }
+        catch ( Exception )
+        {
+            // Already written to the console; nowhere else to report it.
         }
     }
 }
