@@ -46,6 +46,14 @@ differs between the packages is the apphosts and the DNNE native shim, and both 
 own toolchain - and a final job attaches all four to one draft release tagged with the version.
 Drafts are invisible to the updater, so nothing reaches users until the release is published.
 
+The Windows package's own binaries (`ClassicAssist*.dll` / `ClassicAssist*.exe`, not third-party
+assemblies or `cuoapi.dll`) are Authenticode-signed with Azure Artifact Signing before zipping, and
+the build fails if any of them comes out without a valid signature. The workflow signs in to Azure
+through GitHub OIDC - the `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` secrets name an Entra app whose
+federated credential trusts only this repository's `master` branch and whose only role is
+*Artifact Signing Certificate Profile Signer* on the `Codesign` profile - so there is no client secret
+to rotate, and releases must be dispatched from `master`.
+
 Packages are trimmed to the platform they are for before zipping: a runtime-agnostic build carries
 native binaries for every RID under the sun, ~245MB of a ~290MB tree, and the updater reads the
 whole download into memory on a five minute timeout. The keep list lives in the workflow matrix, by

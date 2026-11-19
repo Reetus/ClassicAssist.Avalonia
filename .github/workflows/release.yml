@@ -59,6 +59,14 @@ jobs:
             exit 1
           fi
 
+          # The Windows build signs its binaries with Azure Artifact Signing, and the federated
+          # credential that lets this workflow sign trusts only refs/heads/master. A dispatch from any
+          # other ref would build three platforms and then fail at the Azure login, so stop it here.
+          if [[ "$GITHUB_REF" != 'refs/heads/master' ]]; then
+            echo "::error::Releases must be dispatched from master (got $GITHUB_REF) - code signing only trusts master."
+            exit 1
+          fi
+
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Building $version, tagging $tag"
@@ -66,6 +74,12 @@ jobs:
   build:
     needs: prepare
     runs-on: ${{ matrix.os }}
+    # id-token lets the Windows leg exchange a GitHub OIDC token for an Azure one (see Sign
+    # binaries). There is no client secret anywhere: the Entra app trusts this repo's master branch
+    # through a federated credential, and holds only the signer role on the one certificate profile.
+    permissions:
+      contents: read
+      id-token: write
     strategy:
       # Every platform's result is wanted, not just the first failure - the release job will not run
       # regardless, and one broken runner should not hide the state of the other three.
@@ -212,6 +226,78 @@ jobs:
           done
 
           exit $missing
+
+      # Authenticode-sign our own binaries with Azure Artifact Signing. Only ClassicAssist* files:
+      # third-party assemblies keep their vendors' signatures (or none), and cuoapi.dll is
+      # ClassicUO's. Signing happens after the layout check and before zipping, so the zip carries
+      # the signed files. The list is built here rather than with the action's files-folder-filter
+      # so the log shows exactly what was signed.
+      - name: Find binaries to sign (Windows)
+        id: to-sign
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path Output\ClassicAssist -Recurse -File -Include 'ClassicAssist*.dll', 'ClassicAssist*.exe' |
+            ForEach-Object { $_.FullName }
+
+          if ( -not $files ) {
+            Write-Output '::error::Found nothing to sign under Output\ClassicAssist.'
+            exit 1
+          }
+
+          $files | ForEach-Object { Write-Output "Will sign: $_" }
+          "files=$( $files -join ',' )" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      # allow-no-subscriptions: the service principal's only role is on the certificate profile, so
+      # it may see no subscription at all - signing needs just a tenant token.
+      - name: Azure login (Windows)
+        if: runner.os == 'Windows'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      # Authenticates through the az CLI session above; the other DefaultAzureCredential sources are
+      # excluded so a failure is reported from the one that matters rather than after a timeout chain.
+      - name: Sign binaries (Windows)
+        if: runner.os == 'Windows'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: john-scott
+          certificate-profile-name: Codesign
+          files: ${{ steps.to-sign.outputs.files }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          exclude-environment-credential: true
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+
+      # The action reports per-file results only in its log; this fails the build if any file came
+      # out unsigned rather than shipping it.
+      - name: Verify signatures (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          FILES: ${{ steps.to-sign.outputs.files }}
+        run: |
+          $bad = 0
+
+          foreach ( $file in $env:FILES -split ',' ) {
+            $signature = Get-AuthenticodeSignature -FilePath $file
+
+            if ( $signature.Status -ne 'Valid' ) {
+              Write-Output "::error::$file is not validly signed: $( $signature.Status ) $( $signature.StatusMessage )"
+              $bad = 1
+            }
+            else {
+              Write-Output "Signed: $file ($( $signature.SignerCertificate.Subject ))"
+            }
+          }
+
+          exit $bad
 
       # zip rather than tar, and zip rather than upload-artifact's own archiving: the updater
       # extracts with ZipFile.ExtractToDirectory, which restores Unix file modes from the zip's
