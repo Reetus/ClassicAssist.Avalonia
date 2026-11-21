@@ -25,13 +25,17 @@ public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
     // Upper bound on waiting for a single drag/drop to complete. A drag normally finishes in one
     // action delay (Options.ActionDelayMS, 900ms by default) plus DROP_DELAY (50ms) and two packet
     // sends, so 5000ms leaves room for a handful of other queued actions (autoloot etc.) to drain
-    // ahead of it first. The wait must be bounded because CheckArea also runs on the packet-
-    // processing thread (via ItemsOnCollectionChanged), which is the only thread that delivers
-    // PacketWaitEntries.CheckWait for the whole app - an unbounded wait here can deadlock against
-    // ActionPacketQueue requeue actions that wait for a 0x3C packet only that thread can deliver.
-    // On timeout the item stays claimed, so its still-queued drag runs at most once later; this
-    // thread just stops waiting for it instead of parking forever.
+    // ahead of it first. CheckArea always runs on a pool thread now (see ItemsOnCollectionChanged),
+    // but the wait stays bounded so a stuck queue can't park that thread forever. On timeout the
+    // item stays claimed, so its still-queued drag runs at most once later.
     private const int SCAVENGE_DRAG_DROP_TIMEOUT_MS = 5000;
+
+    // How long a ground item must stay put before it is scavenged. Some servers put an item on the
+    // ground for an instant on its way somewhere else - a quest reward is sent as a world item (0xF3)
+    // at the player's feet and deleted (0x1D) a few milliseconds later, once it has been merged into
+    // the backpack's gold. Without the wait an idle action queue sends the drag before the delete
+    // has been processed.
+    private const int SCAVENGE_SETTLE_MS = 250;
 
     private readonly List<int> _ignoreList;
     private readonly Lock _scavengeLock = new();
@@ -249,8 +253,42 @@ public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
 
         if ( hasNearby )
         {
-            CheckArea();
+            // Never on the calling thread: this is raised from the packet handlers, and CheckArea
+            // waits - for the item to settle, then for each drag. While the packet thread is parked
+            // here it can't process the delete or move that shows the item has already gone, so the
+            // scavenger would act on stale state by construction.
+            Task.Run( CheckArea );
         }
+    }
+
+    /// <summary>
+    ///     Whether <paramref name="serial" /> is still a ground item within scavenging range. Read from
+    ///     the item store each time, never from the <see cref="Item" /> a pass started with, because
+    ///     the point is to notice that it has since been deleted or moved into a container.
+    /// </summary>
+    private static bool IsOnGroundNearby( int serial )
+    {
+        return Engine.Items.GetItem( serial ) is { Owner: 0 } item && item.Distance <= SCAVENGER_DISTANCE;
+    }
+
+    /// <summary>
+    ///     Final check, made by the action queue when it reaches the drag. If the item has gone, the
+    ///     drag is skipped without a message and the claim released, so an item that only moved out of
+    ///     range can be scavenged again when the player comes back to it.
+    /// </summary>
+    private bool CanStillScavenge( int serial )
+    {
+        if ( IsOnGroundNearby( serial ) )
+        {
+            return true;
+        }
+
+        lock ( _scavengeLock )
+        {
+            _ignoreList.Remove( serial );
+        }
+
+        return false;
     }
 
     public void CheckArea()
@@ -302,31 +340,48 @@ public class ScavengerTabViewModel : BaseViewModel, ISettingProvider
             return;
         }
 
-        foreach ( Item scavengerItem in scavengerItems.Where( scavengerItem =>
-            scavengerItem.Distance <= SCAVENGER_DISTANCE ).Distinct() )
+        // Let anything that was only passing through the ground go first - see SCAVENGE_SETTLE_MS.
+        Thread.Sleep( SCAVENGE_SETTLE_MS );
+
+        foreach ( Item scavengerItem in scavengerItems.Distinct() )
         {
+            int serial = scavengerItem.Serial;
+
+            if ( !IsOnGroundNearby( serial ) )
+            {
+                continue;
+            }
+
             lock ( _scavengeLock )
             {
                 // Claim the serial under the lock so overlapping passes can never enqueue a second
                 // drag for the same item - each item is scavenged at most once, and the drag/drop
                 // actions themselves still run one at a time on ActionPacketQueue's single worker.
-                if ( _ignoreList.Contains( scavengerItem.Serial ) )
+                if ( _ignoreList.Contains( serial ) )
                 {
                     continue;
                 }
 
-                _ignoreList.Add( scavengerItem.Serial );
+                _ignoreList.Add( serial );
             }
 
-            UOC.SystemMessage( string.Format( Strings.Scavenging___0__, scavengerItem.Name ?? "Unknown" ), 61 );
+            DragDropOptions options = new()
+            {
+                CheckRange = true,
+                // The queue can hold the drag for a while (action delay, other agents' drags), so
+                // check again when it is reached rather than trusting what the pass saw.
+                CanPerformAction = () => CanStillScavenge( serial ),
+                // Announced only when the drag is actually sent, not when it is queued.
+                BeforeDragDrop = item => UOC.SystemMessage( string.Format( Strings.Scavenging___0__, item.Name ?? "Unknown" ), 61 )
+            };
 
-            Task<bool> scavengeTask = ActionPacketQueue.EnqueueDragDrop( scavengerItem.Serial, scavengerItem.Count,
-                container.Serial, QueuePriority.Low, options: new DragDropOptions { CheckRange = true } );
+            Task<bool> scavengeTask = ActionPacketQueue.EnqueueDragDrop( serial, scavengerItem.Count, container.Serial, QueuePriority.Low,
+                options: options );
 
             // _scavengeLock is deliberately NOT held across this wait - waiting under the lock would
-            // park any other CheckArea caller (including the packet-processing thread) for the whole
-            // drag. The wait is bounded per SCAVENGE_DRAG_DROP_TIMEOUT_MS above; it keeps the scavenge
-            // drags of one pass strictly one-at-a-time as before.
+            // park every other CheckArea pass for the whole drag. The wait is bounded per
+            // SCAVENGE_DRAG_DROP_TIMEOUT_MS above; it keeps the scavenge drags of one pass strictly
+            // one-at-a-time as before.
             scavengeTask.Wait( SCAVENGE_DRAG_DROP_TIMEOUT_MS );
         }
     }
