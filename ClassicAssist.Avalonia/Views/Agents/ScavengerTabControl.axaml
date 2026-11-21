@@ -20,14 +20,14 @@
           <Setter Property="Padding" Value="20,5,20,5" />
         </Style>
       </StackPanel.Styles>
-      <CheckBox Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding Enabled}" />
+      <CheckBox Content="{x:Static resources:Strings.Enabled}" IsChecked="{Binding Enabled}" Margin="0,0,0,3" />
       <Button Content="{x:Static resources:Strings.Insert}" Command="{Binding InsertCommand}" />
       <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCommand}"
               CommandParameter="{Binding SelectedItem, ElementName=ListView}" />
       <Button Content="{x:Static resources:Strings.Clear_All}" Command="{Binding ClearAllCommand}" />
       <Button Content="{x:Static resources:Strings.Set_Container}" Command="{Binding SetContainerCommand}" />
       <Button Content="{x:Static resources:Strings.Cliloc_Filter}" Command="{Binding OpenClilocFilterCommand}" />
-      <CheckBox Content="{x:Static resources:Strings.Check_Weight}" IsChecked="{Binding CheckWeight}" />
+      <CheckBox Content="{x:Static resources:Strings.Check_Weight}" IsChecked="{Binding CheckWeight}" Margin="0,8,0,0" />
     </StackPanel>
     <Grid Grid.Column="1" RowDefinitions="*, Auto">
       <DataGrid Grid.Row="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
@@ -44,21 +44,26 @@
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Color}" Width="*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <controls:EditTextBlock Text="{Binding Hue}" ShowIcon="True" VerticalContentAlignment="Center"/>
+                <!-- Right margin keeps the pencil icon off the Priority combo box beside it. -->
+                <controls:EditTextBlock Text="{Binding Hue}" ShowIcon="True" VerticalAlignment="Center"
+                                        VerticalContentAlignment="Center" Margin="0,0,8,0"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Priority}" Width="*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
+                <!-- Inset from the cell: without a margin the combo box filled the row edge to edge, so
+                     neighbouring rows' boxes touched and the last column ran into the grid border. -->
                 <ComboBox ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type scavenger:ScavengerPriority}}}"
-                          SelectedItem="{Binding Priority}" HorizontalAlignment="Stretch"/>
+                          SelectedItem="{Binding Priority}" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                          VerticalContentAlignment="Center" Margin="6,3"/>
               </DataTemplate>
             </DataGridTemplateColumn.CellTemplate>
           </DataGridTemplateColumn>
         </DataGrid.Columns>
       </DataGrid>
-      <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,5,0,0" VerticalAlignment="Center">
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
         <TextBlock Text="{x:Static resources:Strings.Minimum_Weight_Available_}" VerticalAlignment="Center" Margin="0,0,10,0" />
         <TextBox Text="{Binding MinWeightAvailable}" Width="60" IsEnabled="{Binding CheckWeight}" />
       </StackPanel>
