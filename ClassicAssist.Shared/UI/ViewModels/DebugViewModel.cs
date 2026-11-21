@@ -25,8 +25,20 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
     /// </summary>
     private readonly bool[] _packetEnabled = new bool[256];
 
+    /// <summary>
+    ///     Every captured packet, whatever the display filter. <see cref="Items" /> is the filtered view
+    ///     of it, so changing the filter re-applies to what has already been captured. UI thread only.
+    /// </summary>
+    private readonly List<PacketEntry> _allItems = [];
+
     /// <summary>Guards <see cref="Dispose" /> so the teardown below can only ever run once.</summary>
     private bool _disposed;
+
+    /// <summary>
+    ///     The last filter that parsed, or null for none. While the text is invalid (mid-edit, say)
+    ///     this keeps the previous filter applied rather than flashing the whole log back.
+    /// </summary>
+    private volatile PacketMatchExpression _filterExpression;
 
     public DebugViewModel()
     {
@@ -58,6 +70,28 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
     public ICommand ClearCommand => field ??= new RelayCommand( Clear, o => true );
 
     public ICommand ExportLogCommand => field ??= new RelayCommand( ExportLog, o => true );
+
+    /// <summary>
+    ///     Display filter over the captured packets - see <see cref="PacketMatchExpression" /> for the
+    ///     syntax, e.g. <c>[0] = 0xF3 &amp;&amp; [4..7] = 0x4001ABCD</c>. Packets are still captured while
+    ///     hidden, so clearing or changing the filter shows them again.
+    /// </summary>
+    public string Filter
+    {
+        get;
+        set
+        {
+            SetProperty( ref field, value );
+            UpdateFilter();
+        }
+    } = string.Empty;
+
+    /// <summary>Why <see cref="Filter" /> doesn't parse, or null when it does.</summary>
+    public string FilterError
+    {
+        get;
+        set => SetProperty( ref field, value );
+    }
 
     public ObservableCollection<PacketEntry> Items
     {
@@ -128,7 +162,8 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
                 { "Enabled", Enabled },
                 { "IncludeInternal", IncludeInternal },
                 { "Direction", Direction.ToString() },
-                { "Topmost", Topmost }
+                { "Topmost", Topmost },
+                { "Filter", Filter ?? string.Empty }
             };
 
             JArray packets = [];
@@ -169,6 +204,7 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
         Enabled = config["Enabled"]?.ToObject<bool>() ?? false;
         IncludeInternal = config["IncludeInternal"]?.ToObject<bool>() ?? true;
         Topmost = config["Topmost"]?.ToObject<bool>() ?? true;
+        Filter = config["Filter"]?.ToObject<string>() ?? string.Empty;
 
         Direction = Enum.TryParse( config["Direction"]?.ToObject<string>() ?? string.Empty,
             out PacketDirection direction )
@@ -232,6 +268,7 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
 
         // The capture buffer can be the whole session's traffic; clear it so it doesn't stay
         // reachable through the static view model list after the window has closed.
+        _allItems.Clear();
         Items.Clear();
     }
 
@@ -276,9 +313,59 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
         //File.WriteAllText( fileName, jArray.ToString() );
     }
 
-    private void ProcessQueue( PacketEntry entry )
+    internal void ProcessQueue( PacketEntry entry )
     {
-        _dispatcher.Invoke( () => { Items.Add( entry ); } );
+        _dispatcher.Invoke( () =>
+        {
+            _allItems.Add( entry );
+
+            if ( _filterExpression?.IsMatch( entry.Data ) ?? true )
+            {
+                Items.Add( entry );
+            }
+        } );
+    }
+
+    private void UpdateFilter()
+    {
+        if ( string.IsNullOrWhiteSpace( Filter ) )
+        {
+            _filterExpression = null;
+            FilterError = null;
+        }
+        else if ( PacketMatchExpression.TryParse( Filter, out PacketMatchExpression expression, out string error ) )
+        {
+            _filterExpression = expression;
+            FilterError = null;
+        }
+        else
+        {
+            FilterError = error;
+
+            return;
+        }
+
+        if ( _dispatcher == null || _dispatcher.CheckAccess() )
+        {
+            RebuildItems();
+        }
+        else
+        {
+            _dispatcher.Invoke( RebuildItems );
+        }
+    }
+
+    /// <summary>
+    ///     Replaces <see cref="Items" /> rather than clearing and re-adding to it: one reset for the
+    ///     list instead of a change notification per packet, which matters with a long capture.
+    /// </summary>
+    private void RebuildItems()
+    {
+        PacketMatchExpression expression = _filterExpression;
+
+        IEnumerable<PacketEntry> matching = expression == null ? _allItems : _allItems.Where( e => expression.IsMatch( e.Data ) );
+
+        Items = new ObservableCollection<PacketEntry>( matching );
     }
 
     /// <summary>
@@ -348,6 +435,7 @@ public class DebugViewModel : BaseViewModel, ISettingProvider, IDisposable
 
     private void Clear( object obj )
     {
+        _allItems.Clear();
         Items.Clear();
     }
 

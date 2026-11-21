@@ -9,6 +9,7 @@
         xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
         xmlns:debug="clr-namespace:ClassicAssist.Avalonia.Views.Debug"
         xmlns:packetFilter="clr-namespace:ClassicAssist.UO.Network.PacketFilter;assembly=ClassicAssist.Shared"
+        xmlns:conv="clr-namespace:Avalonia.Data.Converters;assembly=Avalonia.Base"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="ClassicAssist.Avalonia.Views.DebugWindow" x:Name="Window"
         Title="Debug Window" Height="450" Width="600" Topmost="{Binding Topmost}">
@@ -22,7 +23,7 @@
   </Window.Styles>
   <TabControl Padding="10">
     <TabItem Header="{x:Static resources:Strings.Main}">
-      <Grid RowDefinitions="Auto, *, Auto">
+      <Grid RowDefinitions="Auto, Auto, *, Auto">
         <WrapPanel Grid.Row="0" Classes="ToolBar">
           <Button Command="{Binding ClearCommand}" Margin="0,0,5,0" ToolTip.Tip="{x:Static resources:Strings.Clear_All}">
             <Image Source="{StaticResource RemoveIcon}" Height="16"/>
@@ -47,7 +48,27 @@
             </ComboBox.ItemTemplate>
           </ComboBox>
         </WrapPanel>
-        <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="1" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" Margin="0,10,0,0">
+        <Grid Grid.Row="1" ColumnDefinitions="Auto, *" RowDefinitions="Auto, Auto" Margin="0,10,0,0">
+          <TextBlock Grid.Column="0" Text="{x:Static resources:Strings.Filter_}" VerticalAlignment="Center"
+                     Margin="0,0,10,0" />
+          <TextBox Grid.Column="1" Text="{Binding Filter, Delay=300}" FontFamily="avares://ClassicAssist.Avalonia/Assets/Fonts/*.ttf#Ubuntu Mono"
+                   PlaceholderText="[0] = 0xF3 &amp;&amp; [4..7] = 0x4001ABCD">
+            <ToolTip.Tip>
+              <TextBlock xml:space="preserve" FontFamily="avares://ClassicAssist.Avalonia/Assets/Fonts/*.ttf#Ubuntu Mono">[i] = 0xAA              byte at offset i
+[i..j] = 0xAABBCCDD      bytes i to j inclusive, big-endian (max 8)
+len &gt; 20               packet length
+contains 0x4001ABCD      bytes anywhere in the packet
+Operators: =  ==  !=  =!  &lt;  &lt;=  &gt;  &gt;=
+Combine:   &amp;&amp; / and,  || / or,  ! / not,  ( )
+Numbers:   decimal, or hex with 0x
+A byte test never matches a packet too short to have that byte.</TextBlock>
+            </ToolTip.Tip>
+          </TextBox>
+          <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding FilterError}" Foreground="Red" TextWrapping="Wrap"
+                     Margin="0,5,0,0"
+                     IsVisible="{Binding FilterError, Converter={x:Static conv:ObjectConverters.IsNotNull}}" />
+        </Grid>
+        <ListBox x:Name="ListBox" ItemsSource="{Binding Items}" Grid.Row="2" AutoScrollToSelectedItem="True" SelectedItem="{Binding SelectedItem}" Margin="0,10,0,0">
           <ListBox.ItemTemplate>
             <DataTemplate>
               <controls:HexDumpControl Packet="{Binding $parent.DataContext}"/>
@@ -57,7 +78,7 @@
             <misc:ListBoxAutoScrollBehaviour/>
           </Interaction.Behaviors>
         </ListBox>
-        <WrapPanel Grid.Row="2" Margin="0,10,0,0">
+        <WrapPanel Grid.Row="3" Margin="0,10,0,0">
           <CheckBox Content="{x:Static resources:Strings.Capture_Packets}" VerticalAlignment="Center"
                     Margin="0,0,10,0" IsChecked="{Binding Enabled}" />
           <CheckBox Content="{x:Static resources:Strings.Include_Internal}" VerticalAlignment="Center"
