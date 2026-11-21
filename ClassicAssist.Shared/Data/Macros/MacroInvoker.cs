@@ -242,9 +242,22 @@ public class MacroInvoker
 
         IsFaulted = false;
 
+        // Held shut until the launching thread has announced the start (below). Without it the macro
+        // could run ahead of MacroManager.OnMacroStarted, which is what gives the DAP debugger its
+        // per-thread state: a short macro reached its breakpoint before that state existed, so
+        // DebugManager.OnBreakpoint silently skipped it, the macro ran to the end, and the debugger
+        // was told the thread had exited before it was told it had started - then kept the finished
+        // thread in its list. Seen as intermittent MacroDebuggingTests timeouts on the slower CI runners.
+        // Disposed by the macro thread once through it, not here: Execute can return before that
+        // thread has even reached Wait.
+        ManualResetEventSlim announced = new( false );
+
         Thread = new Thread( () =>
         {
             Thread = Thread.CurrentThread;
+
+            announced.Wait();
+            announced.Dispose();
 
             try
             {
@@ -331,15 +344,24 @@ public class MacroInvoker
         try
         {
             Thread.Start();
-            MacroManager.GetInstance().OnMacroStarted( _macro );
+
+            try
+            {
+                MacroManager.GetInstance().OnMacroStarted( _macro );
+            }
+            finally
+            {
+                // Even if a start listener throws - the macro must never be left parked.
+                announced.Set();
+            }
         }
         catch ( ThreadStateException )
         {
-            // TODO 
+            // TODO
         }
         catch ( ThreadStartException )
         {
-            // TODO 
+            // TODO
         }
     }
 

@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using ClassicAssist.Data.Macros;
 using ClassicAssist.DebugAdapter;
@@ -141,6 +142,55 @@ namespace ClassicAssist.Tests.DebugAdapter
             JObject evaluated = await _dap.RequestAsync( "evaluate",
                 new { expression = "total + i + 100", frameId = threadId * 1000 } );
             Assert.Equal( "100", (string) evaluated["body"]["result"] );
+        }
+
+        /// <summary>
+        ///     The macro thread used to start running before the launching thread had registered it with
+        ///     the debugger (MacroManager.OnMacroStarted, called after Thread.Start). A short macro could
+        ///     reach its breakpoint first: DebugManager.OnBreakpoint found no state for the thread and
+        ///     skipped it, the macro ran to the end, "exited" was sent before "started", and the finished
+        ///     thread stayed in the debugger's list. It showed up as intermittent timeouts in this class
+        ///     on the slower macOS runners. Here a start listener - which runs on the launching thread just
+        ///     ahead of the debugger's registration - stalls, so the macro gets that head start every time.
+        /// </summary>
+        [Fact]
+        public async Task WillStopAtABreakpointEvenWhenTheLauncherIsSlowToRegisterTheMacro()
+        {
+            MacroEntry macro = AddMacro( LOOP_MACRO );
+
+            void Stall( MacroEntry started )
+            {
+                if ( ReferenceEquals( started, macro ) )
+                {
+                    Thread.Sleep( 500 );
+                }
+            }
+
+            MacroManager.GetInstance().MacroStartedEvent += Stall;
+
+            try
+            {
+                JObject stopped = await LaunchToFirstStopAsync( macro, 3 );
+                int threadId = (int) stopped["body"]["threadId"];
+
+                Assert.Equal( 3, await StoppedLineAsync( threadId ) );
+
+                await _dap.RequestAsync( "setBreakpoints", new { source = new { path = macro.FilePath } } );
+                await _dap.RequestAsync( "continue", new { threadId } );
+                await WaitForExitAsync( macro, threadId );
+
+                int started = _dap.Received.FindIndex( m =>
+                    (string) m["event"] == "thread" && (string) m["body"]["reason"] == "started" );
+                int exited = _dap.Received.FindIndex( m =>
+                    (string) m["event"] == "thread" && (string) m["body"]["reason"] == "exited" );
+
+                Assert.InRange( started, 0, exited - 1 );
+                Assert.Null( _manager.GetThreadState( threadId ) );
+            }
+            finally
+            {
+                MacroManager.GetInstance().MacroStartedEvent -= Stall;
+            }
         }
 
         [Fact]
