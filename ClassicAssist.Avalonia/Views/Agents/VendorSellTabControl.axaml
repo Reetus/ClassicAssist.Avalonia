@@ -10,17 +10,6 @@
   <UserControl.DataContext>
     <agents:VendorSellTabViewModel />
   </UserControl.DataContext>
-  <UserControl.Styles>
-    <!-- Centred in the row and inset like DataGridTextColumn's own text (12px); the right margin keeps
-         each cell's pencil off the next column's value. -->
-    <Style Selector="DataGridCell controls|EditTextBlock">
-      <Setter Property="VerticalAlignment" Value="Center"/>
-      <Setter Property="Margin" Value="12,0,8,0"/>
-    </Style>
-    <Style Selector="DataGridCell CheckBox">
-      <Setter Property="Margin" Value="8,0,0,0"/>
-    </Style>
-  </UserControl.Styles>
   <Grid RowDefinitions="*, Auto">
     <DataGrid Grid.Row="0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem, Mode=TwoWay}">
       <DataGrid.Columns>

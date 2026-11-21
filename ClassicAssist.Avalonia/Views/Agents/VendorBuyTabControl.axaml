@@ -18,14 +18,6 @@
     <Style Selector="controls|EditTextBlock">
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
-    <!-- Inset like DataGridTextColumn's own text (12px), and keep each cell's pencil off the next
-         column's value. -->
-    <Style Selector="DataGridCell controls|EditTextBlock">
-      <Setter Property="Margin" Value="12,0,8,0"/>
-    </Style>
-    <Style Selector="DataGridCell CheckBox">
-      <Setter Property="Margin" Value="8,0,0,0"/>
-    </Style>
     <!-- The column widths below fit the English headers on one line. A longer translation is cut
          with an ellipsis, and the full header is in the tooltip. -->
     <Style Selector="DataGridColumnHeader">

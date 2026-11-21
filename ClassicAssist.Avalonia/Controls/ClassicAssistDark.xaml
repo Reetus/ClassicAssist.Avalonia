@@ -64,6 +64,24 @@
     <Setter Property="CaretBrush" Value="{DynamicResource ThemeForegroundBrush}"/>
   </Style>
 
+  <!--
+    NumericUpDown is a TextBox inside a ButtonSpinner, but it takes its colours from its own
+    Background/BorderBrush rather than the TextBox style above - left alone it kept Fluent's near-black
+    fill and bright border and stood out from every text box next to it.
+  -->
+  <Style Selector="NumericUpDown">
+    <Setter Property="Background" Value="{DynamicResource TextBoxBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource TextBoxForegroundBrush}"/>
+  </Style>
+
+  <!-- ... and its spin buttons, which otherwise stay Fluent's black. -->
+  <Style Selector="ButtonSpinner /template/ RepeatButton">
+    <Setter Property="Background" Value="{DynamicResource ButtonBackgroundBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorderBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource ButtonForegroundBrush}"/>
+  </Style>
+
   <Style Selector="ComboBox">
     <Setter Property="Background" Value="{DynamicResource ComboBoxNonEditableBackgroundBrush}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource ComboBoxNonEditableBorderBrush}"/>
@@ -357,6 +375,17 @@
           <SolidColorBrush x:Key="SliderThumbBackgroundDisabled" Color="#FF626262"/>
           <SolidColorBrush x:Key="SliderInnerThumbBackground" Color="#FF8A8A8A"/>
           <SolidColorBrush x:Key="SliderOuterThumbBackground" Color="#FF8A8A8A"/>
+
+          <!-- Expander (Object Inspector): Fluent's header is near-black, darker than anything else
+               here; use the header colour the DataGrid and group boxes use. -->
+          <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="#FF333333"/>
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#FF3A3A3A"/>
+          <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="#FF4B4B4B"/>
+          <SolidColorBrush x:Key="ExpanderContentBackground" Color="#FF292929"/>
+          <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="#FF4B4B4B"/>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>
