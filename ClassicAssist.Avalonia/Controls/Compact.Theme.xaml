@@ -80,4 +80,13 @@
     <Setter Property="MinHeight" Value="0"/>
     <Setter Property="Padding" Value="8,4"/>
   </Style>
+
+  <!--
+    The header template puts the sort arrow in its own column with a 32px MinWidth, reserved even
+    while the column is unsorted and the arrow hidden. In a narrow column that left the header text
+    a sliver ("Co" for Colour in a 64px column). Unsorted, let the text span that column too.
+  -->
+  <Style Selector="DataGridColumnHeader:not(:sortascending):not(:sortdescending) /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Grid.ColumnSpan" Value="2"/>
+  </Style>
 </Styles>
