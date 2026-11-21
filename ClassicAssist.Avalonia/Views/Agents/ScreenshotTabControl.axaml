@@ -39,7 +39,13 @@
               Command="{Binding OpenFolderCommand}"/>
     </Grid>
     <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" Margin="10,0,0,0">
-      <StackPanel>
+      <!-- One shared label column for every group, so all the settings boxes start at the same x. -->
+      <StackPanel Grid.IsSharedSizeScope="True">
+        <StackPanel.Styles>
+          <Style Selector=":is(controls|HorizontalHeaderedContentControl)">
+            <Setter Property="Margin" Value="0,0,0,5" />
+          </Style>
+        </StackPanel.Styles>
         <!-- Shown only on a client whose frames cannot be read back at all - see
              ReflectionImpl.CanCaptureClientFrame. Everything below still binds, so the settings can be
              prepared against a client that does support it. -->

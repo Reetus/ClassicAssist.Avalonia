@@ -34,8 +34,10 @@
     <controls:ResponsiveGrid MinColumnWidth="260">
       <controls:ResponsiveGrid.Items>
 
+        <!-- Grid.IsSharedSizeScope: the label/box rows in a group line their boxes up (see
+             OptionsControls.Theme.xaml). -->
         <controls:GroupBox Header="{x:Static resources:Strings.General}">
-          <StackPanel Margin="5">
+          <StackPanel Margin="5" Grid.IsSharedSizeScope="True">
             <controls:HorizontalHeaderedContentControl Header="{x:Static resources:Strings.Language}">
               <ComboBox x:Name="langCombo" MinWidth="100" HorizontalAlignment="Stretch"
                         ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:Language}}}"
@@ -82,7 +84,7 @@
         </controls:GroupBox>
 
         <controls:GroupBox Header="{x:Static resources:Strings.Target}">
-          <StackPanel Margin="5">
+          <StackPanel Margin="5" Grid.IsSharedSizeScope="True">
             <controls:HorizontalHeaderedComboBox Header="{x:Static resources:Strings.Smart_last_target_}"
                                                  ItemsSource="{Binding Source={misc:EnumBindingSourceExtension {x:Type data:SmartTargetOption}}}"
                                                  SelectedItem="{Binding CurrentOptions.SmartTargetOption, Mode=TwoWay}" />
@@ -179,8 +181,9 @@
 
         <controls:GroupBox Header="{x:Static resources:Strings.Other}">
           <StackPanel Margin="5">
-            <CheckBox Content="{x:Static resources:Strings.Use_death_screen_whilst_hidden}"
-                      IsChecked="{Binding CurrentOptions.UseDeathScreenWhilstHidden}" />
+            <CheckBox IsChecked="{Binding CurrentOptions.UseDeathScreenWhilstHidden}">
+              <TextBlock Text="{x:Static resources:Strings.Use_death_screen_whilst_hidden}" TextWrapping="Wrap" />
+            </CheckBox>
             <CheckBox Content="{x:Static resources:Strings.Auto_accept_party_invites}"
                       IsChecked="{Binding CurrentOptions.AutoAcceptPartyInvite}" />
             <CheckBox IsChecked="{Binding CurrentOptions.AutoAcceptPartyOnlyFromFriends}">

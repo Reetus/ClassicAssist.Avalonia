@@ -23,19 +23,29 @@
     </Setter>
   </Style>
 
+  <!--
+    The label column is in a shared size group, so a container that sets Grid.IsSharedSizeScope lines
+    its rows' boxes up behind the widest label - a stack of "Last target message:", "Friend target
+    message:" ... otherwise starts each box wherever its own label happens to end. Without a scope
+    the group does nothing and each row sizes its label alone, as before.
+  -->
   <Style Selector=":is(controls|HorizontalHeaderedContentControl)">
     <Setter Property="Template">
       <ControlTemplate>
-        <DockPanel LastChildFill="True">
-          <TextBlock DockPanel.Dock="Left" Text="{TemplateBinding Header}"
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" SharedSizeGroup="HorizontalHeader" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <TextBlock Grid.Column="0" Text="{TemplateBinding Header}"
                      Foreground="{TemplateBinding Foreground}"
                      VerticalAlignment="Center"
                      Margin="{TemplateBinding HeaderMargin}"
                      Width="{TemplateBinding HeaderWidth}"
                      MinWidth="{TemplateBinding HeaderMinWidth}" />
-          <ContentPresenter x:Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+          <ContentPresenter Grid.Column="1" x:Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
                             VerticalAlignment="Center" />
-        </DockPanel>
+        </Grid>
       </ControlTemplate>
     </Setter>
   </Style>
