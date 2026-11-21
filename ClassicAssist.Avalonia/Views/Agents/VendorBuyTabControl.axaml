@@ -18,6 +18,23 @@
     <Style Selector="controls|EditTextBlock">
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <!-- Inset like DataGridTextColumn's own text (12px), and keep each cell's pencil off the next
+         column's value. -->
+    <Style Selector="DataGridCell controls|EditTextBlock">
+      <Setter Property="Margin" Value="12,0,8,0"/>
+    </Style>
+    <Style Selector="DataGridCell CheckBox">
+      <Setter Property="Margin" Value="8,0,0,0"/>
+    </Style>
+    <!-- The column widths below fit the English headers on one line. A longer translation is cut
+         with an ellipsis, and the full header is in the tooltip. -->
+    <Style Selector="DataGridColumnHeader">
+      <Setter Property="ContentTemplate">
+        <DataTemplate>
+          <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding}"/>
+        </DataTemplate>
+      </Setter>
+    </Style>
   </UserControl.Styles>
   <Grid RowDefinitions="*, Auto">
     <Grid Grid.Row="0" ColumnDefinitions="150, *">
@@ -57,52 +74,52 @@
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Graphic}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Graphic}" Width="72">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <controls:EditTextBlock
-                      Text="{Binding Graphic}"
-                      ShowIcon="True" />
+                  <controls:EditTextBlock Text="{Binding Graphic}"
+                                          Label="{Binding Graphic, StringFormat={}0x{0:x}}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="1*"/>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Color}" Width="1*">
+            <DataGridTextColumn Header="{x:Static resources:Strings.Name}" Binding="{Binding Name}" Width="*" MinWidth="100"/>
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Color}" Width="64">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                    <controls:EditTextBlock Text="{Binding Hue}" ShowIcon="True" />
+                  <controls:EditTextBlock Text="{Binding Hue}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Amount}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Amount}" Width="66">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <controls:EditTextBlock Text="{Binding Amount}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Max_Price}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Max_Price}" Width="76">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <controls:EditTextBlock Text="{Binding MaxPrice}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Backpack_Graphic}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Backpack_Graphic}" Width="116">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
-                  <controls:EditTextBlock Text="{Binding BackpackGraphic}" ShowIcon="True" />
+                  <controls:EditTextBlock Text="{Binding BackpackGraphic}"
+                                          Label="{Binding BackpackGraphic, StringFormat={}0x{0:x}}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Item_Weight}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Item_Weight}" Width="84">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <controls:EditTextBlock Text="{Binding Weight}" ShowIcon="True" />
                 </DataTemplate>
               </DataGridTemplateColumn.CellTemplate>
             </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="{x:Static resources:Strings.Stackable}" Width="1*">
+            <DataGridTemplateColumn Header="{x:Static resources:Strings.Stackable}" Width="72">
               <DataGridTemplateColumn.CellTemplate>
                 <DataTemplate>
                   <CheckBox IsChecked="{Binding Stackable}" />
@@ -123,7 +140,10 @@
     <WrapPanel Orientation="Horizontal" Grid.Row="1" Margin="0,10,0,0">
       <WrapPanel.Styles>
         <Style Selector="CheckBox">
-          <Setter Property="Margin" Value="0,5,10,5" />
+          <Setter Property="Margin" Value="0,5,20,5" />
+        </Style>
+        <Style Selector="StackPanel.setting > Label">
+          <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style Selector="StackPanel.setting">
           <Setter Property="Orientation" Value="Horizontal" />
@@ -136,12 +156,12 @@
       <CheckBox IsChecked="{Binding CheckWeight}" Content="{x:Static resources:Strings.Check_Weight}" />
       <StackPanel Classes="setting">
         <Label Content="{x:Static resources:Strings.Minimum_Weight_Available_}" Margin="0,0,10,0" />
-        <TextBox MinWidth="100" Text="{Binding MinWeightAvailable}" IsEnabled="{Binding CheckWeight}" />
+        <TextBox Width="70" Text="{Binding MinWeightAvailable}" IsEnabled="{Binding CheckWeight}" />
       </StackPanel>
       <CheckBox IsChecked="{Binding CheckItemCount}" Content="{x:Static resources:Strings.Check_Backpack_Item_Count}" />
       <StackPanel Classes="setting">
         <Label Content="{x:Static resources:Strings.Minimum_Items_Available_}" Margin="0,0,10,0" />
-        <TextBox MinWidth="100" Text="{Binding MinItemsAvailable}" IsEnabled="{Binding CheckItemCount}" />
+        <TextBox Width="70" Text="{Binding MinItemsAvailable}" IsEnabled="{Binding CheckItemCount}" />
       </StackPanel>
     </WrapPanel>
   </Grid>
