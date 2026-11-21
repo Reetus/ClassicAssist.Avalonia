@@ -3,6 +3,7 @@
              xmlns:local="clr-namespace:ClassicAssist.Avalonia"
              xmlns:AvalonEdit="clr-namespace:AvaloniaEdit;assembly=AvaloniaEdit"
              xmlns:Editing="clr-namespace:AvaloniaEdit.Editing;assembly=AvaloniaEdit"
+             xmlns:controls="clr-namespace:ClassicAssist.Avalonia.Controls"
              x:Class="ClassicAssist.Avalonia.App" RequestedThemeVariant="Dark">
   <Application.Resources>
     <ResourceDictionary>
@@ -26,6 +27,15 @@
          Linux even though the same build looks fine on Windows. -->
     <Style Selector="Window">
       <Setter Property="Icon" Value="avares://ClassicAssist.Avalonia/Assets/logo.ico"/>
+    </Style>
+    <!-- Template-column cells get no padding of their own, unlike DataGridTextColumn's text (12px in),
+         so an editable value sat on the column's left edge and its pencil icon ran into the next
+         column's value. Inset to match the text columns, keep 8px clear of the next column, and centre
+         in the row; a local Margin on a particular cell still wins. Here rather than in
+         Compact.Theme.xaml because the launcher and updater link that file and have no EditTextBlock. -->
+    <Style Selector="DataGridCell controls|EditTextBlock">
+      <Setter Property="Margin" Value="12,0,8,0"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="Button">
       <Setter Property="HorizontalAlignment" Value="Stretch"/>
