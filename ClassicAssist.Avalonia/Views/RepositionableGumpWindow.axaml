@@ -16,11 +16,12 @@
     <StackPanel Grid.Row="0" Grid.Column="1" VerticalAlignment="Top" Margin="5,0">
       <StackPanel Orientation="Horizontal" Margin="0,5">
         <TextBlock Text="X:" Margin="0,0,5,0" VerticalAlignment="Center" Width="15" />
-        <TextBox Width="100" Text="{Binding X}" />
+        <!-- 70, not 100: at 100 the boxes pushed the OK button over them in this 220px window. -->
+        <TextBox Width="70" Text="{Binding X}" />
       </StackPanel>
       <StackPanel Orientation="Horizontal" Margin="0,5">
         <TextBlock Text="Y:" Margin="0,0,5,0" VerticalAlignment="Center" Width="15" />
-        <TextBox Width="100" Text="{Binding Y}" />
+        <TextBox Width="70" Text="{Binding Y}" />
       </StackPanel>
     </StackPanel>
     <Button Grid.Row="0" Grid.Column="2" VerticalAlignment="Top" Padding="10,4"

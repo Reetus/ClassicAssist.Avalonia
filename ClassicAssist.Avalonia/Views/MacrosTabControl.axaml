@@ -132,8 +132,10 @@
             </Interaction.Behaviors>
           </AvalonEdit:TextEditor>
         </Border>
+        <!-- FallbackValue: with no macro selected the path doesn't resolve, and an unresolved
+             IsVisible binding falls back to visible - the debugger panel sat over the editor. -->
         <macros:MacrosDebuggerControl MacroEntry="{Binding SelectedItem}"
-                                      IsVisible="{Binding SelectedItem.IsPaused}" />
+                                      IsVisible="{Binding SelectedItem.IsPaused, FallbackValue=False}" />
       </Grid>
       <WrapPanel Grid.Row="1">
         <WrapPanel.Styles>
@@ -154,7 +156,9 @@
         <CheckBox Content="{x:Static resources:Strings.Global}"
                   IsChecked="{Binding SelectedItem.Global}" />
       </WrapPanel>
-      <WrapPanel Grid.Row="2" HorizontalAlignment="Center" Margin="0,5,0,0">
+      <!-- Left-aligned with the checkboxes above. Centred, a wrapped second line started at the
+           panel's left edge rather than the centre and looked indented. -->
+      <WrapPanel Grid.Row="2" Margin="0,5,0,0">
         <WrapPanel.Styles>
           <Style Selector="Button">
             <Setter Property="Margin" Value="0,0,5,5" />

@@ -17,19 +17,19 @@
         <CheckBox IsChecked="{Binding Options.SendToJournal}">
           <TextBlock Text="{x:Static resources:Strings.Journal_receives_filtered_messages}" TextWrapping="Wrap"/>
         </CheckBox>
-        <Grid ColumnDefinitions="140,80,Auto">
+        <Grid ColumnDefinitions="140,120,Auto">
           <TextBlock Grid.Column="0" Text="{x:Static resources:Strings.Message_Limit_}" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" FormatString="0"
                          Value="{Binding Options.MessageLimit}"/>
         </Grid>
-        <Grid ColumnDefinitions="140,80,Auto">
+        <Grid ColumnDefinitions="140,120,Auto">
           <TextBlock Grid.Column="0" Text="{x:Static resources:Strings.Time_Limit_}" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" FormatString="0"
                          Value="{Binding Options.TimeLimit}"/>
           <TextBlock Grid.Column="2" Text="{x:Static resources:Strings.seconds}" VerticalAlignment="Center"
                      Margin="5,0,0,0"/>
         </Grid>
-        <Grid ColumnDefinitions="140,80,Auto">
+        <Grid ColumnDefinitions="140,120,Auto">
           <TextBlock Grid.Column="0" Text="{x:Static resources:Strings.Filtered_Time_}" VerticalAlignment="Center"/>
           <NumericUpDown Grid.Column="1" Minimum="0" Increment="1" FormatString="0"
                          Value="{Binding Options.BlockedTime}"/>

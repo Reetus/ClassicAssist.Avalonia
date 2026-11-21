@@ -27,6 +27,12 @@
       </ListBox>
     </Grid>
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+      <StackPanel.Styles>
+        <!-- Same width for both, as in the other dialogs; sized to its text, OK was a sliver. -->
+        <Style Selector="Button">
+          <Setter Property="MinWidth" Value="80"/>
+        </Style>
+      </StackPanel.Styles>
       <Button Content="{x:Static resources:Strings.OK}" Margin="0,0,5,0">
         <Interaction.Behaviors>
           <misc:CloseOnClickBehaviour Command="{Binding OKCommand}"/>

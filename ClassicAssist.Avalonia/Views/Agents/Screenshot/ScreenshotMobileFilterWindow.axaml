@@ -40,23 +40,33 @@
         </DataGridTemplateColumn>
       </DataGrid.Columns>
     </DataGrid>
-    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-      <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddCommand}" Padding="20,4"
-              Margin="0,0,10,0"/>
-      <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCommand}"
-              CommandParameter="{Binding SelectedItem}" Padding="20,4" Margin="0,0,10,0"/>
-      <Button Content="{x:Static resources:Strings.Target}" Command="{Binding TargetCommand}" Padding="20,4"
-              Margin="0,0,10,0"/>
-      <Button Content="{x:Static resources:Strings.OK}" IsDefault="True" Padding="20,4" Margin="0,0,10,0">
-        <Interaction.Behaviors>
-          <misc:CloseOnClickBehaviour Command="{Binding OkCommand}"/>
-        </Interaction.Behaviors>
-      </Button>
-      <Button Content="{x:Static resources:Strings.Cancel}" Padding="20,4">
-        <Interaction.Behaviors>
-          <misc:CloseOnClickBehaviour/>
-        </Interaction.Behaviors>
-      </Button>
-    </StackPanel>
+    <!-- Entry actions left, OK/Cancel right. Five buttons at 20px padding in one right-aligned row were
+         wider than the 400px window, so Cancel was cut off at the edge. -->
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="0,10,0,0">
+      <Grid.Styles>
+        <Style Selector="Button">
+          <Setter Property="Padding" Value="10,4"/>
+          <Setter Property="MinWidth" Value="60"/>
+        </Style>
+      </Grid.Styles>
+      <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="5">
+        <Button Content="{x:Static resources:Strings.Add}" Command="{Binding AddCommand}"/>
+        <Button Content="{x:Static resources:Strings.Remove}" Command="{Binding RemoveCommand}"
+                CommandParameter="{Binding SelectedItem}"/>
+        <Button Content="{x:Static resources:Strings.Target}" Command="{Binding TargetCommand}"/>
+      </StackPanel>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="5">
+        <Button Content="{x:Static resources:Strings.OK}" IsDefault="True">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour Command="{Binding OkCommand}"/>
+          </Interaction.Behaviors>
+        </Button>
+        <Button Content="{x:Static resources:Strings.Cancel}">
+          <Interaction.Behaviors>
+            <misc:CloseOnClickBehaviour/>
+          </Interaction.Behaviors>
+        </Button>
+      </StackPanel>
+    </Grid>
   </Grid>
 </Window>

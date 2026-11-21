@@ -59,7 +59,7 @@
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Source}" Width="1.2*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding SourceContainer}" VerticalAlignment="Center"/>
                   <Button Content="..." Padding="5,0"
                           Command="{Binding $parent[DataGrid].DataContext.SetEntrySourceContainerCommand}"
@@ -74,7 +74,7 @@
           <DataGridTemplateColumn Header="{x:Static resources:Strings.Destination}" Width="1.2*">
             <DataGridTemplateColumn.CellTemplate>
               <DataTemplate>
-                <StackPanel Orientation="Horizontal" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="4" Margin="8,0,0,0" VerticalAlignment="Center">
                   <TextBlock Text="{Binding DestinationContainer}" VerticalAlignment="Center"/>
                   <Button Content="..." Padding="5,0"
                           Command="{Binding $parent[DataGrid].DataContext.SetEntryDestinationContainerCommand}"
